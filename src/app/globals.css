@@ -1,0 +1,31 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: system-ui, sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.navigation-notice {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: #fff4ce;
+  border-bottom: 1px solid #e0c97a;
+  font-size: 0.9rem;
+}
+
+.map {
+  flex: 1;
+  min-height: 0;
+}
+
+.map-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
