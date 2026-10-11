@@ -185,3 +185,84 @@ describe("#7 AC4/AC5 (core side): changing and restoring settings", () => {
     }
   });
 });
+
+// Round 2: rule approved by Cedric (ADR 0009 amendment). A pending hike leg has
+// no time yet, and neither has the trip while any leg is pending. A failed hike
+// leg is timed on distance only and marked; the trip includes it and the mark.
+// Paddle legs are unchanged.
+describe("#7 round 2: hike legs without climb data", () => {
+  const failingRouter: Router = {
+    route: async (): Promise<RouteResult> => ({ ok: false, failure: { kind: "unavailable" } }),
+  };
+  /** A router that fails hike legs and routes paddle legs. */
+  const hikeFailsRouter: Router = {
+    route: async (mode, points): Promise<RouteResult> =>
+      mode === "hike"
+        ? { ok: false, failure: { kind: "no-route" } }
+        : { ok: true, geometry: points.map((p) => ({ ...p, elevation: 100 })) },
+  };
+
+  it("a hike leg that has not been routed yet is pending, and so is the trip", () => {
+    let trip: Trip = emptyTrip();
+    trip = applyEdit(trip, { type: "addPoint", at: east(0) });
+    trip = applyEdit(trip, { type: "addPoint", at: east(10) });
+    const s = summarise(trip);
+    expect(s.legs[0].timeStatus).toBe("pending");
+    expect(s.trip.timeStatus).toBe("pending");
+  });
+
+  it("a routed hike leg and its trip are plain estimates", async () => {
+    const trip = await drawTrip(lineRouter(600), [east(0), east(10)]);
+    const s = summarise(trip);
+    expect(s.legs[0].timeStatus).toBe("estimated");
+    expect(s.trip.timeStatus).toBe("estimated");
+    expect(s.trip.timeH).toBeCloseTo(3, 6);
+  });
+
+  it("a failed hike leg gets a distance-only time (with pace factor), marked no-climb-data; the trip includes it", async () => {
+    const trip = await drawTrip(failingRouter, [east(0), east(10)]);
+    expect(trip.legs[0].route?.status).toBe("failed");
+    const s = summarise(trip, settings({ paceFactor: 1.2 }));
+    expect(s.legs[0].timeH).toBeCloseTo(2.4, 6);
+    expect(s.legs[0].timeStatus).toBe("no-climb-data");
+    expect(s.trip.timeH).toBeCloseTo(2.4, 6);
+    expect(s.trip.timeStatus).toBe("no-climb-data");
+  });
+
+  it("failed hike + routed paddle: trip sums both and carries the marker; the paddle leg is a plain estimate", async () => {
+    const trip = await drawTrip(hikeFailsRouter, [east(0), east(10), east(20)], ["hike", "paddle"]);
+    expect(trip.legs.map((l) => l.route?.status)).toEqual(["failed", "routed"]);
+    const s = summarise(trip);
+    expect(s.legs[1].timeStatus).toBe("estimated");
+    expect(s.legs[1].timeH).toBeCloseTo(2, 6);
+    expect(s.trip.timeH).toBeCloseTo(4, 6);
+    expect(s.trip.timeStatus).toBe("no-climb-data");
+  });
+
+  it("a failed paddle leg is unchanged: plain estimate, no marker on the trip", async () => {
+    const trip = await drawTrip(failingRouter, [east(0), east(10)], ["paddle"]);
+    expect(trip.legs[0].route?.status).toBe("failed");
+    const s = summarise(trip);
+    expect(s.legs[0].timeStatus).toBe("estimated");
+    expect(s.legs[0].timeH).toBeCloseTo(2, 6);
+    expect(s.trip.timeStatus).toBe("estimated");
+  });
+
+  it("a paddle leg still pending keeps its own time, but the trip is pending", async () => {
+    const routed = await drawTrip(lineRouter(0), [east(0), east(10), east(20)], ["hike", "paddle"]);
+    const trip: Trip = { ...routed, legs: [routed.legs[0], { mode: "paddle", route: { status: "pending" } }] };
+    const s = summarise(trip);
+    expect(s.legs[1].timeStatus).toBe("estimated");
+    expect(s.legs[1].timeH).toBeCloseTo(2, 6);
+    expect(s.trip.timeStatus).toBe("pending");
+  });
+
+  it("pending wins over no-climb-data for the trip", async () => {
+    const failed = await drawTrip(failingRouter, [east(0), east(10)]);
+    const trip = applyEdit(failed, { type: "addPoint", at: east(20) });
+    const s = summarise(trip);
+    expect(s.legs[0].timeStatus).toBe("no-climb-data");
+    expect(s.legs[1].timeStatus).toBe("pending");
+    expect(s.trip.timeStatus).toBe("pending");
+  });
+});

@@ -161,3 +161,153 @@ for (const [name, stored, pace, speed] of [
     expect(errors).toEqual([]);
   });
 }
+
+// Round 2: rule approved by Cedric (ADR 0009 amendment).
+const legTimeText = async (page: Page, leg: number) =>
+  ((await rows(page).nth(leg).textContent()) ?? "").match(new RegExp(`${strings.legTimeEstimate} ([^A-Z]*)`))?.[1]?.trim();
+
+test("R2: a pending hike leg shows … for its time, and so does the trip total; both get real times once routed", async ({
+  page,
+}) => {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((r) => (release = r));
+  await serveOffline(page, { brouter: async (url) => (await gate, byProfile(url)) });
+  const clickMap = await openMap(page);
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  await expect(rows(page).nth(0)).toContainText(`${strings.legTimeEstimate} …`);
+  await expect(tripLine(page)).toHaveText(`${strings.tripTotalTimeEstimate} …`);
+  await expect(legsPanel(page)).not.toContainText(/\d+ min/);
+  release();
+  await expect(rows(page).nth(0)).toContainText(strings.climbLabel);
+  await expect(tripLine(page)).toHaveText(new RegExp(`^${strings.tripTotalTimeEstimate} (\\d+ h )?\\d+ min$`));
+  expect(await legTimeText(page, 0)).not.toContain("…");
+  await expect(legsPanel(page)).not.toContainText("no climb data");
+});
+
+test("R2: a pending paddle leg keeps its own time but the trip total shows … until it is routed", async ({ page }) => {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((r) => (release = r));
+  await serveOffline(page, {
+    brouter: async (url) => {
+      if (url.searchParams.get("profile") === "river") await gate;
+      return byProfile(url);
+    },
+  });
+  const clickMap = await openMap(page);
+  await clickMap(-150, 0);
+  await clickMap(0, 0);
+  await clickMap(150, 0);
+  await expect(rows(page).nth(1)).toContainText(strings.climbLabel);
+  await rows(page)
+    .nth(1)
+    .getByRole("group", { name: strings.legModeLabel(2) })
+    .getByRole("button", { name: strings.legModePaddle })
+    .click();
+  await expect(rows(page).nth(1)).toContainText(new RegExp(`${strings.legTimeEstimate} (\\d+ h )?\\d+ min`));
+  await expect(tripLine(page)).toHaveText(`${strings.tripTotalTimeEstimate} …`);
+  release();
+  await expect(rows(page).nth(1)).toContainText(strings.dropLabel);
+  await expect(tripLine(page)).toHaveText(new RegExp(`^${strings.tripTotalTimeEstimate} (\\d+ h )?\\d+ min$`));
+});
+
+test("R2: a failed hike leg shows a distance-only time marked (no climb data); the trip total includes it with the marker; pace still applies", async ({
+  page,
+}) => {
+  await serveOffline(page); // BRouter unavailable
+  const clickMap = await openMap(page);
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  await expect(rows(page).nth(0).getByRole("alert")).toBeVisible();
+  const marked = /^(\d+ h )?\d+ min \(no climb data\)$/;
+  expect(await legTimeText(page, 0)).toMatch(marked);
+  await expect(tripLine(page)).toHaveText(new RegExp(`^${strings.tripTotalTimeEstimate} (\\d+ h )?\\d+ min \\(no climb data\\)$`));
+  const before = await legMinutes(page, 0);
+  expect(before).toBeGreaterThan(0);
+  expect(minutesIn(await tripLine(page).textContent())).toBe(before);
+  await paceField(page).fill("2");
+  await expect.poll(() => legMinutes(page, 0)).toBeGreaterThanOrEqual(before * 2 - 1);
+  expect(await legMinutes(page, 0)).toBeLessThanOrEqual(before * 2 + 1);
+  await expect(tripLine(page)).toContainText("(no climb data)");
+});
+
+test("R2: failed hike + routed paddle: total = sum with marker; paddle row unmarked", async ({ page }) => {
+  await serveOffline(page, {
+    brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : { status: 503, body: "" }),
+  });
+  const clickMap = await openMap(page);
+  await clickMap(-150, 0);
+  await clickMap(0, 0);
+  await clickMap(150, 0);
+  await rows(page)
+    .nth(1)
+    .getByRole("group", { name: strings.legModeLabel(2) })
+    .getByRole("button", { name: strings.legModePaddle })
+    .click();
+  await expect(rows(page).nth(1)).toContainText(strings.dropLabel);
+  await expect(rows(page).nth(0).getByRole("alert")).toBeVisible();
+  expect(await legTimeText(page, 0)).toContain("(no climb data)");
+  expect(await legTimeText(page, 1)).not.toContain("no climb data");
+  await expect(tripLine(page)).toContainText("(no climb data)");
+  const total = minutesIn(await tripLine(page).textContent());
+  const sum = (await legMinutes(page, 0)) + (await legMinutes(page, 1));
+  expect(Math.abs(total - sum)).toBeLessThanOrEqual(1);
+});
+
+test("R2: a failed paddle leg is unchanged: plain time, no marker on the leg or the total", async ({ page }) => {
+  await serveOffline(page, {
+    brouter: (url) => (url.searchParams.get("profile") === "river" ? { status: 503, body: "" } : TRAIL),
+  });
+  const clickMap = await openMap(page);
+  await clickMap(-150, 0);
+  await clickMap(0, 0);
+  await clickMap(150, 0);
+  await rows(page)
+    .nth(1)
+    .getByRole("group", { name: strings.legModeLabel(2) })
+    .getByRole("button", { name: strings.legModePaddle })
+    .click();
+  await expect(rows(page).nth(1).getByRole("alert")).toBeVisible();
+  await expect(rows(page).nth(0)).toContainText(strings.climbLabel);
+  expect(await legTimeText(page, 1)).toMatch(/^(\d+ h )?\d+ min$/);
+  await expect(tripLine(page)).toHaveText(new RegExp(`^${strings.tripTotalTimeEstimate} (\\d+ h )?\\d+ min$`));
+});
+
+test("R2: retrying a failed hike leg goes … while pending, then a plain time without the marker", async ({ page }) => {
+  let mode: "fail" | "hold" = "fail";
+  let release: () => void = () => {};
+  const gate = new Promise<void>((r) => (release = r));
+  await serveOffline(page, {
+    brouter: async (url) => {
+      if (mode === "fail") return { status: 503, body: "" };
+      await gate;
+      return byProfile(url);
+    },
+  });
+  const clickMap = await openMap(page);
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  await expect(rows(page).nth(0).getByRole("alert")).toBeVisible();
+  await expect(tripLine(page)).toContainText("(no climb data)");
+  mode = "hold";
+  await rows(page).nth(0).getByRole("button", { name: strings.retryRouting }).click();
+  await expect(rows(page).nth(0)).toContainText(`${strings.legTimeEstimate} …`);
+  await expect(tripLine(page)).toHaveText(`${strings.tripTotalTimeEstimate} …`);
+  release();
+  await expect(rows(page).nth(0)).toContainText(strings.climbLabel);
+  await expect(legsPanel(page)).not.toContainText("no climb data");
+  await expect(legsPanel(page)).not.toContainText("…");
+});
+
+test("R2: a routed trip restored from autosave shows real times, not a stuck …", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await serveOffline(page, { brouter: byProfile });
+  await drawHikeThenPaddle(page);
+  const before = await tripLine(page).textContent();
+  await page.reload();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(tripLine(page)).toHaveText(new RegExp(`^${strings.tripTotalTimeEstimate} (\\d+ h )?\\d+ min$`));
+  expect(await tripLine(page).textContent()).toBe(before);
+  expect(errors).toEqual([]);
+});
