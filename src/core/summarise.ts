@@ -13,12 +13,14 @@ export type LegSummary = {
   readonly descentM?: number;
   /**
    * Put-in elevation minus take-out elevation. A paddle leg that ends at most
-   * RISE_NOISE_M higher has a drop of 0 (elevation noise, ADR 0018).
+   * RISE_NOISE_M higher (rounded to whole metres) has a drop of 0 (elevation
+   * noise, ADR 0018).
    */
   readonly dropM?: number;
   /**
    * How much higher a paddle leg ends than it starts, when that is more than
-   * RISE_NOISE_M: a hint that it may be drawn upstream. Replaces the drop.
+   * RISE_NOISE_M once rounded to whole metres: a hint that it may be drawn
+   * upstream. Replaces the drop.
    */
   readonly riseM?: number;
 };
@@ -97,7 +99,8 @@ function legDrop(route: Extract<LegRoute, { status: "routed" }>): { dropM: numbe
   const { geometry } = route;
   const dropM = geometry[0].elevation - geometry[geometry.length - 1].elevation;
   if (dropM >= 0) return { dropM };
-  return -dropM > RISE_NOISE_M ? { riseM: -dropM } : { dropM: 0 };
+  // Rounded to whole metres first, as it is shown, so a rise shown as 2 m is noise too.
+  return Math.round(-dropM) > RISE_NOISE_M ? { riseM: -dropM } : { dropM: 0 };
 }
 
 /**

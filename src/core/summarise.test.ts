@@ -162,7 +162,16 @@ describe("summarise paddle legs", () => {
     const leg = endsAt(90, 93);
     expect(leg.riseM).toBe(3);
     expect(leg.dropM).toBeUndefined();
-    expect(endsAt(90, 92.25).riseM).toBe(2.25);
+  });
+
+  it("rounds the rise to whole metres before the 2 m rule, so a rise shown as 2 m or less is a drop of 0", () => {
+    // Updated in round 3: a 2.25 m rise used to be a rise; it rounds to 2 m.
+    expect(endsAt(90, 92.25)).toMatchObject({ dropM: 0 });
+    expect(endsAt(90, 92.4)).toMatchObject({ dropM: 0 });
+    expect(endsAt(90, 92.4).riseM).toBeUndefined();
+    const leg = endsAt(90, 92.6);
+    expect(leg.riseM).toBeCloseTo(2.6, 9);
+    expect(leg.dropM).toBeUndefined();
   });
 
   it("hike legs and paddle legs that drop have no rise", () => {

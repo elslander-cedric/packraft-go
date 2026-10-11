@@ -163,6 +163,26 @@ test("a paddle leg that ends more than 2 m higher shows a rise with an upstream 
   await expect(row).not.toContainText(strings.dropLabel);
 });
 
+for (const { rise, shown } of [
+  { rise: 2.4, shown: `${strings.dropLabel} 0 m` },
+  { rise: 2.6, shown: strings.riseFigure("3 m") },
+]) {
+  test(`a paddle leg ending ${rise} m higher shows "${shown}" (rise rounded before the 2 m rule)`, async ({ page }) => {
+    const track = JSON.parse(RIVER.body);
+    const coordinates = track.features[0].geometry.coordinates;
+    coordinates[coordinates.length - 1][2] = coordinates[0][2] + rise;
+    const RISING: BRouterReply = { status: 200, body: JSON.stringify(track) };
+    await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? RISING : TRAIL) });
+    const clickMap = await openMap(page);
+
+    await clickMap(-100, 0);
+    await clickMap(100, 0);
+    await modeButton(page, 0, strings.legModePaddle).click();
+
+    await expect(rows(page).nth(0)).toContainText(shown);
+  });
+}
+
 test("a paddle leg with no river between its points says no river route was found", async ({ page }) => {
   const NO_ROUTE: BRouterReply = { status: 400, body: brouterFixture("hiking-no-route-400.txt") };
   await serveOffline(page, { brouter: () => NO_ROUTE });

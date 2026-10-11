@@ -417,10 +417,20 @@ describe("Round 2, rule 2: a paddle leg rise of 2 m or less is drop 0; a larger 
     }
   });
 
-  it("a rise just over 2 m becomes a rise and has no drop", () => {
-    const l = leg("paddle", 100, 102.01);
+  // Updated in round 3: the rise is rounded to whole metres before the 2 m
+  // rule, so 2.01 m (shown as 2 m) is now a drop of 0; the boundary is 2.5 m.
+  it("a rise that rounds to 2 m (2.01, 2.4) is a drop of 0", () => {
+    for (const rise of [2.01, 2.4]) {
+      const l = leg("paddle", 100, 100 + rise);
+      expect(l.dropM, `rise ${rise}`).toBe(0);
+      expect(l.riseM, `rise ${rise}`).toBeUndefined();
+    }
+  });
+
+  it("a rise that rounds to 3 m (2.6) becomes a rise and has no drop", () => {
+    const l = leg("paddle", 100, 102.6);
     expect(l.dropM).toBeUndefined();
-    expect(l.riseM).toBeCloseTo(2.01, 5);
+    expect(l.riseM).toBeCloseTo(2.6, 5);
   });
 
   it("a normal drop is unchanged and has no rise", () => {
