@@ -25,6 +25,7 @@ CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on eve
 ## Layout
 - `src/app/`: Next.js routes (thin; no domain logic).
 - `src/map/`: Leaflet map. `TripMap.tsx` imports Leaflet and must only be loaded through `ClientTripMap.tsx` (no server rendering). `mapConfig.ts` holds the initial view and base layer.
+- `src/core/`: trip planner core (pure TypeScript: trip model, edits, figures, router interface). No React, browser or network imports; a test enforces this. Test fakes live in `src/core/testing/`.
 - `src/ui/strings.ts`: all user-facing text (ADR 0013).
 
 ## Conventions
