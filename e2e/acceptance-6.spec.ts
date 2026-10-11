@@ -49,8 +49,7 @@ async function drag(page: Page, from: Px, to: Px) {
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 12 });
   await page.mouse.up();
-  // A human pause after dropping. The app ignores the browser's post-drag click
-  // for one tick, so a click within ~0 ms of the drop would be swallowed.
+  // A human pause after dropping.
   await page.waitForTimeout(100);
 }
 
