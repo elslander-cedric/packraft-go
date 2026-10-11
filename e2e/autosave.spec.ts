@@ -61,6 +61,50 @@ test("a drawn trip is restored on reload with its snapped routes, and no routing
   expect(network.blocked).toEqual([]);
 });
 
+test("a paddle leg is restored on reload with its mode, river route and drop, and no routing requests", async ({
+  page,
+}) => {
+  const TRAIL = SNAPPED;
+  const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.geojson") };
+  const network = await serveOffline(page, {
+    brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL),
+  });
+  const clickMap = await openMap(page);
+  const modeButton = (leg: number, mode: string) =>
+    rows(page)
+      .nth(leg)
+      .getByRole("group", { name: strings.legModeLabel(leg + 1) })
+      .getByRole("button", { name: mode });
+
+  await clickMap(-150, 0);
+  await clickMap(0, 0);
+  await clickMap(150, 0);
+  await expect(legLines(page)).toHaveCount(2);
+  await modeButton(1, strings.legModePaddle).click();
+  await expect(legLines(page).nth(1)).toHaveClass(/leg-paddle/);
+  await expect(legLines(page).nth(1)).toHaveClass(/leg-routed/);
+  await expect(rows(page).nth(1)).toContainText(`${strings.dropLabel} 7 m`);
+  const requestsBefore = network.brouter.length;
+  expect(network.brouter.map((url) => url.searchParams.get("profile"))).toContain("river");
+
+  await page.reload();
+  await waitForMap(page);
+
+  await expect(modeButton(1, strings.legModePaddle)).toHaveAttribute("aria-pressed", "true");
+  await expect(modeButton(0, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
+  await expect(legLines(page).nth(1)).toHaveClass(/leg-paddle/);
+  await expect(legLines(page).nth(1)).toHaveClass(/leg-routed/);
+  await expect(rows(page).nth(1)).toContainText("5.9 km");
+  await expect(rows(page).nth(1)).toContainText(`${strings.dropLabel} 7 m`);
+  await expect(rows(page).nth(0)).toContainText(`${strings.climbLabel} 100 m`);
+  await expect(mapRegion(page).locator("path.put-in")).toHaveCount(1);
+  await expect(mapRegion(page).locator("path.take-out")).toHaveCount(1);
+
+  await page.waitForTimeout(500);
+  expect(network.brouter).toHaveLength(requestsBefore);
+  expect(network.blocked).toEqual([]);
+});
+
 test("every edit is saved: an undone point stays undone after reload", async ({ page }) => {
   await serveOffline(page, { brouter: () => SNAPPED });
   const clickMap = await openMap(page);

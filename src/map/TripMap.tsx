@@ -7,8 +7,9 @@ import type {
   Polyline as LeafletPolyline,
 } from "leaflet";
 import { useEffect, useRef, useState } from "react";
-import { CircleMarker, MapContainer, Pane, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import type { LatLng, LegMode, Trip } from "@/core/trip";
+import { CircleMarker, MapContainer, Pane, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { putInsAndTakeOuts, type LatLng, type LegMode, type ModeChange, type Trip } from "@/core/trip";
+import { strings } from "@/ui/strings";
 import { baseLayer, initialMapView } from "./mapConfig";
 
 export type TripMapProps = {
@@ -23,9 +24,20 @@ export type TripMapProps = {
   onPointDrag: (index: number, to: LatLng) => void;
 };
 
+// Hike legs are thin and earth-coloured, paddle legs wider and water-blue, so the mix shows at a glance.
 const legStyle: Record<LegMode, { color: string; weight: number }> = {
   hike: { color: "#b5491b", weight: 4 },
-  paddle: { color: "#1b6fb5", weight: 4 },
+  paddle: { color: "#1b6fb5", weight: 6 },
+};
+
+const modeChangeStyle: Record<ModeChange["kind"], { color: string }> = {
+  "put-in": { color: "#1a8f3a" },
+  "take-out": { color: "#7a3fb5" },
+};
+
+const modeChangeLabel: Record<ModeChange["kind"], string> = {
+  "put-in": strings.putIn,
+  "take-out": strings.takeOut,
 };
 
 const pointStyle = { color: "#333", weight: 2, fillColor: "#fff", fillOpacity: 1 };
@@ -71,17 +83,19 @@ function PointMarker({ at, selected, eventHandlers, onRemoved }: PointMarkerProp
 
 type LegStatus = "pending" | "routed" | "failed";
 const legStatuses: readonly LegStatus[] = ["pending", "routed", "failed"];
+const legModes: readonly LegMode[] = ["hike", "paddle"];
 
-/** One leg's line; failed legs are dashed. */
+/** One leg's line, styled by mode; failed legs are dashed. */
 function LegLine({ mode, status, positions }: { mode: LegMode; status: LegStatus; positions: LatLng[] }) {
   const line = useRef<LeafletPolyline>(null);
   // Leaflet only reads className when the path is created, and re-creating it
-  // would move it to the end of the SVG (out of leg order), so the status class
-  // is switched on the existing path.
+  // would move it to the end of the SVG (out of leg order), so the status and
+  // mode classes are switched on the existing path.
   useEffect(() => {
     const element = line.current?.getElement();
     for (const s of legStatuses) element?.classList.toggle(`leg-${s}`, s === status);
-  }, [status]);
+    for (const m of legModes) element?.classList.toggle(`leg-${m}`, m === mode);
+  }, [status, mode]);
   return (
     <Polyline
       ref={line}
@@ -176,8 +190,25 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
         // point) are a straight line, dashed if routing failed.
         const positions =
           leg.route?.status === "routed" && !dragged ? [...leg.route.geometry] : [points[i], points[i + 1]];
-        return <LegLine key={`leg-${i}-${leg.mode}`} mode={leg.mode} status={status} positions={positions} />;
+        return <LegLine key={`leg-${i}`} mode={leg.mode} status={status} positions={positions} />;
       })}
+      {/* Put-ins and take-outs: rings around the points where the mode changes, above the legs, below the points. */}
+      <Pane name="trip-mode-changes" pane="overlayPane" style={{ zIndex: 400 }}>
+        {putInsAndTakeOuts(trip).map(({ kind, point }) => (
+          <CircleMarker
+            key={`${kind}-${point}`}
+            center={points[point]}
+            radius={11}
+            className={kind}
+            interactive={false}
+            pathOptions={{ ...modeChangeStyle[kind], weight: 3, fill: false }}
+          >
+            <Tooltip permanent direction="top" offset={[0, -10]} className={`${kind}-label`}>
+              {modeChangeLabel[kind]}
+            </Tooltip>
+          </CircleMarker>
+        ))}
+      </Pane>
       {/* Points get their own pane above the legs, so a leg drawn later never covers a point. */}
       <Pane name="trip-points" pane="overlayPane" style={{ zIndex: 401 }}>
         {points.map((point, i) => (

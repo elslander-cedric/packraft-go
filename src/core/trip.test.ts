@@ -52,6 +52,17 @@ describe("naming the trip", () => {
     expect(applyEdit(named, { type: "undo" }).points).toEqual([{ lat: 50, lng: 4 }]);
   });
 
+  it("undoing a leg mode switch made after naming keeps the name and brings back the hike leg", () => {
+    const trip = applyEdit(applyEdit(emptyTrip(), addPoint(50, 4)), addPoint(50.1, 4.1));
+    const switched = applyEdit(renameTrip(trip, "Lesse loop"), { type: "setLegMode", index: 0, mode: "paddle" });
+    expect(switched.name).toBe("Lesse loop");
+    expect(switched.legs.map((leg) => leg.mode)).toEqual(["paddle"]);
+
+    const undone = applyEdit(switched, { type: "undo" });
+    expect(undone.name).toBe("Lesse loop");
+    expect(undone.legs.map((leg) => leg.mode)).toEqual(["hike"]);
+  });
+
   it("is not an edit: undo keeps the name and goes back to the last route edit", () => {
     const trip = applyEdit(applyEdit(emptyTrip(), addPoint(50, 4)), addPoint(50.1, 4.1));
     const undone = applyEdit(renameTrip(trip, "Lesse loop"), { type: "undo" });

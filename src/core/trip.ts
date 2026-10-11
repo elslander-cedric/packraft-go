@@ -1,5 +1,5 @@
 // Trip planner core: pure TypeScript, no React, no network (spec #2, Seam 1).
-import { canUndo, deletePoint, movePoint, undoLastEdit, withUndoStep } from "./edits";
+import { canUndo, deletePoint, movePoint, setLegMode, undoLastEdit, withUndoStep } from "./edits";
 import type { LegRoute } from "./router";
 
 export { canUndo };
@@ -32,6 +32,7 @@ export type Edit =
   | { readonly type: "addPoint"; readonly at: LatLng }
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   | { readonly type: "deletePoint"; readonly index: number }
+  | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode }
   | { readonly type: "undo" };
 
 export function emptyTrip(): Trip {
@@ -64,6 +65,26 @@ export function applyEdit(trip: Trip, edit: Edit): Trip {
 function applyStep(trip: Trip, edit: Exclude<Edit, { type: "undo" }>): Trip {
   if (edit.type === "movePoint") return movePoint(trip, edit.index, edit.to);
   if (edit.type === "deletePoint") return deletePoint(trip, edit.index);
+  if (edit.type === "setLegMode") return setLegMode(trip, edit.index, edit.mode);
   const legs: Leg[] = trip.points.length > 0 ? [...trip.legs, { mode: "hike" }] : [];
   return { ...trip, points: [...trip.points, edit.at], legs };
+}
+
+/**
+ * Where the trip gets on or off the water: a put-in where a stretch of paddle
+ * legs begins (after a hike leg, or at the trip's start), a take-out where it
+ * ends (before a hike leg, or at the trip's end). `point` is the index of the
+ * point where the planner launches or gets off the water.
+ */
+export type ModeChange = { readonly kind: "put-in" | "take-out"; readonly point: number };
+
+export function putInsAndTakeOuts(trip: Trip): ModeChange[] {
+  // A stretch on the water starts or ends at every point whose two sides
+  // differ in being paddle; the trip's ends count as dry land.
+  const paddleBefore = (point: number) => trip.legs[point - 1]?.mode === "paddle";
+  const paddleAfter = (point: number) => trip.legs[point]?.mode === "paddle";
+  return trip.points.flatMap((_, point): ModeChange[] => {
+    if (paddleBefore(point) === paddleAfter(point)) return [];
+    return [{ kind: paddleAfter(point) ? "put-in" : "take-out", point }];
+  });
 }

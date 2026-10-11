@@ -1,7 +1,8 @@
-// Point edits for the trip planner core: move and delete (spec #2, ADR 0017).
+// Edits for the trip planner core: move and delete points, switch a leg's mode
+// (spec #2, ADR 0017).
 // Legs an edit changes are replaced by fresh, unrouted legs; legs it does not
 // change are carried over as they are, so their routed results are kept.
-import type { LatLng, Leg, Trip } from "./trip";
+import type { LatLng, Leg, LegMode, Trip } from "./trip";
 
 /**
  * A leg with the same mode but no `route` (routed, pending or failed): the
@@ -17,6 +18,17 @@ export function movePoint(trip: Trip, index: number, to: LatLng): Trip {
   // legs[index - 1] ends at the point and legs[index] starts at it.
   const legs = trip.legs.map((leg, i) => (i === index - 1 || i === index ? unrouted(leg) : leg));
   return { ...trip, points, legs };
+}
+
+/**
+ * Switches a leg between hike and paddle. The leg loses its route, so it is
+ * routed again with the new mode's profile; every other leg keeps its route.
+ */
+export function setLegMode(trip: Trip, index: number, mode: LegMode): Trip {
+  const leg = trip.legs[index];
+  if (!leg || leg.mode === mode) return trip;
+  const legs = trip.legs.map((other, i) => (i === index ? unrouted({ ...other, mode }) : other));
+  return { ...trip, legs };
 }
 
 /**

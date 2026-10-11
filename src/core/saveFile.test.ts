@@ -1,6 +1,7 @@
 // Save format (#9): trip ⇄ versioned JSON, including routed results.
 import { describe, expect, it } from "vitest";
 import { parseTrip, restoreTrip, serialiseTrip } from "./saveFile";
+import { summarise } from "./summarise";
 import { applyEdit, canUndo, emptyTrip, type Trip } from "./trip";
 
 const routedTrip: Trip = {
@@ -72,6 +73,48 @@ describe("save format round-trip", () => {
       legs: [{ mode: "hike", route: { status: "routed", geometry } }],
     };
     expect(parseTrip(serialiseTrip(trip))).toEqual({ ok: true, trip });
+  });
+});
+
+describe("paddle legs", () => {
+  // A hike leg to the put-in, then a routed paddle leg from 110 m down to 103 m.
+  const paddleTrip: Trip = {
+    name: "Lesse",
+    points: [
+      { lat: 50.2, lng: 5.0 },
+      { lat: 50.21, lng: 5.01 },
+      { lat: 50.23, lng: 5.04 },
+    ],
+    legs: [
+      routedTrip.legs[0],
+      {
+        mode: "paddle",
+        route: {
+          status: "routed",
+          geometry: [
+            { lat: 50.21, lng: 5.01, elevation: 110 },
+            { lat: 50.22, lng: 5.02, elevation: 111 },
+            { lat: 50.23, lng: 5.04, elevation: 103 },
+          ],
+          climbM: 1,
+        },
+      },
+    ],
+  };
+
+  it("restore with their mode and river route, so the drop is the same and nothing needs routing", () => {
+    const restored = restoreTrip(serialiseTrip(paddleTrip));
+    expect(restored).toEqual(paddleTrip);
+    expect(restored.legs.map((leg) => leg.mode)).toEqual(["hike", "paddle"]);
+    expect(restored.legs.every((leg) => leg.route?.status === "routed")).toBe(true);
+    expect(summarise(restored).legs[1]).toMatchObject({ mode: "paddle", dropM: 7 });
+    expect(summarise(restored)).toEqual(summarise(paddleTrip));
+  });
+
+  it("a paddle leg switched by setLegMode saves its new mode", () => {
+    const switched = applyEdit(routedTrip, { type: "setLegMode", index: 0, mode: "paddle" });
+    const restored = restoreTrip(serialiseTrip(switched));
+    expect(restored.legs[0]).toEqual({ mode: "paddle" });
   });
 });
 

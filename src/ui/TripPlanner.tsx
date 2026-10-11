@@ -97,7 +97,12 @@ export default function TripPlanner({ router }: { router?: Router }) {
           onUndo={undo}
           onDeletePoint={deleteSelectedPoint}
         />
-        <LegsPanel summary={summarise(trip)} legs={trip.legs} onRetry={retry} />
+        <LegsPanel
+          summary={summarise(trip)}
+          legs={trip.legs}
+          onRetry={retry}
+          onSetMode={(index, mode) => edit({ type: "setLegMode", index, mode })}
+        />
       </div>
     </div>
   );
