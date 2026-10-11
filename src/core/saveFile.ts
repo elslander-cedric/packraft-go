@@ -34,7 +34,6 @@ export function serialiseTrip(trip: Trip): string {
 export const SAVE_FILE_EXTENSION = ".packraft.json";
 
 // Characters Windows, macOS or Linux do not allow in file names, and control characters.
-// eslint-disable-next-line no-control-regex
 const unsafeInFileName = /[/\\:*?"<>|\u0000-\u001f]+/g;
 
 /** The save file's name: the trip's name, or `untitledName` for a trip without one. */
