@@ -30,6 +30,19 @@ export function serialiseTrip(trip: Trip): string {
   });
 }
 
+/** Ending of a save file's name, so trip files are recognisable among downloads. */
+export const SAVE_FILE_EXTENSION = ".packraft.json";
+
+// Characters Windows, macOS or Linux do not allow in file names, and control characters.
+// eslint-disable-next-line no-control-regex
+const unsafeInFileName = /[/\\:*?"<>|\u0000-\u001f]+/g;
+
+/** The save file's name: the trip's name, or `untitledName` for a trip without one. */
+export function saveFileName(trip: Trip, untitledName: string): string {
+  const name = trip.name.replace(unsafeInFileName, "-").trim();
+  return `${name || untitledName}${SAVE_FILE_EXTENSION}`;
+}
+
 /**
  * Reads save-file text back into a trip. Anything that is not a valid save of
  * this version is rejected as a whole; fields the format does not know are
