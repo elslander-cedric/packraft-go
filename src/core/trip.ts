@@ -1,4 +1,5 @@
 // Trip planner core: pure TypeScript, no React, no network (spec #2, Seam 1).
+import { deletePoint, movePoint } from "./edits";
 
 export type LatLng = { readonly lat: number; readonly lng: number };
 
@@ -14,7 +15,10 @@ export type Trip = {
   readonly legs: readonly Leg[];
 };
 
-export type Edit = { readonly type: "addPoint"; readonly at: LatLng };
+export type Edit =
+  | { readonly type: "addPoint"; readonly at: LatLng }
+  | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
+  | { readonly type: "deletePoint"; readonly index: number };
 
 export function emptyTrip(): Trip {
   return { name: "", points: [], legs: [] };
@@ -22,6 +26,8 @@ export function emptyTrip(): Trip {
 
 /** Returns a new trip with the edit applied; the input trip is not changed. */
 export function applyEdit(trip: Trip, edit: Edit): Trip {
+  if (edit.type === "movePoint") return movePoint(trip, edit.index, edit.to);
+  if (edit.type === "deletePoint") return deletePoint(trip, edit.index);
   const legs: Leg[] = trip.points.length > 0 ? [...trip.legs, { mode: "hike" }] : [];
   return { ...trip, points: [...trip.points, edit.at], legs };
 }
