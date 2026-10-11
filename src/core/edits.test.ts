@@ -156,6 +156,17 @@ describe("edits clear routed results only for legs they change", () => {
     expect(routes(added)).toEqual([...routes(trip), undefined]);
   });
 
+  it("undo brings a leg that was pending back without a route, so it is routed again", () => {
+    // Its request may have been answered (or failed) in the meantime; pending would never resolve.
+    const failed: LegRoute = { status: "failed", failure: { kind: "no-route" } };
+    const mixed: Trip = {
+      ...trip,
+      legs: [{ mode: "hike", route: { status: "pending" } }, { mode: "hike", route: failed }, ...trip.legs.slice(2)],
+    };
+    const moved = applyEdit(mixed, { type: "movePoint", index: 4, to: A });
+    expect(routes(applyEdit(moved, { type: "undo" }))).toEqual([undefined, failed, routeFor(C, D), routeFor(D, ELSEWHERE)]);
+  });
+
   it("undo brings back the routes an edit dropped", () => {
     const moved = applyEdit(trip, { type: "movePoint", index: 2, to: ELSEWHERE });
     expect(routes(applyEdit(moved, { type: "undo" }))).toEqual(routes(trip));

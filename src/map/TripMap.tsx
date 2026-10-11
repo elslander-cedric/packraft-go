@@ -4,6 +4,7 @@ import type {
   CircleMarker as LeafletCircleMarker,
   LeafletEventHandlerFnMap,
   LeafletMouseEvent,
+  Polyline as LeafletPolyline,
 } from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import { CircleMarker, MapContainer, Pane, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
@@ -64,6 +65,30 @@ function PointMarker({ at, selected, eventHandlers, onRemoved }: PointMarkerProp
       bubblingMouseEvents={false}
       pathOptions={selected ? selectedPointStyle : pointStyle}
       eventHandlers={eventHandlers}
+    />
+  );
+}
+
+type LegStatus = "pending" | "routed" | "failed";
+const legStatuses: readonly LegStatus[] = ["pending", "routed", "failed"];
+
+/** One leg's line; failed legs are dashed. */
+function LegLine({ mode, status, positions }: { mode: LegMode; status: LegStatus; positions: LatLng[] }) {
+  const line = useRef<LeafletPolyline>(null);
+  // Leaflet only reads className when the path is created, and re-creating it
+  // would move it to the end of the SVG (out of leg order), so the status class
+  // is switched on the existing path.
+  useEffect(() => {
+    const element = line.current?.getElement();
+    for (const s of legStatuses) element?.classList.toggle(`leg-${s}`, s === status);
+  }, [status]);
+  return (
+    <Polyline
+      ref={line}
+      positions={positions}
+      // className must be a prop: react-leaflet applies pathOptions via setStyle, which ignores it.
+      className={`leg leg-${mode} leg-${status}`}
+      pathOptions={{ ...legStyle[mode], dashArray: status === "failed" ? "8 8" : undefined }}
     />
   );
 }
@@ -151,16 +176,7 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
         // point) are a straight line, dashed if routing failed.
         const positions =
           leg.route?.status === "routed" && !dragged ? [...leg.route.geometry] : [points[i], points[i + 1]];
-        return (
-          <Polyline
-            // The key includes the status: Leaflet only reads className when the path is created.
-            key={`leg-${i}-${leg.mode}-${status}`}
-            positions={positions}
-            // className must be a prop: react-leaflet applies pathOptions via setStyle, which ignores it.
-            className={`leg leg-${leg.mode} leg-${status}`}
-            pathOptions={{ ...legStyle[leg.mode], dashArray: status === "failed" ? "8 8" : undefined }}
-          />
-        );
+        return <LegLine key={`leg-${i}-${leg.mode}`} mode={leg.mode} status={status} positions={positions} />;
       })}
       {/* Points get their own pane above the legs, so a leg drawn later never covers a point. */}
       <Pane name="trip-points" pane="overlayPane" style={{ zIndex: 401 }}>

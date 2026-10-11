@@ -227,20 +227,32 @@ describe("auto routing with undo", () => {
     expect(state.trip.legs[0].route).toEqual(TRAIL_ROUTE);
   });
 
-  it("a leg undo brings back as pending gets the answer that arrived meanwhile, without a new request", async () => {
+  it("syncing an older trip with a pending leg after its failure is stored sends no new request", async () => {
+    // React can render the in-between pending trip after the answer arrived.
+    const router = createFakeRouter({ hike: { ok: false, failure: { kind: "unavailable" } } });
+    const { state, update } = plannerState(through(A, B));
+    const autoRouter = createAutoRouter(router, update);
+
+    await autoRouter.sync(state.trip);
+    await autoRouter.sync({ ...through(A, B), legs: [{ mode: "hike", route: { status: "pending" } }] });
+
+    expect(router.calls).toHaveLength(1);
+    expect(state.trip.legs[0].route?.status).toBe("failed");
+  });
+
+  it("a leg that was pending when undone comes back and gets the answer that arrived meanwhile, without a new request", async () => {
     const { router, calls } = manualRouter();
     const { state, update } = plannerState(through(A, B));
     const autoRouter = createAutoRouter(router, update);
     void autoRouter.sync(state.trip); // AB on the way
 
-    // Move B while AB is on the way: the undo step remembers AB as pending.
+    // Move B while AB is on the way.
     update((trip) => applyEdit(trip, { type: "movePoint", index: 1, to: C }));
     void autoRouter.sync(state.trip); // AC on the way
     calls[0].answer(TRAIL); // AB's answer: no leg AB in the trip any more
     await flush();
 
     update((trip) => applyEdit(trip, { type: "undo" }));
-    expect(state.trip.legs[0].route).toEqual({ status: "pending" });
     await autoRouter.sync(state.trip);
 
     expect(state.trip.legs[0].route).toEqual(TRAIL_ROUTE);
@@ -250,7 +262,7 @@ describe("auto routing with undo", () => {
     ]);
   });
 
-  it("a leg undo brings back as pending whose request failed is routed again, not left pending", async () => {
+  it("a leg that was pending when undone, whose request failed, is routed again rather than left pending", async () => {
     const { router, calls } = manualRouter();
     const { state, update } = plannerState(through(A, B));
     const autoRouter = createAutoRouter(router, update);
