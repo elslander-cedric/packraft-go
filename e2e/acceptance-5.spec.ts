@@ -114,7 +114,8 @@ test("a paddle leg that can't be snapped stays as a dashed straight paddle leg w
   await modeButton(page, 1, strings.legModePaddle).click();
 
   const row = rows(page).nth(1);
-  await expect(row).toContainText(strings.legRouteFailed["no-route"]);
+  // Updated in round 2: a paddle leg that fails says no river route was found.
+  await expect(row).toContainText(strings.legRouteFailedNoRiver);
   const line = legLines(page).nth(1);
   await expect(line).toHaveClass(/leg-failed/);
   await expect(line).toHaveClass(/leg-paddle/);
@@ -143,16 +144,20 @@ test("a portage (paddle, hike, paddle) shows a take-out then a put-in", async ({
   await modeButton(page, 0, strings.legModePaddle).click();
   await modeButton(page, 2, strings.legModePaddle).click();
 
+  // Updated in round 2: the trip starts and ends on the water, so besides the
+  // portage's take-out and put-in, its start is a put-in and its end a take-out.
   const takeOut = mapRegion(page).locator("path.take-out");
   const putIn = mapRegion(page).locator("path.put-in");
-  await expect(takeOut).toHaveCount(1);
-  await expect(putIn).toHaveCount(1);
+  await expect(takeOut).toHaveCount(2);
+  await expect(putIn).toHaveCount(2);
   const mapBox = (await mapRegion(page).boundingBox())!;
   const centreX = mapBox.x + mapBox.width / 2;
   const cx = async (l: typeof putIn) => {
     const b = (await l.boundingBox())!;
     return b.x + b.width / 2;
   };
-  expect(Math.abs((await cx(takeOut)) - (centreX - 50))).toBeLessThan(3);
-  expect(Math.abs((await cx(putIn)) - (centreX + 50))).toBeLessThan(3);
+  expect(Math.abs((await cx(putIn.nth(0))) - (centreX - 150))).toBeLessThan(3);
+  expect(Math.abs((await cx(takeOut.nth(0))) - (centreX - 50))).toBeLessThan(3);
+  expect(Math.abs((await cx(putIn.nth(1))) - (centreX + 50))).toBeLessThan(3);
+  expect(Math.abs((await cx(takeOut.nth(1))) - (centreX + 150))).toBeLessThan(3);
 });

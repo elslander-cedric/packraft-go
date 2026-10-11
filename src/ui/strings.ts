@@ -26,11 +26,15 @@ export const strings = {
   climbLabel: "Climb",
   descentLabel: "Descent",
   dropLabel: "Drop",
+  // A paddle leg that ends higher than it starts (ADR 0018); `elevation` is formatted, e.g. "3 m".
+  riseFigure: (elevation: string) => `↑ ${elevation} (upstream?)`,
   legRouting: "Snapping to the map…",
   legRouteFailed: {
     "no-route": "No path found between these points. Shown as a straight line; move a point or retry.",
     unavailable: "The routing service is unavailable. Shown as a straight line; retry later.",
   },
+  legRouteFailedNoRiver:
+    "No river route found between these points. Shown as a straight line; move a point onto the river or retry.",
   retryRouting: "Retry",
   navigationRulesNotice:
     "Check local navigation rules before paddling. packraft-go does not check whether a river may be paddled.",

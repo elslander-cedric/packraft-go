@@ -61,6 +61,7 @@ export default function LegsPanel({ summary, legs, onRetry, onSetMode }: LegsPan
                   <span>{`${strings.descentLabel} ${formatElevation(leg.descentM)}`}</span>
                 )}
                 {leg.dropM !== undefined && <span>{`${strings.dropLabel} ${formatElevation(leg.dropM)}`}</span>}
+                {leg.riseM !== undefined && <span>{strings.riseFigure(formatElevation(leg.riseM))}</span>}
                 {(!route || route.status === "pending") && (
                   <span role="status" className="leg-routing">
                     {strings.legRouting}
@@ -68,7 +69,11 @@ export default function LegsPanel({ summary, legs, onRetry, onSetMode }: LegsPan
                 )}
                 {route?.status === "failed" && (
                   <span className="leg-route-failed">
-                    <span role="alert">{strings.legRouteFailed[route.failure.kind]}</span>
+                    <span role="alert">
+                      {leg.mode === "paddle" && route.failure.kind === "no-route"
+                        ? strings.legRouteFailedNoRiver
+                        : strings.legRouteFailed[route.failure.kind]}
+                    </span>
                     <button type="button" onClick={() => onRetry(i)}>
                       {strings.retryRouting}
                     </button>

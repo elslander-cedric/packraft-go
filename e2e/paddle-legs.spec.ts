@@ -114,10 +114,66 @@ test("switching a paddle leg back to hike removes its put-in and take-out", asyn
   await clickMap(0, 0);
   await clickMap(150, 0);
   await modeButton(page, 1, strings.legModePaddle).click();
-  // A trip that ends on the water has a put-in but no take-out.
+  // A trip that ends on the water has a take-out at its end.
   await expect(mapRegion(page).locator("path.put-in")).toHaveCount(1);
-  await expect(mapRegion(page).locator("path.take-out")).toHaveCount(0);
+  await expect(mapRegion(page).locator("path.take-out")).toHaveCount(1);
 
   await modeButton(page, 1, strings.legModeHike).click();
   await expect(mapRegion(page).locator("path.put-in, path.take-out")).toHaveCount(0);
+});
+
+test("a trip that starts on the water has a put-in at its start", async ({ page }) => {
+  await serveOffline(page, { brouter: byProfile });
+  const clickMap = await openMap(page);
+
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  await modeButton(page, 0, strings.legModePaddle).click();
+
+  const putIn = mapRegion(page).locator("path.put-in");
+  const takeOut = mapRegion(page).locator("path.take-out");
+  await expect(putIn).toHaveCount(1);
+  await expect(takeOut).toHaveCount(1);
+  const mapBox = (await mapRegion(page).boundingBox())!;
+  const centreX = mapBox.x + mapBox.width / 2;
+  const middle = async (marker: typeof putIn) => {
+    const box = (await marker.boundingBox())!;
+    return box.x + box.width / 2;
+  };
+  expect(Math.abs((await middle(putIn)) - (centreX - 100))).toBeLessThan(3);
+  expect(Math.abs((await middle(takeOut)) - (centreX + 100))).toBeLessThan(3);
+});
+
+test("a paddle leg that ends more than 2 m higher shows a rise with an upstream hint instead of a drop", async ({
+  page,
+}) => {
+  // The recorded Lesse track, reversed: it now climbs 7.25 m, as if drawn upstream.
+  const upstream = JSON.parse(RIVER.body);
+  upstream.features[0].geometry.coordinates.reverse();
+  const UPSTREAM: BRouterReply = { status: 200, body: JSON.stringify(upstream) };
+  await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? UPSTREAM : TRAIL) });
+  const clickMap = await openMap(page);
+
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  await modeButton(page, 0, strings.legModePaddle).click();
+
+  const row = rows(page).nth(0);
+  await expect(row).toContainText(strings.riseFigure("7 m"));
+  await expect(row).not.toContainText(strings.dropLabel);
+});
+
+test("a paddle leg with no river between its points says no river route was found", async ({ page }) => {
+  const NO_ROUTE: BRouterReply = { status: 400, body: brouterFixture("hiking-no-route-400.txt") };
+  await serveOffline(page, { brouter: () => NO_ROUTE });
+  const clickMap = await openMap(page);
+
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  // A hike leg keeps the general message.
+  await expect(rows(page).nth(0)).toContainText(strings.legRouteFailed["no-route"]);
+
+  await modeButton(page, 0, strings.legModePaddle).click();
+  await expect(rows(page).nth(0)).toContainText(strings.legRouteFailedNoRiver);
+  await expect(rows(page).nth(0)).not.toContainText(strings.legRouteFailed["no-route"]);
 });
