@@ -1,6 +1,6 @@
 import type { LegRoute, RoutedPoint } from "./router";
 import { defaultSettings, type Settings } from "./settings";
-import type { LatLng, LegMode, Trip } from "./trip";
+import type { LatLng, Leg, LegMode, Trip } from "./trip";
 
 /**
  * Figures for one leg. Hike legs have climb and descent (metres); paddle legs
@@ -42,8 +42,30 @@ export type TimeStatus = "estimated" | "pending" | "no-climb-data";
 /** A paddle leg ending up to this many metres higher than it starts is elevation noise, not a rise. */
 export const RISE_NOISE_M = 2;
 
+/**
+ * Totals for one day (ADR 0008): the legs from the start or a camp to the next
+ * camp or the end. Climb and descent come from hike legs only; paddle legs
+ * have a drop instead (ADR 0018). A hike leg not routed yet adds no climb or
+ * descent; its day's time status says so.
+ */
+export type DaySummary = {
+  /** Index of the day's first leg. */
+  readonly firstLeg: number;
+  /** Index of the day's last leg. */
+  readonly lastLeg: number;
+  readonly hikeDistanceKm: number;
+  readonly paddleDistanceKm: number;
+  readonly climbM: number;
+  readonly descentM: number;
+  readonly timeH: number;
+  /** Follows the trip total's rule (ADR 0009), over the day's legs only. */
+  readonly timeStatus: TimeStatus;
+};
+
 export type TripSummary = {
   readonly legs: readonly LegSummary[];
+  /** The trip's days: one without camps, none without legs. Always derived, never stored. */
+  readonly days: readonly DaySummary[];
   readonly trip: { readonly distanceKm: number; readonly timeH: number; readonly timeStatus: TimeStatus };
 };
 
@@ -159,12 +181,52 @@ export function summarise(trip: Trip, settings: Settings = defaultSettings): Tri
   const sum = (figure: (leg: LegSummary) => number) => legs.reduce((total, leg) => total + figure(leg), 0);
   return {
     legs,
-    trip: { distanceKm: sum((leg) => leg.distanceKm), timeH: sum((leg) => leg.timeH), timeStatus: tripTimeStatus(trip, legs) },
+    days: dayRanges(trip).map(([first, last]) => summariseDay(trip, legs, first, last)),
+    trip: {
+      distanceKm: sum((leg) => leg.distanceKm),
+      timeH: sum((leg) => leg.timeH),
+      timeStatus: timeStatusOf(trip.legs, legs),
+    },
   };
 }
 
-/** The trip time waits while any leg is still being routed, and lacks climb data when any leg's time does. */
-function tripTimeStatus(trip: Trip, legs: readonly LegSummary[]): TimeStatus {
-  if (trip.legs.some((leg) => leg.route === undefined || leg.route.status === "pending")) return "pending";
-  return legs.some((leg) => leg.timeStatus === "no-climb-data") ? "no-climb-data" : "estimated";
+/**
+ * First and last leg index of each day. A camp at point i ends a day after
+ * leg i - 1; camps at the start or end point split nothing.
+ */
+function dayRanges(trip: Trip): [number, number][] {
+  if (trip.legs.length === 0) return [];
+  const ranges: [number, number][] = [];
+  let first = 0;
+  for (const camp of trip.camps ?? []) {
+    if (camp <= first || camp >= trip.legs.length) continue;
+    ranges.push([first, camp - 1]);
+    first = camp;
+  }
+  ranges.push([first, trip.legs.length - 1]);
+  return ranges;
+}
+
+function summariseDay(trip: Trip, legs: readonly LegSummary[], first: number, last: number): DaySummary {
+  const dayLegs = legs.slice(first, last + 1);
+  const sum = (figure: (leg: LegSummary) => number) => dayLegs.reduce((total, leg) => total + figure(leg), 0);
+  return {
+    firstLeg: first,
+    lastLeg: last,
+    hikeDistanceKm: sum((leg) => (leg.mode === "hike" ? leg.distanceKm : 0)),
+    paddleDistanceKm: sum((leg) => (leg.mode === "paddle" ? leg.distanceKm : 0)),
+    climbM: sum((leg) => leg.climbM ?? 0),
+    descentM: sum((leg) => leg.descentM ?? 0),
+    timeH: sum((leg) => leg.timeH),
+    timeStatus: timeStatusOf(trip.legs.slice(first, last + 1), dayLegs),
+  };
+}
+
+/**
+ * A total's time (the trip's or a day's) waits while any of its legs is still
+ * being routed, and lacks climb data when any of its legs' times does.
+ */
+function timeStatusOf(legs: readonly Leg[], summaries: readonly LegSummary[]): TimeStatus {
+  if (legs.some((leg) => leg.route === undefined || leg.route.status === "pending")) return "pending";
+  return summaries.some((leg) => leg.timeStatus === "no-climb-data") ? "no-climb-data" : "estimated";
 }
