@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDistance, formatElevation } from "./format";
+import { formatDistance, formatDuration, formatElevation } from "./format";
 
 describe("formatElevation", () => {
   it("shows whole metres", () => {
@@ -14,5 +14,23 @@ describe("formatDistance", () => {
     expect(formatDistance(12.345)).toBe("12.3 km");
     expect(formatDistance(0.26)).toBe("0.3 km");
     expect(formatDistance(0)).toBe("0.0 km");
+  });
+});
+
+describe("formatDuration", () => {
+  it("shows hours and minutes, rounded to the minute", () => {
+    expect(formatDuration(3)).toBe("3 h 00 min");
+    expect(formatDuration(1.0833)).toBe("1 h 05 min");
+    expect(formatDuration(12.5)).toBe("12 h 30 min");
+  });
+
+  it("shows only minutes under an hour", () => {
+    expect(formatDuration(0.75)).toBe("45 min");
+    expect(formatDuration(0)).toBe("0 min");
+  });
+
+  it("carries 60 rounded minutes into the hour", () => {
+    expect(formatDuration(2.9999)).toBe("3 h 00 min");
+    expect(formatDuration(0.9999)).toBe("1 h 00 min");
   });
 });
