@@ -2,14 +2,17 @@ import type { LegRoute, RoutedPoint } from "./router";
 import type { LatLng, LegMode, Trip } from "./trip";
 
 /**
- * Figures for one leg. Climb and descent (metres) come from the routed
- * geometry's elevations, so they are absent until the leg is routed.
+ * Figures for one leg. Hike legs have climb and descent (metres); paddle legs
+ * have a drop instead (ADR 0018). They come from the routed geometry's
+ * elevations, so they are absent until the leg is routed.
  */
 export type LegSummary = {
   readonly mode: LegMode;
   readonly distanceKm: number;
   readonly climbM?: number;
   readonly descentM?: number;
+  /** Put-in elevation minus take-out elevation; negative if the leg ends higher. */
+  readonly dropM?: number;
 };
 
 export type TripSummary = {
@@ -75,6 +78,12 @@ function legClimbAndDescent(route: Extract<LegRoute, { status: "routed" }>) {
   return { climbM: route.climbM ?? smoothed.climbM, descentM: smoothed.descentM };
 }
 
+/** Drop of a routed paddle leg: from its per-point elevations, not the router's climb (ADR 0018). */
+function legDrop(route: Extract<LegRoute, { status: "routed" }>) {
+  const { geometry } = route;
+  return { dropM: geometry[0].elevation - geometry[geometry.length - 1].elevation };
+}
+
 /**
  * Figures for each leg and the whole trip. Totals are always derived, never
  * stored (ADR 0008). Legs are measured as straight lines until they are routed.
@@ -82,7 +91,8 @@ function legClimbAndDescent(route: Extract<LegRoute, { status: "routed" }>) {
 export function summarise(trip: Trip): TripSummary {
   const legs = trip.legs.map((leg, i): LegSummary => {
     if (leg.route?.status === "routed") {
-      return { mode: leg.mode, distanceKm: pathKm(leg.route.geometry), ...legClimbAndDescent(leg.route) };
+      const elevation = leg.mode === "paddle" ? legDrop(leg.route) : legClimbAndDescent(leg.route);
+      return { mode: leg.mode, distanceKm: pathKm(leg.route.geometry), ...elevation };
     }
     return { mode: leg.mode, distanceKm: distanceKm(trip.points[i], trip.points[i + 1]) };
   });

@@ -120,3 +120,72 @@ describe("summarise routed hike legs", () => {
     expect(leg.descentM).toBeUndefined();
   });
 });
+
+describe("summarise paddle legs", () => {
+  const paddle = (geometry: RoutedPoint[], climbM?: number): Trip => ({
+    ...tripThrough(geometry[0], geometry[geometry.length - 1]),
+    legs: [{ mode: "paddle", route: { status: "routed", geometry, climbM } }],
+  });
+
+  it("shows the drop (put-in elevation minus take-out elevation) instead of climb and descent", () => {
+    const leg = summarise(
+      paddle(
+        [
+          { lat: 0, lng: 0, elevation: 99 },
+          { lat: 0, lng: 0.01, elevation: 104 },
+          { lat: 0, lng: 0.02, elevation: 92 },
+        ],
+        3,
+      ),
+    ).legs[0];
+    expect(leg.mode).toBe("paddle");
+    expect(leg.dropM).toBe(7);
+    expect(leg.climbM).toBeUndefined();
+    expect(leg.descentM).toBeUndefined();
+  });
+
+  it("a paddle leg that ends higher than it starts has a negative drop", () => {
+    const leg = summarise(
+      paddle([
+        { lat: 0, lng: 0, elevation: 90 },
+        { lat: 0, lng: 0.01, elevation: 92 },
+      ]),
+    ).legs[0];
+    expect(leg.dropM).toBe(-2);
+  });
+
+  it("a hike leg has no drop", () => {
+    const geometry = [
+      { lat: 0, lng: 0, elevation: 100 },
+      { lat: 0, lng: 0.01, elevation: 90 },
+    ];
+    const trip: Trip = {
+      ...tripThrough(geometry[0], geometry[1]),
+      legs: [{ mode: "hike", route: { status: "routed", geometry } }],
+    };
+    expect(summarise(trip).legs[0].dropM).toBeUndefined();
+  });
+
+  it("a paddle leg that is not routed yet has no drop, only its straight-line distance", () => {
+    const trip: Trip = { ...tripThrough({ lat: 0, lng: 0 }, { lat: 0, lng: 1 }), legs: [{ mode: "paddle" }] };
+    const leg = summarise(trip).legs[0];
+    expect(leg.dropM).toBeUndefined();
+    expect(leg.distanceKm).toBeCloseTo(ONE_DEGREE_KM, 1);
+  });
+
+  it("gives the recorded river track (Lesse, Walzin to Anseremme) its length and drop", async () => {
+    const body = readFileSync(path.join(__dirname, "../routing/fixtures/river-success.geojson"), "utf8");
+    const result = await createBRouterRouter({ fetch: async () => new Response(body) }).route("paddle", []);
+    if (!result.ok) throw new Error("fixture should route");
+    const trip: Trip = {
+      ...tripThrough(result.geometry[0], result.geometry[result.geometry.length - 1]),
+      legs: [{ mode: "paddle", route: { status: "routed", geometry: result.geometry, climbM: result.climbM } }],
+    };
+
+    const leg = summarise(trip).legs[0];
+    // BRouter reports this track as 5892 m long; it runs from 99.25 m down to 92 m.
+    expect(Math.abs(leg.distanceKm - 5.892)).toBeLessThan(0.03);
+    expect(leg.dropM).toBeCloseTo(7.25, 6);
+    expect(leg.climbM).toBeUndefined();
+  });
+});
