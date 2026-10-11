@@ -47,12 +47,12 @@ test("a hike leg shows pending, then follows the trail with its distance, climb 
   const d = (await legLines(page).getAttribute("d")) ?? "";
   expect((d.match(/L/g) ?? []).length).toBeGreaterThan(1);
 
-  // Figures come from the routed track: 3.2 km, 118 m up, 78 m down.
+  // Figures come from the routed track: 3.2 km, BRouter's smoothed climb of 100 m, 59 m smoothed descent.
   const row = rows(page).nth(0);
   await expect(row.getByRole("status")).toHaveCount(0);
   await expect(row).toContainText("3.2 km");
-  await expect(row).toContainText(`${strings.climbLabel} 118 m`);
-  await expect(row).toContainText(`${strings.descentLabel} 78 m`);
+  await expect(row).toContainText(`${strings.climbLabel} 100 m`);
+  await expect(row).toContainText(`${strings.descentLabel} 59 m`);
 
   // The hiking profile was asked for, once, through the two clicked points.
   expect(network.brouter).toHaveLength(1);
@@ -98,7 +98,7 @@ test("a leg that fails to snap stays as a dashed straight line with a message, a
 
   await expect(legLines(page)).toHaveClass(/leg-routed/);
   await expect(row).not.toContainText(strings.legRouteFailed["no-route"]);
-  await expect(row).toContainText(`${strings.climbLabel} 118 m`);
+  await expect(row).toContainText(`${strings.climbLabel} 100 m`);
   expect(network.brouter).toHaveLength(2);
   expect(network.blocked).toEqual([]);
 });

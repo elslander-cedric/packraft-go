@@ -31,6 +31,21 @@ describe("BRouter adapter: hike legs", () => {
     expect(result.geometry[158]).toEqual({ lat: 50.343913, lng: 5.470053, elevation: 201 });
   });
 
+  it("passes on BRouter's smoothed climb ('filtered ascend') for the track", async () => {
+    const { fetch } = replay(fixture("hiking-success.geojson"));
+    const result = await createBRouterRouter({ fetch }).route("hike", [START, END]);
+    expect(result.ok && result.climbM).toBe(100);
+  });
+
+  it("leaves the climb out when BRouter does not report one", async () => {
+    const track = JSON.parse(fixture("hiking-success.geojson"));
+    delete track.features[0].properties["filtered ascend"];
+    const { fetch } = replay(JSON.stringify(track));
+    const result = await createBRouterRouter({ fetch }).route("hike", [START, END]);
+    expect(result.ok).toBe(true);
+    expect(result.ok && "climbM" in result).toBe(false);
+  });
+
   it("asks the public server for the hiking profile through the leg's points, lng before lat", async () => {
     const { fetch, urls } = replay(fixture("hiking-success.geojson"));
     await createBRouterRouter({ fetch }).route("hike", [START, END]);
@@ -54,6 +69,7 @@ describe("BRouter adapter: hike legs", () => {
         { lat: 51.911879, lng: 2.437514, elevation: 0 },
         { lat: 51.913537, lng: 2.459185, elevation: 0 },
       ],
+      climbM: 0,
     });
   });
 

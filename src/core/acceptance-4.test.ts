@@ -205,7 +205,9 @@ describe("#4 AC4: failure keeps the leg and can be retried", () => {
 });
 
 describe("#4 AC5: hike figures come from the routed result", () => {
-  it("distance follows the routed geometry; climb and descent sum the per-point elevation changes", () => {
+  // Updated in round 2 (Cedric's decision on PR #16): climb and descent are
+  // smoothed with a 5 m buffer instead of raw sums of per-point changes.
+  it("distance follows the routed geometry; climb and descent are smoothed per-point elevation changes", () => {
     const base = through(P1, P2);
     const geometry = [
       { lat: 50.0, lng: 5.0, elevation: 200 },
@@ -218,8 +220,9 @@ describe("#4 AC5: hike figures come from the routed result", () => {
     const leg = summarise(trip).legs[0];
     // 0.04 degrees of latitude is about 4.45 km, regardless of where P1/P2 are.
     expect(leg.distanceKm).toBeCloseTo(4.448, 2);
-    expect(leg.climbM).toBe(80);
-    expect(leg.descentM).toBe(20);
+    // Raw sums would be 80 up / 20 down; each sustained rise or fall loses its first 5 m.
+    expect(leg.climbM).toBe(70); // (50 - 5) + (30 - 5)
+    expect(leg.descentM).toBe(15); // 20 - 5
     expect(summarise(trip).trip.distanceKm).toBeCloseTo(leg.distanceKm, 6);
   });
 

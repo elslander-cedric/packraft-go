@@ -13,11 +13,12 @@ export type RouteFailure = { readonly kind: "no-route" | "unavailable" };
 /** Where a leg is in routing, stored on the leg (see `Leg.route`). */
 export type LegRoute =
   | { readonly status: "pending" }
-  | { readonly status: "routed"; readonly geometry: readonly RoutedPoint[] }
+  | { readonly status: "routed"; readonly geometry: readonly RoutedPoint[]; readonly climbM?: number }
   | { readonly status: "failed"; readonly failure: RouteFailure };
 
 export type RouteResult =
-  | { readonly ok: true; readonly geometry: readonly RoutedPoint[] }
+  /** `climbM`: the router's own smoothed climb in metres, when it reports one. */
+  | { readonly ok: true; readonly geometry: readonly RoutedPoint[]; readonly climbM?: number }
   | { readonly ok: false; readonly failure: RouteFailure };
 
 /**

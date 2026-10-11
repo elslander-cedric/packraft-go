@@ -14,3 +14,7 @@ Map: Leaflet. Base tiles: OpenTopoMap. Snapping + distance + elevation: public B
 ## Consequences
 - Attribution for OSM/OpenTopoMap/BRouter must be visible.
 - BRouter's river profile is a proof of concept and ignores weirs (see ADR 0016).
+
+## Amendment (2026-10-11, PR #16)
+- **Profile name:** hike legs use BRouter's `hiking-mountain` profile. The public server has no profile called `hiking` (requesting it returns HTTP 500), and `hiking-mountain` is its walking profile.
+- **Climb and descent:** hike-leg climb is BRouter's own smoothed figure (`filtered ascend`), not the raw sum of per-point elevation changes, which over-counts noise in the elevation data (118 m raw against 100 m filtered on a recorded 3.2 km track). BRouter does not report a descent, so descent (and climb, if a result lacks BRouter's figure) uses the same kind of smoothing: elevation changes accumulate in a 5 m buffer, and only the part of a sustained rise or fall beyond the first 5 m counts. A 5 m buffer reproduces BRouter's climb on recorded tracks (99.25 m against its 100 m).

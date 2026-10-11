@@ -62,8 +62,9 @@ test("#4: a snapped hike leg shows pending, then the trail with distance, climb 
 
   await expect(row.getByRole("status")).toHaveCount(0);
   await expect(row).toContainText(/3\.2 km/);
-  await expect(row).toContainText(`${strings.climbLabel} 118 m`);
-  await expect(row).toContainText(`${strings.descentLabel} 78 m`);
+  // Updated in round 2 (Cedric's decision on PR #16): smoothed climb/descent; raw sums were 118/78.
+  await expect(row).toContainText(`${strings.climbLabel} 100 m`);
+  await expect(row).toContainText(`${strings.descentLabel} 59 m`);
   await expect(panel(page).getByText(strings.tripTotalDistance)).toContainText("3.2 km");
   await expect(legLines(page)).not.toHaveAttribute("stroke-dasharray", /.+/);
 
@@ -115,7 +116,7 @@ test("#4: a failed leg stays dashed and straight with a message; retry while sti
   await expect(legLines(page)).toHaveClass(/routed/);
   await expect(row.getByRole("alert")).toHaveCount(0);
   await expect(row.getByRole("button", { name: strings.retryRouting })).toHaveCount(0);
-  await expect(row).toContainText(`${strings.climbLabel} 118 m`);
+  await expect(row).toContainText(`${strings.climbLabel} 100 m`);
   expect(net.brouter).toHaveLength(3);
   expect(net.blocked).toEqual([]);
 });

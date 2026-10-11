@@ -51,12 +51,20 @@ export function createBRouterRouter(options: BRouterOptions = {}): Router {
 
 type Position = [lng: number, lat: number, elevation?: number];
 
+type BRouterFeature = {
+  properties?: Record<string, unknown>;
+  geometry?: { coordinates?: unknown };
+};
+
 function toRouteResult(geojson: unknown): RouteResult {
-  const coordinates = (geojson as { features?: { geometry?: { coordinates?: unknown } }[] })
-    .features?.[0]?.geometry?.coordinates;
+  const feature = (geojson as { features?: BRouterFeature[] }).features?.[0];
+  const coordinates = feature?.geometry?.coordinates;
   if (!Array.isArray(coordinates)) return UNAVAILABLE;
   if (coordinates.length < 2) return NO_ROUTE;
-  return { ok: true, geometry: withElevations(coordinates as Position[]) };
+  const geometry = withElevations(coordinates as Position[]);
+  // BRouter's smoothed climb ("filtered ascend", whole metres, sent as a string).
+  const climbM = Number.parseFloat(String(feature?.properties?.["filtered ascend"]));
+  return Number.isFinite(climbM) ? { ok: true, geometry, climbM } : { ok: true, geometry };
 }
 
 /**

@@ -34,7 +34,9 @@ function setRoutes(trip: Trip, route: LegRoute, applies: (leg: Leg, i: number) =
 }
 
 const routeOf = (result: RouteResult): LegRoute =>
-  result.ok ? { status: "routed", geometry: result.geometry } : { status: "failed", failure: result.failure };
+  result.ok
+    ? { status: "routed", geometry: result.geometry, ...(result.climbM !== undefined && { climbM: result.climbM }) }
+    : { status: "failed", failure: result.failure };
 
 /** Clears a failed leg's route so that the next sync routes it again. Other legs are left alone. */
 export function retryLeg(trip: Trip, legIndex: number): Trip {
@@ -86,7 +88,10 @@ export function createAutoRouter(router: Router, update: TripUpdate): AutoRouter
 
   return {
     async sync(trip) {
-      const requests = trip.legs.flatMap((leg, i) => (awaitsRoute(leg) ? [requestOf(trip, i)] : []));
+      // Only legs without a route. A pending leg belongs to a request already
+      // sent: the trip passed in may be older than that request's answer, so
+      // asking again would duplicate it. (Undo never brings back pending legs.)
+      const requests = trip.legs.flatMap((leg, i) => (leg.route ? [] : [requestOf(trip, i)]));
       const waiting: Promise<void>[] = [];
       for (const request of requests) {
         const key = keyOf(request);
