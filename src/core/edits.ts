@@ -3,7 +3,10 @@
 // change are carried over as they are, so their routed results are kept.
 import type { LatLng, Leg, Trip } from "./trip";
 
-/** A leg with the same mode but no routed result: it needs routing again. */
+/**
+ * A leg with the same mode but no `route` (routed, pending or failed): the
+ * auto router routes it again. Every edit that changes a leg goes through here.
+ */
 function unrouted(leg: Leg): Leg {
   return { mode: leg.mode };
 }
@@ -21,11 +24,17 @@ export function movePoint(trip: Trip, index: number, to: LatLng): Trip {
  * states (they share unchanged points and legs, so they are cheap), which makes
  * every edit reversible, including the routed results it cleared.
  * An edit that changed nothing is not recorded.
+ * A pending leg is recorded without a route: by the time undo brings it back
+ * its request may have been answered, so it must be routed again rather than
+ * wait for an answer that already came.
  */
 export function withUndoStep(before: Trip, after: Trip): Trip {
   if (after === before) return before;
   const { undoSteps = [], ...state } = before;
-  return { ...after, undoSteps: [...undoSteps, state] };
+  const recorded = state.legs.some((leg) => leg.route?.status === "pending")
+    ? { ...state, legs: state.legs.map((leg) => (leg.route?.status === "pending" ? unrouted(leg) : leg)) }
+    : state;
+  return { ...after, undoSteps: [...undoSteps, recorded] };
 }
 
 export function canUndo(trip: Trip): boolean {

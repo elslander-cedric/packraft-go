@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Router } from "@/core/router";
+import { createAutoRouter, retryLeg } from "@/core/routing";
 import { summarise } from "@/core/summarise";
 import { applyEdit, canUndo, emptyTrip, type Edit, type LatLng } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
+import { createBRouterRouter } from "@/routing/brouter";
 import EditToolbar from "./EditToolbar";
 import LegsPanel from "./LegsPanel";
 
@@ -16,9 +19,19 @@ const typingInField = (event: KeyboardEvent) =>
  * Holds the current trip and wires the map, toolbar and panel to the trip
  * planner core: they send edits, the core returns the new trip and its figures.
  * The selected point is UI state only; it is cleared by every edit.
+ * Legs without a route are routed through `router` whenever the trip changes.
  */
-export default function TripPlanner() {
+export default function TripPlanner({ router }: { router?: Router }) {
   const [trip, setTrip] = useState(emptyTrip);
+  const [autoRouter] = useState(() => createAutoRouter(router ?? createBRouterRouter(), setTrip));
+
+  useEffect(() => {
+    void autoRouter.sync(trip);
+  }, [autoRouter, trip]);
+
+  const retry = (legIndex: number) => {
+    setTrip((current) => retryLeg(current, legIndex));
+  };
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null);
 
   const edit = (change: Edit) => {
@@ -63,7 +76,7 @@ export default function TripPlanner() {
           onUndo={undo}
           onDeletePoint={deleteSelectedPoint}
         />
-        <LegsPanel summary={summarise(trip)} />
+        <LegsPanel summary={summarise(trip)} legs={trip.legs} onRetry={retry} />
       </div>
     </div>
   );

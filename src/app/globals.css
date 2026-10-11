@@ -71,8 +71,38 @@ body {
 .leg-row {
   display: grid;
   grid-template-columns: 4rem 1fr auto;
+  column-gap: 0.5rem;
   padding: 0.25rem 0;
   border-bottom: 1px solid #eee;
+}
+
+.leg-routing,
+.leg-route-failed {
+  grid-column: 1 / -1;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.leg-route-failed {
+  color: #a32020;
+}
+
+.leg-route-failed button {
+  margin-left: 0.5rem;
+}
+
+/* Leaflet paths: a pending leg pulses until its route arrives. */
+path.leg-pending {
+  animation: leg-pending-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes leg-pending-pulse {
+  from {
+    stroke-opacity: 0.9;
+  }
+  to {
+    stroke-opacity: 0.3;
+  }
 }
 
 .legs-panel-empty {

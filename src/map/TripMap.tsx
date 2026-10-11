@@ -4,6 +4,7 @@ import type {
   CircleMarker as LeafletCircleMarker,
   LeafletEventHandlerFnMap,
   LeafletMouseEvent,
+  Polyline as LeafletPolyline,
 } from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import { CircleMarker, MapContainer, Pane, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
@@ -64,6 +65,30 @@ function PointMarker({ at, selected, eventHandlers, onRemoved }: PointMarkerProp
       bubblingMouseEvents={false}
       pathOptions={selected ? selectedPointStyle : pointStyle}
       eventHandlers={eventHandlers}
+    />
+  );
+}
+
+type LegStatus = "pending" | "routed" | "failed";
+const legStatuses: readonly LegStatus[] = ["pending", "routed", "failed"];
+
+/** One leg's line; failed legs are dashed. */
+function LegLine({ mode, status, positions }: { mode: LegMode; status: LegStatus; positions: LatLng[] }) {
+  const line = useRef<LeafletPolyline>(null);
+  // Leaflet only reads className when the path is created, and re-creating it
+  // would move it to the end of the SVG (out of leg order), so the status class
+  // is switched on the existing path.
+  useEffect(() => {
+    const element = line.current?.getElement();
+    for (const s of legStatuses) element?.classList.toggle(`leg-${s}`, s === status);
+  }, [status]);
+  return (
+    <Polyline
+      ref={line}
+      positions={positions}
+      // className must be a prop: react-leaflet applies pathOptions via setStyle, which ignores it.
+      className={`leg leg-${mode} leg-${status}`}
+      pathOptions={{ ...legStyle[mode], dashArray: status === "failed" ? "8 8" : undefined }}
     />
   );
 }
@@ -144,16 +169,15 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
 
   return (
     <>
-      {trip.legs.map((leg, i) => (
-        // Straight line until the leg is routed.
-        <Polyline
-          key={`leg-${i}-${leg.mode}`}
-          positions={[points[i], points[i + 1]]}
-          // className must be a prop: react-leaflet applies pathOptions via setStyle, which ignores it.
-          className={`leg leg-${leg.mode}`}
-          pathOptions={legStyle[leg.mode]}
-        />
-      ))}
+      {trip.legs.map((leg, i) => {
+        const status = leg.route?.status ?? "pending";
+        const dragged = preview !== null && (preview.index === i || preview.index === i + 1);
+        // A routed leg follows its geometry; others (and legs touching a dragged
+        // point) are a straight line, dashed if routing failed.
+        const positions =
+          leg.route?.status === "routed" && !dragged ? [...leg.route.geometry] : [points[i], points[i + 1]];
+        return <LegLine key={`leg-${i}-${leg.mode}`} mode={leg.mode} status={status} positions={positions} />;
+      })}
       {/* Points get their own pane above the legs, so a leg drawn later never covers a point. */}
       <Pane name="trip-points" pane="overlayPane" style={{ zIndex: 401 }}>
         {points.map((point, i) => (

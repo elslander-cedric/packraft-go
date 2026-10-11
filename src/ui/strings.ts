@@ -18,6 +18,15 @@ export const strings = {
   legModePaddle: "Paddle",
   tripTotalDistance: "Total distance",
   kilometreUnit: "km",
+  metreUnit: "m",
+  climbLabel: "Climb",
+  descentLabel: "Descent",
+  legRouting: "Snapping to the map…",
+  legRouteFailed: {
+    "no-route": "No path found between these points. Shown as a straight line; move a point or retry.",
+    unavailable: "The routing service is unavailable. Shown as a straight line; retry later.",
+  },
+  retryRouting: "Retry",
   navigationRulesNotice:
     "Check local navigation rules before paddling. packraft-go does not check whether a river may be paddled.",
   // Shown in the map's attribution control. Contains HTML links.
