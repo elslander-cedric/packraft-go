@@ -175,8 +175,48 @@ path.leg-pending {
   color: #666;
 }
 
-.trip-total {
+.trip-total,
+.trip-time {
   font-weight: 600;
+}
+
+.trip-total {
+  margin-bottom: 0;
+}
+
+.trip-time {
+  margin-top: 0.25rem;
+}
+
+.time-estimate-note,
+.setting-hint {
+  margin: 0;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.settings-panel {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid #ccc;
+}
+
+.settings-panel h2 {
+  font-size: 1rem;
+}
+
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.setting input {
+  width: 6rem;
+}
+
+.setting input[aria-invalid="true"] {
+  outline: 2px solid #c0392b;
 }
 
 .map-loading {

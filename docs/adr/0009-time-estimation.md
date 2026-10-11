@@ -13,3 +13,9 @@ Hike legs use Naismith's rule (5 km/h on flat + 1 h per 600 m ascent), scaled by
 
 ## Consequences
 - Estimates are explicitly labelled as estimates.
+
+## Amendment (2026-10-11, PR #20)
+Hike time needs climb, which only a routed hike leg has:
+- **While a hike leg is being snapped** (pending), its time shows "…". The trip total also shows "…" while any leg, hike or paddle, is pending.
+- **If a hike leg failed to route**, its time counts the straight-line distance only and is marked "(no climb data)", e.g. "24 min (no climb data)". The trip total includes it and carries the same marker.
+- **Paddle legs are unchanged:** their time does not depend on climb, so it is always distance ÷ paddling speed.

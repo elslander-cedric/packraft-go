@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { formatDistance, formatElevation } from "./format";
+import { formatDistance, formatDuration, formatElevation, formatTimeEstimate } from "./format";
+import { strings } from "./strings";
+
+describe("formatTimeEstimate", () => {
+  it("shows an estimated time as hours and minutes", () => {
+    expect(formatTimeEstimate(1.0833, "estimated")).toBe("1 h 05 min");
+  });
+
+  it("shows a pending time as an ellipsis", () => {
+    expect(formatTimeEstimate(2, "pending")).toBe(strings.timePending);
+    expect(strings.timePending).toBe("…");
+  });
+
+  it("marks a time without climb data", () => {
+    expect(formatTimeEstimate(0.75, "no-climb-data")).toBe("45 min (no climb data)");
+  });
+});
 
 describe("formatElevation", () => {
   it("shows whole metres", () => {
@@ -14,5 +30,23 @@ describe("formatDistance", () => {
     expect(formatDistance(12.345)).toBe("12.3 km");
     expect(formatDistance(0.26)).toBe("0.3 km");
     expect(formatDistance(0)).toBe("0.0 km");
+  });
+});
+
+describe("formatDuration", () => {
+  it("shows hours and minutes, rounded to the minute", () => {
+    expect(formatDuration(3)).toBe("3 h 00 min");
+    expect(formatDuration(1.0833)).toBe("1 h 05 min");
+    expect(formatDuration(12.5)).toBe("12 h 30 min");
+  });
+
+  it("shows only minutes under an hour", () => {
+    expect(formatDuration(0.75)).toBe("45 min");
+    expect(formatDuration(0)).toBe("0 min");
+  });
+
+  it("carries 60 rounded minutes into the hour", () => {
+    expect(formatDuration(2.9999)).toBe("3 h 00 min");
+    expect(formatDuration(0.9999)).toBe("1 h 00 min");
   });
 });

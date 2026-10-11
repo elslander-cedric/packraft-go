@@ -1,4 +1,5 @@
 import type { LegRoute, RoutedPoint } from "./router";
+import { defaultSettings, type Settings } from "./settings";
 import type { LatLng, LegMode, Trip } from "./trip";
 
 /**
@@ -23,14 +24,27 @@ export type LegSummary = {
    * upstream. Replaces the drop.
    */
   readonly riseM?: number;
+  /** Estimated time in hours (ADR 0009). An estimate, and shown as one; see `timeStatus`. */
+  readonly timeH: number;
+  readonly timeStatus: TimeStatus;
 };
+
+/**
+ * How far a time can be trusted (ADR 0009, amended):
+ * - `estimated`: the time rule had everything it needs.
+ * - `pending`: a hike leg (or, for the trip, any leg) is still being routed;
+ *   `timeH` is only a placeholder and is not shown.
+ * - `no-climb-data`: a hike leg failed to route, so its time counts distance
+ *   only; a trip including such a leg says so too.
+ */
+export type TimeStatus = "estimated" | "pending" | "no-climb-data";
 
 /** A paddle leg ending up to this many metres higher than it starts is elevation noise, not a rise. */
 export const RISE_NOISE_M = 2;
 
 export type TripSummary = {
   readonly legs: readonly LegSummary[];
-  readonly trip: { readonly distanceKm: number };
+  readonly trip: { readonly distanceKm: number; readonly timeH: number; readonly timeStatus: TimeStatus };
 };
 
 const EARTH_MEAN_RADIUS_KM = 6371.0088;
@@ -103,18 +117,54 @@ function legDrop(route: Extract<LegRoute, { status: "routed" }>): { dropM: numbe
   return Math.round(-dropM) > RISE_NOISE_M ? { riseM: -dropM } : { dropM: 0 };
 }
 
+/** Naismith's rule: 5 km/h on the flat plus 1 h per 600 m of climb. */
+const NAISMITH_FLAT_KMH = 5;
+const NAISMITH_CLIMB_M_PER_H = 600;
+
+/** Hike time in hours (ADR 0009): Naismith's rule scaled by the planner's pace factor. */
+function hikeTimeH(km: number, climbM: number, settings: Settings): number {
+  return (km / NAISMITH_FLAT_KMH + climbM / NAISMITH_CLIMB_M_PER_H) * settings.paceFactor;
+}
+
+/** Paddle time in hours (ADR 0009): distance at the planner's paddling speed. */
+function paddleTimeH(km: number, settings: Settings): number {
+  return km / settings.paddleSpeedKmh;
+}
+
 /**
- * Figures for each leg and the whole trip. Totals are always derived, never
+ * Figures for each leg and the whole trip, with times from the planner's settings. Totals are always derived, never
  * stored (ADR 0008). Legs are measured as straight lines until they are routed.
  */
-export function summarise(trip: Trip): TripSummary {
+export function summarise(trip: Trip, settings: Settings = defaultSettings): TripSummary {
   const legs = trip.legs.map((leg, i): LegSummary => {
     if (leg.route?.status === "routed") {
-      const elevation = leg.mode === "paddle" ? legDrop(leg.route) : legClimbAndDescent(leg.route);
-      return { mode: leg.mode, distanceKm: pathKm(leg.route.geometry), ...elevation };
+      const km = pathKm(leg.route.geometry);
+      if (leg.mode === "paddle") {
+        const timeH = paddleTimeH(km, settings);
+        return { mode: leg.mode, distanceKm: km, ...legDrop(leg.route), timeH, timeStatus: "estimated" };
+      }
+      const elevation = legClimbAndDescent(leg.route);
+      const timeH = hikeTimeH(km, elevation.climbM, settings);
+      return { mode: leg.mode, distanceKm: km, ...elevation, timeH, timeStatus: "estimated" };
     }
-    return { mode: leg.mode, distanceKm: distanceKm(trip.points[i], trip.points[i + 1]) };
+    // Not routed: a straight line. Paddle time does not need climb; hike time
+    // waits for routing, or does without climb when routing failed.
+    const km = distanceKm(trip.points[i], trip.points[i + 1]);
+    if (leg.mode === "paddle") {
+      return { mode: leg.mode, distanceKm: km, timeH: paddleTimeH(km, settings), timeStatus: "estimated" };
+    }
+    const timeStatus: TimeStatus = leg.route?.status === "failed" ? "no-climb-data" : "pending";
+    return { mode: leg.mode, distanceKm: km, timeH: hikeTimeH(km, 0, settings), timeStatus };
   });
-  const total = legs.reduce((sum, leg) => sum + leg.distanceKm, 0);
-  return { legs, trip: { distanceKm: total } };
+  const sum = (figure: (leg: LegSummary) => number) => legs.reduce((total, leg) => total + figure(leg), 0);
+  return {
+    legs,
+    trip: { distanceKm: sum((leg) => leg.distanceKm), timeH: sum((leg) => leg.timeH), timeStatus: tripTimeStatus(trip, legs) },
+  };
+}
+
+/** The trip time waits while any leg is still being routed, and lacks climb data when any leg's time does. */
+function tripTimeStatus(trip: Trip, legs: readonly LegSummary[]): TimeStatus {
+  if (trip.legs.some((leg) => leg.route === undefined || leg.route.status === "pending")) return "pending";
+  return legs.some((leg) => leg.timeStatus === "no-climb-data") ? "no-climb-data" : "estimated";
 }
