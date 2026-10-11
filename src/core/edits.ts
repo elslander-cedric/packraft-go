@@ -53,11 +53,14 @@ export function canUndo(trip: Trip): boolean {
   return (trip.undoSteps?.length ?? 0) > 0;
 }
 
-/** Goes back to the state before the last edit; with nothing to undo, returns the trip. */
+/**
+ * Goes back to the state before the last edit; with nothing to undo, returns the trip.
+ * The trip's name is kept: naming is not an edit (see `renameTrip`).
+ */
 export function undoLastEdit(trip: Trip): Trip {
   const steps = trip.undoSteps ?? [];
   if (steps.length === 0) return trip;
-  return { ...steps[steps.length - 1], undoSteps: steps.slice(0, -1) };
+  return { ...steps[steps.length - 1], name: trip.name, undoSteps: steps.slice(0, -1) };
 }
 
 /**
