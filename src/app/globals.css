@@ -38,6 +38,31 @@ body {
   font-size: 0.9rem;
 }
 
+.planner-loading {
+  flex: 1;
+  padding: 1rem;
+}
+
+.trip-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 0;
+}
+
+.trip-name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.trip-name span {
+  font-size: 0.8rem;
+  color: #666;
+}
+
 .edit-toolbar {
   display: flex;
   flex-wrap: wrap;

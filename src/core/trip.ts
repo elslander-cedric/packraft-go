@@ -39,6 +39,23 @@ export function emptyTrip(): Trip {
   return { name: "", points: [], legs: [] };
 }
 
+/**
+ * A new trip replaces the current one and cannot be undone, so the planner is
+ * asked first when that would lose any points. A trip without points (even a
+ * named one) is replaced without asking.
+ */
+export function newTripNeedsConfirmation(trip: Trip): boolean {
+  return trip.points.length > 0;
+}
+
+/**
+ * Names the trip. Naming is not an edit of the route (ADR 0017), so it is not
+ * undone: undo keeps the current name.
+ */
+export function renameTrip(trip: Trip, name: string): Trip {
+  return trip.name === name ? trip : { ...trip, name };
+}
+
 /** Returns a new trip with the edit applied; the input trip is not changed. */
 export function applyEdit(trip: Trip, edit: Edit): Trip {
   if (edit.type === "undo") return undoLastEdit(trip);
