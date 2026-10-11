@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import type { Router } from "@/core/router";
 import { createAutoRouter, retryLeg } from "@/core/routing";
+import { defaultSettings, withSetting, type Settings } from "@/core/settings";
 import { summarise } from "@/core/summarise";
 import { applyEdit, canUndo, emptyTrip, type Edit, type LatLng } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import { createBRouterRouter } from "@/routing/brouter";
 import EditToolbar from "./EditToolbar";
 import LegsPanel from "./LegsPanel";
+import SettingsPanel from "./SettingsPanel";
+import { useSettings } from "./useSettings";
 
 /** True when a key press is meant for a text field, not for the planner. */
 const typingInField = (event: KeyboardEvent) =>
@@ -28,6 +31,15 @@ export default function TripPlanner({ router }: { router?: Router }) {
   useEffect(() => {
     void autoRouter.sync(trip);
   }, [autoRouter, trip]);
+
+  // Settings live in browser storage, so they are null during server rendering
+  // and hydration. Until they are read, figures use the defaults.
+  const [settings, setSettings] = useSettings();
+  const changeSetting = (name: keyof Settings, value: number) => {
+    if (settings === null) return;
+    const changed = withSetting(settings, name, value);
+    if (changed !== settings) setSettings(changed);
+  };
 
   const retry = (legIndex: number) => {
     setTrip((current) => retryLeg(current, legIndex));
@@ -77,11 +89,12 @@ export default function TripPlanner({ router }: { router?: Router }) {
           onDeletePoint={deleteSelectedPoint}
         />
         <LegsPanel
-          summary={summarise(trip)}
+          summary={summarise(trip, settings ?? defaultSettings)}
           legs={trip.legs}
           onRetry={retry}
           onSetMode={(index, mode) => edit({ type: "setLegMode", index, mode })}
         />
+        {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
       </div>
     </div>
   );
