@@ -21,12 +21,18 @@ const savedLeg = (leg: Leg): Leg => {
   return route ? { mode: leg.mode, route } : { mode: leg.mode };
 };
 
-/** The trip as save-file text. Undo history is not saved. */
+/**
+ * The trip as save-file text. Undo history is not saved.
+ * `camps` (point indices, #8) was added to version 1 as an optional field: it
+ * is only written when the trip has camps, and a save without it is a trip
+ * without camps, so saves from before camps still load.
+ */
 export function serialiseTrip(trip: Trip): string {
+  const camps = trip.camps?.length ? { camps: trip.camps } : {};
   return JSON.stringify({
     format: SAVE_FORMAT,
     version: SAVE_VERSION,
-    trip: { name: trip.name, points: trip.points, legs: trip.legs.map(savedLeg) },
+    trip: { name: trip.name, points: trip.points, legs: trip.legs.map(savedLeg), ...camps },
   });
 }
 
@@ -126,5 +132,17 @@ function readTrip(trip: Fields): Trip {
   const legs = list(trip.legs).map(readLeg);
   // legs[i] runs from points[i] to points[i + 1].
   if (legs.length !== Math.max(points.length - 1, 0)) throw invalid;
-  return { name: trip.name, points, legs };
+  const camps = readCamps(trip.camps, points.length);
+  return camps.length > 0 ? { name: trip.name, points, legs, camps } : { name: trip.name, points, legs };
+}
+
+/** Camps as distinct indices of existing points, in ascending order; none when the field is absent. */
+function readCamps(value: unknown, pointCount: number): number[] {
+  if (value === undefined) return [];
+  const camps = list(value).map((camp) => {
+    if (!Number.isInteger(camp)) throw invalid;
+    return number(camp, 0, pointCount - 1);
+  });
+  if (new Set(camps).size !== camps.length) throw invalid;
+  return camps.sort((a, b) => a - b);
 }
