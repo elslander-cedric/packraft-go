@@ -1,0 +1,400 @@
+// Acceptance tests for #8 (camps and per-day totals), written by the tester from
+// the issue, spec #2 (stories 20-24, 30) and ADRs 0008 / 0009 before reading the
+// diff. BRouter and tiles are answered from recorded fixtures (ADR 0019); every
+// BRouter request is counted so "marking a camp routes nothing" can be checked.
+import { expect, test, type Page } from "@playwright/test";
+import { strings } from "../src/ui/strings";
+import {
+  brouterFixture,
+  serveOffline,
+  type BRouterReply,
+} from "./support/offline";
+
+const KEY = "packraft-go.trip";
+const mapRegion = (page: Page) =>
+  page.getByRole("region", { name: strings.mapLabel });
+const legsPanel = (page: Page) =>
+  page.getByRole("complementary", { name: strings.legsPanelLabel });
+const legRows = (page: Page) => legsPanel(page).getByRole("listitem");
+const daysPanel = (page: Page) =>
+  page.getByRole("complementary", { name: strings.daysPanelLabel });
+const dayRows = (page: Page) => daysPanel(page).getByRole("listitem");
+const pointMarkers = (page: Page) =>
+  mapRegion(page).locator(".leaflet-overlay-pane path.point");
+const legLines = (page: Page) =>
+  mapRegion(page).locator(".leaflet-overlay-pane path.leg");
+const campMarkers = (page: Page) =>
+  mapRegion(page).getByRole("img", { name: strings.campMarker });
+const campButton = (page: Page) =>
+  page.getByRole("button", { name: strings.campButton, exact: true });
+const deleteButton = (page: Page) =>
+  page.getByRole("button", { name: strings.deletePointButton });
+const openBtn = (page: Page) =>
+  page.getByRole("button", { name: strings.openFileButton });
+
+const TRAIL: BRouterReply = {
+  status: 200,
+  body: brouterFixture("hiking-success.geojson"),
+};
+const RIVER: BRouterReply = {
+  status: 200,
+  body: brouterFixture("river-success.geojson"),
+};
+const NO_ROUTE: BRouterReply = {
+  status: 400,
+  body: brouterFixture("hiking-no-route-400.txt"),
+};
+const byProfile = (url: URL) =>
+  url.searchParams.get("profile") === "river" ? RIVER : TRAIL;
+
+function minutesIn(text: string | null): number {
+  const m = (text ?? "").match(/(?:(\d+) h )?(\d+) min/);
+  if (!m) throw new Error(`no time in "${text}"`);
+  return Number(m[1] ?? 0) * 60 + Number(m[2]);
+}
+function kmIn(text: string | null, label: string): number {
+  const m = (text ?? "").match(new RegExp(`${label} (\\d+\\.\\d) km`));
+  if (!m) throw new Error(`no ${label} distance in "${text}"`);
+  return Number(m[1]);
+}
+const legKm = async (page: Page, i: number) =>
+  Number(
+    ((await legRows(page).nth(i).textContent()) ?? "").match(
+      /(\d+\.\d) km/,
+    )![1],
+  );
+const legMin = async (page: Page, i: number) =>
+  minutesIn(await legRows(page).nth(i).locator(".leg-time").textContent());
+const dayTime = (page: Page, i: number) =>
+  dayRows(page).nth(i).locator(".day-time");
+
+type Click = (dx: number) => Promise<void>;
+
+async function openMap(page: Page): Promise<Click> {
+  await page.goto("/");
+  await expect(
+    mapRegion(page).locator("img.leaflet-tile-loaded").first(),
+  ).toBeVisible();
+  const box = (await mapRegion(page).boundingBox())!;
+  return (dx: number) =>
+    page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2);
+}
+
+const XS = [-240, -80, 80, 240];
+
+/** Hike, paddle, hike: four points, all legs routed. Clicking at XS[i] selects point i afterwards. */
+async function drawThreeLegs(page: Page) {
+  const click = await openMap(page);
+  for (const x of XS) await click(x);
+  await expect(legLines(page)).toHaveCount(3);
+  await legRows(page)
+    .nth(1)
+    .getByRole("group", { name: strings.legModeLabel(2) })
+    .getByRole("button", { name: strings.legModePaddle })
+    .click();
+  await expect(legRows(page).nth(1)).toContainText(strings.dropLabel);
+  await expect(legRows(page).nth(0)).toContainText(strings.climbLabel);
+  await expect(legRows(page).nth(2)).toContainText(strings.climbLabel);
+  return click;
+}
+
+async function toggleCampAt(page: Page, click: Click, point: number) {
+  await click(XS[point]);
+  await expect(campButton(page)).toBeEnabled();
+  await campButton(page).click();
+}
+
+test("AC1: the Camp action needs a selected point; marking shows a distinct marker and unmarking removes it", async ({
+  page,
+}) => {
+  await serveOffline(page, { brouter: byProfile });
+  const click = await openMap(page);
+  await expect(campButton(page)).toBeDisabled();
+  await click(XS[0]);
+  await click(XS[1]);
+  await expect(campButton(page)).toBeDisabled(); // nothing selected yet
+  await toggleCampAt(page, click, 1);
+  await expect(campMarkers(page)).toHaveCount(1);
+  await expect(campButton(page)).toHaveAttribute("aria-pressed", "true");
+  // Still the same number of points: the camp marker is not a new point.
+  await expect(pointMarkers(page)).toHaveCount(2);
+  await campButton(page).click();
+  await expect(campMarkers(page)).toHaveCount(0);
+  await expect(campButton(page)).toHaveAttribute("aria-pressed", "false");
+});
+
+test("AC2/AC3: camps on the start and end add no day; a middle camp splits the days and their totals match the legs", async ({
+  page,
+}) => {
+  const network = await serveOffline(page, { brouter: byProfile });
+  const click = await drawThreeLegs(page);
+  const routed = network.brouter.length;
+
+  await expect(dayRows(page)).toHaveCount(1);
+  await toggleCampAt(page, click, 0);
+  await toggleCampAt(page, click, 3);
+  await expect(campMarkers(page)).toHaveCount(2);
+  await expect(dayRows(page)).toHaveCount(1);
+
+  await toggleCampAt(page, click, 2);
+  await expect(campMarkers(page)).toHaveCount(3);
+  await expect(dayRows(page)).toHaveCount(2);
+
+  const [h0, p1, h2] = [
+    await legKm(page, 0),
+    await legKm(page, 1),
+    await legKm(page, 2),
+  ];
+  const day1 = await dayRows(page).nth(0).textContent();
+  const day2 = await dayRows(page).nth(1).textContent();
+  // Day 1 = legs 1-2 (hike + paddle), day 2 = leg 3 (hike).
+  expect(day1).toContain(strings.dayLegs(1, 2));
+  expect(day2).toContain(strings.dayLegs(3, 3));
+  expect(
+    Math.abs(kmIn(day1, strings.dayHikeDistance) - h0),
+  ).toBeLessThanOrEqual(0.1);
+  expect(
+    Math.abs(kmIn(day1, strings.dayPaddleDistance) - p1),
+  ).toBeLessThanOrEqual(0.1);
+  expect(
+    Math.abs(kmIn(day2, strings.dayHikeDistance) - h2),
+  ).toBeLessThanOrEqual(0.1);
+  expect(kmIn(day2, strings.dayPaddleDistance)).toBe(0);
+  expect(day1).toContain(`${strings.climbLabel} 100 m`);
+  expect(day2).toContain(`${strings.climbLabel} 100 m`);
+  expect(day1).toContain(strings.descentLabel);
+  const d1 = minutesIn(await dayTime(page, 0).textContent());
+  const d2 = minutesIn(await dayTime(page, 1).textContent());
+  expect(
+    Math.abs(d1 - ((await legMin(page, 0)) + (await legMin(page, 1)))),
+  ).toBeLessThanOrEqual(1);
+  expect(d2).toBe(await legMin(page, 2));
+  const tripMin = minutesIn(
+    await legsPanel(page).locator(".trip-time").textContent(),
+  );
+  expect(Math.abs(d1 + d2 - tripMin)).toBeLessThanOrEqual(1);
+
+  // Marking camps changed no leg: nothing was routed again and the lines are still snapped.
+  expect(network.brouter.length).toBe(routed);
+  await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
+});
+
+test("AC4: Ctrl+Z / Cmd+Z undoes a camp, one toggle at a time, without routing", async ({
+  page,
+}) => {
+  const network = await serveOffline(page, { brouter: byProfile });
+  const click = await drawThreeLegs(page);
+  const routed = network.brouter.length;
+  await toggleCampAt(page, click, 1);
+  await toggleCampAt(page, click, 2);
+  await expect(dayRows(page)).toHaveCount(3);
+
+  const mod = process.platform === "darwin" ? "Meta" : "Control";
+  await page.keyboard.press(`${mod}+z`);
+  await expect(dayRows(page)).toHaveCount(2);
+  await expect(campMarkers(page)).toHaveCount(1);
+  await page.keyboard.press(`${mod}+z`);
+  await expect(dayRows(page)).toHaveCount(1);
+  await expect(campMarkers(page)).toHaveCount(0);
+  // The next undo goes back to the mode switch, proving camps were separate undo steps.
+  await expect(legRows(page).nth(1)).toContainText(strings.dropLabel);
+  expect(network.brouter.length).toBe(routed);
+});
+
+test("AC3: a day with a hike leg that failed to route shows '(no climb data)'; the other day is a plain estimate", async ({
+  page,
+}) => {
+  let failHike = false;
+  await serveOffline(page, {
+    brouter: (url) =>
+      failHike && url.searchParams.get("profile") !== "river"
+        ? NO_ROUTE
+        : byProfile(url),
+  });
+  const click = await openMap(page);
+  await click(XS[0]);
+  await click(XS[1]);
+  await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
+  failHike = true;
+  await click(XS[2]);
+  await expect(legRows(page).nth(1)).toContainText(strings.retryRouting);
+
+  await toggleCampAt(page, click, 1);
+  await expect(dayRows(page)).toHaveCount(2);
+  await expect(dayTime(page, 0)).toHaveText(
+    `${strings.dayTimeEstimate} 49 min`,
+  );
+  await expect(dayTime(page, 1)).toHaveText(
+    new RegExp(`^${strings.dayTimeEstimate} \\d.*min \\(no climb data\\)$`),
+  );
+  await expect(dayTime(page, 1)).toHaveText(
+    strings.dayTimeEstimate +
+      " " +
+      strings.timeWithoutClimb(
+        (await legRows(page).nth(1).locator(".leg-time").textContent())!
+          .replace(`${strings.legTimeEstimate} `, "")
+          .replace(" (no climb data)", ""),
+      ),
+  );
+});
+
+test("AC3: marking a camp while a leg is still being snapped: the day shows '…' and the leg is routed once", async ({
+  page,
+}) => {
+  let release: () => void = () => {};
+  const held = new Promise<void>((r) => (release = r));
+  let heldCount = 0;
+  const network = await serveOffline(page, {
+    brouter: async (url) => {
+      if (heldCount++ === 1) await held; // hold the second leg
+      return byProfile(url);
+    },
+  });
+  const click = await openMap(page);
+  await click(XS[0]);
+  await click(XS[1]);
+  await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
+  await click(XS[2]);
+  await toggleCampAt(page, click, 1);
+  await expect(dayRows(page)).toHaveCount(2);
+  await expect(dayTime(page, 0)).toHaveText(
+    `${strings.dayTimeEstimate} 49 min`,
+  );
+  await expect(dayTime(page, 1)).toHaveText(
+    `${strings.dayTimeEstimate} ${strings.timePending}`,
+  );
+  release();
+  await expect(dayTime(page, 1)).toHaveText(
+    `${strings.dayTimeEstimate} 49 min`,
+  );
+  expect(network.brouter.length).toBe(2);
+});
+
+test("deleting a camp's point removes its camp and joins the days", async ({
+  page,
+}) => {
+  await serveOffline(page, { brouter: byProfile });
+  const click = await drawThreeLegs(page);
+  await toggleCampAt(page, click, 2);
+  await expect(dayRows(page)).toHaveCount(2);
+  await deleteButton(page).click(); // point 2 is still selected
+  await expect(pointMarkers(page)).toHaveCount(3);
+  await expect(campMarkers(page)).toHaveCount(0);
+  await expect(dayRows(page)).toHaveCount(1);
+});
+
+test("camps persist through autosave: marking and unmarking are both stored", async ({
+  page,
+}) => {
+  const network = await serveOffline(page, { brouter: byProfile });
+  const click = await drawThreeLegs(page);
+  await toggleCampAt(page, click, 1);
+  await toggleCampAt(page, click, 2);
+  await expect
+    .poll(
+      async () =>
+        JSON.parse((await page.evaluate((k) => localStorage.getItem(k), KEY))!)
+          .trip.camps,
+    )
+    .toEqual([1, 2]);
+  const routed = network.brouter.length;
+
+  await page.reload();
+  await expect(pointMarkers(page)).toHaveCount(4);
+  await expect(campMarkers(page)).toHaveCount(2);
+  await expect(dayRows(page)).toHaveCount(3);
+  expect(network.brouter.length).toBe(routed);
+
+  // Unmark one after the reload; the reload after that still has only the other.
+  await toggleCampAt(page, click, 1);
+  await expect(campMarkers(page)).toHaveCount(1);
+  await page.reload();
+  await expect(campMarkers(page)).toHaveCount(1);
+  await expect(dayRows(page)).toHaveCount(2);
+  await expect(dayRows(page).nth(0)).toContainText(strings.dayLegs(1, 2));
+});
+
+test("an older save file without camps opens as a trip without camps, replacing a trip that had some", async ({
+  page,
+}) => {
+  await serveOffline(page, { brouter: byProfile });
+  page.on("dialog", (d) => void d.accept());
+  const click = await drawThreeLegs(page);
+  await toggleCampAt(page, click, 1);
+  await expect(campMarkers(page)).toHaveCount(1);
+
+  const older = JSON.stringify({
+    format: "packraft-go-trip",
+    version: 1,
+    trip: {
+      name: "Before camps",
+      points: [
+        { lat: 50.3, lng: 5.6 },
+        { lat: 50.31, lng: 5.61 },
+        { lat: 50.32, lng: 5.62 },
+      ],
+      legs: [
+        {
+          mode: "hike",
+          route: { status: "failed", failure: { kind: "no-route" } },
+        },
+        {
+          mode: "paddle",
+          route: { status: "failed", failure: { kind: "no-route" } },
+        },
+      ],
+    },
+  });
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    openBtn(page).click(),
+  ]);
+  await chooser.setFiles({
+    name: "old.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(older),
+  });
+  await expect(pointMarkers(page)).toHaveCount(3);
+  await expect(campMarkers(page)).toHaveCount(0);
+  await expect(dayRows(page)).toHaveCount(1);
+  await expect(
+    page.getByRole("alert").filter({ hasText: strings.openFileInvalid }),
+  ).toHaveCount(0);
+});
+
+test("a save file with a camp on a point that does not exist is refused and the current trip is untouched", async ({
+  page,
+}) => {
+  await serveOffline(page, { brouter: byProfile });
+  page.on("dialog", (d) => void d.accept());
+  const click = await drawThreeLegs(page);
+  await toggleCampAt(page, click, 1);
+  const bad = JSON.stringify({
+    format: "packraft-go-trip",
+    version: 1,
+    trip: {
+      name: "Bad",
+      points: [
+        { lat: 50.3, lng: 5.6 },
+        { lat: 50.31, lng: 5.61 },
+      ],
+      legs: [{ mode: "hike" }],
+      camps: [5],
+    },
+  });
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    openBtn(page).click(),
+  ]);
+  await chooser.setFiles({
+    name: "bad.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(bad),
+  });
+  await expect(
+    page.getByRole("alert").filter({ hasText: strings.openFileInvalid }),
+  ).toBeVisible();
+  await expect(pointMarkers(page)).toHaveCount(4);
+  await expect(campMarkers(page)).toHaveCount(1);
+  await expect(dayRows(page)).toHaveCount(2);
+});
