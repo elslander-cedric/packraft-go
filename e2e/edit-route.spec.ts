@@ -31,6 +31,26 @@ async function openMap(page: Page) {
   return { network, cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
 }
 
+/** How far Leaflet has panned the map, in pixels, once any inertia has died down. */
+async function settledMapOffset(page: Page): Promise<Pixel> {
+  const pane = mapRegion(page).locator(".leaflet-map-pane");
+  const read = () =>
+    pane.evaluate((element) => {
+      const m = new DOMMatrix(getComputedStyle(element).transform);
+      return { x: m.m41, y: m.m42 };
+    });
+  let offset = await read();
+  await expect
+    .poll(async () => {
+      const earlier = offset;
+      await page.waitForTimeout(150);
+      offset = await read();
+      return offset.x === earlier.x && offset.y === earlier.y;
+    })
+    .toBe(true);
+  return offset;
+}
+
 async function drag(page: Page, from: Pixel, to: Pixel) {
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
@@ -119,9 +139,18 @@ test("the Delete key removes the selected point; deleting an end point removes i
   expectNear(await centreOf(points(page).nth(1)), b);
 
   // The point that was under the mouse is gone: dragging there pans the map again.
+  const before = await settledMapOffset(page);
   await drag(page, c, { x: c.x, y: c.y + 50 });
-  expectNear(await centreOf(points(page).nth(0)), { x: a.x, y: a.y + 50 });
-  expectNear(await centreOf(points(page).nth(1)), { x: b.x, y: b.y + 50 });
+  const after = await settledMapOffset(page);
+  const pan = { x: after.x - before.x, y: after.y - before.y };
+  // The map follows the drag. Leaflet's inertia may carry it a few pixels further
+  // down, depending on how fast the drag ended (slower under load), so allow that.
+  expect(Math.abs(pan.x)).toBeLessThan(3);
+  expect(pan.y).toBeGreaterThan(47);
+  expect(pan.y).toBeLessThan(65);
+  // The points stay exactly where they are on the map, however far it moved.
+  expectNear(await centreOf(points(page).nth(0)), { x: a.x + pan.x, y: a.y + pan.y });
+  expectNear(await centreOf(points(page).nth(1)), { x: b.x + pan.x, y: b.y + pan.y });
   await expect(points(page)).toHaveCount(2);
 });
 
