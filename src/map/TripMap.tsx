@@ -36,16 +36,21 @@ export default function TripMap({ trip, onMapClick }: TripMapProps) {
         attribution={baseLayer.attribution}
       />
       <MapClicks onMapClick={onMapClick} />
-      {trip.legs.map((leg, i) => (
-        // Straight line until the leg is routed.
-        <Polyline
-          key={`leg-${i}-${leg.mode}`}
-          positions={[trip.points[i], trip.points[i + 1]]}
-          // className must be a prop: react-leaflet applies pathOptions via setStyle, which ignores it.
-          className={`leg leg-${leg.mode}`}
-          pathOptions={legStyle[leg.mode]}
-        />
-      ))}
+      {trip.legs.map((leg, i) => {
+        const status = leg.route?.status ?? "pending";
+        // A routed leg follows its geometry; others are a straight line, dashed if routing failed.
+        const positions = leg.route?.status === "routed" ? [...leg.route.geometry] : [trip.points[i], trip.points[i + 1]];
+        return (
+          <Polyline
+            // The key includes the status: Leaflet only reads className when the path is created.
+            key={`leg-${i}-${leg.mode}-${status}`}
+            positions={positions}
+            // className must be a prop: react-leaflet applies pathOptions via setStyle, which ignores it.
+            className={`leg leg-${leg.mode} leg-${status}`}
+            pathOptions={{ ...legStyle[leg.mode], dashArray: status === "failed" ? "8 8" : undefined }}
+          />
+        );
+      })}
       {trip.points.map((point, i) => (
         <CircleMarker
           key={`point-${i}`}
