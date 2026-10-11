@@ -67,11 +67,9 @@ export function createAutoRouter(router: Router, update: TripUpdate): AutoRouter
 
   return {
     async sync(trip) {
-      // Pending legs are included so that one whose answer was lost (e.g. it
-      // came back while an edit had changed the leg) is asked for again.
-      const requests = trip.legs.flatMap((leg, i) =>
-        !leg.route || leg.route.status === "pending" ? [requestOf(trip, i)] : [],
-      );
+      // Only legs without a route: a pending leg belongs to a request already
+      // on the way (the trip passed in may be older than the stored answer).
+      const requests = trip.legs.flatMap((leg, i) => (leg.route ? [] : [requestOf(trip, i)]));
       if (requests.length === 0) return;
       update((current) =>
         setRoutes(current, { status: "pending" }, (leg, i) => !leg.route && requests.some((r) => isFor(current, i, r))),

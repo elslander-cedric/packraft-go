@@ -171,14 +171,16 @@ describe("auto routing", () => {
     expect(state.trip.legs[0].route).toEqual({ status: "routed", geometry: otherTrail.ok && otherTrail.geometry });
   });
 
-  it("asks again for a pending leg whose answer was lost", async () => {
-    // e.g. undo restores a leg as it was while its route was on the way.
+  it("does not ask again for a pending leg, even after its answer has been stored", async () => {
+    // A render can still hold the trip from before the answer arrived.
     const router = createFakeRouter({ hike: TRAIL });
-    const { state, update } = plannerState({ ...through(A, B), legs: [{ mode: "hike", route: { status: "pending" } }] });
+    const { state, update } = plannerState(through(A, B));
+    const autoRouter = createAutoRouter(router, update);
 
-    await createAutoRouter(router, update).sync(state.trip);
+    await autoRouter.sync(state.trip);
+    await autoRouter.sync({ ...through(A, B), legs: [{ mode: "hike", route: { status: "pending" } }] });
 
-    expect(router.calls).toEqual([{ mode: "hike", points: [A, B] }]);
+    expect(router.calls).toHaveLength(1);
     expect(state.trip.legs[0].route).toEqual(TRAIL_ROUTE);
   });
 });
