@@ -341,3 +341,106 @@ describe("AC4: put-ins and take-outs at mode changes", () => {
     expect(putInsAndTakeOuts(trip)).toEqual([]);
   });
 });
+
+// Round 2 acceptance tests, written by the tester from the three rules Cedric
+// approved (trip ends on the water; 2 m rise rule, ADR 0018; river no-route message).
+describe("Round 2, rule 1: a trip that starts or ends on the water is marked at its ends", () => {
+  const withModes = (...m: LegMode[]): Trip => ({
+    ...emptyTrip(),
+    points: P.slice(0, m.length + 1),
+    legs: m.map((mode) => ({ mode })),
+  });
+
+  it("a single point, or a trip with no legs, has no markers", () => {
+    expect(putInsAndTakeOuts({ ...emptyTrip(), points: [P[0]], legs: [] })).toEqual([]);
+  });
+
+  it("one paddle leg: put-in at the start, take-out at the end", () => {
+    expect(putInsAndTakeOuts(withModes("paddle"))).toEqual([
+      { kind: "put-in", point: 0 },
+      { kind: "take-out", point: 1 },
+    ]);
+  });
+
+  it("an all-paddle trip is one stretch: put-in at the start, take-out at the end, nothing between", () => {
+    expect(putInsAndTakeOuts(withModes("paddle", "paddle", "paddle"))).toEqual([
+      { kind: "put-in", point: 0 },
+      { kind: "take-out", point: 3 },
+    ]);
+  });
+
+  it("starting on the water then hiking: put-in at 0, take-out where the hike begins, nothing at the trip's end", () => {
+    expect(putInsAndTakeOuts(withModes("paddle", "hike", "hike"))).toEqual([
+      { kind: "put-in", point: 0 },
+      { kind: "take-out", point: 1 },
+    ]);
+  });
+
+  it("markers follow edits: deleting the last hike point makes the trip end on the water; undo brings it back", () => {
+    const start = withModes("hike", "paddle", "hike");
+    const deleted = applyEdit(start, { type: "deletePoint", index: 3 });
+    expect(modes(deleted)).toEqual(["hike", "paddle"]);
+    expect(putInsAndTakeOuts(deleted)).toEqual([
+      { kind: "put-in", point: 1 },
+      { kind: "take-out", point: 2 },
+    ]);
+    const undone = applyEdit(deleted, undo);
+    expect(putInsAndTakeOuts(undone)).toEqual(putInsAndTakeOuts(start));
+  });
+});
+
+describe("Round 2, rule 2: a paddle leg rise of 2 m or less is drop 0; a larger rise is a rise (ADR 0018)", () => {
+  const leg = (mode: LegMode, start: number, end: number) =>
+    summarise({
+      ...emptyTrip(),
+      points: [P[0], P[1]],
+      legs: [
+        {
+          mode,
+          route: {
+            status: "routed",
+            geometry: [
+              { ...P[0], elevation: start },
+              { lat: 50.213, lng: 4.937, elevation: Math.max(start, end) + 10 },
+              { ...P[1], elevation: end },
+            ],
+          },
+        },
+      ],
+    }).legs[0];
+
+  it("level and small rises (0, 0.1, 1.99, exactly 2 m) show a drop of 0 and no rise", () => {
+    for (const rise of [0, 0.1, 1.99, 2]) {
+      const l = leg("paddle", 100, 100 + rise);
+      expect(l.dropM, `rise ${rise}`).toBe(0);
+      expect(l.riseM, `rise ${rise}`).toBeUndefined();
+    }
+  });
+
+  it("a rise just over 2 m becomes a rise and has no drop", () => {
+    const l = leg("paddle", 100, 102.01);
+    expect(l.dropM).toBeUndefined();
+    expect(l.riseM).toBeCloseTo(2.01, 5);
+  });
+
+  it("a normal drop is unchanged and has no rise", () => {
+    const l = leg("paddle", 100, 92.5);
+    expect(l.dropM).toBe(7.5);
+    expect(l.riseM).toBeUndefined();
+  });
+
+  it("a hike leg that ends higher has climb and descent, never a drop or a rise", () => {
+    const l = leg("hike", 100, 120);
+    expect(l.climbM).toBeGreaterThan(0);
+    expect(l.dropM).toBeUndefined();
+    expect(l.riseM).toBeUndefined();
+  });
+
+  it("an unrouted paddle leg has neither drop nor rise", async () => {
+    const { state, edit } = await routedHikeTrip(2);
+    void edit(setMode(0, "paddle"));
+    const l = summarise(state.trip).legs[0];
+    expect(l.dropM).toBeUndefined();
+    expect(l.riseM).toBeUndefined();
+  });
+});

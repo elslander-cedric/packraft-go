@@ -161,3 +161,89 @@ test("a portage (paddle, hike, paddle) shows a take-out then a put-in", async ({
   expect(Math.abs((await cx(putIn.nth(1))) - (centreX + 50))).toBeLessThan(3);
   expect(Math.abs((await cx(takeOut.nth(1))) - (centreX + 150))).toBeLessThan(3);
 });
+
+// Round 2 acceptance tests, written by the tester from the three rules Cedric approved.
+
+/** The Lesse fixture with its last point's elevation moved so the leg ends `rise` metres above its start. */
+function riverEndingAbove(rise: number): BRouterReply {
+  const doc = JSON.parse(brouterFixture("river-success.geojson"));
+  const coords: number[][] = doc.features[0].geometry.coordinates;
+  coords[coords.length - 1][2] = coords[0][2] + rise;
+  return { status: 200, body: JSON.stringify(doc) };
+}
+
+test("round 2, rule 2: a paddle leg ending 1.5 m higher shows Drop 0 m and no upstream hint", async ({ page }) => {
+  const RISE = riverEndingAbove(1.5);
+  await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RISE : TRAIL) });
+  const clickMap = await openMap(page);
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  await modeButton(page, 0, strings.legModePaddle).click();
+  const row = rows(page).nth(0);
+  await expect(row).toContainText(`${strings.dropLabel} 0 m`);
+  await expect(row).not.toContainText("upstream");
+  await expect(row).not.toContainText("-");
+});
+
+test("round 2, rule 2: a paddle leg ending 5 m higher shows the rise with the upstream hint and no drop", async ({
+  page,
+}) => {
+  const RISE = riverEndingAbove(5);
+  await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RISE : TRAIL) });
+  const clickMap = await openMap(page);
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  await modeButton(page, 0, strings.legModePaddle).click();
+  const row = rows(page).nth(0);
+  await expect(row).toContainText("↑ 5 m (upstream?)");
+  await expect(row).not.toContainText(strings.dropLabel);
+});
+
+test("round 2, rule 3: a paddle leg whose service is down keeps the unavailable message; a hike no-route keeps the generic one", async ({
+  page,
+}) => {
+  const DOWN: BRouterReply = { status: 503, body: "" };
+  await serveOffline(page, {
+    brouter: (u) => (u.searchParams.get("profile") === "river" ? DOWN : RIVER_NO_ROUTE),
+  });
+  const clickMap = await openMap(page);
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  const row = rows(page).nth(0);
+  await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailed["no-route"]);
+
+  await modeButton(page, 0, strings.legModePaddle).click();
+  await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailed.unavailable);
+  await expect(row).not.toContainText(strings.legRouteFailedNoRiver);
+
+  // Back to hike: the hike message returns, not the river one.
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(modeButton(page, 0, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
+  await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailed["no-route"]);
+});
+
+test("round 2, rule 1: making the last leg paddle too moves the take-out to the trip's end, with nothing between the paddle legs", async ({
+  page,
+}) => {
+  await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
+  const clickMap = await openMap(page);
+  await clickMap(-150, 0);
+  await clickMap(0, 0);
+  await clickMap(150, 0);
+  await modeButton(page, 0, strings.legModePaddle).click();
+  const putIn = mapRegion(page).locator("path.put-in");
+  const takeOut = mapRegion(page).locator("path.take-out");
+  await expect(putIn).toHaveCount(1);
+  await expect(takeOut).toHaveCount(1);
+
+  // Switch the last leg to paddle too: one stretch, take-out moves to the trip's end.
+  await modeButton(page, 1, strings.legModePaddle).click();
+  await expect(putIn).toHaveCount(1);
+  await expect(takeOut).toHaveCount(1);
+  const mapBox = (await mapRegion(page).boundingBox())!;
+  const centreX = mapBox.x + mapBox.width / 2;
+  const b = (await takeOut.boundingBox())!;
+  expect(Math.abs(b.x + b.width / 2 - (centreX + 150))).toBeLessThan(3);
+  const p = (await putIn.boundingBox())!;
+  expect(Math.abs(p.x + p.width / 2 - (centreX - 150))).toBeLessThan(3);
+});
