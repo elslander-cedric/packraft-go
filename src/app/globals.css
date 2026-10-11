@@ -19,9 +19,48 @@ body {
   font-size: 0.9rem;
 }
 
-.map {
+.planner {
+  display: flex;
   flex: 1;
   min-height: 0;
+}
+
+.map {
+  flex: 1;
+  min-width: 0;
+}
+
+.legs-panel {
+  width: 18rem;
+  padding: 0 1rem;
+  overflow-y: auto;
+  border-left: 1px solid #ccc;
+  font-size: 0.9rem;
+}
+
+.legs-panel h2 {
+  font-size: 1rem;
+}
+
+.legs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.leg-row {
+  display: grid;
+  grid-template-columns: 4rem 1fr auto;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.legs-panel-empty {
+  color: #666;
+}
+
+.trip-total {
+  font-weight: 600;
 }
 
 .map-loading {
