@@ -1,11 +1,17 @@
 // Trip planner core: pure TypeScript, no React, no network (spec #2, Seam 1).
+import type { LegRoute } from "./router";
 
 export type LatLng = { readonly lat: number; readonly lng: number };
 
 export type LegMode = "hike" | "paddle";
 
-/** A continuous stretch of the trip between two consecutive points, in one mode. */
-export type Leg = { readonly mode: LegMode };
+/**
+ * A continuous stretch of the trip between two consecutive points, in one mode.
+ * `route` is where the leg is in routing; a leg without one is routed next.
+ * Rule for edits: an edit that changes a leg's endpoints or mode drops its
+ * route, so only changed legs are routed again (ADR 0014).
+ */
+export type Leg = { readonly mode: LegMode; readonly route?: LegRoute };
 
 /** Legs connect consecutive points: `legs[i]` runs from `points[i]` to `points[i + 1]`. */
 export type Trip = {
