@@ -3,6 +3,8 @@ import type { Leg, LegMode } from "@/core/trip";
 import { formatDistance, formatElevation } from "./format";
 import { strings } from "./strings";
 
+const modes: readonly LegMode[] = ["hike", "paddle"];
+
 const modeLabel: Record<LegMode, string> = {
   hike: strings.legModeHike,
   paddle: strings.legModePaddle,
@@ -13,10 +15,33 @@ export type LegsPanelProps = {
   /** The trip's legs, for their routing state. */
   legs: readonly Leg[];
   onRetry: (legIndex: number) => void;
+  /** The planner switched a leg to another mode. */
+  onSetMode: (legIndex: number, mode: LegMode) => void;
 };
 
+type ModeSwitchProps = { legIndex: number; mode: LegMode; onSetMode: (mode: LegMode) => void };
+
+/** Hike / Paddle switch for one leg; the leg's current mode is pressed. */
+function ModeSwitch({ legIndex, mode, onSetMode }: ModeSwitchProps) {
+  return (
+    <span role="group" aria-label={strings.legModeLabel(legIndex + 1)} className="leg-mode-switch">
+      {modes.map((m) => (
+        <button
+          key={m}
+          type="button"
+          className={`leg-mode leg-mode-${m}`}
+          aria-pressed={m === mode}
+          onClick={() => onSetMode(m)}
+        >
+          {modeLabel[m]}
+        </button>
+      ))}
+    </span>
+  );
+}
+
 /** Lists each leg's figures and the trip totals. Renders a summary; no domain logic. */
-export default function LegsPanel({ summary, legs, onRetry }: LegsPanelProps) {
+export default function LegsPanel({ summary, legs, onRetry, onSetMode }: LegsPanelProps) {
   return (
     <aside className="legs-panel" aria-label={strings.legsPanelLabel}>
       <h2>{strings.legsPanelLabel}</h2>
@@ -29,12 +54,13 @@ export default function LegsPanel({ summary, legs, onRetry }: LegsPanelProps) {
             return (
               <li key={i} className={`leg-row leg-row-${leg.mode}`}>
                 <span>{strings.legLabel(i + 1)}</span>
-                <span>{modeLabel[leg.mode]}</span>
+                <ModeSwitch legIndex={i} mode={leg.mode} onSetMode={(mode) => onSetMode(i, mode)} />
                 <span>{formatDistance(leg.distanceKm)}</span>
                 {leg.climbM !== undefined && <span>{`${strings.climbLabel} ${formatElevation(leg.climbM)}`}</span>}
                 {leg.descentM !== undefined && (
                   <span>{`${strings.descentLabel} ${formatElevation(leg.descentM)}`}</span>
                 )}
+                {leg.dropM !== undefined && <span>{`${strings.dropLabel} ${formatElevation(leg.dropM)}`}</span>}
                 {(!route || route.status === "pending") && (
                   <span role="status" className="leg-routing">
                     {strings.legRouting}

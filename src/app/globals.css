@@ -76,6 +76,47 @@ body {
   border-bottom: 1px solid #eee;
 }
 
+/* Hike and paddle rows carry the colour of their line on the map. */
+.leg-row-hike {
+  border-left: 4px solid #b5491b;
+  padding-left: 0.4rem;
+}
+
+.leg-row-paddle {
+  border-left: 6px solid #1b6fb5;
+  padding-left: 0.4rem;
+  background: #eef5fc;
+}
+
+.leg-mode-switch {
+  display: inline-flex;
+}
+
+.leg-mode {
+  padding: 0.05rem 0.4rem;
+  border: 1px solid #999;
+  background: #fff;
+  color: #333;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.leg-mode + .leg-mode {
+  border-left: none;
+}
+
+.leg-mode-hike[aria-pressed="true"] {
+  background: #b5491b;
+  border-color: #b5491b;
+  color: #fff;
+}
+
+.leg-mode-paddle[aria-pressed="true"] {
+  background: #1b6fb5;
+  border-color: #1b6fb5;
+  color: #fff;
+}
+
 .leg-routing,
 .leg-route-failed {
   grid-column: 1 / -1;
