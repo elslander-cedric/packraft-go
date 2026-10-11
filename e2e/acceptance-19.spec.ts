@@ -27,6 +27,21 @@ async function drag(page: Page, from: Px, to: Px) {
   await page.mouse.up();
 }
 
+/** Waits until the map pane has stopped moving (pan inertia has died down). */
+async function mapSettled(page: Page) {
+  const pane = mapRegion(page).locator(".leaflet-map-pane");
+  const read = () => pane.evaluate((element) => getComputedStyle(element).transform);
+  let last = await read();
+  await expect
+    .poll(async () => {
+      const earlier = last;
+      await page.waitForTimeout(150);
+      last = await read();
+      return last === earlier;
+    })
+    .toBe(true);
+}
+
 /** A busy main thread: zero-delay timers run long after queued input. */
 async function busyPage(page: Page) {
   await page.addInitScript(() => {
@@ -87,7 +102,9 @@ for (const busy of [false, true]) {
     // Pan the map (press on empty map), then click the point where it now is.
     await drag(page, { x: cx + 100, y: cy - 100 }, { x: cx + 100, y: cy - 40 });
     await expect(points(page)).toHaveCount(1);
-    const box = (await points(page).first().boundingBox())!;
+    // Leaflet's inertia may still be moving the map; read the point once it has stopped.
+    await mapSettled(page);
+    const box =(await points(page).first().boundingBox())!;
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await expect(selected(page)).toHaveCount(1);
     await expect(points(page)).toHaveCount(1);
