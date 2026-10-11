@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "creator": "BRouter-1.7.10",
+        "name": "brouter_hiking-mountain_0",
+        "track-length": "1501",
+        "filtered ascend": "0",
+        "plain-ascend": "0",
+        "total-time": "1073",
+        "total-energy": "13913",
+        "cost": "3512",
+        "messages": [
+          ["Longitude", "Latitude", "Elevation", "Distance", "CostPerKm", "ElevCost", "TurnCost", "NodeCost", "InitialCost", "WayTags", "NodeTags", "Time", "Energy"],
+          ["2459185", "51913537", "-8192", "1501", "2340", "0", "0", "0", "0", "foot=yes bicycle=yes vehicle=no route=ferry route_bicycle_icn=yes route_hiking_iwn=yes", "", "1072", "13913"]
+        ],
+        "times": [0,1072.836]
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.437514, 51.911879],
+          [2.459185, 51.913537]
+        ]
+      }
+    }
+  ]
+}
