@@ -14,6 +14,7 @@ export const strings = {
   tripNamePlaceholder: "Untitled trip",
   newTripButton: "New trip",
   newTripHint: "Start an empty trip. The current trip is replaced.",
+  newTripConfirm: "Start a new trip? Your current trip will be lost.",
   toolbarLabel: "Edit route",
   undoButton: "Undo",
   undoShortcut: "Undo the last edit (Ctrl+Z / Cmd+Z)",

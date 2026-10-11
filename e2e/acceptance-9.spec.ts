@@ -182,6 +182,8 @@ test("#9: new trip clears everything; a late route answer does not bring legs ba
   await page.mouse.click(c.x + 150, c.y);
   await expect(rows(page).first().getByRole("status")).toBeVisible();
 
+  // Updated in round 2: new trip asks for confirmation when the trip has points; accept it.
+  page.once("dialog", (dialog) => void dialog.accept());
   await newTripBtn(page).click();
   g.open(SNAPPED);
   await page.waitForTimeout(500);

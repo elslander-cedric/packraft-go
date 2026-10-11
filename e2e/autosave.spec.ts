@@ -10,6 +10,7 @@ const pointMarkers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-p
 const rows = (page: Page) => legsPanel(page).getByRole("listitem");
 const tripName = (page: Page) => page.getByRole("textbox", { name: strings.tripNameLabel });
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
+const newTripButton = (page: Page) => page.getByRole("button", { name: strings.newTripButton });
 
 const SNAPPED: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 
@@ -89,7 +90,8 @@ test("the trip name is saved and restored", async ({ page }) => {
   await expect(tripName(page)).toHaveValue("Ourthe weekend");
 });
 
-test("new trip clears to an empty trip, which stays empty after reload", async ({ page }) => {
+// Updated in round 2: new trip now asks for confirmation when the trip has points.
+test("new trip, once confirmed, clears to an empty trip, which stays empty after reload", async ({ page }) => {
   await serveOffline(page, { brouter: () => SNAPPED });
   const clickMap = await openMap(page);
 
@@ -98,7 +100,13 @@ test("new trip clears to an empty trip, which stays empty after reload", async (
   await clickMap(100, 0);
   await expect(legLines(page)).toHaveClass(/leg-routed/);
 
-  await page.getByRole("button", { name: strings.newTripButton }).click();
+  const asked: string[] = [];
+  page.once("dialog", (dialog) => {
+    asked.push(`${dialog.type()}: ${dialog.message()}`);
+    void dialog.accept();
+  });
+  await newTripButton(page).click();
+  await expect.poll(() => asked).toEqual([`confirm: ${strings.newTripConfirm}`]);
 
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect(legLines(page)).toHaveCount(0);
@@ -110,6 +118,52 @@ test("new trip clears to an empty trip, which stays empty after reload", async (
   await waitForMap(page);
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect(tripName(page)).toHaveValue("");
+});
+
+test("cancelling the new trip question keeps the current trip", async ({ page }) => {
+  const network = await serveOffline(page, { brouter: () => SNAPPED });
+  const clickMap = await openMap(page);
+
+  await tripName(page).fill("Keep me");
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  await expect(legLines(page)).toHaveClass(/leg-routed/);
+
+  const asked: string[] = [];
+  page.once("dialog", (dialog) => {
+    asked.push(dialog.message());
+    void dialog.dismiss();
+  });
+  await newTripButton(page).click();
+  await expect.poll(() => asked).toEqual([strings.newTripConfirm]);
+
+  await expect(pointMarkers(page)).toHaveCount(2);
+  await expect(legLines(page)).toHaveCount(1);
+  await expect(legLines(page)).toHaveClass(/leg-routed/);
+  await expect(tripName(page)).toHaveValue("Keep me");
+  await expect(undoButton(page)).toBeEnabled();
+
+  await page.reload();
+  await waitForMap(page);
+  await expect(pointMarkers(page)).toHaveCount(2);
+  await expect(tripName(page)).toHaveValue("Keep me");
+  expect(network.brouter).toHaveLength(1);
+});
+
+test("new trip on a trip without points clears it without asking", async ({ page }) => {
+  await serveOffline(page);
+  await openMap(page);
+  const asked: string[] = [];
+  page.on("dialog", (dialog) => {
+    asked.push(dialog.message());
+    void dialog.dismiss();
+  });
+
+  await tripName(page).fill("Only a name");
+  await newTripButton(page).click();
+
+  await expect(tripName(page)).toHaveValue("");
+  expect(asked).toEqual([]);
 });
 
 test("unreadable stored data opens an empty trip without crashing", async ({ page }) => {

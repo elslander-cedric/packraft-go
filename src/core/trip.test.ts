@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyEdit, emptyTrip, renameTrip } from "./trip";
+import { applyEdit, emptyTrip, newTripNeedsConfirmation, renameTrip } from "./trip";
 
 const addPoint = (lat: number, lng: number) => ({ type: "addPoint", at: { lat, lng } }) as const;
 
@@ -28,6 +28,17 @@ describe("adding points", () => {
     applyEdit(before, addPoint(51, 4));
     expect(before.points).toHaveLength(1);
     expect(before.legs).toHaveLength(0);
+  });
+});
+
+describe("starting a new trip", () => {
+  it("asks first when the current trip has a point, since it would be lost", () => {
+    expect(newTripNeedsConfirmation(applyEdit(emptyTrip(), addPoint(50, 4)))).toBe(true);
+  });
+
+  it("does not ask when the current trip has no points, even if it is named", () => {
+    expect(newTripNeedsConfirmation(emptyTrip())).toBe(false);
+    expect(newTripNeedsConfirmation(renameTrip(emptyTrip(), "Lesse loop"))).toBe(false);
   });
 });
 

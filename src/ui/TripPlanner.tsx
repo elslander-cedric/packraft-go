@@ -4,12 +4,21 @@ import { useEffect, useState } from "react";
 import type { Router } from "@/core/router";
 import { createAutoRouter, retryLeg } from "@/core/routing";
 import { summarise } from "@/core/summarise";
-import { applyEdit, canUndo, emptyTrip, renameTrip, type Edit, type LatLng } from "@/core/trip";
+import {
+  applyEdit,
+  canUndo,
+  emptyTrip,
+  newTripNeedsConfirmation,
+  renameTrip,
+  type Edit,
+  type LatLng,
+} from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
 import EditToolbar from "./EditToolbar";
 import LegsPanel from "./LegsPanel";
+import { strings } from "./strings";
 import TripToolbar from "./TripToolbar";
 
 /** True when a key press is meant for a text field, not for the planner. */
@@ -45,6 +54,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
   };
   const rename = (name: string) => setTrip((current) => renameTrip(current, name));
   const newTrip = () => {
+    if (newTripNeedsConfirmation(trip) && !window.confirm(strings.newTripConfirm)) return;
     setTrip(emptyTrip());
     setSelectedPoint(null);
   };
