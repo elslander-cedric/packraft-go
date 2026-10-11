@@ -88,6 +88,8 @@ body {
 
 .legs-panel {
   flex: 1;
+  /* Keeps a few legs in view when the days panel below needs room too. */
+  min-height: 10rem;
   padding: 0 1rem;
   overflow-y: auto;
 }
@@ -202,6 +204,63 @@ path.leg-pending {
   margin: 0;
   color: #666;
   font-size: 0.8rem;
+}
+
+.days-panel {
+  flex: 0 1 auto;
+  min-height: 6rem;
+  max-height: 40%;
+  padding: 0 1rem 0.5rem;
+  border-top: 1px solid #ccc;
+  overflow-y: auto;
+}
+
+.days-panel h2 {
+  font-size: 1rem;
+}
+
+.days {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.day-row {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.75rem;
+  padding: 0.25rem 0 0.25rem 0.4rem;
+  border-left: 4px solid #2e6b30;
+  margin-bottom: 0.25rem;
+}
+
+.day-row > span {
+  white-space: nowrap;
+}
+
+.day-label,
+.day-time {
+  font-weight: 600;
+}
+
+/* The day and its legs on the first line, the figures below, the time on its own line. */
+.day-heading,
+.day-time {
+  flex-basis: 100%;
+}
+
+.day-legs {
+  color: #666;
+}
+
+.camp-toggle[aria-pressed="true"] {
+  background: #2e6b30;
+  border-color: #2e6b30;
+  color: #fff;
+}
+
+.camp-marker svg {
+  display: block;
 }
 
 .settings-panel {

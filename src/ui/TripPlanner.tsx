@@ -9,6 +9,7 @@ import {
   applyEdit,
   canUndo,
   emptyTrip,
+  isCamp,
   newTripNeedsConfirmation,
   renameTrip,
   type Edit,
@@ -19,6 +20,7 @@ import ClientTripMap from "@/map/ClientTripMap";
 import { downloadTripFile, readTripFile } from "@/persistence/tripFile";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
+import DaysPanel from "./DaysPanel";
 import EditToolbar from "./EditToolbar";
 import LegsPanel from "./LegsPanel";
 import SettingsPanel from "./SettingsPanel";
@@ -90,6 +92,12 @@ export default function TripPlanner({ router }: { router?: Router }) {
     if (opened.ok) replaceTrip(opened.trip, strings.openFileConfirm);
     else setFileError(strings.openFileInvalid);
   };
+  /** Marks or unmarks the selected point as a camp. The point stays selected: no point moves. */
+  const toggleSelectedCamp = () => {
+    if (selectedPoint === null) return;
+    setTrip((current) => applyEdit(current, { type: "toggleCamp", index: selectedPoint }));
+    setFileError(null);
+  };
   const undo = () => edit({ type: "undo" });
   const deleteSelectedPoint = () => {
     if (selectedPoint !== null) edit({ type: "deletePoint", index: selectedPoint });
@@ -112,6 +120,8 @@ export default function TripPlanner({ router }: { router?: Router }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   });
 
+  const summary = summarise(trip, settings ?? defaultSettings);
+
   return (
     <div className="planner">
       <ClientTripMap
@@ -133,15 +143,18 @@ export default function TripPlanner({ router }: { router?: Router }) {
         <EditToolbar
           canUndo={canUndo(trip)}
           canDeletePoint={selectedPoint !== null}
+          selectedPointIsCamp={selectedPoint === null ? null : isCamp(trip, selectedPoint)}
           onUndo={undo}
           onDeletePoint={deleteSelectedPoint}
+          onToggleCamp={toggleSelectedCamp}
         />
         <LegsPanel
-          summary={summarise(trip, settings ?? defaultSettings)}
+          summary={summary}
           legs={trip.legs}
           onRetry={retry}
           onSetMode={(index, mode) => edit({ type: "setLegMode", index, mode })}
         />
+        <DaysPanel days={summary.days} />
         {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
       </div>
     </div>

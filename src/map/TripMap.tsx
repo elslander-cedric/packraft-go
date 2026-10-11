@@ -6,8 +6,9 @@ import type {
   LeafletMouseEvent,
   Polyline as LeafletPolyline,
 } from "leaflet";
+import { divIcon } from "leaflet";
 import { useEffect, useRef, useState } from "react";
-import { CircleMarker, MapContainer, Pane, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type ModeChange, type Trip } from "@/core/trip";
 import { strings } from "@/ui/strings";
 import { baseLayer, initialMapView } from "./mapConfig";
@@ -39,6 +40,18 @@ const modeChangeLabel: Record<ModeChange["kind"], string> = {
   "put-in": strings.putIn,
   "take-out": strings.takeOut,
 };
+
+// A small tent, drawn below and to the right of its point, clear of the point
+// and of the put-in/take-out labels above it.
+const campIcon = divIcon({
+  className: "camp-marker",
+  html:
+    `<svg role="img" aria-label=${JSON.stringify(strings.campMarker)} viewBox="0 0 20 18" width="20" height="18">` +
+    '<path d="M10 1 L19 17 H1 Z" fill="#2e6b30" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>' +
+    '<path d="M10 8 L13.5 17 H6.5 Z" fill="#fff"/></svg>',
+  iconSize: [20, 18],
+  iconAnchor: [-7, -5],
+});
 
 const pointStyle = { color: "#333", weight: 2, fillColor: "#fff", fillOpacity: 1 };
 const selectedPointStyle = { ...pointStyle, color: "#000", weight: 3, fillColor: "#ffd400" };
@@ -207,6 +220,12 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
               {modeChangeLabel[kind]}
             </Tooltip>
           </CircleMarker>
+        ))}
+      </Pane>
+      {/* Camps: a tent just above the point, not clickable, so the point under it can still be grabbed. */}
+      <Pane name="trip-camps" pane="overlayPane" style={{ zIndex: 402 }}>
+        {(trip.camps ?? []).map((point) => (
+          <Marker key={`camp-${point}`} position={points[point]} icon={campIcon} interactive={false} keyboard={false} />
         ))}
       </Pane>
       {/* Points get their own pane above the legs, so a leg drawn later never covers a point. */}
