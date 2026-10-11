@@ -1,6 +1,6 @@
 // Save format (#9): trip ⇄ versioned JSON, including routed results.
 import { describe, expect, it } from "vitest";
-import { parseTrip, restoreTrip, serialiseTrip } from "./saveFile";
+import { parseTrip, restoreTrip, saveFileName, serialiseTrip } from "./saveFile";
 import { summarise } from "./summarise";
 import { applyEdit, canUndo, emptyTrip, type Trip } from "./trip";
 
@@ -177,5 +177,24 @@ describe("parsing invalid input", () => {
   it("ignores fields it does not know, so they do not leak into the trip", () => {
     const text = withTrip({ undoSteps: [], extra: true, points: [{ lat: 50.3, lng: 5.6, x: 1 }, ...valid.trip.points.slice(1)] });
     expect(parseTrip(text)).toEqual({ ok: true, trip: routedTrip });
+  });
+});
+
+describe("save file name", () => {
+  it("is named after the trip", () => {
+    expect(saveFileName({ ...emptyTrip(), name: "Ourthe weekend" }, "Untitled trip")).toBe(
+      "Ourthe weekend.packraft.json",
+    );
+  });
+
+  it("uses the given untitled name for a trip without a name", () => {
+    expect(saveFileName(emptyTrip(), "Untitled trip")).toBe("Untitled trip.packraft.json");
+    expect(saveFileName({ ...emptyTrip(), name: "   " }, "Untitled trip")).toBe("Untitled trip.packraft.json");
+  });
+
+  it("replaces characters that file systems do not allow and trims spaces", () => {
+    expect(saveFileName({ ...emptyTrip(), name: ' Lesse / Ourthe: day 1-2 <v2>?*"|\\ ' }, "Untitled trip")).toBe(
+      "Lesse - Ourthe- day 1-2 -v2-.packraft.json",
+    );
   });
 });

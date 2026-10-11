@@ -13,8 +13,10 @@ import {
   renameTrip,
   type Edit,
   type LatLng,
+  type Trip,
 } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
+import { downloadTripFile, readTripFile } from "@/persistence/tripFile";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
 import EditToolbar from "./EditToolbar";
@@ -38,6 +40,8 @@ const typingInField = (event: KeyboardEvent) =>
 export default function TripPlanner({ router }: { router?: Router }) {
   // Starts from the stored trip, so this component is only rendered in the browser (see ClientTripPlanner).
   const [trip, setTrip] = useState(loadStoredTrip);
+  // Shown after a file could not be opened, until the planner does something else.
+  const [fileError, setFileError] = useState<string | null>(null);
   const [autoRouter] = useState(() => createAutoRouter(router ?? createBRouterRouter(), setTrip));
 
   // Every change is saved. Restored legs keep their routed results, so syncing routes nothing new.
@@ -63,12 +67,28 @@ export default function TripPlanner({ router }: { router?: Router }) {
   const edit = (change: Edit) => {
     setTrip((current) => applyEdit(current, change));
     setSelectedPoint(null);
+    setFileError(null);
   };
-  const rename = (name: string) => setTrip((current) => renameTrip(current, name));
-  const newTrip = () => {
-    if (newTripNeedsConfirmation(trip) && !window.confirm(strings.newTripConfirm)) return;
-    setTrip(emptyTrip());
+  const rename = (name: string) => {
+    setTrip((current) => renameTrip(current, name));
+    setFileError(null);
+  };
+  /** Replaces the current trip, asking first when that would lose points (it cannot be undone). */
+  const replaceTrip = (next: Trip, question: string) => {
+    if (newTripNeedsConfirmation(trip) && !window.confirm(question)) return;
+    setTrip(next);
     setSelectedPoint(null);
+    setFileError(null);
+  };
+  const newTrip = () => replaceTrip(emptyTrip(), strings.newTripConfirm);
+  const saveFile = () => {
+    setFileError(null);
+    downloadTripFile(trip, strings.tripNamePlaceholder);
+  };
+  const openFile = async (file: File) => {
+    const opened = await readTripFile(file);
+    if (opened.ok) replaceTrip(opened.trip, strings.openFileConfirm);
+    else setFileError(strings.openFileInvalid);
   };
   const undo = () => edit({ type: "undo" });
   const deleteSelectedPoint = () => {
@@ -102,7 +122,14 @@ export default function TripPlanner({ router }: { router?: Router }) {
         onPointDrag={(index, to) => edit({ type: "movePoint", index, to })}
       />
       <div className="sidebar">
-        <TripToolbar name={trip.name} onRename={rename} onNewTrip={newTrip} />
+        <TripToolbar
+          name={trip.name}
+          fileError={fileError}
+          onRename={rename}
+          onNewTrip={newTrip}
+          onSaveFile={saveFile}
+          onOpenFile={(file) => void openFile(file)}
+        />
         <EditToolbar
           canUndo={canUndo(trip)}
           canDeletePoint={selectedPoint !== null}
