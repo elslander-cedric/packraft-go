@@ -30,12 +30,32 @@ body {
   min-width: 0;
 }
 
-.legs-panel {
+.sidebar {
+  display: flex;
+  flex-direction: column;
   width: 18rem;
-  padding: 0 1rem;
-  overflow-y: auto;
   border-left: 1px solid #ccc;
   font-size: 0.9rem;
+}
+
+.edit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 0;
+}
+
+.edit-hint {
+  flex-basis: 100%;
+  margin: 0;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.legs-panel {
+  flex: 1;
+  padding: 0 1rem;
+  overflow-y: auto;
 }
 
 .legs-panel h2 {
