@@ -185,7 +185,134 @@ describe("auto routing", () => {
   });
 });
 
-const TRAIL_ROUTE = { status: "routed", geometry: TRAIL.ok ? TRAIL.geometry : [] } as const;
+describe("auto routing keeps the trip stable", () => {
+  it("syncing a trip whose legs are already on the way leaves the trip object as it is", () => {
+    // The UI syncs after every change; a new object here would sync again, forever.
+    const router = { route: () => new Promise<RouteResult>(() => {}) };
+    const { state, update } = plannerState(through(A, B));
+    const autoRouter = createAutoRouter(router, update);
+    void autoRouter.sync(state.trip);
+    const pending = state.trip;
+
+    void autoRouter.sync(state.trip);
+
+    expect(state.trip).toBe(pending);
+  });
+});
+
+describe("auto routing with undo", () => {
+  const D = { lat: 50.32, lng: 5.49 };
+
+  /** A router whose answers the test releases by hand, one per request. */
+  function manualRouter() {
+    const calls: { points: readonly LatLng[]; answer: (r: RouteResult) => void }[] = [];
+    const router = {
+      route: (_mode: unknown, points: readonly LatLng[]) =>
+        new Promise<RouteResult>((answer) => calls.push({ points, answer })),
+    };
+    return { router, calls };
+  }
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  it("syncing an older trip after the answer is stored sends no new request", async () => {
+    const router = createFakeRouter({ hike: TRAIL });
+    const older = through(A, B);
+    const { state, update } = plannerState(older);
+    const autoRouter = createAutoRouter(router, update);
+
+    await autoRouter.sync(older);
+    await autoRouter.sync(older);
+
+    expect(router.calls).toHaveLength(1);
+    expect(state.trip.legs[0].route).toEqual(TRAIL_ROUTE);
+  });
+
+  it("a leg undo brings back as pending gets the answer that arrived meanwhile, without a new request", async () => {
+    const { router, calls } = manualRouter();
+    const { state, update } = plannerState(through(A, B));
+    const autoRouter = createAutoRouter(router, update);
+    void autoRouter.sync(state.trip); // AB on the way
+
+    // Move B while AB is on the way: the undo step remembers AB as pending.
+    update((trip) => applyEdit(trip, { type: "movePoint", index: 1, to: C }));
+    void autoRouter.sync(state.trip); // AC on the way
+    calls[0].answer(TRAIL); // AB's answer: no leg AB in the trip any more
+    await flush();
+
+    update((trip) => applyEdit(trip, { type: "undo" }));
+    expect(state.trip.legs[0].route).toEqual({ status: "pending" });
+    await autoRouter.sync(state.trip);
+
+    expect(state.trip.legs[0].route).toEqual(TRAIL_ROUTE);
+    expect(calls.map((c) => c.points)).toEqual([
+      [A, B],
+      [A, C],
+    ]);
+  });
+
+  it("a leg undo brings back as pending whose request failed is routed again, not left pending", async () => {
+    const { router, calls } = manualRouter();
+    const { state, update } = plannerState(through(A, B));
+    const autoRouter = createAutoRouter(router, update);
+    void autoRouter.sync(state.trip);
+    update((trip) => applyEdit(trip, { type: "movePoint", index: 1, to: C }));
+    calls[0].answer({ ok: false, failure: { kind: "unavailable" } });
+    await flush();
+
+    update((trip) => applyEdit(trip, { type: "undo" }));
+    void autoRouter.sync(state.trip);
+
+    expect(calls.map((c) => c.points)).toEqual([
+      [A, B],
+      [A, B],
+    ]);
+    calls[1].answer(TRAIL);
+    await flush();
+    expect(state.trip.legs[0].route).toEqual(TRAIL_ROUTE);
+  });
+
+  it("a pending leg brought back by undo while its request is still out gets that request's answer", async () => {
+    const { router, calls } = manualRouter();
+    const { state, update } = plannerState(through(A, B, D));
+    const autoRouter = createAutoRouter(router, update);
+    void autoRouter.sync(state.trip); // AB and BD on the way
+
+    update((trip) => applyEdit(trip, { type: "deletePoint", index: 1 })); // merged AD
+    void autoRouter.sync(state.trip);
+    update((trip) => applyEdit(trip, { type: "undo" })); // AB and BD pending again
+    void autoRouter.sync(state.trip);
+    calls[0].answer(TRAIL);
+    calls[1].answer(TRAIL);
+    await flush();
+
+    expect(calls.map((c) => c.points)).toEqual([
+      [A, B],
+      [B, D],
+      [A, D],
+    ]);
+    expect(state.trip.legs.map((leg) => leg.route?.status)).toEqual(["routed", "routed"]);
+  });
+
+  it("a routed leg undo brings back keeps its route and is not requested again", async () => {
+    const router = createFakeRouter({ hike: TRAIL });
+    const { state, update } = plannerState(through(A, B));
+    const autoRouter = createAutoRouter(router, update);
+    await autoRouter.sync(state.trip);
+
+    update((trip) => applyEdit(trip, { type: "movePoint", index: 1, to: C }));
+    await autoRouter.sync(state.trip);
+    update((trip) => applyEdit(trip, { type: "undo" }));
+    await autoRouter.sync(state.trip);
+
+    expect(router.calls.map((c) => c.points)).toEqual([
+      [A, B],
+      [A, C],
+    ]);
+    expect(state.trip.legs[0].route).toEqual(TRAIL_ROUTE);
+  });
+});
+
+const TRAIL_ROUTE ={ status: "routed", geometry: TRAIL.ok ? TRAIL.geometry : [] } as const;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

@@ -42,10 +42,29 @@ export function retryLeg(trip: Trip, legIndex: number): Trip {
   return { ...trip, legs: trip.legs.map((leg, i) => (i === legIndex ? { ...leg, route: undefined } : leg)) };
 }
 
-const keyOf =({ mode, points: [from, to] }: Request) => `${mode}:${from.lat},${from.lng};${to.lat},${to.lng}`;
+const keyOf = ({ mode, points: [from, to] }: Request) => `${mode}:${from.lat},${from.lng};${to.lat},${to.lng}`;
+
+/** Legs that wait for a route: never routed, or pending (possibly brought back by undo). */
+const awaitsRoute = (leg: Leg) => !leg.route || leg.route.status === "pending";
+
+/**
+ * Stores a route on every leg of the current trip that `request` is for and
+ * that is still waiting for one. Legs that changed meanwhile are left alone.
+ */
+const store = (request: Request, route: LegRoute) => (current: Trip) =>
+  setRoutes(
+    current,
+    route,
+    // A leg already pending stays as it is, so marking legs pending twice does not change the trip.
+    (leg, i) => awaitsRoute(leg) && leg.route?.status !== route.status && isFor(current, i, request),
+  );
 
 export function createAutoRouter(router: Router, update: TripUpdate): AutoRouter {
   const inFlight = new Map<string, Promise<void>>();
+  // Routes already received, by request. A leg that comes back unchanged (by
+  // undo, or in a trip older than the stored answer) gets its route from here
+  // instead of a new request. Failures are not kept: retrying must ask again.
+  const received = new Map<string, LegRoute>();
 
   const start = (request: Request) => {
     const key = keyOf(request);
@@ -57,9 +76,9 @@ export function createAutoRouter(router: Router, update: TripUpdate): AutoRouter
         result = { ok: false, failure: { kind: "unavailable" } };
       }
       inFlight.delete(key);
-      update((current) =>
-        setRoutes(current, routeOf(result), (leg, i) => leg.route?.status === "pending" && isFor(current, i, request)),
-      );
+      const route = routeOf(result);
+      if (route.status === "routed") received.set(key, route);
+      update(store(request, route));
     })();
     inFlight.set(key, running);
     return running;
@@ -67,14 +86,19 @@ export function createAutoRouter(router: Router, update: TripUpdate): AutoRouter
 
   return {
     async sync(trip) {
-      // Only legs without a route: a pending leg belongs to a request already
-      // on the way (the trip passed in may be older than the stored answer).
-      const requests = trip.legs.flatMap((leg, i) => (leg.route ? [] : [requestOf(trip, i)]));
-      if (requests.length === 0) return;
-      update((current) =>
-        setRoutes(current, { status: "pending" }, (leg, i) => !leg.route && requests.some((r) => isFor(current, i, r))),
-      );
-      await Promise.all(requests.map((request) => inFlight.get(keyOf(request)) ?? start(request)));
+      const requests = trip.legs.flatMap((leg, i) => (awaitsRoute(leg) ? [requestOf(trip, i)] : []));
+      const waiting: Promise<void>[] = [];
+      for (const request of requests) {
+        const key = keyOf(request);
+        const known = received.get(key);
+        if (known) {
+          update(store(request, known));
+        } else {
+          update(store(request, { status: "pending" }));
+          waiting.push(inFlight.get(key) ?? start(request));
+        }
+      }
+      await Promise.all(waiting);
     },
   };
 }

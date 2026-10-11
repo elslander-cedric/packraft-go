@@ -3,7 +3,10 @@
 // change are carried over as they are, so their routed results are kept.
 import type { LatLng, Leg, Trip } from "./trip";
 
-/** A leg with the same mode but no routed result: it needs routing again. */
+/**
+ * A leg with the same mode but no `route` (routed, pending or failed): the
+ * auto router routes it again. Every edit that changes a leg goes through here.
+ */
 function unrouted(leg: Leg): Leg {
   return { mode: leg.mode };
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { LegRoute } from "./router";
 import { summarise } from "./summarise";
 import { applyEdit, canUndo, emptyTrip, type Edit, type LatLng, type Leg, type Trip } from "./trip";
 
@@ -88,45 +89,78 @@ describe("deleting a point", () => {
   });
 });
 
-// Routed results live on the leg. An edit must hand back the very same leg for
-// every leg it does not change (so its routed result survives), and a new leg
-// for every leg it does change (so it is routed again).
+// Routed results live on the leg (`route`). An edit drops the route of every
+// leg it changes (so it is routed again) and keeps it on every other leg.
 describe("edits clear routed results only for legs they change", () => {
-  const trip = through(A, B, C, D, ELSEWHERE); // legs: AB, BC, CD, D-ELSEWHERE
+  /** A distinct routed result per leg, so a kept route can be told apart from another leg's. */
+  const routeFor = (from: LatLng, to: LatLng): LegRoute => ({
+    status: "routed",
+    geometry: [
+      { ...from, elevation: 100 },
+      { ...to, elevation: 120 },
+    ],
+  });
+  const routedThrough = (...points: LatLng[]): Trip => {
+    const trip = through(...points);
+    return { ...trip, legs: trip.legs.map((leg, i) => ({ ...leg, route: routeFor(points[i], points[i + 1]) })) };
+  };
+  const trip = routedThrough(A, B, C, D, ELSEWHERE); // legs: AB, BC, CD, D-ELSEWHERE
+  const routes = (t: Trip) => t.legs.map((leg) => leg.route);
 
-  it("moving a point replaces only the two legs touching it", () => {
+  it("moving a point drops the routes of the two legs touching it and keeps the others", () => {
     const moved = applyEdit(trip, { type: "movePoint", index: 2, to: ELSEWHERE });
-    expect(moved.legs[0]).toBe(trip.legs[0]);
-    expect(moved.legs[1]).not.toBe(trip.legs[1]);
-    expect(moved.legs[2]).not.toBe(trip.legs[2]);
-    expect(moved.legs[3]).toBe(trip.legs[3]);
+    expect(routes(moved)).toEqual([routeFor(A, B), undefined, undefined, routeFor(D, ELSEWHERE)]);
+    expect(moved.legs.map((leg) => leg.mode)).toEqual(["hike", "hike", "hike", "hike"]);
   });
 
-  it("moving the start point replaces only the first leg", () => {
+  it("moving the start point drops only the first leg's route", () => {
     const moved = applyEdit(trip, { type: "movePoint", index: 0, to: ELSEWHERE });
-    expect(moved.legs[0]).not.toBe(trip.legs[0]);
-    moved.legs.slice(1).forEach((leg, i) => expect(leg).toBe(trip.legs[i + 1]));
+    expect(routes(moved)).toEqual([undefined, routeFor(B, C), routeFor(C, D), routeFor(D, ELSEWHERE)]);
   });
 
-  it("deleting a middle point replaces only the merged leg", () => {
+  it("moving the end point drops only the last leg's route", () => {
+    const moved = applyEdit(trip, { type: "movePoint", index: 4, to: A });
+    expect(routes(moved)).toEqual([routeFor(A, B), routeFor(B, C), routeFor(C, D), undefined]);
+  });
+
+  it("deleting a middle point gives an unrouted merged leg and keeps the other routes", () => {
     const deleted = applyEdit(trip, { type: "deletePoint", index: 2 });
-    expect(deleted.legs).toHaveLength(3);
-    expect(deleted.legs[0]).toBe(trip.legs[0]);
-    expect(deleted.legs[1]).not.toBe(trip.legs[1]);
-    expect(deleted.legs[1]).not.toBe(trip.legs[2]);
-    expect(deleted.legs[2]).toBe(trip.legs[3]);
+    expect(routes(deleted)).toEqual([routeFor(A, B), undefined, routeFor(D, ELSEWHERE)]);
   });
 
-  it("deleting an end point keeps every remaining leg", () => {
-    const noStart = applyEdit(trip, { type: "deletePoint", index: 0 });
-    noStart.legs.forEach((leg, i) => expect(leg).toBe(trip.legs[i + 1]));
-    const noEnd = applyEdit(trip, { type: "deletePoint", index: 4 });
-    noEnd.legs.forEach((leg, i) => expect(leg).toBe(trip.legs[i]));
+  it("deleting an end point keeps the routes of every remaining leg", () => {
+    expect(routes(applyEdit(trip, { type: "deletePoint", index: 0 }))).toEqual([
+      routeFor(B, C),
+      routeFor(C, D),
+      routeFor(D, ELSEWHERE),
+    ]);
+    expect(routes(applyEdit(trip, { type: "deletePoint", index: 4 }))).toEqual([
+      routeFor(A, B),
+      routeFor(B, C),
+      routeFor(C, D),
+    ]);
   });
 
-  it("adding a point keeps every existing leg", () => {
+  it("drops a failed or pending route the same way", () => {
+    const failed: LegRoute = { status: "failed", failure: { kind: "unavailable" } };
+    const mixed: Trip = {
+      ...trip,
+      legs: [{ mode: "hike", route: failed }, { mode: "hike", route: { status: "pending" } }, ...trip.legs.slice(2)],
+    };
+    const moved = applyEdit(mixed, { type: "movePoint", index: 1, to: ELSEWHERE });
+    expect(routes(moved)).toEqual([undefined, undefined, routeFor(C, D), routeFor(D, ELSEWHERE)]);
+  });
+
+  it("adding a point keeps every existing route and adds an unrouted leg", () => {
     const added = applyEdit(trip, addPoint(A));
-    trip.legs.forEach((leg, i) => expect(added.legs[i]).toBe(leg));
+    expect(routes(added)).toEqual([...routes(trip), undefined]);
+  });
+
+  it("undo brings back the routes an edit dropped", () => {
+    const moved = applyEdit(trip, { type: "movePoint", index: 2, to: ELSEWHERE });
+    expect(routes(applyEdit(moved, { type: "undo" }))).toEqual(routes(trip));
+    const deleted = applyEdit(trip, { type: "deletePoint", index: 2 });
+    expect(routes(applyEdit(deleted, { type: "undo" }))).toEqual(routes(trip));
   });
 });
 
