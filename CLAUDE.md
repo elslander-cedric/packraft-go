@@ -11,7 +11,21 @@ Route-planning app for packrafting (mixed hike + paddle trips).
 - Free services only (ADR 0012). English UI with strings in one module (ADR 0013).
 
 ## Commands
-_To be filled in once the stack is chosen (install, test, lint, run)._
+Node 22 (see `.nvmrc`), npm.
+- Install: `npm install` (first time also `npx playwright install chromium`)
+- Dev server: `npm run dev` (http://localhost:3000)
+- Unit tests: `npm test` (Vitest, `src/**/*.test.ts`); watch mode: `npm run test:watch`
+- End-to-end tests: `npm run e2e` (Playwright, `e2e/`; builds and starts the app on port 3100). Use `serveOffline(page)` from `e2e/support/offline.ts` so tiles come from fixtures and no live service is called.
+- Lint: `npm run lint`
+- Type-check: `npm run typecheck`
+- Production build: `npm run build`
+
+CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on every pull request.
+
+## Layout
+- `src/app/`: Next.js routes (thin; no domain logic).
+- `src/map/`: Leaflet map. `TripMap.tsx` imports Leaflet and must only be loaded through `ClientTripMap.tsx` (no server rendering). `mapConfig.ts` holds the initial view and base layer.
+- `src/ui/strings.ts`: all user-facing text (ADR 0013).
 
 ## Conventions
 - Domain terms are defined in `GLOSSARY.md`; use them consistently in code and docs.
