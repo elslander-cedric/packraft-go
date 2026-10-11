@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyEdit, emptyTrip } from "./trip";
+import { applyEdit, emptyTrip, renameTrip } from "./trip";
 
 const addPoint = (lat: number, lng: number) => ({ type: "addPoint", at: { lat, lng } }) as const;
 
@@ -28,5 +28,23 @@ describe("adding points", () => {
     applyEdit(before, addPoint(51, 4));
     expect(before.points).toHaveLength(1);
     expect(before.legs).toHaveLength(0);
+  });
+});
+
+describe("naming the trip", () => {
+  it("sets the name and keeps points, legs and undo history", () => {
+    const trip = applyEdit(applyEdit(emptyTrip(), addPoint(50, 4)), addPoint(50.1, 4.1));
+    const named = renameTrip(trip, "Lesse loop");
+    expect(named.name).toBe("Lesse loop");
+    expect(named.points).toBe(trip.points);
+    expect(named.legs).toBe(trip.legs);
+    expect(applyEdit(named, { type: "undo" }).points).toEqual([{ lat: 50, lng: 4 }]);
+  });
+
+  it("is not an edit: undo keeps the name and goes back to the last route edit", () => {
+    const trip = applyEdit(applyEdit(emptyTrip(), addPoint(50, 4)), addPoint(50.1, 4.1));
+    const undone = applyEdit(renameTrip(trip, "Lesse loop"), { type: "undo" });
+    expect(undone.name).toBe("Lesse loop");
+    expect(undone.points).toEqual([{ lat: 50, lng: 4 }]);
   });
 });
