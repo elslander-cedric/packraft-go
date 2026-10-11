@@ -15,14 +15,14 @@ const tripThrough = (...points: LatLng[]) =>
 const ONE_DEGREE_KM = 111.19;
 
 describe("summarise", () => {
-  it("an empty trip has no legs and zero distance", () => {
-    expect(summarise(emptyTrip())).toEqual({ legs: [], trip: { distanceKm: 0 } });
+  it("an empty trip has no legs, zero distance and no time", () => {
+    expect(summarise(emptyTrip())).toEqual({ legs: [], trip: { distanceKm: 0, timeH: 0 } });
   });
 
-  it("a trip with only a start point has no legs and zero distance", () => {
+  it("a trip with only a start point has no legs, zero distance and no time", () => {
     expect(summarise(tripThrough({ lat: 50, lng: 4 }))).toEqual({
       legs: [],
-      trip: { distanceKm: 0 },
+      trip: { distanceKm: 0, timeH: 0 },
     });
   });
 
