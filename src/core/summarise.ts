@@ -2,15 +2,31 @@ import type { LegRoute, RoutedPoint } from "./router";
 import type { LatLng, LegMode, Trip } from "./trip";
 
 /**
- * Figures for one leg. Climb and descent (metres) come from the routed
- * geometry's elevations, so they are absent until the leg is routed.
+ * Figures for one leg. Hike legs have climb and descent (metres); paddle legs
+ * have a drop instead (ADR 0018). They come from the routed geometry's
+ * elevations, so they are absent until the leg is routed.
  */
 export type LegSummary = {
   readonly mode: LegMode;
   readonly distanceKm: number;
   readonly climbM?: number;
   readonly descentM?: number;
+  /**
+   * Put-in elevation minus take-out elevation. A paddle leg that ends at most
+   * RISE_NOISE_M higher (rounded to whole metres) has a drop of 0 (elevation
+   * noise, ADR 0018).
+   */
+  readonly dropM?: number;
+  /**
+   * How much higher a paddle leg ends than it starts, when that is more than
+   * RISE_NOISE_M once rounded to whole metres: a hint that it may be drawn
+   * upstream. Replaces the drop.
+   */
+  readonly riseM?: number;
 };
+
+/** A paddle leg ending up to this many metres higher than it starts is elevation noise, not a rise. */
+export const RISE_NOISE_M = 2;
 
 export type TripSummary = {
   readonly legs: readonly LegSummary[];
@@ -76,13 +92,26 @@ function legClimbAndDescent(route: Extract<LegRoute, { status: "routed" }>) {
 }
 
 /**
+ * Drop of a routed paddle leg: from its per-point elevations, not the router's
+ * climb (ADR 0018). A small rise counts as no drop; a larger one is a rise.
+ */
+function legDrop(route: Extract<LegRoute, { status: "routed" }>): { dropM: number } | { riseM: number } {
+  const { geometry } = route;
+  const dropM = geometry[0].elevation - geometry[geometry.length - 1].elevation;
+  if (dropM >= 0) return { dropM };
+  // Rounded to whole metres first, as it is shown, so a rise shown as 2 m is noise too.
+  return Math.round(-dropM) > RISE_NOISE_M ? { riseM: -dropM } : { dropM: 0 };
+}
+
+/**
  * Figures for each leg and the whole trip. Totals are always derived, never
  * stored (ADR 0008). Legs are measured as straight lines until they are routed.
  */
 export function summarise(trip: Trip): TripSummary {
   const legs = trip.legs.map((leg, i): LegSummary => {
     if (leg.route?.status === "routed") {
-      return { mode: leg.mode, distanceKm: pathKm(leg.route.geometry), ...legClimbAndDescent(leg.route) };
+      const elevation = leg.mode === "paddle" ? legDrop(leg.route) : legClimbAndDescent(leg.route);
+      return { mode: leg.mode, distanceKm: pathKm(leg.route.geometry), ...elevation };
     }
     return { mode: leg.mode, distanceKm: distanceKm(trip.points[i], trip.points[i + 1]) };
   });

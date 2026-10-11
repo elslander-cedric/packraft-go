@@ -7,7 +7,8 @@ export const strings = {
   mapLoading: "Loading map…",
   legsPanelLabel: "Legs",
   legsPanelEmpty: "Click the map to place the start point, then click again to add legs.",
-  editHint: "Drag a point to move it. Click a point to select it, then delete it.",
+  editHint:
+    "Drag a point to move it. Click a point to select it, then delete it. Switch a leg between hike and paddle in the list.",
   toolbarLabel: "Edit route",
   undoButton: "Undo",
   undoShortcut: "Undo the last edit (Ctrl+Z / Cmd+Z)",
@@ -16,16 +17,24 @@ export const strings = {
   legLabel: (n: number) => `Leg ${n}`,
   legModeHike: "Hike",
   legModePaddle: "Paddle",
+  legModeLabel: (n: number) => `Leg ${n} mode`,
+  putIn: "Put-in",
+  takeOut: "Take-out",
   tripTotalDistance: "Total distance",
   kilometreUnit: "km",
   metreUnit: "m",
   climbLabel: "Climb",
   descentLabel: "Descent",
+  dropLabel: "Drop",
+  // A paddle leg that ends higher than it starts (ADR 0018); `elevation` is formatted, e.g. "3 m".
+  riseFigure: (elevation: string) => `↑ ${elevation} (upstream?)`,
   legRouting: "Snapping to the map…",
   legRouteFailed: {
     "no-route": "No path found between these points. Shown as a straight line; move a point or retry.",
     unavailable: "The routing service is unavailable. Shown as a straight line; retry later.",
   },
+  legRouteFailedNoRiver:
+    "No river route found between these points. Shown as a straight line; move a point onto the river or retry.",
   retryRouting: "Retry",
   navigationRulesNotice:
     "Check local navigation rules before paddling. packraft-go does not check whether a river may be paddled.",
