@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { summarise } from "./summarise";
-import { applyEdit, emptyTrip, type Edit, type LatLng, type Leg, type Trip } from "./trip";
+import { applyEdit, canUndo, emptyTrip, type Edit, type LatLng, type Leg, type Trip } from "./trip";
 
 const A = { lat: 50.35, lng: 5.45 };
 const B = { lat: 50.27, lng: 5.44 };
@@ -127,5 +127,72 @@ describe("edits clear routed results only for legs they change", () => {
   it("adding a point keeps every existing leg", () => {
     const added = applyEdit(trip, addPoint(A));
     trip.legs.forEach((leg, i) => expect(added.legs[i]).toBe(leg));
+  });
+});
+
+describe("undo", () => {
+  const undo: Edit = { type: "undo" };
+  /** Points and legs only: what the planner sees. */
+  const shape = (trip: Trip) => ({ points: trip.points, legs: trip.legs });
+
+  it("undoes adding a point", () => {
+    const trip = applyEdit(through(A, B, C), undo);
+    expect(shape(trip)).toEqual(shape(through(A, B)));
+  });
+
+  it("undoes moving a point", () => {
+    const before = through(A, B, C);
+    const trip = applyEdit(applyEdit(before, { type: "movePoint", index: 1, to: ELSEWHERE }), undo);
+    expect(shape(trip)).toEqual(shape(before));
+  });
+
+  it("undoes deleting a point, bringing back both legs and their modes", () => {
+    const before = withModes([A, B, C], ["paddle", "hike"]);
+    const trip = applyEdit(applyEdit(before, { type: "deletePoint", index: 1 }), undo);
+    expect(shape(trip)).toEqual(shape(before));
+  });
+
+  it("restores the very legs from before the edit, so their routed results come back", () => {
+    const before = through(A, B, C, D);
+    const after = applyEdit(applyEdit(before, { type: "deletePoint", index: 1 }), undo);
+    after.legs.forEach((leg, i) => expect(leg).toBe(before.legs[i]));
+  });
+
+  it("undoes add, move and delete repeatedly, back to an empty trip", () => {
+    let trip = through(A, B, C);
+    trip = applyEdit(trip, { type: "movePoint", index: 2, to: ELSEWHERE });
+    trip = applyEdit(trip, { type: "deletePoint", index: 0 });
+
+    const expected = [[A, B, ELSEWHERE], [A, B, C], [A, B], [A], []];
+    for (const points of expected) {
+      trip = applyEdit(trip, undo);
+      expect(trip.points).toEqual(points);
+      expect(trip.legs).toHaveLength(Math.max(0, points.length - 1));
+    }
+    expect(shape(trip)).toEqual(shape(emptyTrip()));
+  });
+
+  it("undo with nothing to undo leaves the trip as it is", () => {
+    expect(shape(applyEdit(emptyTrip(), undo))).toEqual(shape(emptyTrip()));
+    const trip = applyEdit(through(A), undo);
+    expect(shape(applyEdit(trip, undo))).toEqual(shape(emptyTrip()));
+  });
+
+  it("an edit that changes nothing is not an undo step", () => {
+    const trip = applyEdit(through(A, B), { type: "deletePoint", index: 9 });
+    expect(applyEdit(trip, undo).points).toEqual([A]);
+  });
+
+  it("tells whether there is anything to undo", () => {
+    expect(canUndo(emptyTrip())).toBe(false);
+    expect(canUndo(through(A))).toBe(true);
+    expect(canUndo(applyEdit(through(A), undo))).toBe(false);
+  });
+
+  it("does not change the trip it was given", () => {
+    const before = through(A, B);
+    const snapshot = JSON.stringify(before);
+    applyEdit(before, undo);
+    expect(JSON.stringify(before)).toBe(snapshot);
   });
 });

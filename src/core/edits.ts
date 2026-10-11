@@ -17,6 +17,29 @@ export function movePoint(trip: Trip, index: number, to: LatLng): Trip {
 }
 
 /**
+ * Records `before` as an undo step on `after`. Undo steps are whole earlier
+ * states (they share unchanged points and legs, so they are cheap), which makes
+ * every edit reversible, including the routed results it cleared.
+ * An edit that changed nothing is not recorded.
+ */
+export function withUndoStep(before: Trip, after: Trip): Trip {
+  if (after === before) return before;
+  const { undoSteps = [], ...state } = before;
+  return { ...after, undoSteps: [...undoSteps, state] };
+}
+
+export function canUndo(trip: Trip): boolean {
+  return (trip.undoSteps?.length ?? 0) > 0;
+}
+
+/** Goes back to the state before the last edit; with nothing to undo, returns the trip. */
+export function undoLastEdit(trip: Trip): Trip {
+  const steps = trip.undoSteps ?? [];
+  if (steps.length === 0) return trip;
+  return { ...steps[steps.length - 1], undoSteps: steps.slice(0, -1) };
+}
+
+/**
  * Removes a point. An end point takes its one leg with it; a middle point's
  * two legs merge into one unrouted leg with the earlier leg's mode.
  */
