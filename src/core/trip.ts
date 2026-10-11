@@ -1,5 +1,5 @@
 // Trip planner core: pure TypeScript, no React, no network (spec #2, Seam 1).
-import { canUndo, deletePoint, movePoint, setLegMode, undoLastEdit, withUndoStep } from "./edits";
+import { canUndo, deletePoint, movePoint, setLegMode, toggleCamp, undoLastEdit, withUndoStep } from "./edits";
 import type { LegRoute } from "./router";
 
 export { canUndo };
@@ -21,6 +21,11 @@ export type Trip = {
   readonly name: string;
   readonly points: readonly LatLng[];
   readonly legs: readonly Leg[];
+  /**
+   * Indices of the points marked as camps, in ascending order (ADR 0008).
+   * Absent or empty when the trip has no camps. Use `isCamp` to read it.
+   */
+  readonly camps?: readonly number[];
   /** The trip as it was before each edit, oldest first. Undo goes back one step. */
   readonly undoSteps?: readonly TripState[];
 };
@@ -33,6 +38,7 @@ export type Edit =
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   | { readonly type: "deletePoint"; readonly index: number }
   | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode }
+  | { readonly type: "toggleCamp"; readonly index: number }
   | { readonly type: "undo" };
 
 export function emptyTrip(): Trip {
@@ -66,8 +72,14 @@ function applyStep(trip: Trip, edit: Exclude<Edit, { type: "undo" }>): Trip {
   if (edit.type === "movePoint") return movePoint(trip, edit.index, edit.to);
   if (edit.type === "deletePoint") return deletePoint(trip, edit.index);
   if (edit.type === "setLegMode") return setLegMode(trip, edit.index, edit.mode);
+  if (edit.type === "toggleCamp") return toggleCamp(trip, edit.index);
   const legs: Leg[] = trip.points.length > 0 ? [...trip.legs, { mode: "hike" }] : [];
   return { ...trip, points: [...trip.points, edit.at], legs };
+}
+
+/** True when the point at `index` is marked as a camp. */
+export function isCamp(trip: Trip, index: number): boolean {
+  return trip.camps?.includes(index) ?? false;
 }
 
 /**
