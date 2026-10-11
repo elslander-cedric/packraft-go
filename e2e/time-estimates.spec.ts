@@ -45,6 +45,8 @@ async function drawHikeThenPaddle(page: Page) {
     .getByRole("button", { name: strings.legModePaddle })
     .click();
   await expect(rows(page).nth(1)).toContainText(strings.dropLabel);
+  // Updated in round 2: the trip total waits for every leg to be routed.
+  await expect(rows(page).nth(0)).toContainText(strings.climbLabel);
 }
 
 test("each leg and the trip show an estimated time, labelled as an estimate", async ({ page }) => {
@@ -90,6 +92,37 @@ test("changing the pace factor and paddling speed updates the times at once", as
   await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} 1 h 13 min`);
   await paceFactor(page).fill("0");
   await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} 1 h 13 min`);
+});
+
+test("while a hike leg is being snapped its time and the trip total show an ellipsis", async ({ page }) => {
+  let answer: (reply: BRouterReply) => void = () => {};
+  const held = new Promise<BRouterReply>((resolve) => (answer = resolve));
+  await serveOffline(page, { brouter: () => held });
+  const clickMap = await openMap(page);
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+
+  await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} ${strings.timePending}`);
+  await expect(tripTime(page)).toHaveText(`${strings.tripTotalTimeEstimate} ${strings.timePending}`);
+
+  answer(TRAIL);
+  await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} 49 min`);
+  await expect(tripTime(page)).toHaveText(`${strings.tripTotalTimeEstimate} 49 min`);
+});
+
+test("a hike leg that failed to snap shows a distance-only time marked as having no climb data, and so does the total", async ({
+  page,
+}) => {
+  await serveOffline(page); // BRouter unavailable
+  const clickMap = await openMap(page);
+  await clickMap(-100, 0);
+  await clickMap(100, 0);
+  await expect(rows(page).nth(0).getByRole("alert")).toBeVisible();
+
+  const noClimb = new RegExp(`\\d+ min \\(no climb data\\)$`);
+  await expect(legTime(page, 0)).toHaveText(noClimb);
+  await expect(tripTime(page)).toHaveText(noClimb);
+  expect(strings.timeWithoutClimb("45 min")).toBe("45 min (no climb data)");
 });
 
 test("settings are remembered across reloads", async ({ page }) => {

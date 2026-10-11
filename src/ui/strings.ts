@@ -28,6 +28,10 @@ export const strings = {
   // Times are estimates (ADR 0009) and say so wherever they are shown.
   legTimeEstimate: "Est. time",
   tripTotalTimeEstimate: "Estimated total time",
+  // Shown instead of a time while a hike leg (or, for the total, any leg) is still being snapped.
+  timePending: "…",
+  // A hike leg that failed to route is timed on distance only; `duration` is formatted, e.g. "45 min".
+  timeWithoutClimb: (duration: string) => `${duration} (no climb data)`,
   timeEstimateNote: "Times are estimates: Naismith's rule for hike legs, your paddling speed for paddle legs.",
   settingsPanelLabel: "Settings",
   paceFactorLabel: "Hiking pace factor",

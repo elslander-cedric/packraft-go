@@ -1,3 +1,4 @@
+import type { TimeStatus } from "@/core/summarise";
 import { strings } from "./strings";
 
 /** A distance in kilometres for display, e.g. "12.3 km". */
@@ -17,4 +18,14 @@ export function formatDuration(hours: number): string {
   const min = totalMinutes % 60;
   if (h === 0) return `${min} ${strings.minuteUnit}`;
   return `${h} ${strings.hourUnit} ${String(min).padStart(2, "0")} ${strings.minuteUnit}`;
+}
+
+/**
+ * A time estimate for display (ADR 0009, amended): "…" while it waits for
+ * routing, and marked when it counts distance only.
+ */
+export function formatTimeEstimate(hours: number, status: TimeStatus): string {
+  if (status === "pending") return strings.timePending;
+  const duration = formatDuration(hours);
+  return status === "no-climb-data" ? strings.timeWithoutClimb(duration) : duration;
 }

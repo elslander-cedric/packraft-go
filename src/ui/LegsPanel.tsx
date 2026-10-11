@@ -1,6 +1,6 @@
 import type { TripSummary } from "@/core/summarise";
 import type { Leg, LegMode } from "@/core/trip";
-import { formatDistance, formatDuration, formatElevation } from "./format";
+import { formatDistance, formatElevation, formatTimeEstimate } from "./format";
 import { strings } from "./strings";
 
 const modes: readonly LegMode[] = ["hike", "paddle"];
@@ -62,7 +62,9 @@ export default function LegsPanel({ summary, legs, onRetry, onSetMode }: LegsPan
                 )}
                 {leg.dropM !== undefined && <span>{`${strings.dropLabel} ${formatElevation(leg.dropM)}`}</span>}
                 {leg.riseM !== undefined && <span>{strings.riseFigure(formatElevation(leg.riseM))}</span>}
-                <span className="leg-time">{`${strings.legTimeEstimate} ${formatDuration(leg.timeH)}`}</span>
+                <span className="leg-time">
+                  {`${strings.legTimeEstimate} ${formatTimeEstimate(leg.timeH, leg.timeStatus)}`}
+                </span>
                 {(!route || route.status === "pending") && (
                   <span role="status" className="leg-routing">
                     {strings.legRouting}
@@ -88,7 +90,9 @@ export default function LegsPanel({ summary, legs, onRetry, onSetMode }: LegsPan
       <p className="trip-total">
         {`${strings.tripTotalDistance} ${formatDistance(summary.trip.distanceKm)}`}
       </p>
-      <p className="trip-time">{`${strings.tripTotalTimeEstimate} ${formatDuration(summary.trip.timeH)}`}</p>
+      <p className="trip-time">
+        {`${strings.tripTotalTimeEstimate} ${formatTimeEstimate(summary.trip.timeH, summary.trip.timeStatus)}`}
+      </p>
       <p className="time-estimate-note">{strings.timeEstimateNote}</p>
     </aside>
   );

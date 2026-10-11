@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { formatDistance, formatDuration, formatElevation } from "./format";
+import { formatDistance, formatDuration, formatElevation, formatTimeEstimate } from "./format";
+import { strings } from "./strings";
+
+describe("formatTimeEstimate", () => {
+  it("shows an estimated time as hours and minutes", () => {
+    expect(formatTimeEstimate(1.0833, "estimated")).toBe("1 h 05 min");
+  });
+
+  it("shows a pending time as an ellipsis", () => {
+    expect(formatTimeEstimate(2, "pending")).toBe(strings.timePending);
+    expect(strings.timePending).toBe("…");
+  });
+
+  it("marks a time without climb data", () => {
+    expect(formatTimeEstimate(0.75, "no-climb-data")).toBe("45 min (no climb data)");
+  });
+});
 
 describe("formatElevation", () => {
   it("shows whole metres", () => {
