@@ -259,3 +259,81 @@ test("#9: blocked browser storage does not crash the planner", async ({ page }) 
   await expect(legLines(page)).toHaveClass(/leg-routed/);
   expect(errors).toEqual([]);
 });
+
+// Round 2 rule (approved by Cedric): New trip asks "Start a new trip? Your current
+// trip will be lost." when the trip has at least one point, does nothing on cancel,
+// and does not ask for an empty trip.
+function watchDialogs(page: Page, answer: () => "accept" | "dismiss") {
+  const seen: string[] = [];
+  page.on("dialog", (dialog) => {
+    seen.push(`${dialog.type()}: ${dialog.message()}`);
+    void (answer() === "accept" ? dialog.accept() : dialog.dismiss());
+  });
+  return seen;
+}
+const CONFIRM = `confirm: ${strings.newTripConfirm}`;
+
+test("#9 round 2: a single point is enough to ask; cancel keeps it, OK clears it, and an empty trip is not asked about", async ({ page }) => {
+  await serveOffline(page, { brouter: () => SNAPPED });
+  const c = await openMap(page);
+  let answer: "accept" | "dismiss" = "dismiss";
+  const seen = watchDialogs(page, () => answer);
+  expect(strings.newTripConfirm).toBe("Start a new trip? Your current trip will be lost.");
+
+  await page.mouse.click(c.x, c.y);
+  await expect(pointMarkers(page)).toHaveCount(1);
+  await expect.poll(async () => (await stored(page))?.trip.points.length).toBe(1);
+
+  await newTripBtn(page).click();
+  await expect.poll(() => seen).toEqual([CONFIRM]);
+  await page.waitForTimeout(300);
+  await expect(pointMarkers(page)).toHaveCount(1);
+  expect((await stored(page)).trip.points).toHaveLength(1);
+
+  // Cancelling twice in a row still changes nothing.
+  await newTripBtn(page).click();
+  await expect.poll(() => seen).toEqual([CONFIRM, CONFIRM]);
+  await expect(pointMarkers(page)).toHaveCount(1);
+
+  answer = "accept";
+  await newTripBtn(page).click();
+  await expect.poll(() => seen).toHaveLength(3);
+  await expect(pointMarkers(page)).toHaveCount(0);
+  expect((await stored(page)).trip).toEqual({ name: "", points: [], legs: [] });
+
+  // Now empty: no question.
+  await newTripBtn(page).click();
+  await page.waitForTimeout(300);
+  expect(seen).toHaveLength(3);
+});
+
+test("#9 round 2: a trip restored after reload is asked about; a trip emptied by undo is not", async ({ page }) => {
+  await serveOffline(page, { brouter: () => SNAPPED });
+  let c = await openMap(page);
+  const seen = watchDialogs(page, () => "dismiss");
+
+  await page.mouse.click(c.x - 150, c.y);
+  await page.mouse.click(c.x + 150, c.y);
+  await expect(legLines(page)).toHaveClass(/leg-routed/);
+  await reload(page);
+  await expect(pointMarkers(page)).toHaveCount(2);
+
+  await newTripBtn(page).click();
+  await expect.poll(() => seen).toEqual([CONFIRM]);
+  await expect(pointMarkers(page)).toHaveCount(2);
+  await reload(page);
+  await expect(pointMarkers(page)).toHaveCount(2);
+
+  // Start fresh, add one point and undo it: the trip has no points again.
+  await page.evaluate((key) => localStorage.removeItem(key), KEY);
+  c = await openMap(page);
+  await expect(pointMarkers(page)).toHaveCount(0);
+  await page.mouse.click(c.x, c.y);
+  await expect(pointMarkers(page)).toHaveCount(1);
+  await undoBtn(page).click();
+  await expect(pointMarkers(page)).toHaveCount(0);
+  await tripName(page).fill("Named but empty");
+  await newTripBtn(page).click();
+  await expect(tripName(page)).toHaveValue("");
+  expect(seen).toEqual([CONFIRM]);
+});
