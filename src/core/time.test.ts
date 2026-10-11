@@ -55,9 +55,27 @@ describe("hike time (Naismith)", () => {
     expect(leg.timeH).toBeCloseTo(3, 6);
   });
 
-  it("a hike leg not routed yet is timed on its straight-line distance with no climb", () => {
+  it("a routed hike leg has an estimated time", () => {
+    expect(summarise(routedLeg("hike", 10, 600)).legs[0].timeStatus).toBe("estimated");
+  });
+
+  // Updated in round 2: a hike leg still being snapped has no time yet (it used to be timed without climb).
+  it("a hike leg that is not routed yet (no route or pending) has a pending time", () => {
     const trip = tripThrough({ lat: 0, lng: 0 }, { lat: 0, lng: 10 / KM_PER_DEGREE });
-    expect(summarise(trip).legs[0].timeH).toBeCloseTo(2, 6);
+    expect(summarise(trip).legs[0].timeStatus).toBe("pending");
+    const pending: Trip = { ...trip, legs: [{ mode: "hike", route: { status: "pending" } }] };
+    expect(summarise(pending).legs[0].timeStatus).toBe("pending");
+  });
+
+  it("a hike leg that failed to route is timed on its straight-line distance, marked as having no climb data", () => {
+    const trip = tripThrough({ lat: 0, lng: 0 }, { lat: 0, lng: 10 / KM_PER_DEGREE });
+    const failed: Trip = {
+      ...trip,
+      legs: [{ mode: "hike", route: { status: "failed", failure: { kind: "unavailable" } } }],
+    };
+    const leg = summarise(failed, { ...defaultSettings, paceFactor: 1.5 }).legs[0];
+    expect(leg.timeH).toBeCloseTo(3, 6);
+    expect(leg.timeStatus).toBe("no-climb-data");
   });
 });
 
@@ -83,12 +101,42 @@ describe("paddle time (planner's speed)", () => {
       legs: [{ mode: "paddle" }],
     };
     expect(summarise(trip).legs[0].timeH).toBeCloseTo(2, 6);
+    // Paddle time does not depend on climb, so it is an estimate even before routing.
+    expect(summarise(trip).legs[0].timeStatus).toBe("estimated");
+    const failed: Trip = { ...trip, legs: [{ mode: "paddle", route: { status: "failed", failure: { kind: "no-route" } } }] };
+    expect(summarise(failed).legs[0].timeStatus).toBe("estimated");
   });
 });
 
 describe("trip time", () => {
   it("an empty trip takes no time", () => {
     expect(summarise(emptyTrip()).trip.timeH).toBe(0);
+    expect(summarise(emptyTrip()).trip.timeStatus).toBe("estimated");
+  });
+
+  /** A hike leg of 10 km + 600 m (3 h) followed by a second leg in the given state. */
+  const withSecondLeg = (second: Trip["legs"][number]): Trip => {
+    const hike = routedLeg("hike", 10, 600);
+    return { ...hike, points: [...hike.points, { lat: 0, lng: 20 / KM_PER_DEGREE }], legs: [hike.legs[0], second] };
+  };
+
+  it("is pending while any leg is pending, whatever its mode", () => {
+    expect(summarise(withSecondLeg({ mode: "hike" })).trip.timeStatus).toBe("pending");
+    expect(summarise(withSecondLeg({ mode: "paddle", route: { status: "pending" } })).trip.timeStatus).toBe(
+      "pending",
+    );
+  });
+
+  it("includes a failed hike leg's distance-only time and is marked as having no climb data", () => {
+    const summary = summarise(withSecondLeg({ mode: "hike", route: { status: "failed", failure: { kind: "no-route" } } }));
+    expect(summary.trip.timeH).toBeCloseTo(5, 6);
+    expect(summary.trip.timeStatus).toBe("no-climb-data");
+  });
+
+  it("a failed paddle leg leaves the trip time an estimate", () => {
+    const summary = summarise(withSecondLeg({ mode: "paddle", route: { status: "failed", failure: { kind: "no-route" } } }));
+    expect(summary.trip.timeH).toBeCloseTo(5, 6);
+    expect(summary.trip.timeStatus).toBe("estimated");
   });
 
   it("is the sum of the legs' times, and follows settings changes", () => {

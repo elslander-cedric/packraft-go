@@ -24,16 +24,27 @@ export type LegSummary = {
    * upstream. Replaces the drop.
    */
   readonly riseM?: number;
-  /** Estimated time in hours (ADR 0009). An estimate, and shown as one. */
+  /** Estimated time in hours (ADR 0009). An estimate, and shown as one; see `timeStatus`. */
   readonly timeH: number;
+  readonly timeStatus: TimeStatus;
 };
+
+/**
+ * How far a time can be trusted (ADR 0009, amended):
+ * - `estimated`: the time rule had everything it needs.
+ * - `pending`: a hike leg (or, for the trip, any leg) is still being routed;
+ *   `timeH` is only a placeholder and is not shown.
+ * - `no-climb-data`: a hike leg failed to route, so its time counts distance
+ *   only; a trip including such a leg says so too.
+ */
+export type TimeStatus = "estimated" | "pending" | "no-climb-data";
 
 /** A paddle leg ending up to this many metres higher than it starts is elevation noise, not a rise. */
 export const RISE_NOISE_M = 2;
 
 export type TripSummary = {
   readonly legs: readonly LegSummary[];
-  readonly trip: { readonly distanceKm: number; readonly timeH: number };
+  readonly trip: { readonly distanceKm: number; readonly timeH: number; readonly timeStatus: TimeStatus };
 };
 
 const EARTH_MEAN_RADIUS_KM = 6371.0088;
@@ -129,16 +140,31 @@ export function summarise(trip: Trip, settings: Settings = defaultSettings): Tri
     if (leg.route?.status === "routed") {
       const km = pathKm(leg.route.geometry);
       if (leg.mode === "paddle") {
-        return { mode: leg.mode, distanceKm: km, ...legDrop(leg.route), timeH: paddleTimeH(km, settings) };
+        const timeH = paddleTimeH(km, settings);
+        return { mode: leg.mode, distanceKm: km, ...legDrop(leg.route), timeH, timeStatus: "estimated" };
       }
       const elevation = legClimbAndDescent(leg.route);
-      return { mode: leg.mode, distanceKm: km, ...elevation, timeH: hikeTimeH(km, elevation.climbM, settings) };
+      const timeH = hikeTimeH(km, elevation.climbM, settings);
+      return { mode: leg.mode, distanceKm: km, ...elevation, timeH, timeStatus: "estimated" };
     }
+    // Not routed: a straight line. Paddle time does not need climb; hike time
+    // waits for routing, or does without climb when routing failed.
     const km = distanceKm(trip.points[i], trip.points[i + 1]);
-    // Not routed yet: a straight line, with no climb known.
-    const timeH = leg.mode === "paddle" ? paddleTimeH(km, settings) : hikeTimeH(km, 0, settings);
-    return { mode: leg.mode, distanceKm: km, timeH };
+    if (leg.mode === "paddle") {
+      return { mode: leg.mode, distanceKm: km, timeH: paddleTimeH(km, settings), timeStatus: "estimated" };
+    }
+    const timeStatus: TimeStatus = leg.route?.status === "failed" ? "no-climb-data" : "pending";
+    return { mode: leg.mode, distanceKm: km, timeH: hikeTimeH(km, 0, settings), timeStatus };
   });
   const sum = (figure: (leg: LegSummary) => number) => legs.reduce((total, leg) => total + figure(leg), 0);
-  return { legs, trip: { distanceKm: sum((leg) => leg.distanceKm), timeH: sum((leg) => leg.timeH) } };
+  return {
+    legs,
+    trip: { distanceKm: sum((leg) => leg.distanceKm), timeH: sum((leg) => leg.timeH), timeStatus: tripTimeStatus(trip, legs) },
+  };
+}
+
+/** The trip time waits while any leg is still being routed, and lacks climb data when any leg's time does. */
+function tripTimeStatus(trip: Trip, legs: readonly LegSummary[]): TimeStatus {
+  if (trip.legs.some((leg) => leg.route === undefined || leg.route.status === "pending")) return "pending";
+  return legs.some((leg) => leg.timeStatus === "no-climb-data") ? "no-climb-data" : "estimated";
 }
