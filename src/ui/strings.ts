@@ -5,6 +5,13 @@ export const strings = {
   appDescription: "Plan packrafting trips: hike legs and paddle legs on one map.",
   mapLabel: "Trip map",
   mapLoading: "Loading map…",
+  legsPanelLabel: "Legs",
+  legsPanelEmpty: "Click the map to place the start point, then click again to add legs.",
+  legLabel: (n: number) => `Leg ${n}`,
+  legModeHike: "Hike",
+  legModePaddle: "Paddle",
+  tripTotalDistance: "Total distance",
+  kilometreUnit: "km",
   navigationRulesNotice:
     "Check local navigation rules before paddling. packraft-go does not check whether a river may be paddled.",
   // Shown in the map's attribution control. Contains HTML links.
