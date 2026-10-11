@@ -11,9 +11,20 @@ export type LegSummary = {
   readonly distanceKm: number;
   readonly climbM?: number;
   readonly descentM?: number;
-  /** Put-in elevation minus take-out elevation; negative if the leg ends higher. */
+  /**
+   * Put-in elevation minus take-out elevation. A paddle leg that ends at most
+   * RISE_NOISE_M higher has a drop of 0 (elevation noise, ADR 0018).
+   */
   readonly dropM?: number;
+  /**
+   * How much higher a paddle leg ends than it starts, when that is more than
+   * RISE_NOISE_M: a hint that it may be drawn upstream. Replaces the drop.
+   */
+  readonly riseM?: number;
 };
+
+/** A paddle leg ending up to this many metres higher than it starts is elevation noise, not a rise. */
+export const RISE_NOISE_M = 2;
 
 export type TripSummary = {
   readonly legs: readonly LegSummary[];
@@ -78,10 +89,15 @@ function legClimbAndDescent(route: Extract<LegRoute, { status: "routed" }>) {
   return { climbM: route.climbM ?? smoothed.climbM, descentM: smoothed.descentM };
 }
 
-/** Drop of a routed paddle leg: from its per-point elevations, not the router's climb (ADR 0018). */
-function legDrop(route: Extract<LegRoute, { status: "routed" }>) {
+/**
+ * Drop of a routed paddle leg: from its per-point elevations, not the router's
+ * climb (ADR 0018). A small rise counts as no drop; a larger one is a rise.
+ */
+function legDrop(route: Extract<LegRoute, { status: "routed" }>): { dropM: number } | { riseM: number } {
   const { geometry } = route;
-  return { dropM: geometry[0].elevation - geometry[geometry.length - 1].elevation };
+  const dropM = geometry[0].elevation - geometry[geometry.length - 1].elevation;
+  if (dropM >= 0) return { dropM };
+  return -dropM > RISE_NOISE_M ? { riseM: -dropM } : { dropM: 0 };
 }
 
 /**

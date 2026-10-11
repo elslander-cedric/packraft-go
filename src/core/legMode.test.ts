@@ -141,6 +141,7 @@ describe("put-ins and take-outs", () => {
       { kind: "put-in", point: 1 },
       { kind: "take-out", point: 2 },
       { kind: "put-in", point: 3 },
+      { kind: "take-out", point: 4 },
     ]);
   });
 
@@ -151,8 +152,24 @@ describe("put-ins and take-outs", () => {
     ]);
   });
 
-  it("only marks changes of mode, so a trip that starts or ends on the water has no marker at its ends", () => {
-    expect(putInsAndTakeOuts(withModes(["paddle", "hike"]))).toEqual([{ kind: "take-out", point: 1 }]);
-    expect(putInsAndTakeOuts(withModes(["paddle"]))).toEqual([]);
+  it("a trip that starts on the water has a put-in at its start", () => {
+    expect(putInsAndTakeOuts(withModes(["paddle", "hike"]))).toEqual([
+      { kind: "put-in", point: 0 },
+      { kind: "take-out", point: 1 },
+    ]);
+  });
+
+  it("a trip that ends on the water has a take-out at its end", () => {
+    expect(putInsAndTakeOuts(withModes(["hike", "paddle"]))).toEqual([
+      { kind: "put-in", point: 1 },
+      { kind: "take-out", point: 2 },
+    ]);
+  });
+
+  it("a single paddle leg has a put-in at its start and a take-out at its end", () => {
+    expect(putInsAndTakeOuts(withModes(["paddle"]))).toEqual([
+      { kind: "put-in", point: 0 },
+      { kind: "take-out", point: 1 },
+    ]);
   });
 });

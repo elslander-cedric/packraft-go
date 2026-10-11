@@ -144,14 +144,29 @@ describe("summarise paddle legs", () => {
     expect(leg.descentM).toBeUndefined();
   });
 
-  it("a paddle leg that ends higher than it starts has a negative drop", () => {
-    const leg = summarise(
+  const endsAt = (start: number, end: number) =>
+    summarise(
       paddle([
-        { lat: 0, lng: 0, elevation: 90 },
-        { lat: 0, lng: 0.01, elevation: 92 },
+        { lat: 0, lng: 0, elevation: start },
+        { lat: 0, lng: 0.01, elevation: end },
       ]),
     ).legs[0];
-    expect(leg.dropM).toBe(-2);
+
+  it("a paddle leg that ends up to 2 m higher than it starts has a drop of 0 (elevation noise)", () => {
+    expect(endsAt(90, 92)).toMatchObject({ dropM: 0 });
+    expect(endsAt(90, 92).riseM).toBeUndefined();
+    expect(endsAt(90, 90.5)).toMatchObject({ dropM: 0 });
+  });
+
+  it("a paddle leg that ends more than 2 m higher than it starts has a rise instead of a drop", () => {
+    const leg = endsAt(90, 93);
+    expect(leg.riseM).toBe(3);
+    expect(leg.dropM).toBeUndefined();
+    expect(endsAt(90, 92.25).riseM).toBe(2.25);
+  });
+
+  it("hike legs and paddle legs that drop have no rise", () => {
+    expect(endsAt(99, 92).riseM).toBeUndefined();
   });
 
   it("a hike leg has no drop", () => {

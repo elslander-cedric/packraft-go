@@ -213,7 +213,11 @@ describe("paddle-leg routing failure (hand-made via the fake router; no recorded
     expect(leg.climbM).toBeUndefined();
     expect(leg.distanceKm).toBeGreaterThan(0);
     // The put-in is still marked: the mode is what counts, not the routing.
-    expect(putInsAndTakeOuts(state.trip)).toEqual([{ kind: "put-in", point: 1 }]);
+    // Updated in round 2: a trip that ends on the water has a take-out at its end.
+    expect(putInsAndTakeOuts(state.trip)).toEqual([
+      { kind: "put-in", point: 1 },
+      { kind: "take-out", point: 2 },
+    ]);
   });
 
   it("retry asks the river profile again and the leg snaps once it succeeds", async () => {
@@ -314,9 +318,13 @@ describe("AC4: put-ins and take-outs at mode changes", () => {
   });
 
   it("a portage (paddle, short hike, paddle; ADR 0016) gives a take-out then a put-in", () => {
+    // Updated in round 2: the trip starts and ends on the water, so its start
+    // is a put-in and its end a take-out.
     expect(putInsAndTakeOuts(withModes("paddle", "hike", "paddle"))).toEqual([
+      { kind: "put-in", point: 0 },
       { kind: "take-out", point: 1 },
       { kind: "put-in", point: 2 },
+      { kind: "take-out", point: 3 },
     ]);
   });
 

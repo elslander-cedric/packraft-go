@@ -54,17 +54,20 @@ function applyStep(trip: Trip, edit: Exclude<Edit, { type: "undo" }>): Trip {
 }
 
 /**
- * Where the trip gets on or off the water: a put-in where a hike leg ends and
- * a paddle leg begins, a take-out where a paddle leg ends and a hike leg
- * begins. `point` is the index of the point where the mode changes. Only
- * changes of mode count, so the trip's start and end are never marked.
+ * Where the trip gets on or off the water: a put-in where a stretch of paddle
+ * legs begins (after a hike leg, or at the trip's start), a take-out where it
+ * ends (before a hike leg, or at the trip's end). `point` is the index of the
+ * point where the planner launches or gets off the water.
  */
 export type ModeChange = { readonly kind: "put-in" | "take-out"; readonly point: number };
 
 export function putInsAndTakeOuts(trip: Trip): ModeChange[] {
-  return trip.legs.flatMap((leg, i): ModeChange[] => {
-    const before = trip.legs[i - 1];
-    if (!before || before.mode === leg.mode) return [];
-    return [{ kind: leg.mode === "paddle" ? "put-in" : "take-out", point: i }];
+  // A stretch on the water starts or ends at every point whose two sides
+  // differ in being paddle; the trip's ends count as dry land.
+  const paddleBefore = (point: number) => trip.legs[point - 1]?.mode === "paddle";
+  const paddleAfter = (point: number) => trip.legs[point]?.mode === "paddle";
+  return trip.points.flatMap((_, point): ModeChange[] => {
+    if (paddleBefore(point) === paddleAfter(point)) return [];
+    return [{ kind: paddleAfter(point) ? "put-in" : "take-out", point }];
   });
 }
