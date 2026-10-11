@@ -1,4 +1,4 @@
-import TripPlanner from "@/ui/TripPlanner";
+import ClientTripPlanner from "@/ui/ClientTripPlanner";
 import { strings } from "@/ui/strings";
 
 export default function Home() {
@@ -7,7 +7,7 @@ export default function Home() {
       <p className="navigation-notice" role="note">
         {strings.navigationRulesNotice}
       </p>
-      <TripPlanner />
+      <ClientTripPlanner />
     </main>
   );
 }
