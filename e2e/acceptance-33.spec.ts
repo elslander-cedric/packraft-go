@@ -1,5 +1,7 @@
 // Tester acceptance tests for #33: version 2 is the only save-format version.
 // Version 1 is refused the same way as other unknown versions, in autosave and Open file.
+// Updated: format reset (#52). Version 1 is the only version again; the old version 2 is refused the
+// same way as other unknown versions, so the roles of 1 and 2 are swapped.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
@@ -50,7 +52,7 @@ async function loadWithAutosave(page: Page, text: string) {
   return storedText(page);
 }
 
-test("#33: a version 1 autosave is handled exactly like a version 3 autosave (empty trip, same storage outcome)", async ({
+test("#33, #52: an old version 2 autosave is handled exactly like a version 3 autosave (empty trip, same storage outcome)", async ({
   browser,
 }) => {
   const outcome = async (version: number) => {
@@ -70,12 +72,12 @@ test("#33: a version 1 autosave is handled exactly like a version 3 autosave (em
     await context.close();
     return result;
   };
-  const v1 = await outcome(1);
-  expect(v1).toMatchObject({ name: "", points: 0, alert: 0, errors: [] });
-  expect(v1).toEqual(await outcome(3));
+  const v2 = await outcome(2);
+  expect(v2).toMatchObject({ name: "", points: 0, alert: 0, errors: [] });
+  expect(v2).toEqual(await outcome(3));
 });
 
-test("#33: opening a version 1 file on an empty planner shows the unknown-version message and changes nothing, twice in a row", async ({
+test("#33, #52: opening an old version 2 file on an empty planner shows the unknown-version message and changes nothing, twice in a row", async ({
   page,
 }) => {
   const net = await serveOffline(page);
@@ -89,7 +91,7 @@ test("#33: opening a version 1 file on an empty planner shows the unknown-versio
   const before = await storedText(page);
 
   for (let i = 0; i < 2; i++) {
-    await openFile(page, save(1));
+    await openFile(page, save(2));
     await expect(alertWith(page, strings.openFileUnknownVersion)).toBeVisible();
     await expect(alertWith(page, strings.openFileInvalid)).toHaveCount(0);
     await page.waitForTimeout(300);
@@ -100,8 +102,8 @@ test("#33: opening a version 1 file on an empty planner shows the unknown-versio
   expect(dialogs).toEqual([]);
   expect(net.brouter).toHaveLength(0);
 
-  // The same content as version 2 opens, and the message goes away.
-  await openFile(page, save(2));
+  // The same content as version 1 opens, and the message goes away.
+  await openFile(page, save(1));
   await expect(tripName(page)).toHaveValue("Old format");
   await expect(pointMarkers(page)).toHaveCount(2);
   await expect(alertWith(page, strings.openFileUnknownVersion)).toHaveCount(0);

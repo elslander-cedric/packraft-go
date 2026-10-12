@@ -74,9 +74,10 @@ test("a newer-version autosave is kept, with a warning, while the planner edits"
   expect(errors).toEqual([]);
 });
 
-test("version 1 autosave is treated like any other unknown version", async ({ page }) => {
+// Updated: format reset (#52). The old version 2 is the unknown one now.
+test("an old version 2 autosave is treated like any other unknown version", async ({ page }) => {
   await serveOffline(page);
-  const old = saveText(1);
+  const old = saveText(2);
   await openWithStored(page, old);
 
   await expect(warning(page)).toBeVisible();
@@ -97,7 +98,8 @@ test("starting a new trip replaces the kept save and clears the warning", async 
   await expect(warning(page)).toHaveCount(0);
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect.poll(() => storedTrip(page)).not.toBe(NEWER);
-  expect(JSON.parse((await storedTrip(page))!)).toMatchObject({ version: 2, trip: { points: [] } });
+  // Updated: format reset (#52).
+  expect(JSON.parse((await storedTrip(page))!)).toMatchObject({ version: 1, trip: { points: [] } });
 
   // From now on edits are saved again.
   await tripName(page).fill("Fresh start");
@@ -123,7 +125,8 @@ test("opening a trip file replaces the kept save and clears the warning", async 
   await openWithStored(page, NEWER);
   await expect(warning(page)).toBeVisible();
 
-  const file = { name: "lesse.packraft.json", mimeType: "application/json", buffer: Buffer.from(saveText(2)) };
+  // Updated: format reset (#52). A valid file is version 1.
+  const file = { name: "lesse.packraft.json", mimeType: "application/json", buffer: Buffer.from(saveText(1)) };
   const [chooser] = await Promise.all([page.waitForEvent("filechooser"), openFileButton(page).click()]);
   await chooser.setFiles(file);
 

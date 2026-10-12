@@ -7,11 +7,13 @@ const trip: Trip = { name: "Semois", points: [{ lat: 49.8, lng: 5.0 }], legs: []
 const base = JSON.parse(serialiseTrip(trip));
 
 describe("#28 restoring the autosave", () => {
-  it.each([2.0])("restores version %s", (version) => {
+  // Updated: format reset (#52). The current version is 1.
+  it.each([1.0])("restores version %s", (version) => {
     expect(restoreStoredTrip(JSON.stringify({ ...base, version }))).toEqual({ trip, unknownVersion: false });
   });
 
-  it.each([3, 4, 1000, -1])("flags version %s as unknown and gives an empty trip", (version) => {
+  // Updated: format reset (#52). The old version 2 is unknown too.
+  it.each([2, 3, 4, 1000, -1])("flags version %s as unknown and gives an empty trip", (version) => {
     expect(restoreStoredTrip(JSON.stringify({ ...base, version }))).toEqual({
       trip: emptyTrip(),
       unknownVersion: true,

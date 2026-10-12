@@ -1,3 +1,4 @@
+import { addDays, type CalendarDate } from "./calendarDate";
 import type { LegRoute, RoutedPoint } from "./router";
 import { defaultSettings, type Settings } from "./settings";
 import type { LatLng, Leg, LegMode, Trip } from "./trip";
@@ -60,6 +61,8 @@ export type DaySummary = {
   readonly timeH: number;
   /** Follows the trip total's rule (ADR 0009), over the day's legs only. */
   readonly timeStatus: TimeStatus;
+  /** The day's calendar date, from the trip's start date; absent for an undated trip. */
+  readonly date?: CalendarDate;
 };
 
 export type TripSummary = {
@@ -181,7 +184,11 @@ export function summarise(trip: Trip, settings: Settings = defaultSettings): Tri
   const sum = (figure: (leg: LegSummary) => number) => legs.reduce((total, leg) => total + figure(leg), 0);
   return {
     legs,
-    days: dayRanges(trip).map(([first, last]) => summariseDay(trip, legs, first, last)),
+    days: dayRanges(trip).map(([first, last], day) => {
+      const summary = summariseDay(trip, legs, first, last);
+      // Day n (counted from 1) falls on the start date + n - 1.
+      return trip.startDate === undefined ? summary : { ...summary, date: addDays(trip.startDate, day) };
+    }),
     trip: {
       distanceKm: sum((leg) => leg.distanceKm),
       timeH: sum((leg) => leg.timeH),

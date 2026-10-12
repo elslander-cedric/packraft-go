@@ -310,10 +310,11 @@ describe("camps persist in the save format", () => {
   });
 
   // Updated: v1 dropped (#33). A version 1 save used to open as a trip without camps.
-  it("a version 1 save is refused as an unknown version", () => {
+  // Updated: format reset (#52). Version 1 is current again; the old version 2 is refused.
+  it("an old version 2 save is refused as an unknown version", () => {
     const older = JSON.stringify({
       format: "packraft-go-trip",
-      version: 1,
+      version: 2,
       trip: {
         name: "Old",
         points: [

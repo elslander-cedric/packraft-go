@@ -1,10 +1,11 @@
 import type { DaySummary } from "@/core/summarise";
-import { formatDistance, formatElevation, formatTimeEstimate } from "./format";
+import { formatDayDate, formatDistance, formatElevation, formatTimeEstimate } from "./format";
 import { strings } from "./strings";
 
 /**
  * Totals for each day (ADR 0008): the trip is split into days at camps.
- * Renders the core's day summaries; no domain logic.
+ * Renders the core's day summaries; no domain logic. A dated trip's days show
+ * their calendar dates (#52).
  */
 export default function DaysPanel({ days }: { days: readonly DaySummary[] }) {
   if (days.length === 0) return null;
@@ -16,6 +17,13 @@ export default function DaysPanel({ days }: { days: readonly DaySummary[] }) {
           <li key={i} className="day-row">
             <span className="day-heading">
               <span className="day-label">{strings.dayLabel(i + 1)}</span>{" "}
+              {day.date && (
+                <>
+                  <time className="day-date" dateTime={day.date}>
+                    {formatDayDate(day.date)}
+                  </time>{" "}
+                </>
+              )}
               <span className="day-legs">{strings.dayLegs(day.firstLeg + 1, day.lastLeg + 1)}</span>
             </span>
             <span>{`${strings.dayHikeDistance} ${formatDistance(day.hikeDistanceKm)}`}</span>

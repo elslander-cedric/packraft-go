@@ -68,12 +68,21 @@ export function canUndo(trip: Trip): boolean {
 
 /**
  * Goes back to the state before the last edit; with nothing to undo, returns the trip.
- * The trip's name is kept: naming is not an edit (see `renameTrip`).
+ * The trip's name and start date are kept: they are not edits of the route
+ * (see `renameTrip` and `setStartDate`).
  */
 export function undoLastEdit(trip: Trip): Trip {
   const steps = trip.undoSteps ?? [];
   if (steps.length === 0) return trip;
-  return { ...steps[steps.length - 1], name: trip.name, undoSteps: steps.slice(0, -1) };
+  const previous = { ...steps[steps.length - 1], name: trip.name, undoSteps: steps.slice(0, -1) };
+  return withStartDate(previous, trip.startDate);
+}
+
+/** The trip with the given start date, or without one for `undefined` (no `startDate` key is left). */
+export function withStartDate(trip: Trip, startDate: string | undefined): Trip {
+  const dated: { -readonly [K in keyof Trip]: Trip[K] } = { ...trip, startDate };
+  if (startDate === undefined) delete dated.startDate;
+  return dated;
 }
 
 /**

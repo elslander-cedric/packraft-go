@@ -316,7 +316,8 @@ test("camps persist through autosave: marking and unmarking are both stored", as
 
 // Updated: v1 dropped (#33). A version 1 file used to open as a trip without
 // camps; now it is refused and the trip with its camps stays.
-test("a version 1 save file is refused as an unknown version, keeping the trip and its camps", async ({
+// Updated: format reset (#52). Version 1 is current again; the old version 2 is the one refused.
+test("an old version 2 save file is refused as an unknown version, keeping the trip and its camps", async ({
   page,
 }) => {
   await serveOffline(page, { brouter: byProfile });
@@ -327,7 +328,7 @@ test("a version 1 save file is refused as an unknown version, keeping the trip a
 
   const older = JSON.stringify({
     format: "packraft-go-trip",
-    version: 1,
+    version: 2,
     trip: {
       name: "Before camps",
       points: [
@@ -375,9 +376,10 @@ test("a save file with a camp on a point that does not exist is refused and the 
   const click = await drawThreeLegs(page);
   await toggleCampAt(page, click, 1);
   // Updated: v1 dropped (#33). Version 2, so this stays about bad camps, not the version.
+  // Updated: format reset (#52). Version 1, the current version.
   const bad = JSON.stringify({
     format: "packraft-go-trip",
-    version: 2,
+    version: 1,
     trip: {
       name: "Bad",
       points: [
