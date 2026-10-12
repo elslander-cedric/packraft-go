@@ -17,3 +17,4 @@ Shared language for packraft-go. One term per entry: what it means *in this proj
 - **Aire**: A designated put-in or take-out point on a Walloon stretch (*aire d'embarquement / de débarquement*). In Wallonia you may only get in or out at an aire.
 - **Access status**: Whether a stretch may be paddled at a given moment (open / closed, with a reason such as low flow, high flow or season).
 - **Access point**: A place where you can get onto or off the water: a put-in, a take-out, or both. It may be an official aire, a slipway, a jetty or an informal bank. Being an access point doesn't make it legal; see Aire.
+- **Section**: A run of consecutive legs of the same mode (hike or paddle), ending where the mode changes or at a camp. Each section is exported as its own GPX file (ADR 0021). Not the same as a Stretch, which is a legal unit of river.
