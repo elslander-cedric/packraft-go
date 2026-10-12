@@ -6,6 +6,7 @@ Route-planning app for packrafting (mixed hike + paddle trips).
 - Next.js (App Router) + TypeScript, deployed to Vercel Hobby (ADR 0015). Browser-only logic in v1: no API routes, no database (ADR 0011).
 - Map: Leaflet with OpenTopoMap tiles. Map components must be client-only (Leaflet needs `window`).
 - Routing/snapping/elevation: public BRouter server, hiking profile for hike legs and river profile for paddle legs (ADR 0014). Only route a leg when it changes; store results in the trip.
+- UI components: Base UI (`@base-ui/react`), unstyled, via thin wrappers in `src/ui/components/`. Never import Base UI directly in screens. Plain CSS with design tokens as CSS variables (ADR 0020).
 - Storage: browser storage + file save/open (ADR 0011).
 - Tests: Vitest (unit), Playwright (end-to-end), recorded BRouter responses, never the live server (ADR 0019).
 - Free services only (ADR 0012). English UI with strings in one module (ADR 0013).
