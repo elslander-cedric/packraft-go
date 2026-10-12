@@ -1,5 +1,6 @@
 // Save format (spec #2, ADR 0011): the trip as versioned JSON, including
 // routed results, so a restored trip needs no routing requests (ADR 0014).
+import { tripFileName } from "./fileName";
 import type { LegRoute, RoutedPoint } from "./router";
 import { emptyTrip, type LatLng, type Leg, type LegMode, type Trip } from "./trip";
 
@@ -49,13 +50,9 @@ export function serialiseTrip(trip: Trip): string {
 /** Ending of a save file's name, so trip files are recognisable among downloads. */
 export const SAVE_FILE_EXTENSION = ".packraft.json";
 
-// Characters Windows, macOS or Linux do not allow in file names, and control characters.
-const unsafeInFileName = /[/\\:*?"<>|\u0000-\u001f]+/g;
-
 /** The save file's name: the trip's name, or `untitledName` for a trip without one. */
 export function saveFileName(trip: Trip, untitledName: string): string {
-  const name = trip.name.replace(unsafeInFileName, "-").trim();
-  return `${name || untitledName}${SAVE_FILE_EXTENSION}`;
+  return tripFileName(trip, untitledName, SAVE_FILE_EXTENSION);
 }
 
 /**

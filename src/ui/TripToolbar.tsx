@@ -8,11 +8,13 @@ type TripToolbarProps = {
   onRename: (name: string) => void;
   onNewTrip: () => void;
   onSaveFile: () => void;
+  /** Null while there is nothing to export (no legs). */
+  onExportGpx: (() => void) | null;
   onOpenFile: (file: File) => void;
 };
 
 /** The trip's name and actions on the whole trip. */
-export default function TripToolbar({ name, fileError, onRename, onNewTrip, onSaveFile, onOpenFile }: TripToolbarProps) {
+export default function TripToolbar({ name, fileError, onRename, onNewTrip, onSaveFile, onExportGpx, onOpenFile }: TripToolbarProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   const chooseFile = () => {
     fileInput.current?.click();
@@ -33,6 +35,9 @@ export default function TripToolbar({ name, fileError, onRename, onNewTrip, onSa
       </button>
       <button type="button" onClick={onSaveFile} title={strings.saveFileHint}>
         {strings.saveFileButton}
+      </button>
+      <button type="button" onClick={onExportGpx ?? undefined} disabled={!onExportGpx} title={strings.exportGpxHint}>
+        {strings.exportGpxButton}
       </button>
       <button type="button" onClick={chooseFile} title={strings.openFileHint}>
         {strings.openFileButton}

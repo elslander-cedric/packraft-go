@@ -17,7 +17,7 @@ import {
   type Trip,
 } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
-import { downloadTripFile, readTripFile } from "@/persistence/tripFile";
+import { downloadGpxFile, downloadTripFile, readTripFile } from "@/persistence/tripFile";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
 import DaysPanel from "./DaysPanel";
@@ -87,6 +87,14 @@ export default function TripPlanner({ router }: { router?: Router }) {
     setFileError(null);
     downloadTripFile(trip, strings.tripNamePlaceholder);
   };
+  const exportGpx = () => {
+    setFileError(null);
+    downloadGpxFile(trip, {
+      untitledTrip: strings.tripNamePlaceholder,
+      leg: strings.gpxTrackName,
+      camp: strings.gpxCampName,
+    });
+  };
   const openFile = async (file: File) => {
     const opened = await readTripFile(file);
     if (opened.ok) replaceTrip(opened.trip, strings.openFileConfirm);
@@ -138,6 +146,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
           onRename={rename}
           onNewTrip={newTrip}
           onSaveFile={saveFile}
+          onExportGpx={trip.legs.length > 0 ? exportGpx : null}
           onOpenFile={(file) => void openFile(file)}
         />
         <EditToolbar
