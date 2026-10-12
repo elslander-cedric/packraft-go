@@ -1,5 +1,5 @@
-// Edits for the trip planner core: move and delete points, switch a leg's mode
-// (spec #2, ADR 0017).
+// Edits for the trip planner core: move and delete points, switch a leg's mode,
+// mark or unmark a camp (spec #2, ADR 0017).
 // Legs an edit changes are replaced by fresh, unrouted legs; legs it does not
 // change are carried over as they are, so their routed results are kept.
 import type { LatLng, Leg, LegMode, Trip } from "./trip";
@@ -29,6 +29,19 @@ export function setLegMode(trip: Trip, index: number, mode: LegMode): Trip {
   if (!leg || leg.mode === mode) return trip;
   const legs = trip.legs.map((other, i) => (i === index ? unrouted({ ...other, mode }) : other));
   return { ...trip, legs };
+}
+
+/**
+ * Marks the point as a camp, or unmarks it. A camp changes no leg, so every
+ * leg keeps its route and nothing is routed again.
+ */
+export function toggleCamp(trip: Trip, index: number): Trip {
+  if (!(index in trip.points)) return trip;
+  const camps = trip.camps ?? [];
+  const toggled = camps.includes(index)
+    ? camps.filter((camp) => camp !== index)
+    : [...camps, index].sort((a, b) => a - b);
+  return { ...trip, camps: toggled };
 }
 
 /**
@@ -66,6 +79,7 @@ export function undoLastEdit(trip: Trip): Trip {
 /**
  * Removes a point. An end point takes its one leg with it; a middle point's
  * two legs merge into one unrouted leg with the earlier leg's mode.
+ * A camp on the point goes with it; camps on later points stay on their points.
  */
 export function deletePoint(trip: Trip, index: number): Trip {
   if (!(index in trip.points)) return trip;
@@ -78,5 +92,7 @@ export function deletePoint(trip: Trip, index: number): Trip {
     const merged = unrouted(trip.legs[index - 1]);
     legs = [...trip.legs.slice(0, index - 1), merged, ...trip.legs.slice(index + 1)];
   }
-  return { ...trip, points, legs };
+  if (!trip.camps) return { ...trip, points, legs };
+  const camps = trip.camps.filter((camp) => camp !== index).map((camp) => (camp > index ? camp - 1 : camp));
+  return { ...trip, points, legs, camps };
 }

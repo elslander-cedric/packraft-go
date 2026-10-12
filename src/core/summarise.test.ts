@@ -19,6 +19,7 @@ describe("summarise", () => {
   it("an empty trip has no legs, zero distance and no time", () => {
     expect(summarise(emptyTrip())).toEqual({
       legs: [],
+      days: [], // Updated for #8: summaries now include days.
       trip: { distanceKm: 0, timeH: 0, timeStatus: "estimated" },
     });
   });
@@ -27,6 +28,7 @@ describe("summarise", () => {
   it("a trip with only a start point has no legs, zero distance and no time", () => {
     expect(summarise(tripThrough({ lat: 50, lng: 4 }))).toEqual({
       legs: [],
+      days: [], // Updated for #8: summaries now include days.
       trip: { distanceKm: 0, timeH: 0, timeStatus: "estimated" },
     });
   });
