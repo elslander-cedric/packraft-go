@@ -74,7 +74,8 @@ body {
 .sidebar {
   display: flex;
   flex-direction: column;
-  width: 18rem;
+  /* Wide enough for a leg row's figures on two lines (#27); desktop-first (ADR 0005). */
+  width: 24rem;
   border-left: 1px solid var(--color-border);
   font-size: 0.9rem;
 }
@@ -145,12 +146,42 @@ body {
   list-style: none;
 }
 
+/* A leg row reads in two lines: the leg, its mode and distance; then its
+   other figures with the time at the end. A figure never breaks inside. */
 .leg-row {
-  display: grid;
-  grid-template-columns: 4rem 1fr auto;
-  column-gap: 0.5rem;
-  padding: 0.25rem 0;
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-1) 0;
   border-bottom: 1px solid #eee;
+}
+
+.leg-row-heading,
+.leg-figures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+}
+
+.leg-name {
+  min-width: 3.25rem;
+  font-weight: 600;
+}
+
+.leg-figures {
+  column-gap: 0.75rem;
+}
+
+.leg-figure {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The distance and the time line up on the right of every row. */
+.leg-distance,
+.leg-time {
+  margin-left: auto;
 }
 
 /* Hike and paddle rows carry the colour of their line on the map. */
@@ -161,12 +192,9 @@ body {
 
 .leg-row-paddle {
   border-left: 6px solid var(--color-paddle);
-  padding-left: 0.4rem;
+  /* The thicker border takes 2px of the padding, so hike and paddle text line up. */
+  padding-left: calc(0.4rem - 2px);
   background: var(--color-paddle-tint);
-}
-
-.leg-mode-switch {
-  align-self: start;
 }
 
 .toggle.leg-mode-hike[data-pressed] {
@@ -181,17 +209,20 @@ body {
 
 .leg-routing,
 .leg-route-failed {
-  grid-column: 1 / -1;
   color: var(--color-muted);
   font-size: 0.85rem;
 }
 
+/* The message wraps; the Retry button keeps its size beside it. */
 .leg-route-failed {
-  color: #a32020;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-danger);
 }
 
 .leg-route-failed .button {
-  margin-left: 0.5rem;
+  flex-shrink: 0;
 }
 
 /* Leaflet paths: a pending leg pulses until its route arrives. */
@@ -217,8 +248,11 @@ path.leg-pending {
   font-weight: 600;
 }
 
+/* The trip totals sit below a rule, apart from the leg rows. */
 .trip-total {
-  margin-bottom: 0;
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-2);
+  border-top: 2px solid var(--color-border);
 }
 
 .trip-time {

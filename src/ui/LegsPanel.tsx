@@ -47,18 +47,28 @@ export default function LegsPanel({ summary, legs, onRetry, onSetMode }: LegsPan
             const route = legs[i]?.route;
             return (
               <li key={i} className={`leg-row leg-row-${leg.mode}`}>
-                <span>{strings.legLabel(i + 1)}</span>
-                <ModeSwitch legIndex={i} mode={leg.mode} onSetMode={(mode) => onSetMode(i, mode)} />
-                <span>{formatDistance(leg.distanceKm)}</span>
-                {leg.climbM !== undefined && <span>{`${strings.climbLabel} ${formatElevation(leg.climbM)}`}</span>}
-                {leg.descentM !== undefined && (
-                  <span>{`${strings.descentLabel} ${formatElevation(leg.descentM)}`}</span>
-                )}
-                {leg.dropM !== undefined && <span>{`${strings.dropLabel} ${formatElevation(leg.dropM)}`}</span>}
-                {leg.riseM !== undefined && <span>{strings.riseFigure(formatElevation(leg.riseM))}</span>}
-                <span className="leg-time">
-                  {`${strings.legTimeEstimate} ${formatTimeEstimate(leg.timeH, leg.timeStatus)}`}
-                </span>
+                <div className="leg-row-heading">
+                  <span className="leg-name">{strings.legLabel(i + 1)}</span>
+                  <ModeSwitch legIndex={i} mode={leg.mode} onSetMode={(mode) => onSetMode(i, mode)} />
+                  <span className="leg-figure leg-distance">{formatDistance(leg.distanceKm)}</span>
+                </div>
+                <div className="leg-figures">
+                  {leg.climbM !== undefined && (
+                    <span className="leg-figure">{`${strings.climbLabel} ${formatElevation(leg.climbM)}`}</span>
+                  )}
+                  {leg.descentM !== undefined && (
+                    <span className="leg-figure">{`${strings.descentLabel} ${formatElevation(leg.descentM)}`}</span>
+                  )}
+                  {leg.dropM !== undefined && (
+                    <span className="leg-figure">{`${strings.dropLabel} ${formatElevation(leg.dropM)}`}</span>
+                  )}
+                  {leg.riseM !== undefined && (
+                    <span className="leg-figure">{strings.riseFigure(formatElevation(leg.riseM))}</span>
+                  )}
+                  <span className="leg-figure leg-time">
+                    {`${strings.legTimeEstimate} ${formatTimeEstimate(leg.timeH, leg.timeStatus)}`}
+                  </span>
+                </div>
                 {(!route || route.status === "pending") && (
                   <span role="status" className="leg-routing">
                     {strings.legRouting}
