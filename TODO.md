@@ -18,7 +18,9 @@ Improvements for packraft-go, beyond v1. GitHub issues are the source of truth f
 ### Deferred to v2 by an ADR
 - [ ] **River information**: difficulty grade, water levels, hazards. Data is patchy for Belgian rivers, so research sources first. ADR 0007
 - [ ] **Weirs and portages**: detect weirs on paddle legs automatically instead of drawing portages by hand. ADR 0016
-- [ ] **River access rules**: when and where paddling is allowed in Wallonia (seasons, water levels, closed stretches). Needed before sharing the app widely. ADR 0010
+- [ ] **River access rules**: when and where paddling is allowed in Flanders and Wallonia (seasons, hours, flow thresholds, closed stretches, locks). Needed before sharing the app widely. ADR 0010. Research: [access rules](docs/research/access-rules.md), [data sources](docs/research/data-sources.md)
+- [ ] **Designated put-ins (aires) in Wallonia**: snap or warn when a mode change isn't at an aire. Research: [paddle routes](docs/research/paddle-routes.md)
+- [ ] **Official paddle routes as suggestions/overlays**: only if the licence allows. Research: [paddle routes](docs/research/paddle-routes.md)
 
 ### Left out of v1, could come later
 - [ ] **Automatic route-finding**: suggest the hike/paddle mix between a start and an end. ADR 0003
@@ -46,4 +48,5 @@ Low priority. File one if it starts to bother you.
 
 ## Process
 - [ ] Before v2: plan a real trip with v1 and note what's missing.
-- [ ] Research data sources for Walloon rivers (water levels, navigation rules, weirs) before grilling the v2 scope.
+- [x] Research access rules, routes and data sources for Flanders and Wallonia: see [docs/research/](docs/research/).
+- [ ] Close the research's open questions: Walloon hydrometry API + licence, AGW Annex 1 & 2, port regulations in Flanders. See [data-sources.md](docs/research/data-sources.md#next-steps-for-v2-planning).

@@ -12,3 +12,7 @@ Shared language for packraft-go. One term per entry: what it means *in this proj
 - **Camp**: An overnight stop marked on the route. Camps split a trip into days.
 - **Portage**: Carrying the packraft around an obstacle on the water (e.g. a weir). Modelled as a short hike leg between two paddle legs.
 - **Drop**: The elevation lost from a paddle leg's put-in to its take-out. Shown instead of climb/descent on paddle legs.
+- **Navigable waterway**: A canal or river officially open to shipping (in Flanders managed by De Vlaamse Waterweg). Access rules differ from those for non-navigable rivers. See `docs/research/access-rules.md`.
+- **Stretch**: A legally defined section of river where paddling is regulated as one unit (e.g. Walloon AGW Annex 1 stretches), with its own season, hours and flow thresholds.
+- **Aire**: A designated put-in or take-out point on a Walloon stretch (*aire d'embarquement / de débarquement*). In Wallonia you may only get in or out at an aire.
+- **Access status**: Whether a stretch may be paddled at a given moment (open / closed, with a reason such as low flow, high flow or season).

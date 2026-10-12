@@ -32,4 +32,6 @@ Next.js + TypeScript, Leaflet, OpenTopoMap tiles, BRouter. Hosted on Vercel. Map
 ## Docs
 - [`GLOSSARY.md`](GLOSSARY.md): shared vocabulary for the domain
 - [`docs/adr/`](docs/adr/): architecture decision records (why we chose what we chose)
+- [`docs/research/`](docs/research/): background research on paddling access rules, routes and data sources in Belgium
+- [`TODO.md`](TODO.md): improvements for v1.1 and v2
 - [`CLAUDE.md`](CLAUDE.md): instructions for Claude agents working in this repo
