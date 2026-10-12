@@ -34,6 +34,7 @@ CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on eve
 - `src/ui/strings.ts`: all user-facing text (ADR 0013).
 
 ## Conventions
+- Don't commit PR screenshots or other review-only assets to the repo. Put them in the PR description or a PR comment instead (git history keeps every committed file forever).
 - Domain terms are defined in `GLOSSARY.md`; use them consistently in code and docs.
 - Significant decisions get an ADR in `docs/adr/NNNN-title.md`.
 - Work is tracked as GitHub issues; labels: `ready-for-agent`, `tested`, `needs-fix`.
