@@ -20,6 +20,7 @@ Node 22 (see `.nvmrc`), npm.
 - Lint: `npm run lint`
 - Type-check: `npm run typecheck`
 - Production build: `npm run build`
+- Live BRouter check: `npm run check:brouter` (manual only, never in `npm test`, `npm run e2e` or CI). Calls the public BRouter server four times, one request at a time with a 2 s pause, identifying itself with the project URL only. It compares each answer with its recorded fixture in `src/routing/fixtures/` and with what the adapter makes of it, then prints MATCH / DRIFT / MISMATCH per check. Exit code 1 means a mismatch: the live app is probably broken. Drift alone passes and means "consider re-recording". Run it now and then (e.g. monthly), or when live routing misbehaves while the tests pass. Don't run it in a loop: it's a free community server. It never writes fixtures; re-recording stays a deliberate, manual step. Logic: `src/routing/liveCheck.ts` (unit-tested offline); entry point: `scripts/check-brouter.mts`.
 
 CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on every pull request.
 
