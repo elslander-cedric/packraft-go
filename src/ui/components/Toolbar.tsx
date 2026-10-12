@@ -4,8 +4,6 @@ import { useId, type ReactNode, type Ref } from "react";
 import "./Button.css";
 import "./Toolbar.css";
 
-type ButtonRef = Ref<HTMLButtonElement>;
-
 export type ToolbarProps = {
   /** Accessible name of the toolbar. */
   label: string;
@@ -40,7 +38,7 @@ export type ToolbarButtonProps = {
   /** For on/off buttons: whether it is on. */
   pressed?: boolean;
   className?: string;
-  ref?: ButtonRef;
+  ref?: Ref<HTMLButtonElement>;
   children: ReactNode;
 };
 

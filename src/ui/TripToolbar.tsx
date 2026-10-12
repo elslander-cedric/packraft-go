@@ -2,8 +2,6 @@ import { useRef, type Ref } from "react";
 import { Toolbar, ToolbarButton } from "./components/Toolbar";
 import { strings } from "./strings";
 
-type ButtonRef = Ref<HTMLButtonElement>;
-
 type TripToolbarProps = {
   name: string;
   /** Message to show when the last file could not be opened, or null. */
@@ -15,8 +13,8 @@ type TripToolbarProps = {
   onExportGpx: (() => void) | null;
   onOpenFile: (file: File) => void;
   /** The New trip and Open file buttons, so focus can return to them after a confirmation. */
-  newTripButtonRef?: ButtonRef;
-  openFileButtonRef?: ButtonRef;
+  newTripButtonRef?: Ref<HTMLButtonElement>;
+  openFileButtonRef?: Ref<HTMLButtonElement>;
 };
 
 /** The trip's name and actions on the whole trip. */
@@ -32,9 +30,7 @@ export default function TripToolbar({
   openFileButtonRef,
 }: TripToolbarProps) {
   const fileInput = useRef<HTMLInputElement>(null);
-  const chooseFile = () => {
-    fileInput.current?.click();
-  };
+  const chooseFile = () => fileInput.current?.click();
   return (
     <div className="trip-toolbar">
       {/* The name is outside the toolbar: in a toolbar the arrow keys move between buttons, not the text cursor. */}
