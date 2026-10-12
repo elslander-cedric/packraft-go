@@ -33,6 +33,7 @@ Improvements for packraft-go, beyond v1. GitHub issues are the source of truth f
 ### Left out of v1, could come later
 - [ ] **Automatic route-finding**: suggest the hike/paddle mix between a start and an end. ADR 0003
 - [ ] **Overpass + Turf.js fallback** for paddle legs, if BRouter's experimental river profile fails on real rivers. ADR 0014
+- [ ] **Whole-trip GPX export** as one file (one track), next to the per-section ZIP, for apps that handle long courses. ADR 0021
 - [ ] **GPX import**: bring in tracks from other apps. Spec #2, Out of scope
 - [ ] **More editing**: redo, notes on points/legs, alternative routes per trip. ADR 0017
 - [ ] **Several trips in the browser**: a trip list instead of one current trip (today, files are the way to keep more than one). Spec #2, Out of scope
