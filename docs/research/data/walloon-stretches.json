@@ -1,0 +1,520 @@
+[
+ {
+  "id": "1A1",
+  "annex1Ref": "1A1",
+  "category": "1.A",
+  "subBasin": "Amblève",
+  "river": "Amblève",
+  "from": {
+   "fr": "aval du pont de Sougné à Aywaille",
+   "en": "below Sougné bridge, Aywaille"
+  },
+  "to": {
+   "fr": "confluent de l'Ourthe à Comblain-au-Pont",
+   "en": "Ourthe confluence at Comblain-au-Pont"
+  },
+  "annex2Gauge": "Martinrive",
+  "minM3s": 2.5,
+  "maxM3s": 44,
+  "note": "Gauge inferred: Annex 2 row 'Amblève en aval du barrage de Lorcé' covers this reach. [UNVERIFIED]"
+ },
+ {
+  "id": "1A2",
+  "annex1Ref": "1A2",
+  "category": "1.A",
+  "subBasin": "Lesse",
+  "river": "Lesse",
+  "from": {
+   "fr": "premier barrage fixe de la Lesse à Anseremme",
+   "en": "first fixed weir on the Lesse at Anseremme"
+  },
+  "to": {
+   "fr": "confluent de la Meuse à Anseremme",
+   "en": "Meuse confluence at Anseremme"
+  },
+  "annex2Gauge": "Gendron",
+  "minM3s": 1.5,
+  "maxM3s": 52,
+  "note": "Gauge inferred: Annex 2 row 'Lesse en aval de Pont-à-Lesse' covers this reach. [UNVERIFIED]"
+ },
+ {
+  "id": "1A3a",
+  "annex1Ref": "1A3",
+  "category": "1.A",
+  "subBasin": "Ourthe",
+  "river": "Ourthe",
+  "from": {
+   "fr": "barrage de Nisramont (non compris)",
+   "en": "Nisramont dam (dam itself excluded)"
+  },
+  "to": {
+   "fr": "pont à Maboge",
+   "en": "Maboge bridge"
+  },
+  "annex2Gauge": "Nisramont",
+  "minM3s": 3.0,
+  "maxM3s": 31,
+  "note": "Split point from Annex 2, not Annex 1."
+ },
+ {
+  "id": "1A3b",
+  "annex1Ref": "1A3",
+  "category": "1.A",
+  "subBasin": "Ourthe",
+  "river": "Ourthe",
+  "from": {
+   "fr": "pont à Maboge",
+   "en": "Maboge bridge"
+  },
+  "to": {
+   "fr": "barrage mobile de Barvaux",
+   "en": "Barvaux movable dam"
+  },
+  "annex2Gauge": "Durbuy",
+  "minM3s": 1.9,
+  "maxM3s": 50,
+  "note": "Split points from Annex 2, not Annex 1."
+ },
+ {
+  "id": "1A3c",
+  "annex1Ref": "1A3",
+  "category": "1.A",
+  "subBasin": "Ourthe",
+  "river": "Ourthe",
+  "from": {
+   "fr": "barrage mobile de Barvaux",
+   "en": "Barvaux movable dam"
+  },
+  "to": {
+   "fr": "confluent de la Meuse à Liège",
+   "en": "Meuse confluence at Liège"
+  },
+  "annex2Gauge": "Tabreux",
+  "minM3s": 2.5,
+  "maxM3s": 65,
+  "note": "Split point from Annex 2. Liège has two Ourthe channels (river and Dérivation); which mouth is meant is unclear. [UNVERIFIED]"
+ },
+ {
+  "id": "1A4",
+  "annex1Ref": "1A4",
+  "category": "1.A",
+  "subBasin": "Semois",
+  "river": "Semois",
+  "from": {
+   "fr": "moulin Deleau près d'Herbeumont",
+   "en": "Deleau mill near Herbeumont"
+  },
+  "to": {
+   "fr": "frontière française à Vresse-sur-Semois (Bohan)",
+   "en": "French border at Bohan (Vresse-sur-Semois)"
+  },
+  "annex2Gauge": "Membre",
+  "minM3s": 2.2,
+  "maxM3s": 50
+ },
+ {
+  "id": "1B1a",
+  "annex1Ref": "1B1a",
+  "category": "1.B",
+  "subBasin": "Amblève",
+  "river": "Amblève",
+  "from": {
+   "fr": "aval de sa confluence avec la Warche",
+   "en": "just below the Warche confluence"
+  },
+  "to": {
+   "fr": "pont de Cheneux",
+   "en": "Cheneux bridge"
+  },
+  "annex2Gauge": "Stavelot",
+  "minM3s": 1.0,
+  "maxM3s": 21
+ },
+ {
+  "id": "1B1b",
+  "annex1Ref": "1B1b",
+  "category": "1.B",
+  "subBasin": "Amblève",
+  "river": "Amblève",
+  "from": {
+   "fr": "200 m à l'amont du pont de Remouchamps",
+   "en": "200 m upstream of Remouchamps bridge"
+  },
+  "to": {
+   "fr": "pont de Sougné à Aywaille",
+   "en": "Sougné bridge, Aywaille"
+  },
+  "annex2Gauge": "Martinrive",
+  "minM3s": 2.5,
+  "maxM3s": 44,
+  "note": "Gauge inferred from Annex 2 row 'en aval du barrage de Lorcé'. Annex 1 does not open Lorcé to Remouchamps itself. [UNVERIFIED]"
+ },
+ {
+  "id": "1B2a",
+  "annex1Ref": "1B2",
+  "category": "1.B",
+  "subBasin": "Lesse",
+  "river": "Lesse",
+  "from": {
+   "fr": "lieu-dit « Al Mainprez » (100 m en amont du pont de Houyet)",
+   "en": "'Al Mainprez' locality, 100 m upstream of Houyet bridge"
+  },
+  "to": {
+   "fr": "50 m en amont du pont-route Gendron-Celles à Gendron",
+   "en": "50 m upstream of the Gendron–Celles road bridge, Gendron"
+  },
+  "annex2Gauge": "Gendron",
+  "minM3s": 2.0,
+  "maxM3s": 52,
+  "note": "Annex 1 gives no end point; split points from Annex 2."
+ },
+ {
+  "id": "1B2b",
+  "annex1Ref": "1B2",
+  "category": "1.B",
+  "subBasin": "Lesse",
+  "river": "Lesse",
+  "from": {
+   "fr": "50 m en amont du pont-route Gendron-Celles à Gendron",
+   "en": "50 m upstream of the Gendron–Celles road bridge"
+  },
+  "to": {
+   "fr": "Pont-à-Lesse",
+   "en": "Pont-à-Lesse"
+  },
+  "annex2Gauge": "Gendron",
+  "minM3s": 1.5,
+  "maxM3s": 52,
+  "note": "Split points from Annex 2."
+ },
+ {
+  "id": "1B2c",
+  "annex1Ref": "1B2",
+  "category": "1.B",
+  "subBasin": "Lesse",
+  "river": "Lesse",
+  "from": {
+   "fr": "Pont-à-Lesse",
+   "en": "Pont-à-Lesse"
+  },
+  "to": {
+   "fr": "(implicite) premier barrage fixe à Anseremme",
+   "en": "(implied) first fixed weir at Anseremme, where 1.A.2 starts"
+  },
+  "annex2Gauge": "Gendron",
+  "minM3s": 1.5,
+  "maxM3s": 52,
+  "note": "End point not stated; inferred from start of 1.A.2. [UNVERIFIED]"
+ },
+ {
+  "id": "1B3",
+  "annex1Ref": "1B3",
+  "category": "1.B",
+  "subBasin": "Meuse amont",
+  "river": "Viroin",
+  "from": {
+   "fr": "(tout le cours d'eau)",
+   "en": "(whole river) start: Eau Blanche + Eau Noire confluence at Nismes [UNVERIFIED]"
+  },
+  "to": {
+   "fr": "(tout le cours d'eau)",
+   "en": "(whole river) end: French border below Treignes [UNVERIFIED]"
+  },
+  "annex2Gauge": "Treignes",
+  "minM3s": 1.6,
+  "maxM3s": 23,
+  "note": "Annex 1 lists 'le Viroin' with no limits."
+ },
+ {
+  "id": "1B4a",
+  "annex1Ref": "1B4",
+  "category": "1.B",
+  "subBasin": "Semois",
+  "river": "Semois",
+  "from": {
+   "fr": "rejet de la centrale hydroélectrique du barrage de la Vierre à Chiny",
+   "en": "outflow of the Vierre dam hydro plant, Chiny"
+  },
+  "to": {
+   "fr": "Martué (compris)",
+   "en": "Martué (included)"
+  },
+  "annex2Gauge": "Chiny",
+  "minM3s": 1.5,
+  "maxM3s": 31,
+  "note": "Annex 1 gives no end point; split points from Annex 2."
+ },
+ {
+  "id": "1B4b",
+  "annex1Ref": "1B4",
+  "category": "1.B",
+  "subBasin": "Semois",
+  "river": "Semois",
+  "from": {
+   "fr": "Martué",
+   "en": "Martué"
+  },
+  "to": {
+   "fr": "pont de Chassepierre",
+   "en": "Chassepierre bridge"
+  },
+  "annex2Gauge": "Chiny",
+  "minM3s": 1.5,
+  "maxM3s": 31,
+  "note": "Split points from Annex 2."
+ },
+ {
+  "id": "1B4c",
+  "annex1Ref": "1B4",
+  "category": "1.B",
+  "subBasin": "Semois",
+  "river": "Semois",
+  "from": {
+   "fr": "pont de Chassepierre",
+   "en": "Chassepierre bridge"
+  },
+  "to": {
+   "fr": "(implicite) moulin Deleau",
+   "en": "(implied) Deleau mill, where 1.A.4 starts"
+  },
+  "annex2Gauge": "Membre",
+  "minM3s": 2.2,
+  "maxM3s": 50,
+  "note": "End point from Annex 2 and 1.A.4."
+ },
+ {
+  "id": "1C1a",
+  "annex1Ref": "1C1a",
+  "category": "1.C",
+  "subBasin": "Amblève",
+  "river": "Warche",
+  "from": {
+   "fr": "aval du barrage de Robertville",
+   "en": "below Robertville dam"
+  },
+  "to": {
+   "fr": "(non précisé)",
+   "en": "(not stated) presumably Amblève confluence below Malmedy [UNVERIFIED]"
+  },
+  "annex2Gauge": "Malmedy",
+  "minM3s": null,
+  "maxM3s": 8.9
+ },
+ {
+  "id": "1C1b",
+  "annex1Ref": "1C1b",
+  "category": "1.C",
+  "subBasin": "Amblève",
+  "river": "Salm",
+  "from": {
+   "fr": "aval du barrage de Vielsalm",
+   "en": "below Vielsalm dam"
+  },
+  "to": {
+   "fr": "(non précisé)",
+   "en": "(not stated) presumably Amblève confluence at Trois-Ponts [UNVERIFIED]"
+  },
+  "annex2Gauge": "Trois-Ponts",
+  "minM3s": null,
+  "maxM3s": 9.7
+ },
+ {
+  "id": "1C2a",
+  "annex1Ref": "1C2a",
+  "category": "1.C",
+  "subBasin": "Lesse",
+  "river": "Lesse",
+  "from": {
+   "fr": "pont des Barbouillons à Daverdisse",
+   "en": "Barbouillons bridge, Daverdisse"
+  },
+  "to": {
+   "fr": "Chanly",
+   "en": "Chanly (village)"
+  },
+  "annex2Gauge": "Daverdisse",
+  "minM3s": null,
+  "maxM3s": 14
+ },
+ {
+  "id": "1C2b",
+  "annex1Ref": "1C2b",
+  "category": "1.C",
+  "subBasin": "Lesse",
+  "river": "Lesse",
+  "from": {
+   "fr": "barrage du plan d'eau d'Han-sur-Lesse",
+   "en": "Han-sur-Lesse lake dam"
+  },
+  "to": {
+   "fr": "en amont du pont de Houyet",
+   "en": "upstream of Houyet bridge (Annex 2: 100 m upstream)"
+  },
+  "annex2Gauge": "Wanlin",
+  "minM3s": null,
+  "maxM3s": 47,
+  "note": "No KiWIS station named Wanlin on the Lesse (see hydrometry.md)."
+ },
+ {
+  "id": "1C2c",
+  "annex1Ref": "1C2c",
+  "category": "1.C",
+  "subBasin": "Lesse",
+  "river": "Lhomme",
+  "from": {
+   "fr": "aval de Mirwart",
+   "en": "below Mirwart (village)"
+  },
+  "to": {
+   "fr": "(non précisé)",
+   "en": "(not stated) presumably Lesse confluence at Éprave [UNVERIFIED]"
+  },
+  "annex2Gauge": "Jemelle",
+  "minM3s": null,
+  "maxM3s": 11
+ },
+ {
+  "id": "1C3",
+  "annex1Ref": "1C3",
+  "category": "1.C",
+  "subBasin": "Meuse amont",
+  "river": "Houille",
+  "from": {
+   "fr": "aval de Patignies",
+   "en": "below Patignies (village)"
+  },
+  "to": {
+   "fr": "(non précisé)",
+   "en": "(not stated) presumably French border [UNVERIFIED]"
+  },
+  "annex2Gauge": "Gedinne",
+  "minM3s": null,
+  "maxM3s": 3.8
+ },
+ {
+  "id": "1C4a",
+  "annex1Ref": "1C4a",
+  "category": "1.C",
+  "subBasin": "Moselle",
+  "river": "Sûre",
+  "from": {
+   "fr": "rampe d'accès établie à l'amont du pont de Bodange (Fauvillers)",
+   "en": "access ramp upstream of Bodange bridge (Fauvillers)"
+  },
+  "to": {
+   "fr": "(non précisé)",
+   "en": "(not stated) presumably Luxembourg border near Martelange [UNVERIFIED]"
+  },
+  "annex2Gauge": "Martelange",
+  "minM3s": null,
+  "maxM3s": 9.9
+ },
+ {
+  "id": "1C4b",
+  "annex1Ref": "1C4b",
+  "category": "1.C",
+  "subBasin": "Moselle",
+  "river": "Our",
+  "from": {
+   "fr": "aval d'Auel (province de Liège)",
+   "en": "below Auel (Liège province)"
+  },
+  "to": {
+   "fr": "(non précisé)",
+   "en": "(not stated) presumably where the Our leaves Belgium near Ouren [UNVERIFIED]"
+  },
+  "annex2Gauge": "Reuland",
+  "minM3s": null,
+  "maxM3s": 17
+ },
+ {
+  "id": "1C5a",
+  "annex1Ref": "1C5a",
+  "category": "1.C",
+  "subBasin": "Ourthe",
+  "river": "Aisne",
+  "from": {
+   "fr": "confluence avec l'Estinée à Fanzel (Erezée)",
+   "en": "Estinée confluence at Fanzel (Erezée)"
+  },
+  "to": {
+   "fr": "(non précisé)",
+   "en": "(not stated) presumably Ourthe confluence at Bomal [UNVERIFIED]"
+  },
+  "annex2Gauge": "Erezée",
+  "minM3s": null,
+  "maxM3s": 4.4
+ },
+ {
+  "id": "1C5b",
+  "annex1Ref": "1C5b",
+  "category": "1.C",
+  "subBasin": "Ourthe",
+  "river": "Ourthe occidentale",
+  "from": {
+   "fr": "aval du pont de Prelle",
+   "en": "below Prelle bridge"
+  },
+  "to": {
+   "fr": "(non précisé)",
+   "en": "(not stated) presumably Nisramont reservoir [UNVERIFIED]"
+  },
+  "annex2Gauge": "Amberloup",
+  "minM3s": null,
+  "maxM3s": 6
+ },
+ {
+  "id": "1C5c",
+  "annex1Ref": "1C5c",
+  "category": "1.C",
+  "subBasin": "Ourthe",
+  "river": "Ourthe orientale",
+  "from": {
+   "fr": "aval du pont de la Rue Porte à l'Eau à Houffalize",
+   "en": "below the Rue Porte à l'Eau bridge, Houffalize"
+  },
+  "to": {
+   "fr": "(non précisé)",
+   "en": "(not stated) presumably Nisramont reservoir [UNVERIFIED]"
+  },
+  "annex2Gauge": "Houffalize",
+  "minM3s": null,
+  "maxM3s": 8.8
+ },
+ {
+  "id": "1C6a",
+  "annex1Ref": "1C6a",
+  "category": "1.C",
+  "subBasin": "Semois",
+  "river": "Semois",
+  "from": {
+   "fr": "pont de la route Tintigny-Marbehan à Tintigny",
+   "en": "Tintigny–Marbehan road bridge, Tintigny"
+  },
+  "to": {
+   "fr": "rejet de la centrale hydroélectrique du barrage de la Vierre à Chiny",
+   "en": "outflow of the Vierre dam hydro plant, Chiny"
+  },
+  "annex2Gauge": "Tintigny",
+  "minM3s": null,
+  "maxM3s": 17
+ },
+ {
+  "id": "1C6b",
+  "annex1Ref": "1C6b",
+  "category": "1.C",
+  "subBasin": "Semois",
+  "river": "Vierre",
+  "from": {
+   "fr": "route Straimont-Martilly à Martilly",
+   "en": "Straimont–Martilly road, Martilly"
+  },
+  "to": {
+   "fr": "pont-route Suxy-Chiny",
+   "en": "Suxy–Chiny road bridge"
+  },
+  "annex2Gauge": "Martilly",
+  "minM3s": null,
+  "maxM3s": 8.6
+ }
+]

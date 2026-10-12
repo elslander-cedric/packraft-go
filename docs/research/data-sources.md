@@ -8,11 +8,12 @@ Researched 2026-10-12. This decides what packraft-go can *show* versus only *lin
 |---|---|---|---|
 | Walloon live river status (kayak.spw.wallonie.be) | No public API found | No terms published | **No**, unless the SPW agrees to a feed |
 | Walloon stretches + put-in/take-out points (Metawal dataset) | Shapefile / FGDB, from 2014 | Restricted; redistribution forbidden | **No** |
-| Walloon rules (AGW 2009, annexes) | Public legal text (PDF) | Public law | **Yes**, if encoded by hand |
+| Walloon rules (AGW 2009, annexes) | Public legal text (PDF), **now extracted** to [data/walloon-stretches.json](data/walloon-stretches.json) | Public law | **Yes**. Stretch ends still need placing on the map (about 45 landmarks, 2–4 h of curation) |
 | Walloon hydrometry (live river flows) | **Yes**: public KiWIS JSON API, no key, CORS open | No named licence; attribution required; publishing needs the SPW's written agreement | **Technically yes; legally needs SPW permission.** See [hydrometry.md](hydrometry.md) |
 | Sport Vlaanderen routes (RouteYou) | Internal API only | No open licence found | **No**, without permission |
 | Flemish waterway network (De Vlaamse Waterweg RIS-index) | WFS/WMS | Modellicentie Gratis Hergebruik (open) | **Yes** |
-| Flemish rules (forbidden waters, lock ban) | Prose only | Public | **Yes**, if encoded by hand |
+| Flemish rules (forbidden waters, ports, lock ban) | Prose only | Public | **Yes**, if encoded by hand. A short list, since non-navigable rivers are allowed by default |
+| Flemish river categories and managers (VHA Waterlopen) | WFS | Open Data Licentie Vlaanderen | **Yes** |
 | OpenStreetMap paddling tags in Belgium | Yes (Overpass) | ODbL (open) | Too sparse to rely on; locks and waterway classes are usable |
 
 **Conclusion:** there's no ready-made open feed for "can I paddle here today?". But the Walloon status **can be computed in the browser**: encode the AGW rules ourselves (stretch list, categories, seasons, hours, thresholds) and combine them with **live flows from the public KiWIS API**, which needs no key and allows CORS. This covers about 25 of 26 stretches. The forecast rule and ad-hoc closures can't be computed, and **publishing the derived status needs written permission from the SPW**. See [hydrometry.md](hydrometry.md).

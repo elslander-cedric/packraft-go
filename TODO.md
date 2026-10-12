@@ -59,4 +59,6 @@ Low priority. File one if it starts to bother you.
 - [x] Research access rules, routes and data sources for Flanders and Wallonia: see [docs/research/](docs/research/).
 - [x] Check the Walloon hydrometry API: it works from the browser; publishing needs SPW permission. See [hydrometry.md](docs/research/hydrometry.md).
 - [ ] Email the SPW for written permission to show flows and a derived status, and ask which gauge is used for Wanlin (Cedric sends).
-- [ ] Extract AGW Annex 1 (river list and categories); check the port regulations in Flanders.
+- [x] Extract AGW Annex 1 ([walloon-stretches.md](docs/research/walloon-stretches.md)) and check the Flemish rules and ports ([flanders.md](docs/research/flanders.md)).
+- [ ] Place the ~45 Walloon stretch start and end points on the map (manual curation, 2–4 h) before stretches can be drawn.
+- [ ] Still open: Boudewijnkanaal status; whether any Flemish river managers have imposed bans.
