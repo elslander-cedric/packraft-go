@@ -35,11 +35,13 @@ export const strings = {
   openFileUnknownVersion:
     "This trip file is from a newer or unknown version of packraft-go and can't be opened here. Your current trip is unchanged.",
   exportGpxButton: "Export GPX",
-  exportGpxHint: "Download the trip as a GPX file for a GPS device or outdoor app: one track per leg, camps as waypoints.",
+  exportGpxHint:
+    "Download the trip as a ZIP of GPX files for a GPS device or outdoor app: one file per hike or paddle section, split at camps.",
   exportGpxDisabledReason: "Nothing to export yet: click the map twice to add a leg.",
-  // Names inside the exported GPX file: a track per leg, e.g. "Leg 3 – paddle", and a waypoint per camp.
-  gpxTrackName: (n: number, mode: "hike" | "paddle") => `Leg ${n} – ${mode === "hike" ? "hike" : "paddle"}`,
-  gpxCampName: (n: number) => `Camp ${n}`,
+  // A section's name in the GPX export (ADR 0021), used for its file, metadata and track,
+  // e.g. "Ourthe – 2 – paddle", or "Ourthe – 2 – Day 1 – paddle" when the trip has camps.
+  gpxSectionName: (trip: string, n: number, mode: "hike" | "paddle", day?: number) =>
+    [trip, String(n), ...(day === undefined ? [] : [`Day ${day}`]), mode === "hike" ? "hike" : "paddle"].join(" – "),
   toolbarLabel: "Edit route",
   undoButton: "Undo",
   undoShortcut: "Undo the last edit (Ctrl+Z / Cmd+Z)",
