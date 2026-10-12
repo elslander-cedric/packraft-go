@@ -1,0 +1,30 @@
+.toggle-group {
+  display: inline-flex;
+}
+
+.toggle {
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.toggle + .toggle {
+  border-left: none;
+}
+
+.toggle:focus-visible {
+  position: relative;
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+/* Callers colour the pressed option (e.g. hike/paddle); this is the fallback. */
+.toggle[data-pressed] {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-on-accent);
+}

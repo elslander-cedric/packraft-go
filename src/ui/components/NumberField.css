@@ -1,0 +1,28 @@
+.number-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.number-field-input {
+  width: 6rem;
+  padding: 0.15rem 0.3rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.number-field-input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.number-field-input[aria-invalid="true"] {
+  outline: 2px solid var(--color-danger);
+}
+
+.number-field-hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}

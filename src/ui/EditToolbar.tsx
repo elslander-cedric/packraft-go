@@ -1,3 +1,4 @@
+import { Toolbar, ToolbarButton } from "./components/Toolbar";
 import { strings } from "./strings";
 
 type EditToolbarProps = {
@@ -20,28 +21,32 @@ export default function EditToolbar({
   onToggleCamp,
 }: EditToolbarProps) {
   return (
-    <div className="edit-toolbar" role="toolbar" aria-label={strings.toolbarLabel}>
-      <button type="button" onClick={onUndo} disabled={!canUndo} title={strings.undoShortcut}>
-        {strings.undoButton}
-      </button>
-      <button
-        type="button"
-        onClick={onDeletePoint}
-        disabled={!canDeletePoint}
-        title={strings.deletePointShortcut}
-      >
-        {strings.deletePointButton}
-      </button>
-      <button
-        type="button"
-        className="camp-toggle"
-        onClick={onToggleCamp}
-        disabled={selectedPointIsCamp === null}
-        aria-pressed={selectedPointIsCamp ?? false}
-        title={strings.campButtonHint}
-      >
-        {strings.campButton}
-      </button>
+    <div className="edit-toolbar">
+      <Toolbar label={strings.toolbarLabel}>
+        <ToolbarButton
+          onClick={onUndo}
+          hint={strings.undoShortcut}
+          disabledReason={canUndo ? null : strings.undoDisabledReason}
+        >
+          {strings.undoButton}
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={onDeletePoint}
+          hint={strings.deletePointShortcut}
+          disabledReason={canDeletePoint ? null : strings.deletePointDisabledReason}
+        >
+          {strings.deletePointButton}
+        </ToolbarButton>
+        <ToolbarButton
+          className="camp-toggle"
+          onClick={onToggleCamp}
+          pressed={selectedPointIsCamp ?? false}
+          hint={strings.campButtonHint}
+          disabledReason={selectedPointIsCamp === null ? strings.campDisabledReason : null}
+        >
+          {strings.campButton}
+        </ToolbarButton>
+      </Toolbar>
       <p className="edit-hint">{strings.editHint}</p>
     </div>
   );

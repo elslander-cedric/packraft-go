@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Router } from "@/core/router";
 import { createAutoRouter, retryLeg } from "@/core/routing";
 import { defaultSettings, withSetting, type Settings } from "@/core/settings";
@@ -20,6 +20,7 @@ import ClientTripMap from "@/map/ClientTripMap";
 import { downloadGpxFile, downloadTripFile, readTripFile } from "@/persistence/tripFile";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import DaysPanel from "./DaysPanel";
 import EditToolbar from "./EditToolbar";
 import LegsPanel from "./LegsPanel";
@@ -27,6 +28,10 @@ import SettingsPanel from "./SettingsPanel";
 import { strings } from "./strings";
 import TripToolbar from "./TripToolbar";
 import { useSettings } from "./useSettings";
+
+/** The questions asked before a trip with points is replaced. */
+const confirmations = { newTrip: strings.newTripConfirm, openFile: strings.openFileConfirm } as const;
+type Confirmation = keyof typeof confirmations;
 
 /** True when a key press is meant for a text field, not for the planner. */
 const typingInField = (event: KeyboardEvent) =>
@@ -75,14 +80,25 @@ export default function TripPlanner({ router }: { router?: Router }) {
     setTrip((current) => renameTrip(current, name));
     setFileError(null);
   };
-  /** Replaces the current trip, asking first when that would lose points (it cannot be undone). */
-  const replaceTrip = (next: Trip, question: string) => {
-    if (newTripNeedsConfirmation(trip) && !window.confirm(question)) return;
+  // A trip waiting to replace the current one until the planner answers the confirmation.
+  const [pendingReplace, setPendingReplace] = useState<{ next: Trip; question: Confirmation } | null>(null);
+  const newTripButton = useRef(null as HTMLButtonElement | null);
+  const openFileButton = useRef(null as HTMLButtonElement | null);
+  const applyReplace = (next: Trip) => {
     setTrip(next);
     setSelectedPoint(null);
     setFileError(null);
   };
-  const newTrip = () => replaceTrip(emptyTrip(), strings.newTripConfirm);
+  /** Replaces the current trip, asking first when that would lose points (it cannot be undone). */
+  const replaceTrip = (next: Trip, question: Confirmation) => {
+    if (newTripNeedsConfirmation(trip)) setPendingReplace({ next, question });
+    else applyReplace(next);
+  };
+  const confirmReplace = () => {
+    if (pendingReplace) applyReplace(pendingReplace.next);
+    setPendingReplace(null);
+  };
+  const newTrip = () => replaceTrip(emptyTrip(), "newTrip");
   const saveFile = () => {
     setFileError(null);
     downloadTripFile(trip, strings.tripNamePlaceholder);
@@ -97,7 +113,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
   };
   const openFile = async (file: File) => {
     const opened = await readTripFile(file);
-    if (opened.ok) replaceTrip(opened.trip, strings.openFileConfirm);
+    if (opened.ok) replaceTrip(opened.trip, "openFile");
     else setFileError(opened.reason === "unknown-version" ? strings.openFileUnknownVersion : strings.openFileInvalid);
   };
   /** Marks or unmarks the selected point as a camp. The point stays selected: no point moves. */
@@ -113,7 +129,8 @@ export default function TripPlanner({ router }: { router?: Router }) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (typingInField(event)) return;
+      // While a confirmation is open, keys belong to it (Escape cancels it).
+      if (pendingReplace || typingInField(event)) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
         undo();
@@ -129,6 +146,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
   });
 
   const summary = summarise(trip, settings ?? defaultSettings);
+  const confirmation = confirmations[pendingReplace?.question ?? "newTrip"];
 
   return (
     <div className="planner">
@@ -148,6 +166,8 @@ export default function TripPlanner({ router }: { router?: Router }) {
           onSaveFile={saveFile}
           onExportGpx={trip.legs.length > 0 ? exportGpx : null}
           onOpenFile={(file) => void openFile(file)}
+          newTripButtonRef={newTripButton}
+          openFileButtonRef={openFileButton}
         />
         <EditToolbar
           canUndo={canUndo(trip)}
@@ -166,6 +186,16 @@ export default function TripPlanner({ router }: { router?: Router }) {
         <DaysPanel days={summary.days} />
         {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
       </div>
+      <ConfirmDialog
+        open={pendingReplace !== null}
+        title={confirmation.title}
+        message={confirmation.message}
+        confirmLabel={confirmation.confirm}
+        cancelLabel={strings.confirmCancel}
+        onConfirm={confirmReplace}
+        onCancel={() => setPendingReplace(null)}
+        returnFocusTo={pendingReplace?.question === "openFile" ? openFileButton : newTripButton}
+      />
     </div>
   );
 }

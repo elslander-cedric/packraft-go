@@ -13,6 +13,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@base-ui/react": "1.9.0",
     "leaflet": "^1.9.4",
     "next": "^16.4.0",
     "react": "^19.3.0",
