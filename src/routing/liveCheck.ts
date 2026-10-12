@@ -5,7 +5,7 @@
 // fixtures: re-recording stays a deliberate step.
 import type { RouteResult } from "@/core/router";
 import type { LatLng, LegMode } from "@/core/trip";
-import { createBRouterRouter } from "./brouter";
+import { brouterUrl, createBRouterRouter } from "./brouter";
 
 /** One request to replay against the live server, and the fixture it was recorded as. */
 export type LiveCheckCase = {
@@ -207,6 +207,61 @@ function compareNumberProperty(
 
 function withinShare(value: number, reference: number, share: number): boolean {
   return Math.abs(value - reference) <= Math.abs(reference) * share;
+}
+
+/** Pause between two requests to the public server, to be polite to a free community service. */
+export const LIVE_CHECK_DELAY_MS = 2000;
+
+/** Who is asking: the project URL only, never a personal email. */
+export const LIVE_CHECK_USER_AGENT = "packraft-go-brouter-check (+https://github.com/elslander-cedric/packraft-go)";
+
+export type LiveCheckDeps = {
+  fetch: (url: string, init: { headers: Record<string, string> }) => Promise<Response>;
+  wait: (ms: number) => Promise<void>;
+  /** Reads a file from `src/routing/fixtures/`. */
+  readFixture: (name: string) => string;
+};
+
+export type LiveCheckResult = {
+  /** False when any case has a mismatch. Drift alone still passes. */
+  passed: boolean;
+  report: string;
+};
+
+/** Calls the live server once per case, one request at a time, and compares each answer with its fixture. */
+export async function runLiveCheck(deps: LiveCheckDeps): Promise<LiveCheckResult> {
+  const lines: string[] = [];
+  let mismatches = 0;
+  let drifts = 0;
+
+  for (const [index, check] of liveCheckCases.entries()) {
+    if (index > 0) await deps.wait(LIVE_CHECK_DELAY_MS);
+    const url = brouterUrl(check.mode, check.points);
+    const recorded: RecordedResponse = { status: check.status, body: deps.readFixture(check.fixture) };
+
+    let findings: Finding[];
+    try {
+      const response = await deps.fetch(url, { headers: { "User-Agent": LIVE_CHECK_USER_AGENT } });
+      findings = await compareWithFixture(check, { status: response.status, body: await response.text() }, recorded);
+    } catch (error) {
+      findings = [{ level: "mismatch", message: `request failed: ${error instanceof Error ? error.message : String(error)}` }];
+    }
+
+    lines.push("", `${check.name} (${check.fixture})`, `  ${url}`);
+    for (const finding of findings) lines.push(`  ${finding.level.toUpperCase().padEnd(8)} ${finding.message}`);
+    mismatches += findings.filter((f) => f.level === "mismatch").length;
+    drifts += findings.filter((f) => f.level === "drift").length;
+  }
+
+  lines.push("");
+  if (mismatches > 0) {
+    lines.push(`FAILED: ${mismatches} mismatch(es). The live server no longer answers the way the adapter expects.`);
+  } else if (drifts > 0) {
+    lines.push(`PASSED with ${drifts} drift(s): the adapter still copes, but consider re-recording the fixtures.`);
+  } else {
+    lines.push("PASSED: the live server still matches the recorded fixtures.");
+  }
+  return { passed: mismatches === 0, report: lines.join("\n") };
 }
 
 /** What the adapter makes of a response: `ok`, or the failure kind. */

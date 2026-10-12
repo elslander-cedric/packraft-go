@@ -3,7 +3,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { compareWithFixture, liveCheckCases, type RecordedResponse } from "./liveCheck";
+import { brouterUrl } from "./brouter";
+import {
+  compareWithFixture,
+  LIVE_CHECK_DELAY_MS,
+  LIVE_CHECK_USER_AGENT,
+  liveCheckCases,
+  runLiveCheck,
+  type RecordedResponse,
+} from "./liveCheck";
 
 const fixture = (name: string) => readFileSync(path.join(__dirname, "fixtures", name), "utf8");
 
@@ -19,7 +27,13 @@ const recorded = (fixtureName: string): RecordedResponse => ({
 });
 
 /** A copy of a recorded GeoJSON response with its first feature edited. */
-function editedTrack(fixtureName: string, edit: (feature: Record<string, any>) => void): RecordedResponse {
+type EditableFeature = {
+  properties: Record<string, unknown>;
+  /** Positions as recorded ([lng, lat, elevation?]); tests may replace them with anything. */
+  geometry: { coordinates: unknown[] };
+};
+
+function editedTrack(fixtureName: string, edit: (feature: EditableFeature) => void): RecordedResponse {
   const track = JSON.parse(fixture(fixtureName));
   edit(track.features[0]);
   return { status: 200, body: JSON.stringify(track) };
@@ -61,7 +75,7 @@ describe("comparing a live response with its fixture", () => {
   it("reports a mismatch when the geometry is no longer a LineString of [lng, lat, elevation]", async () => {
     const name = "hiking-success.geojson";
     const live = editedTrack(name, (f) => {
-      f.geometry.coordinates = f.geometry.coordinates.map(([lng, lat]: number[]) => ({ lng, lat }));
+      f.geometry.coordinates = (f.geometry.coordinates as number[][]).map(([lng, lat]) => ({ lng, lat }));
     });
     const findings = await compareWithFixture(caseFor(name), live, recorded(name));
     expect(findings).toContainEqual(expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/coordinates/i) }));
@@ -79,7 +93,7 @@ describe("comparing a live response with its fixture", () => {
   it("reports a mismatch when the track points stop carrying elevations", async () => {
     const name = "river-success.geojson";
     const live = editedTrack(name, (f) => {
-      f.geometry.coordinates = f.geometry.coordinates.map(([lng, lat]: number[]) => [lng, lat]);
+      f.geometry.coordinates = (f.geometry.coordinates as number[][]).map(([lng, lat]) => [lng, lat]);
     });
     const findings = await compareWithFixture(caseFor(name), live, recorded(name));
     expect(findings).toContainEqual(expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/elevation/i) }));
@@ -123,5 +137,96 @@ describe("comparing a live response with its fixture", () => {
     const name = "hiking-no-route-400.txt";
     const findings = await compareWithFixture(caseFor(name), { status: 200, body: "" }, recorded(name));
     expect(levels(findings)).toContain("mismatch");
+  });
+});
+
+describe("running the live check", () => {
+  type FetchInit = { headers: Record<string, string> };
+
+  /** A fake server that answers each case with its own fixture and logs what happened, in order. */
+  function fakeServer(answer: (url: URL) => RecordedResponse = (url) => recordedFor(url)) {
+    const events: string[] = [];
+    const userAgents: (string | null)[] = [];
+    const fetch = async (url: string, init: FetchInit) => {
+      events.push("fetch");
+      userAgents.push(new Headers(init.headers).get("user-agent"));
+      const { status, body } = answer(new URL(url));
+      return new Response(body, { status });
+    };
+    const wait = async (ms: number) => {
+      events.push(`wait ${ms}`);
+    };
+    return { fetch, wait, events, userAgents };
+  }
+
+  function recordedFor(url: URL): RecordedResponse {
+    const c = liveCheckCases.find((c) => brouterUrl(c.mode, c.points) === url.toString());
+    if (!c) throw new Error(`unexpected request ${url}`);
+    return recorded(c.fixture);
+  }
+
+  it("asks the server once per case, one at a time, with a pause between requests", async () => {
+    const server = fakeServer();
+    await runLiveCheck({ fetch: server.fetch, wait: server.wait, readFixture: fixture });
+
+    const pause = `wait ${LIVE_CHECK_DELAY_MS}`;
+    expect(server.events).toEqual(["fetch", pause, "fetch", pause, "fetch", pause, "fetch"]);
+    expect(LIVE_CHECK_DELAY_MS).toBeGreaterThanOrEqual(1000);
+  });
+
+  it("identifies itself with the project URL, never a personal email", async () => {
+    const server = fakeServer();
+    await runLiveCheck({ fetch: server.fetch, wait: server.wait, readFixture: fixture });
+
+    expect(LIVE_CHECK_USER_AGENT).toContain("https://github.com/elslander-cedric/packraft-go");
+    expect(LIVE_CHECK_USER_AGENT).not.toMatch(/@/);
+    expect(new Set(server.userAgents)).toEqual(new Set([LIVE_CHECK_USER_AGENT]));
+  });
+
+  it("passes when every live response matches its fixture", async () => {
+    const server = fakeServer();
+    const result = await runLiveCheck({ fetch: server.fetch, wait: server.wait, readFixture: fixture });
+
+    expect(result.passed).toBe(true);
+    expect(result.report).toMatch(/MATCH/);
+    expect(result.report).not.toMatch(/MISMATCH/);
+    for (const c of liveCheckCases) expect(result.report).toContain(c.name);
+  });
+
+  it("fails and names the problem when a live response no longer fits", async () => {
+    const server = fakeServer((url) =>
+      url.searchParams.get("profile") === "river" ? { status: 500, body: "profile not found" } : recordedFor(url),
+    );
+    const result = await runLiveCheck({ fetch: server.fetch, wait: server.wait, readFixture: fixture });
+
+    expect(result.passed).toBe(false);
+    expect(result.report).toMatch(/MISMATCH.*status 500/);
+  });
+
+  it("passes with drift, and says so, when only values changed", async () => {
+    const server = fakeServer((url) => {
+      const response = recordedFor(url);
+      return { ...response, body: response.body.replace("BRouter-1.7.10", "BRouter-1.8.0") };
+    });
+    const result = await runLiveCheck({ fetch: server.fetch, wait: server.wait, readFixture: fixture });
+
+    expect(result.passed).toBe(true);
+    expect(result.report).toMatch(/DRIFT.*BRouter-1\.8\.0/);
+    expect(result.report).toMatch(/re-record/i);
+  });
+
+  it("fails, without stopping the run, when the server cannot be reached", async () => {
+    const server = fakeServer();
+    let calls = 0;
+    const fetch = async (url: string, init: FetchInit) => {
+      calls += 1;
+      if (calls === 1) throw new TypeError("fetch failed");
+      return server.fetch(url, init);
+    };
+    const result = await runLiveCheck({ fetch, wait: server.wait, readFixture: fixture });
+
+    expect(calls).toBe(liveCheckCases.length);
+    expect(result.passed).toBe(false);
+    expect(result.report).toMatch(/MISMATCH.*fetch failed/);
   });
 });

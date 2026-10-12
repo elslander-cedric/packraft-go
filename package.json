@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "check:brouter": "tsx scripts/check-brouter.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
@@ -30,6 +31,7 @@
     "@xmldom/xmldom": "^0.9.12",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.0",
+    "tsx": "4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.0.3"
   }
