@@ -15,6 +15,7 @@ Shared language for packraft-go. One term per entry: what it means *in this proj
 - **Navigable waterway**: A canal or river officially open to shipping (in Flanders managed by De Vlaamse Waterweg). Access rules differ from those for non-navigable rivers. See `docs/research/access-rules.md`.
 - **Stretch**: A legally defined section of river where paddling is regulated as one unit (e.g. Walloon AGW Annex 1 stretches), with its own season, hours and flow thresholds.
 - **Aire**: A designated put-in or take-out point on a Walloon stretch (*aire d'embarquement / de débarquement*). In Wallonia you may only get in or out at an aire.
-- **Access status**: Whether a stretch may be paddled at a given moment (open / closed, with a reason such as low flow, high flow or season).
+- **Access status**: Whether water may be paddled at a given moment. One of: **open**; **closed today** (legal water, but closed by season, hours or flow); **forbidden** (an explicit ban, e.g. a port or excluded canal); **unknown** (no rule or no data).
 - **Access point**: A place where you can get onto or off the water: a put-in, a take-out, or both. It may be an official aire, a slipway, a jetty or an informal bank. Being an access point doesn't make it legal; see Aire.
 - **Section**: A run of consecutive legs of the same mode (hike or paddle), ending where the mode changes or at a camp. Each section is exported as its own GPX file (ADR 0021). Not the same as a Stretch, which is a legal unit of river.
+- **Start date**: The optional calendar date of a trip's first day. Day *n* falls on start date + *n*−1. Access status is checked against these dates.
