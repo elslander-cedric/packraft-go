@@ -88,7 +88,8 @@ test("#10: the saved file is exactly the autosave format, named after the trip",
   // One format: what is downloaded is byte-for-byte what autosave stores.
   expect(file.text).toBe(await storedText(page));
   const parsed = JSON.parse(file.text);
-  expect(parsed).toMatchObject({ format: "packraft-go-trip", version: 1 });
+  // Updated in round 2 of #8: the save format is now version 2 (it includes camps).
+  expect(parsed).toMatchObject({ format: "packraft-go-trip", version: 2 });
   expect(parsed.trip).not.toHaveProperty("undoSteps");
 });
 
@@ -193,16 +194,18 @@ test("#10: a leg that was still routing when saved is routed after opening, as a
   expect(net.brouter.length).toBeLessThanOrEqual(2);
 });
 
-const INVALID: [string, string][] = [
-  ["not JSON", "{corrupt"],
-  ["an empty file", ""],
-  ["JSON that is not a trip", JSON.stringify({ hello: "world" })],
-  ["a newer version", JSON.stringify({ format: "packraft-go-trip", version: 99, trip: { name: "x", points: [], legs: [] } })],
-  ["legs not matching points", JSON.stringify({ format: "packraft-go-trip", version: 1, trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] } })],
-  ["a GPX file", '<?xml version="1.0"?><gpx version="1.1"><trk><name>x</name></trk></gpx>'],
+// Updated in round 2 of #8: each case names the error it expects. A newer
+// version now gets its own message (strings.openFileUnknownVersion).
+const INVALID: [string, string, string][] = [
+  ["not JSON", "{corrupt", strings.openFileInvalid],
+  ["an empty file", "", strings.openFileInvalid],
+  ["JSON that is not a trip", JSON.stringify({ hello: "world" }), strings.openFileInvalid],
+  ["a newer version", JSON.stringify({ format: "packraft-go-trip", version: 99, trip: { name: "x", points: [], legs: [] } }), strings.openFileUnknownVersion],
+  ["legs not matching points", JSON.stringify({ format: "packraft-go-trip", version: 1, trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] } }), strings.openFileInvalid],
+  ["a GPX file", '<?xml version="1.0"?><gpx version="1.1"><trk><name>x</name></trk></gpx>', strings.openFileInvalid],
 ];
 
-for (const [label, text] of INVALID) {
+for (const [label, text, message] of INVALID) {
   test(`#10: an invalid file (${label}) shows an error, never asks, and leaves the trip and storage unchanged`, async ({ page }) => {
     const { net } = await drawMixedTrip(page, "Keep me");
     const seen = watchDialogs(page, () => "accept");
@@ -212,7 +215,7 @@ for (const [label, text] of INVALID) {
     const calls = net.brouter.length;
 
     await open(page, "bad.json", text);
-    await expect(errorAlert(page)).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: message })).toBeVisible();
     await page.waitForTimeout(300);
     expect(seen).toEqual([]);
     await expect(pointMarkers(page)).toHaveCount(4);
@@ -223,6 +226,37 @@ for (const [label, text] of INVALID) {
     expect(net.brouter).toHaveLength(calls);
   });
 }
+
+// Added in round 2 of #8: files saved before the version 2 bump still open.
+test("#10: a version 1 file (saved before camps) still opens, as a trip without camps", async ({ page }) => {
+  const net = await serveOffline(page, { brouter: byProfile });
+  await openMap(page);
+  const seen = watchDialogs(page, () => "accept");
+  const versionOne = JSON.stringify({
+    format: "packraft-go-trip",
+    version: 1,
+    trip: {
+      name: "From version 1",
+      points: [
+        { lat: 50.3, lng: 5.6 },
+        { lat: 50.31, lng: 5.61 },
+      ],
+      legs: [{ mode: "hike", route: { status: "failed", failure: { kind: "no-route" } } }],
+    },
+  });
+
+  await open(page, "old.packraft.json", versionOne);
+  await expect(tripName(page)).toHaveValue("From version 1");
+  await expect(pointMarkers(page)).toHaveCount(2);
+  await expect(legLines(page)).toHaveCount(1);
+  await expect(mapRegion(page).locator(".camp-marker")).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({ hasText: strings.openFileInvalid })).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({ hasText: strings.openFileUnknownVersion })).toHaveCount(0);
+  expect(seen).toEqual([]);
+  expect(net.brouter).toHaveLength(0);
+  // Saved again, it is written as version 2.
+  await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").version).toBe(2);
+});
 
 test("#10: the error goes away after a successful open, and the same file can be opened twice", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });

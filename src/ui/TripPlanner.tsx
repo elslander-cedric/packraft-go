@@ -90,7 +90,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
   const openFile = async (file: File) => {
     const opened = await readTripFile(file);
     if (opened.ok) replaceTrip(opened.trip, strings.openFileConfirm);
-    else setFileError(strings.openFileInvalid);
+    else setFileError(opened.reason === "unknown-version" ? strings.openFileUnknownVersion : strings.openFileInvalid);
   };
   /** Marks or unmarks the selected point as a camp. The point stays selected: no point moves. */
   const toggleSelectedCamp = () => {

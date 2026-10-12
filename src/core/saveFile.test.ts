@@ -35,7 +35,8 @@ describe("save format round-trip", () => {
   });
 
   it("is versioned JSON", () => {
-    expect(JSON.parse(serialiseTrip(routedTrip))).toMatchObject({ format: "packraft-go-trip", version: 1 });
+    // Updated in round 2 of #8: the save format is now version 2.
+    expect(JSON.parse(serialiseTrip(routedTrip))).toMatchObject({ format: "packraft-go-trip", version: 2 });
   });
 
   it("does not save undo history: a restored trip has nothing to undo", () => {
@@ -146,7 +147,6 @@ describe("parsing invalid input", () => {
     ["JSON that is not an object", "[1, 2]"],
     ["null", "null"],
     ["another app's file", JSON.stringify({ ...valid, format: "something-else" })],
-    ["a file from a newer version", JSON.stringify({ ...valid, version: 2 })],
     ["a file without a trip", JSON.stringify({ format: valid.format, version: valid.version })],
     ["a name that is not text", withTrip({ name: 42 })],
     ["points that are not a list", withTrip({ points: {} })],
@@ -199,11 +199,13 @@ describe("save file name", () => {
   });
 });
 
-// Camps (#8): an optional `camps` field in the same version, so older saves without it still load.
+// Camps (#8): version 2 of the save format includes camps; version 1 saves (before camps) still load.
 describe("camps in the save format", () => {
   const withCamps: Trip = { ...routedTrip, camps: [1] };
   const valid = JSON.parse(serialiseTrip(routedTrip));
   const withSavedCamps = (camps: unknown) => JSON.stringify({ ...valid, trip: { ...valid.trip, camps } });
+  /** A version 1 save, as written before camps existed: no camps field. */
+  const versionOne = () => ({ ...valid, version: 1 });
 
   it("a parsed save gives back the trip's camps", () => {
     expect(parseTrip(serialiseTrip(withCamps))).toEqual({ ok: true, trip: withCamps });
@@ -216,13 +218,24 @@ describe("camps in the save format", () => {
     expect(summarise(parsed.trip).days).toEqual(summarise(withCamps).days);
   });
 
-  it("a save from before camps (no camps field) still loads, as a trip without camps", () => {
-    expect(valid.trip).not.toHaveProperty("camps");
-    expect(parseTrip(JSON.stringify(valid))).toEqual({ ok: true, trip: routedTrip });
+  it("is saved as version 2, listing the camps when the trip has any", () => {
+    expect(JSON.parse(serialiseTrip(withCamps))).toMatchObject({ version: 2, trip: { camps: [1] } });
+    const withoutCamps = JSON.parse(serialiseTrip(routedTrip));
+    expect(withoutCamps.version).toBe(2);
+    expect(withoutCamps.trip).not.toHaveProperty("camps");
   });
 
-  it("stays at version 1", () => {
-    expect(JSON.parse(serialiseTrip(withCamps))).toMatchObject({ version: 1, trip: { camps: [1] } });
+  it("a version 1 save (no camps field) still loads, as a trip without camps", () => {
+    expect(versionOne().trip).not.toHaveProperty("camps");
+    expect(parseTrip(JSON.stringify(versionOne()))).toEqual({ ok: true, trip: routedTrip });
+  });
+
+  it.each([0, 3, 99, -1, 1.5])("refuses version %s as a newer or unknown version", (version) => {
+    expect(parseTrip(JSON.stringify({ ...valid, version }))).toEqual({ ok: false, reason: "unknown-version" });
+  });
+
+  it("an unknown version gives an empty trip from storage, like any unreadable save", () => {
+    expect(restoreTrip(JSON.stringify({ ...valid, version: 3 }))).toEqual(emptyTrip());
   });
 
   it("reads camps in any order as the same camps", () => {

@@ -4,9 +4,21 @@ import type { LegRoute, RoutedPoint } from "./router";
 import { emptyTrip, type LatLng, type Leg, type LegMode, type Trip } from "./trip";
 
 export const SAVE_FORMAT = "packraft-go-trip";
-export const SAVE_VERSION = 1;
+/**
+ * The version the app saves (ADR 0011, amended). Version 2 added camps (#8);
+ * version 1 saves, from before camps, still load as trips without camps.
+ */
+export const SAVE_VERSION = 2;
+const READABLE_VERSIONS: readonly unknown[] = [1, 2];
 
-export type ParseResult = { readonly ok: true; readonly trip: Trip } | { readonly ok: false };
+/**
+ * A save that cannot be opened is either damaged or not a trip (no reason), or
+ * a packraft-go trip of a version this app does not know, e.g. from a newer app
+ * (`unknown-version`), so the planner can be told which.
+ */
+export type ParseResult =
+  | { readonly ok: true; readonly trip: Trip }
+  | { readonly ok: false; readonly reason?: "unknown-version" };
 
 /**
  * What is saved of a leg's route: routed results (with the router's `climbM`
@@ -22,10 +34,8 @@ const savedLeg = (leg: Leg): Leg => {
 };
 
 /**
- * The trip as save-file text. Undo history is not saved.
- * `camps` (point indices, #8) was added to version 1 as an optional field: it
- * is only written when the trip has camps, and a save without it is a trip
- * without camps, so saves from before camps still load.
+ * The trip as save-file text, always in the current version. Undo history is
+ * not saved. `camps` (point indices) is only written when the trip has camps.
  */
 export function serialiseTrip(trip: Trip): string {
   const camps = trip.camps?.length ? { camps: trip.camps } : {};
@@ -49,14 +59,16 @@ export function saveFileName(trip: Trip, untitledName: string): string {
 }
 
 /**
- * Reads save-file text back into a trip. Anything that is not a valid save of
- * this version is rejected as a whole; fields the format does not know are
- * ignored. The restored trip has no undo history.
+ * Reads save-file text back into a trip. Versions 1 and 2 are read; a trip
+ * file with any other numbered version is refused as an unknown version.
+ * Anything that is not a valid save is rejected as a whole; fields the format
+ * does not know are ignored. The restored trip has no undo history.
  */
 export function parseTrip(text: string): ParseResult {
   try {
     const file = object(JSON.parse(text));
-    if (file.format !== SAVE_FORMAT || file.version !== SAVE_VERSION) throw invalid;
+    if (file.format !== SAVE_FORMAT || typeof file.version !== "number") throw invalid;
+    if (!READABLE_VERSIONS.includes(file.version)) return { ok: false, reason: "unknown-version" };
     return { ok: true, trip: readTrip(object(file.trip)) };
   } catch {
     return { ok: false };
@@ -132,6 +144,9 @@ function readTrip(trip: Fields): Trip {
   const legs = list(trip.legs).map(readLeg);
   // legs[i] runs from points[i] to points[i + 1].
   if (legs.length !== Math.max(points.length - 1, 0)) throw invalid;
+  // Without a camps list the trip has no camps: always so in version 1, which
+  // came before camps. A camps list in a version 1 save (only pre-release
+  // builds wrote one) is checked like any other, not trusted.
   const camps = readCamps(trip.camps, points.length);
   return camps.length > 0 ? { name: trip.name, points, legs, camps } : { name: trip.name, points, legs };
 }

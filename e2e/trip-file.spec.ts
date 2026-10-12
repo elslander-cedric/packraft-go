@@ -74,7 +74,7 @@ test("save file, start a new trip, open the file: the trip is restored without r
   expect(saved.name).toBe("Ourthe weekend.packraft.json");
   expect(JSON.parse(await readFile(saved.path, "utf8"))).toMatchObject({
     format: "packraft-go-trip",
-    version: 1,
+    version: 2, // Updated for #8: the save format is now version 2.
     trip: { name: "Ourthe weekend" },
   });
 

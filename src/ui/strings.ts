@@ -22,6 +22,8 @@ export const strings = {
   openFileHint: "Open a trip file saved earlier. The current trip is replaced.",
   openFileConfirm: "Open this trip file? Your current trip will be replaced.",
   openFileInvalid: "This is not a packraft-go trip file, or it is damaged. Your current trip is unchanged.",
+  openFileUnknownVersion:
+    "This trip file is from a newer or unknown version of packraft-go and can't be opened here. Your current trip is unchanged.",
   toolbarLabel: "Edit route",
   undoButton: "Undo",
   undoShortcut: "Undo the last edit (Ctrl+Z / Cmd+Z)",
