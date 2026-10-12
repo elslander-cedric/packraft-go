@@ -221,18 +221,57 @@ describe("#41 AC4: naming", () => {
     }
   });
 
-  it("metadata name and track name equal the file name without .gpx, also for names with characters illegal in file names", () => {
-    // Issue #41: "has metadata name and track name equal to the file name (without .gpx)".
-    for (const name of ["Lesse / Ourthe", "Semois: day trip", "A\u0007B"]) {
-      for (const file of tripToGpxFiles(
-        trip(["hike", "paddle"], [], name),
+  it("names with characters illegal in file names: the inside name keeps the typed name, only the file name is made safe", () => {
+    // Issue #41 / ADR 0021, amended 2026-10-12: metadata and track names use the trip
+    // name as typed (XML-invalid characters removed); only the file name replaces
+    // file-system-unsafe characters with "-". Both follow the same pattern otherwise.
+    const cases: [string, number[], string[], string[]][] = [
+      [
+        "Lesse / Ourthe",
+        [],
+        ["Lesse / Ourthe – 1 – hike", "Lesse / Ourthe – 2 – paddle"],
+        ["Lesse - Ourthe – 1 – hike.gpx", "Lesse - Ourthe – 2 – paddle.gpx"],
+      ],
+      [
+        "Semois: day trip",
+        [1],
+        [
+          "Semois: day trip – 1 – Day 1 – hike",
+          "Semois: day trip – 2 – Day 2 – paddle",
+        ],
+        [
+          "Semois- day trip – 1 – Day 1 – hike.gpx",
+          "Semois- day trip – 2 – Day 2 – paddle.gpx",
+        ],
+      ],
+      [
+        "A\u0007B",
+        [],
+        ["AB – 1 – hike", "AB – 2 – paddle"],
+        ["A-B – 1 – hike.gpx", "A-B – 2 – paddle.gpx"],
+      ],
+      [
+        'x\\y*z?"q"<r>|s',
+        [],
+        ['x\\y*z?"q"<r>|s – 1 – hike', 'x\\y*z?"q"<r>|s – 2 – paddle'],
+        ["x-y-z-q-r-s – 1 – hike.gpx", "x-y-z-q-r-s – 2 – paddle.gpx"],
+      ],
+    ];
+    for (const [name, camps, inside, files] of cases) {
+      const exported = tripToGpxFiles(
+        trip(["hike", "paddle"], camps, name),
         names,
-      )) {
+      );
+      expect(
+        exported.map((f) => f.fileName),
+        name,
+      ).toEqual(files);
+      for (const [i, file] of exported.entries()) {
         expect(file.fileName).not.toMatch(/[/\\:*?"<>|\u0000-\u001f]/);
         const gpx = parseGpx11(file.text);
-        const base = file.fileName.replace(/\.gpx$/, "");
-        expect(gpx.metadataName, name).toBe(base);
-        expect(gpx.tracks[0].name, name).toBe(base);
+        expect(gpx.metadataName, name).toBe(inside[i]);
+        expect(gpx.tracks[0].name, name).toBe(inside[i]);
+        expect(() => strictXml(file.text)).not.toThrow();
       }
     }
   });
