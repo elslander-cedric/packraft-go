@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import { parseGpx11 } from "../testing/gpx11";
 import { gpxFileName, tripToGpx, type GpxNames } from "./gpx";
 import { emptyTrip, type Trip } from "./trip";
+import { strings } from "../ui/strings";
 
+// The names the app passes in (ADR 0013), so these tests pin the exported names too.
 const names: GpxNames = {
-  untitledTrip: "Untitled trip",
-  leg: (n, mode) => `Leg ${n} – ${mode}`,
-  camp: (n) => `Camp ${n}`,
+  untitledTrip: strings.tripNamePlaceholder,
+  leg: strings.gpxTrackName,
+  camp: strings.gpxCampName,
 };
 
 const A = { lat: 50.3, lng: 5.6 };
