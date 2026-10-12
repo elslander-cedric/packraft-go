@@ -77,9 +77,21 @@ export function parseTrip(text: string): ParseResult {
  * or an empty trip when nothing is stored or it cannot be read.
  */
 export function restoreTrip(stored: string | null): Trip {
-  if (stored === null) return emptyTrip();
-  const parsed = parseTrip(stored);
-  return parsed.ok ? parsed.trip : emptyTrip();
+  return restoreStoredTrip(stored).trip;
+}
+
+/**
+ * The trip to start with, and whether browser storage holds a save from a
+ * newer or unknown version (#28). Such a save is not discarded: the planner
+ * keeps it in storage and warns, since a newer deployment may be able to read
+ * it. Corrupt data is not flagged; it just gives an empty trip.
+ */
+export type StoredTrip = { readonly trip: Trip; readonly unknownVersion: boolean };
+
+export function restoreStoredTrip(stored: string | null): StoredTrip {
+  const parsed = stored === null ? null : parseTrip(stored);
+  if (parsed?.ok) return { trip: parsed.trip, unknownVersion: false };
+  return { trip: emptyTrip(), unknownVersion: parsed?.reason === "unknown-version" };
 }
 
 // Readers below throw `invalid` on the first thing that does not fit; parseTrip catches it.

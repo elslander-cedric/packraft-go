@@ -118,15 +118,18 @@ test("a version 2 autosave with camps loads them", async ({ page }) => {
   await expect(dayRows(page)).toHaveCount(2);
 });
 
-for (const [label, text] of [
-  ["version 3 with camps", save(3, { ...threePoints, camps: [1] })],
-  ["version 0", save(0, threePoints)],
+// Updated (#28): an autosave of a newer or unknown version is kept, with a warning,
+// instead of being overwritten by the next edit. `unknownVersion` marks those cases;
+// damaged data still falls back and is overwritten as before.
+for (const [label, text, unknownVersion] of [
+  ["version 3 with camps", save(3, { ...threePoints, camps: [1] }), true],
+  ["version 0", save(0, threePoints), true],
   // Updated: v1 dropped (#33). A version 1 autosave used to load as a trip without camps.
-  ["version 1", save(1, threePoints)],
-  ["version 99 in an unknown shape", save(99, { stages: [{ x: 1 }] })],
-  ["version 2 with a camp on a missing point", save(2, { ...threePoints, camps: [9] })],
-  ["version 2 with camps that are not a list", save(2, { ...threePoints, camps: "1" })],
-  ["corrupt JSON", '{"format":"packraft-go-trip","version":2,'],
+  ["version 1", save(1, threePoints), true],
+  ["version 99 in an unknown shape", save(99, { stages: [{ x: 1 }] }), true],
+  ["version 2 with a camp on a missing point", save(2, { ...threePoints, camps: [9] }), false],
+  ["version 2 with camps that are not a list", save(2, { ...threePoints, camps: "1" }), false],
+  ["corrupt JSON", '{"format":"packraft-go-trip","version":2,', false],
 ] as const) {
   test(`an autosave holding ${label} falls back to an empty trip without crashing, and drawing works`, async ({ page }) => {
     await serveOffline(page, { brouter: byProfile });
@@ -145,7 +148,14 @@ for (const [label, text] of [
     await page.mouse.click(box.x + box.width / 2 - 100, box.y + box.height / 2);
     await page.mouse.click(box.x + box.width / 2 + 100, box.y + box.height / 2);
     await expect(legLines(page)).toHaveCount(1);
-    await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").version).toBe(2);
+    if (unknownVersion) {
+      // Updated (#28): the save is kept and the planner says so.
+      await expect(alertWith(page, strings.autosaveUnknownVersion)).toBeVisible();
+      expect(await storedText(page)).toBe(text);
+    } else {
+      await expect(alertWith(page, strings.autosaveUnknownVersion)).toHaveCount(0);
+      await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").version).toBe(2);
+    }
     expect(errors).toEqual([]);
   });
 }
