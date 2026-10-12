@@ -3,6 +3,8 @@
 // Loading accepts v1 (no camps) and v2. Any other version is refused with a
 // clear 'newer/unknown version' message and the current trip is left untouched."
 // Written from that rule and ADR 0011 before reading the round-2 diff.
+// Updated: v1 dropped (#33). Version 2 is now the only version loaded; version 1
+// is refused like any other unknown version.
 import { describe, expect, it } from "vitest";
 import { parseTrip, restoreTrip, serialiseTrip } from "./saveFile";
 import { emptyTrip, type Trip } from "./trip";
@@ -40,21 +42,12 @@ describe("#8 round 2: always written as version 2", () => {
     expect(parseTrip(serialiseTrip(withCamp))).toEqual({ ok: true, trip: withCamp });
   });
 
-  it("a version 1 save read and saved again becomes version 2 with the same trip", () => {
-    const parsed = parseTrip(file(1));
-    expect(parsed).toEqual({ ok: true, trip });
-    if (!parsed.ok) throw new Error("unreachable");
-    const again = JSON.parse(serialiseTrip(parsed.trip));
-    expect(again.version).toBe(2);
-    expect(parseTrip(JSON.stringify(again))).toEqual({ ok: true, trip });
-  });
 });
 
-describe("#8 round 2: loading accepts version 1 (no camps) and version 2", () => {
-  it("version 1 without camps loads as a trip without camps", () => {
-    const parsed = parseTrip(file(1));
-    expect(parsed.ok).toBe(true);
-    if (parsed.ok) expect(parsed.trip.camps ?? []).toEqual([]);
+// Updated: v1 dropped (#33). This block used to accept version 1 as well.
+describe("loading accepts version 2 only", () => {
+  it("version 1 is refused as an unknown version", () => {
+    expect(parseTrip(file(1))).toEqual({ ok: false, reason: "unknown-version" });
   });
 
   it("version 2 without camps loads as a trip without camps", () => {
@@ -66,9 +59,9 @@ describe("#8 round 2: loading accepts version 1 (no camps) and version 2", () =>
     expect(parseTrip(file(2, { ...trip, camps: [1] }))).toEqual({ ok: true, trip: withCamp });
   });
 
-  it("autosave: version 1 and version 2 are restored", () => {
-    expect(restoreTrip(file(1))).toEqual(trip);
+  it("autosave: version 2 is restored; version 1 falls back to an empty trip", () => {
     expect(restoreTrip(file(2, { ...trip, camps: [1] }))).toEqual(withCamp);
+    expect(restoreTrip(file(1))).toEqual(emptyTrip());
   });
 });
 

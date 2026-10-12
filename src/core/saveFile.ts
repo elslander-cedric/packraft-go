@@ -6,11 +6,11 @@ import { emptyTrip, type LatLng, type Leg, type LegMode, type Trip } from "./tri
 
 export const SAVE_FORMAT = "packraft-go-trip";
 /**
- * The version the app saves (ADR 0011, amended). Version 2 added camps (#8);
- * version 1 saves, from before camps, still load as trips without camps.
+ * The save format's version (ADR 0011, amended): the only version the app
+ * saves and the only one it opens. Version 2 added camps (#8); version 1 was
+ * never used for real trips and is refused like any other version (#33).
  */
 export const SAVE_VERSION = 2;
-const READABLE_VERSIONS: readonly unknown[] = [1, 2];
 
 /**
  * A save that cannot be opened is either damaged or not a trip (no reason), or
@@ -56,8 +56,8 @@ export function saveFileName(trip: Trip, untitledName: string): string {
 }
 
 /**
- * Reads save-file text back into a trip. Versions 1 and 2 are read; a trip
- * file with any other numbered version is refused as an unknown version.
+ * Reads save-file text back into a trip. Only the current version is read; a
+ * trip file with any other numbered version is refused as an unknown version.
  * Anything that is not a valid save is rejected as a whole; fields the format
  * does not know are ignored. The restored trip has no undo history.
  */
@@ -65,7 +65,7 @@ export function parseTrip(text: string): ParseResult {
   try {
     const file = object(JSON.parse(text));
     if (file.format !== SAVE_FORMAT || typeof file.version !== "number") throw invalid;
-    if (!READABLE_VERSIONS.includes(file.version)) return { ok: false, reason: "unknown-version" };
+    if (file.version !== SAVE_VERSION) return { ok: false, reason: "unknown-version" };
     return { ok: true, trip: readTrip(object(file.trip)) };
   } catch {
     return { ok: false };
@@ -141,9 +141,7 @@ function readTrip(trip: Fields): Trip {
   const legs = list(trip.legs).map(readLeg);
   // legs[i] runs from points[i] to points[i + 1].
   if (legs.length !== Math.max(points.length - 1, 0)) throw invalid;
-  // Without a camps list the trip has no camps: always so in version 1, which
-  // came before camps. A camps list in a version 1 save (only pre-release
-  // builds wrote one) is checked like any other, not trusted.
+  // Without a camps list the trip has no camps.
   const camps = readCamps(trip.camps, points.length);
   return camps.length > 0 ? { name: trip.name, points, legs, camps } : { name: trip.name, points, legs };
 }

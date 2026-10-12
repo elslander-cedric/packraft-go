@@ -21,4 +21,4 @@ How camps and days work in v1:
 - **Camps at the start or end point split nothing.** A camp there may be marked (e.g. a night before or after the trip), but it adds no empty day. n camps between the start and the end make n + 1 days.
 - **Day totals:** hike distance, paddle distance, climb and descent (hike legs only; paddle legs have a drop instead, ADR 0018), and estimated time. The day time follows the same rule as the trip total (ADR 0009): "…" while any of its legs is being snapped, "(no climb data)" when it includes a hike leg that failed to route.
 - **Marking a camp changes no leg**, so no leg is snapped again.
-- **Saving:** camps are saved as a `camps` list of point indices in save format version 2 (ADR 0011, amended). Version 1 saves from before camps load as trips without camps.
+- **Saving:** camps are saved as a `camps` list of point indices in save format version 2 (ADR 0011, amended). Version 2 is the only version the app opens (#33).

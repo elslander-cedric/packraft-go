@@ -309,7 +309,8 @@ describe("camps persist in the save format", () => {
     expect(campsOf(restoreTrip(serialiseTrip(trip)))).toEqual([0, 2, 4]);
   });
 
-  it("an older save written before camps existed still opens, as a trip without camps", () => {
+  // Updated: v1 dropped (#33). A version 1 save used to open as a trip without camps.
+  it("a version 1 save is refused as an unknown version", () => {
     const older = JSON.stringify({
       format: "packraft-go-trip",
       version: 1,
@@ -322,11 +323,7 @@ describe("camps persist in the save format", () => {
         legs: [{ mode: "hike" }],
       },
     });
-    const parsed = parseTrip(older);
-    expect(parsed.ok).toBe(true);
-    if (!parsed.ok) return;
-    expect(campsOf(parsed.trip)).toEqual([]);
-    expect(summarise(parsed.trip).days).toHaveLength(1);
+    expect(parseTrip(older)).toEqual({ ok: false, reason: "unknown-version" });
   });
 
   it("a save with camps on missing points is refused as a whole, not half-loaded", () => {
