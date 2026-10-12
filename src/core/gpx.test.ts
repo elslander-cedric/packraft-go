@@ -123,6 +123,14 @@ describe("GPX export", () => {
     expect(parseGpx11(tripToGpx({ ...ourthe, name }, names)).metadataName).toBe(name);
   });
 
+  it("drops characters XML 1.0 does not allow from every name it writes, keeping the rest", () => {
+    const odd: GpxNames = { untitledTrip: "x", leg: (n) => `Leg\u0001 ${n}`, camp: (n) => `Camp￿ ${n}\uD800` };
+    const gpx = parseGpx11(tripToGpx({ ...ourthe, name: "Bell\u0007 trip\u001F 🛶" }, odd));
+    expect(gpx.metadataName).toBe("Bell trip 🛶");
+    expect(gpx.tracks.map((track) => track.name)).toEqual(["Leg 1", "Leg 2"]);
+    expect(gpx.waypoints.map((camp) => camp.name)).toEqual(["Camp 1"]);
+  });
+
   it("is valid for an empty trip and a trip with only a start point", () => {
     expect(parseGpx11(tripToGpx(emptyTrip(), names))).toEqual({ metadataName: "Untitled trip", waypoints: [], tracks: [] });
     const start: Trip = { name: "Start", points: [A], legs: [], camps: [0] };
@@ -136,6 +144,18 @@ describe("GPX export", () => {
   it("writes longitude 180 as -180, the same place, since GPX 1.1 only allows -180 up to 180", () => {
     const trip: Trip = { name: "Date line", points: [{ lat: 0, lng: 179.9 }, { lat: 0, lng: 180 }], legs: [{ mode: "hike" }] };
     expect(parseGpx11(tripToGpx(trip, names)).tracks[0].points[1]).toEqual({ lat: 0, lon: -180 });
+  });
+
+  it("wraps a longitude that only rounds to 180 to -180, and keeps latitudes that round to ±90 in range", () => {
+    const trip: Trip = {
+      name: "Edges",
+      points: [{ lat: 89.99999999, lng: 179.99999999 }, { lat: -89.99999999, lng: -179.99999999 }],
+      legs: [{ mode: "hike" }],
+    };
+    expect(parseGpx11(tripToGpx(trip, names)).tracks[0].points).toEqual([
+      { lat: 90, lon: -180 },
+      { lat: -90, lon: -180 },
+    ]);
   });
 
   it("writes very small numbers as plain decimals, which GPX requires (no 1e-7)", () => {

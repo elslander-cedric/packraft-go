@@ -35,6 +35,11 @@ describe("GPX 1.1 structure check", () => {
     ["longitude 180", gpx('<wpt lat="1" lon="180"/>')],
     ["an elevation that is not a number", gpx('<trk><trkseg><trkpt lat="1" lon="1"><ele>NaN</ele></trkpt></trkseg></trk>')],
     ["track name after a segment", gpx("<trk><trkseg/><name>x</name></trk>")],
+    // XML 1.0 forbids these characters even escaped; xmldom lets them through, so the check must not.
+    ["a control character in a name", gpx("<metadata><name>Bell\u0007 trip</name></metadata>")],
+    ["a vertical tab in an attribute", gpx('<wpt lat="1\u000B" lon="1"/>')],
+    ["U+FFFE in a name", gpx("<metadata><name>a￾</name></metadata>")],
+    ["a lone surrogate in a name", gpx("<metadata><name>a\uD800b</name></metadata>")],
   ])("rejects %s", (_, text) => {
     expect(() => parseGpx11(text)).toThrow();
   });

@@ -109,6 +109,11 @@ function readTrack(element: Element): GpxTrack {
  */
 export function parseGpx11(gpx: string): ParsedGpx {
   if (!gpx.startsWith('<?xml version="1.0" encoding="UTF-8"?>')) fail("missing XML declaration");
+  // XML 1.0 Char production; xmldom accepts characters outside it, so check the raw text first.
+  const invalidChar = gpx.match(/[^\u0009\u000A\u000D -퟿-�\u{10000}-\u{10FFFF}]/u);
+  if (invalidChar) {
+    fail(`character U+${invalidChar[0].codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")} is not allowed in XML 1.0`);
+  }
   const document = new DOMParser({
     onError: (level, message) => {
       if (level !== "warning") fail(`not well-formed XML: ${message}`);

@@ -16,8 +16,15 @@ export type GpxNames = {
 /** A point as written to the file; `elevation` in metres, absent when unknown. */
 type GpxPoint = LatLng & { readonly elevation?: number };
 
+// Characters outside XML 1.0's Char production (control characters, U+FFFE/U+FFFF, lone
+// surrogates): not allowed even escaped. A trip name can hold them, e.g. from an opened file.
+const notXmlChar = /[^\u0009\u000A\u000D -퟿-�\u{10000}-\u{10FFFF}]/gu;
+
+/** Text safe to write in XML: characters XML 1.0 does not allow dropped, markup escaped. */
 const escapeXml = (value: string) =>
-  value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!);
+  value
+    .replace(notXmlChar, "")
+    .replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!);
 
 /** A plain decimal (GPX does not allow exponents like 1e-7), without trailing zeros. */
 function decimal(value: number, digits: number): string {
@@ -25,9 +32,17 @@ function decimal(value: number, digits: number): string {
   return text === "-0" ? "0" : text;
 }
 
-/** Latitude and longitude attributes. GPX longitudes run from -180 up to (not including) 180. */
+/**
+ * Latitude and longitude attributes, checked after rounding so the written
+ * values are in GPX bounds: -90 <= lat <= 90, and -180 <= lon < 180, so a
+ * longitude that is (or rounds to) 180 is written as -180, the same meridian.
+ */
 function position({ lat, lng }: LatLng): string {
-  return `lat="${decimal(lat, 7)}" lon="${decimal(lng === 180 ? -180 : lng, 7)}"`;
+  const rounded = (value: number) => Number(decimal(value, 7));
+  const latitude = Math.min(90, Math.max(-90, rounded(lat)));
+  let longitude = Math.min(180, Math.max(-180, rounded(lng)));
+  if (longitude === 180) longitude = -180;
+  return `lat="${decimal(latitude, 7)}" lon="${decimal(longitude, 7)}"`;
 }
 
 const elevationOf = (point: GpxPoint) =>
