@@ -129,7 +129,8 @@ describe("restoring the stored trip", () => {
   });
 
   it("gives an empty trip when the stored data is unreadable", () => {
-    expect(restoreTrip('{"format":"packraft-go-trip","version":1,"trip":{"name":"x","points":[{}]')).toEqual(
+    // Updated: v1 dropped (#33). Version 2, so this stays about unreadable data, not the version.
+    expect(restoreTrip('{"format":"packraft-go-trip","version":2,"trip":{"name":"x","points":[{}]')).toEqual(
       emptyTrip(),
     );
   });
@@ -199,13 +200,11 @@ describe("save file name", () => {
   });
 });
 
-// Camps (#8): version 2 of the save format includes camps; version 1 saves (before camps) still load.
+// Camps (#8): version 2 of the save format includes camps. It is the only version (#33).
 describe("camps in the save format", () => {
   const withCamps: Trip = { ...routedTrip, camps: [1] };
   const valid = JSON.parse(serialiseTrip(routedTrip));
   const withSavedCamps = (camps: unknown) => JSON.stringify({ ...valid, trip: { ...valid.trip, camps } });
-  /** A version 1 save, as written before camps existed: no camps field. */
-  const versionOne = () => ({ ...valid, version: 1 });
 
   it("a parsed save gives back the trip's camps", () => {
     expect(parseTrip(serialiseTrip(withCamps))).toEqual({ ok: true, trip: withCamps });
@@ -225,9 +224,14 @@ describe("camps in the save format", () => {
     expect(withoutCamps.trip).not.toHaveProperty("camps");
   });
 
-  it("a version 1 save (no camps field) still loads, as a trip without camps", () => {
-    expect(versionOne().trip).not.toHaveProperty("camps");
-    expect(parseTrip(JSON.stringify(versionOne()))).toEqual({ ok: true, trip: routedTrip });
+  // Updated: v1 dropped (#33). Version 1 used to load as a trip without camps.
+  it("refuses a version 1 save as an unknown version, like any version other than 2", () => {
+    expect(parseTrip(JSON.stringify({ ...valid, version: 1 }))).toEqual({ ok: false, reason: "unknown-version" });
+  });
+
+  // Updated: v1 dropped (#33).
+  it("a version 1 save gives an empty trip from storage", () => {
+    expect(restoreTrip(JSON.stringify({ ...valid, version: 1 }))).toEqual(emptyTrip());
   });
 
   it.each([0, 3, 99, -1, 1.5])("refuses version %s as a newer or unknown version", (version) => {
