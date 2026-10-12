@@ -8,6 +8,7 @@ Each document records when it was researched and links a source for every claim.
 |---|---|
 | [access-rules.md](access-rules.md) | Where and when you may paddle in Flanders and Wallonia, and how packrafts are classified |
 | [paddle-routes.md](paddle-routes.md) | Official paddle route sets and legal stretches in Belgium |
+| [hydrometry.md](hydrometry.md) | Walloon live river flows (KiWIS API), the licence, and the AGW Annex 2 gauge and threshold table: can the app compute "open today?" |
 | [data-sources.md](data-sources.md) | Which access, route and waterway data is machine-readable, and under what licence |
 
 Researched 2026-10-12, from sources the user supplied (Sport Vlaanderen, Peddelsport Vlaanderen, kayak.spw.wallonie.be) and the official sources they lead to.
