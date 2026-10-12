@@ -209,7 +209,8 @@ for (const [label, text] of [
   ["JSON null", "null"],
   ["a newer version", JSON.stringify({ format: "packraft-go-trip", version: 99, trip: { name: "x", points: [], legs: [] } })],
   // Updated: v1 dropped (#33). Version 2, so this stays about damaged data, not the version.
-  ["legs that do not match points", JSON.stringify({ format: "packraft-go-trip", version: 2, trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] } })],
+  // Updated: format reset (#52). Version 1, the current version.
+  ["legs that do not match points", JSON.stringify({ format: "packraft-go-trip", version: 1, trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] } })],
   ["an empty string", ""],
 ] as const) {
   test(`#9: corrupt storage (${label}) opens an empty trip with no errors, and drawing works again`, async ({ page }) => {

@@ -4,6 +4,8 @@
 // the current trip untouched. Unreadable autosave falls back to an empty trip.
 // Updated: v1 dropped (#33). Version 2 is now the only version read; version 1
 // is refused like any other unknown version.
+// Updated: format reset (#52). Version 1 (camps + optional start date) is now the only version read
+// and written; the old version 2 is refused like any other unknown version.
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
@@ -84,11 +86,12 @@ async function drawTwoDayTrip(page: Page) {
   await expect(dayRows(page)).toHaveCount(2);
 }
 
-test("autosave of a trip with camps is version 2, and a reload brings the camps back", async ({ page }) => {
+// Updated: format reset (#52).
+test("autosave of a trip with camps is version 1, and a reload brings the camps back", async ({ page }) => {
   const net = await serveOffline(page, { brouter: byProfile });
   await drawTwoDayTrip(page);
   await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}")).toMatchObject({
-    version: 2,
+    version: 1,
     trip: { camps: [1] },
   });
   const calls = net.brouter.length;
@@ -99,18 +102,20 @@ test("autosave of a trip with camps is version 2, and a reload brings the camps 
   expect(net.brouter.length).toBe(calls);
 });
 
-test("a saved file of a trip with camps is version 2 with the camps, identical to the autosave", async ({ page }) => {
+// Updated: format reset (#52).
+test("a saved file of a trip with camps is version 1 with the camps, identical to the autosave", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await drawTwoDayTrip(page);
   const [dl] = await Promise.all([page.waitForEvent("download"), saveBtn(page).click()]);
   const text = await readFile((await dl.path())!, "utf8");
-  expect(JSON.parse(text)).toMatchObject({ format: "packraft-go-trip", version: 2, trip: { camps: [1] } });
+  expect(JSON.parse(text)).toMatchObject({ format: "packraft-go-trip", version: 1, trip: { camps: [1] } });
   expect(text).toBe(await storedText(page));
 });
 
-test("a version 2 autosave with camps loads them", async ({ page }) => {
+// Updated: format reset (#52).
+test("a version 1 autosave with camps loads them", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
-  await seedAutosave(page, save(2, { ...threePoints, camps: [1] }));
+  await seedAutosave(page, save(1, { ...threePoints, camps: [1] }));
   await page.goto("/");
   await waitForMap(page);
   await expect(pointMarkers(page)).toHaveCount(3);
@@ -125,11 +130,12 @@ for (const [label, text, unknownVersion] of [
   ["version 3 with camps", save(3, { ...threePoints, camps: [1] }), true],
   ["version 0", save(0, threePoints), true],
   // Updated: v1 dropped (#33). A version 1 autosave used to load as a trip without camps.
-  ["version 1", save(1, threePoints), true],
+  // Updated: format reset (#52). The old version 2 is the unknown one; damaged data is in version 1.
+  ["old version 2", save(2, threePoints), true],
   ["version 99 in an unknown shape", save(99, { stages: [{ x: 1 }] }), true],
-  ["version 2 with a camp on a missing point", save(2, { ...threePoints, camps: [9] }), false],
-  ["version 2 with camps that are not a list", save(2, { ...threePoints, camps: "1" }), false],
-  ["corrupt JSON", '{"format":"packraft-go-trip","version":2,', false],
+  ["version 1 with a camp on a missing point", save(1, { ...threePoints, camps: [9] }), false],
+  ["version 1 with camps that are not a list", save(1, { ...threePoints, camps: "1" }), false],
+  ["corrupt JSON", '{"format":"packraft-go-trip","version":1,', false],
 ] as const) {
   test(`an autosave holding ${label} falls back to an empty trip without crashing, and drawing works`, async ({ page }) => {
     await serveOffline(page, { brouter: byProfile });
@@ -154,14 +160,16 @@ for (const [label, text, unknownVersion] of [
       expect(await storedText(page)).toBe(text);
     } else {
       await expect(alertWith(page, strings.autosaveUnknownVersion)).toHaveCount(0);
-      await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").version).toBe(2);
+      // Updated: format reset (#52).
+      await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").version).toBe(1);
     }
     expect(errors).toEqual([]);
   });
 }
 
 // Updated: v1 dropped (#33): version 1 is refused like the others.
-for (const version of [3, 0, 99, 1]) {
+// Updated: format reset (#52). The old version 2 is refused like the others.
+for (const version of [3, 0, 99, 2]) {
   test(`opening a version ${version} file shows the unknown-version message and leaves the trip, its camps and storage untouched`, async ({ page }) => {
     const net = await serveOffline(page, { brouter: byProfile });
     await drawTwoDayTrip(page);
@@ -189,14 +197,15 @@ test("the unknown-version message tells the planner the file is from a newer or 
   expect(strings.openFileUnknownVersion).not.toBe(strings.openFileInvalid);
 });
 
-test("opening a version 2 file with camps replaces the trip and shows its camps and days", async ({ page }) => {
+// Updated: format reset (#52).
+test("opening a version 1 file with camps replaces the trip and shows its camps and days", async ({ page }) => {
   const net = await serveOffline(page, { brouter: byProfile });
   await drawTwoDayTrip(page);
   const calls = net.brouter.length;
-  await openFile(page, save(2, { ...threePoints, name: "Opened v2", camps: [0, 1] }));
+  await openFile(page, save(1, { ...threePoints, name: "Opened v1", camps: [0, 1] }));
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await answerConfirmation(page, "openFile", "confirm");
-  await expect(tripName(page)).toHaveValue("Opened v2");
+  await expect(tripName(page)).toHaveValue("Opened v1");
   await expect(pointMarkers(page)).toHaveCount(3);
   await expect(campMarkers(page)).toHaveCount(2);
   await expect(dayRows(page)).toHaveCount(2); // a camp on the start splits nothing
@@ -204,12 +213,13 @@ test("opening a version 2 file with camps replaces the trip and shows its camps 
 });
 
 // Updated: v1 dropped (#33). Used a version 1 file; the valid file is now version 2.
-test("after an unknown-version refusal, a valid version 2 file still opens and clears the message", async ({ page }) => {
+// Updated: format reset (#52). The valid file is version 1 again.
+test("after an unknown-version refusal, a valid version 1 file still opens and clears the message", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await drawTwoDayTrip(page);
   await openFile(page, save(3, threePoints));
   await expect(alertWith(page, strings.openFileUnknownVersion)).toBeVisible();
-  await openFile(page, save(2, { ...threePoints, name: "Old one" }));
+  await openFile(page, save(1, { ...threePoints, name: "Old one" }));
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await answerConfirmation(page, "openFile", "confirm");
   await expect(tripName(page)).toHaveValue("Old one");

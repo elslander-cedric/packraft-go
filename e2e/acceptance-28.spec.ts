@@ -28,10 +28,11 @@ const save = (version: unknown) =>
     },
   });
 const NEWER = save(3);
+// Updated: format reset (#52). The valid file is version 1.
 const validFile = (name: string) => ({
   name,
   mimeType: "application/json",
-  buffer: Buffer.from(save(2)),
+  buffer: Buffer.from(save(1)),
 });
 
 async function waitForMap(page: Page) {
@@ -142,7 +143,8 @@ test("AC2: cancelling Open file keeps the save and the warning; confirming repla
   await openFile();
   await answerConfirmation(page, "openFile", "confirm");
   await expect(warning(page)).toHaveCount(0);
-  await expect.poll(async () => JSON.parse((await storedTrip(page)) ?? "{}").version).toBe(2);
+  // Updated: format reset (#52).
+  await expect.poll(async () => JSON.parse((await storedTrip(page)) ?? "{}").version).toBe(1);
   await expect(tripName(page)).toHaveValue("Planned in a newer tab");
 });
 
@@ -155,7 +157,8 @@ for (const [label, text] of [
   ["a save without a version", JSON.stringify({ format: "packraft-go-trip", trip: {} })],
   ["a different format", JSON.stringify({ format: "other-app", version: 3, trip: {} })],
 ] as const) {
-  test(`AC3: corrupt autosave (${label}) gives an empty trip, no warning, no crash, and drawing saves v2`, async ({
+  // Updated: format reset (#52). Drawing saves version 1.
+  test(`AC3: corrupt autosave (${label}) gives an empty trip, no warning, no crash, and drawing saves v1`, async ({
     page,
   }) => {
     await serveOffline(page, { brouter: () => SNAPPED });
@@ -171,7 +174,7 @@ for (const [label, text] of [
     await clickMap(-100);
     await clickMap(100);
     await expect(pointMarkers(page)).toHaveCount(2);
-    await expect.poll(async () => JSON.parse((await storedTrip(page)) ?? "{}").version).toBe(2);
+    await expect.poll(async () => JSON.parse((await storedTrip(page)) ?? "{}").version).toBe(1);
     expect(errors).toEqual([]);
   });
 }
