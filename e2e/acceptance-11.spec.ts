@@ -2,12 +2,12 @@
 // spec #2 (stories 39, 45-47) and ADR 0006. BRouter and tiles are answered from
 // recorded fixtures (ADR 0019); every request is counted so export can be shown
 // to call nothing.
-import { readFile } from "node:fs/promises";
 import { DOMParser } from "@xmldom/xmldom";
 import { expect, test, type Page } from "@playwright/test";
 import { parseGpx11 } from "../src/testing/gpx11";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
+import { downloadGpxZip } from "./support/gpxZip";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
 
 const KEY = "packraft-go.trip";
@@ -47,10 +47,8 @@ async function openMap(page: Page) {
   return (dx: number, dy: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
 }
 
-async function exportGpx(page: Page) {
-  const [dl] = await Promise.all([page.waitForEvent("download"), exportBtn(page).click()]);
-  return { name: dl.suggestedFilename(), text: await readFile((await dl.path())!, "utf8") };
-}
+// Updated: ADR 0021 (#41). Export downloads a ZIP with one GPX file per section.
+const exportGpx = (page: Page) => downloadGpxZip(page, exportBtn(page));
 
 /** Strict XML parse: throws on any well-formedness error. */
 function strictXml(text: string) {
@@ -82,39 +80,40 @@ test("#11: hike + paddle legs and a camp export as GPX 1.1 with routed elevation
   await click(0, 0); // select the middle point
   await campBtn(page).click();
   await expect.poll(async () => (await storedTrip(page)).camps).toEqual([1]);
-  const stored = await storedTrip(page);
   const calls = net.brouter.length;
 
-  const file = await exportGpx(page);
+  const zip = await exportGpx(page);
 
-  // File name is the trip name made safe: no characters that Windows/macOS/Linux reject.
-  expect(file.name.endsWith(".gpx")).toBe(true);
-  expect(file.name).not.toMatch(/[/\\:*?"<>|]/);
-  expect(file.name).toContain("Lesse & Lomme");
-  expect(file.name).toContain("été");
+  // Updated: ADR 0021. A ZIP named after the trip, one GPX file per section.
+  // File names are the trip name made safe: no characters that Windows/macOS/Linux reject.
+  for (const fileName of [zip.name, ...zip.files.map((f) => f.name)]) {
+    expect(fileName).toMatch(/\.(zip|gpx)$/);
+    expect(fileName).not.toMatch(/[/\\:*?"<>|]/);
+    expect(fileName).toContain("Lesse & Lomme");
+    expect(fileName).toContain("été");
+  }
+  expect(zip.name.endsWith(".zip")).toBe(true);
+  expect(zip.files).toHaveLength(2);
 
-  // Well-formed, GPX 1.1 structure, name round-trips exactly through a strict parser.
-  const doc = strictXml(file.text);
-  expect(doc.documentElement!.getAttribute("version")).toBe("1.1");
-  const gpx = parseGpx11(file.text);
-  expect(gpx.metadataName).toBe(name);
-
-  expect(gpx.tracks.map((t) => t.name)).toEqual(["Leg 1 – hike", "Leg 2 – paddle"]);
+  // Updated: ADR 0021. The camp ends the hike section, so each file names its day.
+  const sectionNames = [`${name} – 1 – Day 1 – hike`, `${name} – 2 – Day 2 – paddle`];
   for (const [i, fixture] of [TRAIL_TEXT, RIVER_TEXT].entries()) {
+    // Well-formed, GPX 1.1 structure, name round-trips exactly through a strict parser.
+    const doc = strictXml(zip.files[i].text);
+    expect(doc.documentElement!.getAttribute("version")).toBe("1.1");
+    const gpx = parseGpx11(zip.files[i].text);
+    expect(gpx.metadataName).toBe(sectionNames[i]);
+    expect(gpx.tracks.map((t) => t.name)).toEqual([sectionNames[i]]);
     const expected = recorded(fixture);
-    expect(gpx.tracks[i].points).toHaveLength(expected.length);
-    gpx.tracks[i].points.forEach((p, j) => {
+    expect(gpx.tracks[0].points).toHaveLength(expected.length);
+    gpx.tracks[0].points.forEach((p, j) => {
       expect(p.lat).toBeCloseTo(expected[j].lat, 6);
       expect(p.lon).toBeCloseTo(expected[j].lng, 6);
       expect(p.ele).toBeCloseTo(expected[j].ele, 1);
     });
+    // Updated: ADR 0021. Camps are no longer exported as waypoints.
+    expect(gpx.waypoints).toEqual([]);
   }
-
-  // The camp is a waypoint at the camp point itself.
-  expect(gpx.waypoints).toHaveLength(1);
-  expect(gpx.waypoints[0].name).toBe("Camp 1");
-  expect(gpx.waypoints[0].lat).toBeCloseTo(stored.points[1].lat, 6);
-  expect(gpx.waypoints[0].lon).toBeCloseTo(stored.points[1].lng, 6);
 
   // Exporting calls no routing and no other service.
   await page.waitForTimeout(300);
@@ -132,19 +131,19 @@ test("#11: an unnamed trip with unrouted legs exports straight lines at the draw
   await expect(legLines(page).nth(1)).toHaveClass(/leg-failed/);
   const stored = await storedTrip(page);
 
-  const file = await exportGpx(page);
-  expect(file.name).toBe("Untitled trip.gpx");
-  const gpx = parseGpx11(file.text);
-  expect(gpx.metadataName).toBe("Untitled trip");
+  // Updated: ADR 0021. Two hike legs are one section: one file, one track through the three drawn points.
+  const zip = await exportGpx(page);
+  expect(zip.name).toBe("Untitled trip.zip");
+  expect(zip.files.map((f) => f.name)).toEqual(["Untitled trip – 1 – hike.gpx"]);
+  const gpx = parseGpx11(zip.files[0].text);
+  expect(gpx.metadataName).toBe("Untitled trip – 1 – hike");
   expect(gpx.waypoints).toEqual([]);
-  expect(gpx.tracks.map((t) => t.name)).toEqual(["Leg 1 – hike", "Leg 2 – hike"]);
-  for (const [i, track] of gpx.tracks.entries()) {
-    expect(track.points).toHaveLength(2);
-    for (const [j, p] of track.points.entries()) {
-      expect(p.ele).toBeUndefined();
-      expect(p.lat).toBeCloseTo(stored.points[i + j].lat, 6);
-      expect(p.lon).toBeCloseTo(stored.points[i + j].lng, 6);
-    }
+  expect(gpx.tracks.map((t) => t.name)).toEqual(["Untitled trip – 1 – hike"]);
+  expect(gpx.tracks[0].points).toHaveLength(3);
+  for (const [i, p] of gpx.tracks[0].points.entries()) {
+    expect(p.ele).toBeUndefined();
+    expect(p.lat).toBeCloseTo(stored.points[i].lat, 6);
+    expect(p.lon).toBeCloseTo(stored.points[i].lng, 6);
   }
   expect(net.blocked).toEqual([]);
 });
@@ -187,10 +186,12 @@ test("#11: the export reflects a reloaded trip and renaming, without re-routing"
   await expect(legLines(page)).toHaveCount(1);
   const calls = net.brouter.length;
   await tripName(page).fill("Semois day");
-  const file = await exportGpx(page);
-  expect(file.name).toBe("Semois day.gpx");
-  const gpx = parseGpx11(file.text);
-  expect(gpx.metadataName).toBe("Semois day");
+  // Updated: ADR 0021. A ZIP named after the trip with one file for the one section.
+  const zip = await exportGpx(page);
+  expect(zip.name).toBe("Semois day.zip");
+  expect(zip.files.map((f) => f.name)).toEqual(["Semois day – 1 – hike.gpx"]);
+  const gpx = parseGpx11(zip.files[0].text);
+  expect(gpx.metadataName).toBe("Semois day – 1 – hike");
   expect(gpx.tracks[0].points.length).toBe(recorded(TRAIL_TEXT).length);
   expect(gpx.tracks[0].points.every((p) => typeof p.ele === "number")).toBe(true);
   expect(net.brouter).toHaveLength(calls);
@@ -208,7 +209,11 @@ test("#11: a trip name with a control character (from an opened file) still expo
     legs: [{ mode: "hike" }],
   });
   await expect(legLines(page)).toHaveCount(1);
-  const file = await exportGpx(page);
+  // Updated: ADR 0021. The GPX file comes inside the ZIP.
+  const zip = await exportGpx(page);
+  expect(zip.files).toHaveLength(1);
+  const [file] = zip.files;
+  expect(file.name).not.toMatch(/[\u0000-\u001F]/);
   expect(() => parseGpx11(file.text)).not.toThrow();
   // XML 1.0 forbids these characters even when escaped; xmldom is lenient, so check directly.
   expect(file.text).not.toMatch(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/);
@@ -226,7 +231,8 @@ test("#11: a point at the antimeridian (from an opened file) exports a longitude
     legs: [{ mode: "hike" }],
   });
   await expect(pointMarkers(page)).toHaveCount(2);
-  const file = await exportGpx(page);
+  // Updated: ADR 0021. The GPX file comes inside the ZIP.
+  const [file] = (await exportGpx(page)).files;
   const lons = [...file.text.matchAll(/lon="([^"]+)"/g)].map((m) => Number(m[1]));
   expect(lons).toHaveLength(2);
   // GPX 1.1 longitudeType: -180 <= lon < 180.

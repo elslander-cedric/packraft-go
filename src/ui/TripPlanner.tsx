@@ -17,7 +17,7 @@ import {
   type Trip,
 } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
-import { downloadGpxFile, downloadTripFile, readTripFile } from "@/persistence/tripFile";
+import { downloadGpxZip, downloadTripFile, readTripFile } from "@/persistence/tripFile";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
 import { ConfirmDialog } from "./components/ConfirmDialog";
@@ -114,11 +114,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
   };
   const exportGpx = () => {
     setFileError(null);
-    downloadGpxFile(trip, {
-      untitledTrip: strings.tripNamePlaceholder,
-      leg: strings.gpxTrackName,
-      camp: strings.gpxCampName,
-    });
+    downloadGpxZip(trip, { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName });
   };
   const openFile = async (file: File) => {
     const opened = await readTripFile(file);
