@@ -20,6 +20,14 @@ Improvements for packraft-go, beyond v1. GitHub issues are the source of truth f
 - [ ] **Weirs and portages**: detect weirs on paddle legs automatically instead of drawing portages by hand. ADR 0016
 - [ ] **River access rules**: when and where paddling is allowed in Flanders and Wallonia (seasons, hours, flow thresholds, closed stretches, locks). Needed before sharing the app widely. ADR 0010. Research: [access rules](docs/research/access-rules.md), [data sources](docs/research/data-sources.md)
 - [ ] **Designated put-ins (aires) in Wallonia**: snap or warn when a mode change isn't at an aire. Research: [paddle routes](docs/research/paddle-routes.md)
+- [ ] **Mark access points on mobile**: on the river bank, open packraft-go on a phone and mark an *access point* (put-in, take-out or both) at your GPS position, with a type (official aire, slipway, jetty, informal bank), notes, and whether you checked it on site. The planner then shows these points and can snap put-ins and take-outs to them. This fills the data gap: there's no open dataset of access points in Belgium (see [data-sources.md](docs/research/data-sources.md)).
+  Decisions needed before building (this touches several ADRs):
+  - **Mobile use:** v1 is desktop-first and planning happens at home (ADR 0001, ADR 0005). This adds a phone layout and in-the-field use, at least for this one flow.
+  - **GPS:** uses the browser's location permission. It needs HTTPS (Vercel provides it) and must handle low-accuracy fixes in valleys.
+  - **Offline:** river valleys often have no signal. Can points be marked offline and synced later?
+  - **Storage:** private to you (browser storage + file export, fits ADR 0011) or shared with others (needs a backend and accounts; conflicts with ADR 0002, ADR 0011 and possibly ADR 0012).
+  - **Licence of your own points:** if they're shared, under which licence? Contribute them to OpenStreetMap (`canoe=put_in` / `canoe=egress`)? Only points checked on the ground, never copied from restricted datasets like the Walloon aires.
+  - **Legal status:** a marked point isn't proof that you may get in there. In Wallonia only designated aires are legal (AGW art. 5), so non-aire points need a clear warning.
 - [ ] **Official paddle routes as suggestions/overlays**: only if the licence allows. Research: [paddle routes](docs/research/paddle-routes.md)
 
 ### Left out of v1, could come later
@@ -28,7 +36,7 @@ Improvements for packraft-go, beyond v1. GitHub issues are the source of truth f
 - [ ] **GPX import**: bring in tracks from other apps. Spec #2, Out of scope
 - [ ] **More editing**: redo, notes on points/legs, alternative routes per trip. ADR 0017
 - [ ] **Several trips in the browser**: a trip list instead of one current trip (today, files are the way to keep more than one). Spec #2, Out of scope
-- [ ] **Phone layout / use in the field**: offline maps, GPS position. ADR 0001, ADR 0005
+- [ ] **Phone layout / use in the field**: offline maps, GPS position. ADR 0001, ADR 0005. The access-point feature above would be the first mobile flow.
 - [ ] **Accounts and sync between devices**: needs a backend and costs money. ADR 0002, ADR 0011, ADR 0012
 - [ ] **Other regions** beyond Belgium: mostly config (initial map view). ADR 0004
 - [ ] **Dutch and French UI**: strings are already in one module. ADR 0013

@@ -16,3 +16,4 @@ Shared language for packraft-go. One term per entry: what it means *in this proj
 - **Stretch**: A legally defined section of river where paddling is regulated as one unit (e.g. Walloon AGW Annex 1 stretches), with its own season, hours and flow thresholds.
 - **Aire**: A designated put-in or take-out point on a Walloon stretch (*aire d'embarquement / de débarquement*). In Wallonia you may only get in or out at an aire.
 - **Access status**: Whether a stretch may be paddled at a given moment (open / closed, with a reason such as low flow, high flow or season).
+- **Access point**: A place where you can get onto or off the water: a put-in, a take-out, or both. It may be an official aire, a slipway, a jetty or an informal bank. Being an access point doesn't make it legal; see Aire.
