@@ -81,7 +81,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
     setFileError(null);
   };
   // A trip waiting to replace the current one until the planner answers the confirmation.
-  const [pendingTrip, setPendingTrip] = useState<Trip | null>(null);
+  const [pendingTrip, setPendingTrip] = useState(null as Trip | null);
   // The last question asked; kept after it is answered, so the closing dialog keeps its text and focus target.
   const [question, setQuestion] = useState<Confirmation>("newTrip");
   const newTripButton = useRef(null as HTMLButtonElement | null);

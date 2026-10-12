@@ -7,6 +7,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
+import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
 
 const KEY = "packraft-go.trip";
@@ -153,11 +154,6 @@ for (const [label, text] of [
 for (const version of [3, 0, 99, 1]) {
   test(`opening a version ${version} file shows the unknown-version message and leaves the trip, its camps and storage untouched`, async ({ page }) => {
     const net = await serveOffline(page, { brouter: byProfile });
-    const dialogs: string[] = [];
-    page.on("dialog", (d) => {
-      dialogs.push(d.message());
-      void d.accept();
-    });
     await drawTwoDayTrip(page);
     await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").trip?.camps).toEqual([1]);
     const before = await storedText(page);
@@ -167,7 +163,8 @@ for (const version of [3, 0, 99, 1]) {
     await expect(alertWith(page, strings.openFileUnknownVersion)).toBeVisible();
     await expect(alertWith(page, strings.openFileInvalid)).toHaveCount(0);
     await page.waitForTimeout(300);
-    expect(dialogs).toEqual([]);
+    // Updated for Base UI (#31): no in-page confirmation was shown.
+    await expect(confirmDialog(page)).toHaveCount(0);
     await expect(tripName(page)).toHaveValue("Mine");
     await expect(pointMarkers(page)).toHaveCount(3);
     await expect(campMarkers(page)).toHaveCount(1);
@@ -184,10 +181,11 @@ test("the unknown-version message tells the planner the file is from a newer or 
 
 test("opening a version 2 file with camps replaces the trip and shows its camps and days", async ({ page }) => {
   const net = await serveOffline(page, { brouter: byProfile });
-  page.on("dialog", (d) => void d.accept());
   await drawTwoDayTrip(page);
   const calls = net.brouter.length;
   await openFile(page, save(2, { ...threePoints, name: "Opened v2", camps: [0, 1] }));
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
+  await answerConfirmation(page, "openFile", "confirm");
   await expect(tripName(page)).toHaveValue("Opened v2");
   await expect(pointMarkers(page)).toHaveCount(3);
   await expect(campMarkers(page)).toHaveCount(2);
@@ -198,11 +196,12 @@ test("opening a version 2 file with camps replaces the trip and shows its camps 
 // Updated: v1 dropped (#33). Used a version 1 file; the valid file is now version 2.
 test("after an unknown-version refusal, a valid version 2 file still opens and clears the message", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
-  page.on("dialog", (d) => void d.accept());
   await drawTwoDayTrip(page);
   await openFile(page, save(3, threePoints));
   await expect(alertWith(page, strings.openFileUnknownVersion)).toBeVisible();
   await openFile(page, save(2, { ...threePoints, name: "Old one" }));
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
+  await answerConfirmation(page, "openFile", "confirm");
   await expect(tripName(page)).toHaveValue("Old one");
   await expect(campMarkers(page)).toHaveCount(0);
   await expect(alertWith(page, strings.openFileUnknownVersion)).toHaveCount(0);

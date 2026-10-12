@@ -2,6 +2,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
+import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
@@ -78,17 +79,13 @@ test("save file, start a new trip, open the file: the trip is restored without r
     trip: { name: "Ourthe weekend" },
   });
 
-  page.once("dialog", (dialog) => void dialog.accept());
+  // Updated for Base UI (#31): the questions are in-page dialogs, not window.confirm.
   await newTripButton(page).click();
+  await answerConfirmation(page, "newTrip", "confirm");
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect(tripName(page)).toHaveValue("");
 
   // The trip is empty now, so opening a file does not ask.
-  const asked: string[] = [];
-  page.on("dialog", (dialog) => {
-    asked.push(dialog.message());
-    void dialog.dismiss();
-  });
   await openFile(page, saved.path);
 
   await expect(tripName(page)).toHaveValue("Ourthe weekend");
@@ -101,7 +98,7 @@ test("save file, start a new trip, open the file: the trip is restored without r
   await expect(modeButton(page, 1, strings.legModePaddle)).toHaveAttribute("aria-pressed", "true");
   await expect(rows(page).nth(0)).toContainText(`${strings.climbLabel} 100 m`);
   await expect(rows(page).nth(1)).toContainText(`${strings.dropLabel} 7 m`);
-  expect(asked).toEqual([]);
+  await expect(confirmDialog(page)).toHaveCount(0);
 
   // The opened trip is the current trip, so it is autosaved.
   await page.reload();
@@ -118,11 +115,6 @@ test("an invalid file shows a clear error and leaves the current trip unchanged"
   await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
   await drawTrip(page, "Keep me");
   const pathsBefore = await linePaths(page);
-  const asked: string[] = [];
-  page.on("dialog", (dialog) => {
-    asked.push(dialog.message());
-    void dialog.dismiss();
-  });
 
   await openFile(page, { name: "notes.json", mimeType: "application/json", buffer: Buffer.from('{"hello": 1}') });
   await expect(fileError(page)).toBeVisible();
@@ -132,7 +124,8 @@ test("an invalid file shows a clear error and leaves the current trip unchanged"
   await expect(tripName(page)).toHaveValue("Keep me");
   await expect(pointMarkers(page)).toHaveCount(3);
   expect(await linePaths(page)).toEqual(pathsBefore);
-  expect(asked).toEqual([]);
+  // Updated for Base UI (#31): no in-page confirmation was shown.
+  await expect(confirmDialog(page)).toHaveCount(0);
 
   // The error goes away once the planner carries on.
   await tripName(page).fill("Keep me too");
@@ -153,22 +146,15 @@ test("opening a file over a trip with points asks first; cancelling keeps the cu
   await clickMap(0, 100);
   await expect(pointMarkers(page)).toHaveCount(4);
 
-  const asked: string[] = [];
-  page.once("dialog", (dialog) => {
-    asked.push(`${dialog.type()}: ${dialog.message()}`);
-    void dialog.dismiss();
-  });
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await openFile(page, saved.path);
-  await expect.poll(() => asked).toEqual([`confirm: ${strings.openFileConfirm}`]);
+  await answerConfirmation(page, "openFile", "cancel");
   await expect(tripName(page)).toHaveValue("Current plan");
   await expect(pointMarkers(page)).toHaveCount(4);
 
-  page.once("dialog", (dialog) => {
-    asked.push(dialog.message());
-    void dialog.accept();
-  });
   await openFile(page, saved.path);
+  await answerConfirmation(page, "openFile", "confirm");
   await expect(tripName(page)).toHaveValue("Saved plan");
   await expect(pointMarkers(page)).toHaveCount(3);
-  expect(asked).toHaveLength(2);
+  await expect(confirmDialog(page)).toHaveCount(0);
 });

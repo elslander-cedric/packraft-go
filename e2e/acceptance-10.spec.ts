@@ -2,9 +2,12 @@
 // from the issue, spec #2 (stories 41-44) and ADR 0011, before reading the diff.
 // BRouter is answered from the committed recorded responses (ADR 0019); every
 // request is counted so "no re-routing" can be checked.
+// Updated for Base UI (#31): the "replace this trip?" questions are in-page
+// Alert Dialogs instead of window.confirm; tests answer them with its buttons.
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
+import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
 
 const KEY = "packraft-go.trip";
@@ -38,15 +41,6 @@ async function openMap(page: Page) {
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
   const box = (await mapRegion(page).boundingBox())!;
   return (dx: number, dy: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
-}
-
-function watchDialogs(page: Page, answer: () => "accept" | "dismiss") {
-  const seen: string[] = [];
-  page.on("dialog", (d) => {
-    seen.push(`${d.type()}: ${d.message()}`);
-    void (answer() === "accept" ? d.accept() : d.dismiss());
-  });
-  return seen;
 }
 
 async function save(page: Page) {
@@ -108,8 +102,9 @@ test("#10: opening restores paddle legs, climb, drop and failed legs with no rou
   const panelBefore = await panel(page).innerText();
   const calls = net.brouter.length;
 
-  page.once("dialog", (d) => void d.accept());
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await newTripBtn(page).click();
+  await answerConfirmation(page, "newTrip", "confirm");
   await expect(pointMarkers(page)).toHaveCount(0);
 
   await open(page, file.name, file.text);
@@ -148,15 +143,17 @@ test("#10: undo after opening steps back within the opened trip only, never into
   const file = await save(page);
 
   // A different trip with its own undo history.
-  page.once("dialog", (d) => void d.accept());
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await newTripBtn(page).click();
+  await answerConfirmation(page, "newTrip", "confirm");
   await click(0, -100);
   await click(0, 100);
   await click(100, 100);
   await expect(undoBtn(page)).toBeEnabled();
 
-  page.once("dialog", (d) => void d.accept());
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await open(page, file.name, file.text);
+  await answerConfirmation(page, "openFile", "confirm");
   await expect(pointMarkers(page)).toHaveCount(2);
   await expect(undoBtn(page)).toBeDisabled();
   await page.keyboard.press("ControlOrMeta+z");
@@ -183,8 +180,9 @@ test("#10: a leg that was still routing when saved is routed after opening, as a
   const file = await save(page);
   hold = false;
 
-  page.once("dialog", (d) => void d.accept());
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await newTripBtn(page).click();
+  await answerConfirmation(page, "newTrip", "confirm");
   release();
   await open(page, file.name, file.text);
   await expect(legLines(page)).toHaveClass(/leg-routed/);
@@ -209,7 +207,6 @@ const INVALID: [string, string, string][] = [
 for (const [label, text, message] of INVALID) {
   test(`#10: an invalid file (${label}) shows an error, never asks, and leaves the trip and storage unchanged`, async ({ page }) => {
     const { net } = await drawMixedTrip(page, "Keep me");
-    const seen = watchDialogs(page, () => "accept");
     await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").trip?.legs?.length).toBe(3);
     const storedBefore = await storedText(page);
     const panelBefore = await panel(page).innerText();
@@ -218,7 +215,8 @@ for (const [label, text, message] of INVALID) {
     await open(page, "bad.json", text);
     await expect(page.getByRole("alert").filter({ hasText: message })).toBeVisible();
     await page.waitForTimeout(300);
-    expect(seen).toEqual([]);
+    // Updated for Base UI (#31): no in-page confirmation was shown.
+    await expect(confirmDialog(page)).toHaveCount(0);
     await expect(pointMarkers(page)).toHaveCount(4);
     await expect(tripName(page)).toHaveValue("Keep me");
     expect(await panel(page).innerText()).toBe(panelBefore);
@@ -232,7 +230,6 @@ for (const [label, text, message] of INVALID) {
 // camps; now it is refused as an unknown version and the current trip stays.
 test("#10: a version 1 file is refused as an unknown version and leaves the trip and storage unchanged", async ({ page }) => {
   const { net } = await drawMixedTrip(page, "Keep me");
-  const seen = watchDialogs(page, () => "accept");
   await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").trip?.legs?.length).toBe(3);
   const storedBefore = await storedText(page);
   const calls = net.brouter.length;
@@ -253,7 +250,8 @@ test("#10: a version 1 file is refused as an unknown version and leaves the trip
   await expect(page.getByRole("alert").filter({ hasText: strings.openFileUnknownVersion })).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: strings.openFileInvalid })).toHaveCount(0);
   await page.waitForTimeout(300);
-  expect(seen).toEqual([]);
+  // Updated for Base UI (#31): no in-page confirmation was shown.
+  await expect(confirmDialog(page)).toHaveCount(0);
   await expect(tripName(page)).toHaveValue("Keep me");
   await expect(pointMarkers(page)).toHaveCount(4);
   expect(await storedText(page)).toBe(storedBefore);
@@ -268,19 +266,21 @@ test("#10: the error goes away after a successful open, and the same file can be
   await click(150, 0);
   await expect(legLines(page)).toHaveClass(/leg-routed/);
   const file = await save(page);
-  const seen = watchDialogs(page, () => "accept");
 
+  // Updated for Base UI (#31): each open over points asks once, in an in-page dialog.
   await open(page, "bad.json", "nope");
   await expect(errorAlert(page)).toBeVisible();
+  await expect(confirmDialog(page)).toHaveCount(0);
   await open(page, file.name, file.text);
+  await answerConfirmation(page, "openFile", "confirm");
   await expect(errorAlert(page)).toHaveCount(0);
-  await expect.poll(() => seen).toHaveLength(1);
 
   await click(0, 120);
   await expect(pointMarkers(page)).toHaveCount(3);
   await open(page, file.name, file.text);
+  await answerConfirmation(page, "openFile", "confirm");
   await expect(pointMarkers(page)).toHaveCount(2);
-  expect(seen).toHaveLength(2);
+  await expect(confirmDialog(page)).toHaveCount(0);
 });
 
 test("#10: opening over a trip with points asks; cancel keeps it; OK replaces it; an empty trip is not asked about", async ({ page }) => {
@@ -292,38 +292,32 @@ test("#10: opening over a trip with points asks; cancel keeps it; OK replaces it
   await expect(legLines(page)).toHaveClass(/leg-routed/);
   const file = await save(page);
 
-  let answer: "accept" | "dismiss" = "dismiss";
-  const seen = watchDialogs(page, () => answer);
-  const CONFIRM = `confirm: ${strings.openFileConfirm}`;
-
-  answer = "accept";
+  // Updated for Base UI (#31): the questions are in-page dialogs, answered with their buttons.
   await newTripBtn(page).click();
-  seen.length = 0;
+  await answerConfirmation(page, "newTrip", "confirm");
   await tripName(page).fill("Current");
   await click(0, 100);
   await expect(pointMarkers(page)).toHaveCount(1);
   await expect.poll(async () => JSON.parse((await storedText(page))!).trip.points.length).toBe(1);
   const storedBefore = await storedText(page);
 
-  answer = "dismiss";
   await open(page, file.name, file.text);
-  await expect.poll(() => seen).toEqual([CONFIRM]);
+  await answerConfirmation(page, "openFile", "cancel");
   await page.waitForTimeout(300);
   await expect(tripName(page)).toHaveValue("Current");
   await expect(pointMarkers(page)).toHaveCount(1);
   expect(await storedText(page)).toBe(storedBefore);
 
-  answer = "accept";
   await open(page, file.name, file.text);
-  await expect.poll(() => seen).toEqual([CONFIRM, CONFIRM]);
+  await answerConfirmation(page, "openFile", "confirm");
   await expect(tripName(page)).toHaveValue("From file");
   await expect(pointMarkers(page)).toHaveCount(2);
 
   // A trip without points (only a name) is replaced without asking.
   await newTripBtn(page).click();
+  await answerConfirmation(page, "newTrip", "confirm");
   await tripName(page).fill("Name only");
-  const before = seen.length;
   await open(page, file.name, file.text);
   await expect(tripName(page)).toHaveValue("From file");
-  expect(seen).toHaveLength(before);
+  await expect(confirmDialog(page)).toHaveCount(0);
 });

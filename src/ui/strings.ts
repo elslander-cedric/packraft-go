@@ -18,7 +18,7 @@ export const strings = {
   // Asked in an in-page dialog before a trip with points is replaced (#31).
   newTripConfirm: {
     title: "Start a new trip?",
-    message: "Your current trip will be lost. This can't be undone.",
+    message: "Your current trip will be lost.",
     confirm: "Discard current trip",
   },
   confirmCancel: "Cancel",
@@ -28,7 +28,7 @@ export const strings = {
   openFileHint: "Open a trip file saved earlier. The current trip is replaced.",
   openFileConfirm: {
     title: "Open this trip file?",
-    message: "Your current trip will be replaced. This can't be undone.",
+    message: "Your current trip will be replaced.",
     confirm: "Replace current trip",
   },
   openFileInvalid: "This is not a packraft-go trip file, or it is damaged. Your current trip is unchanged.",

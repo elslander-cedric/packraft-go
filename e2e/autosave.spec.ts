@@ -1,6 +1,7 @@
 // Autosave, restore, name and new trip (#9). BRouter is answered from recorded responses.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
+import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
@@ -144,13 +145,9 @@ test("new trip, once confirmed, clears to an empty trip, which stays empty after
   await clickMap(100, 0);
   await expect(legLines(page)).toHaveClass(/leg-routed/);
 
-  const asked: string[] = [];
-  page.once("dialog", (dialog) => {
-    asked.push(`${dialog.type()}: ${dialog.message()}`);
-    void dialog.accept();
-  });
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await newTripButton(page).click();
-  await expect.poll(() => asked).toEqual([`confirm: ${strings.newTripConfirm}`]);
+  await answerConfirmation(page, "newTrip", "confirm");
 
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect(legLines(page)).toHaveCount(0);
@@ -173,13 +170,9 @@ test("cancelling the new trip question keeps the current trip", async ({ page })
   await clickMap(100, 0);
   await expect(legLines(page)).toHaveClass(/leg-routed/);
 
-  const asked: string[] = [];
-  page.once("dialog", (dialog) => {
-    asked.push(dialog.message());
-    void dialog.dismiss();
-  });
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await newTripButton(page).click();
-  await expect.poll(() => asked).toEqual([strings.newTripConfirm]);
+  await answerConfirmation(page, "newTrip", "cancel");
 
   await expect(pointMarkers(page)).toHaveCount(2);
   await expect(legLines(page)).toHaveCount(1);
@@ -197,17 +190,13 @@ test("cancelling the new trip question keeps the current trip", async ({ page })
 test("new trip on a trip without points clears it without asking", async ({ page }) => {
   await serveOffline(page);
   await openMap(page);
-  const asked: string[] = [];
-  page.on("dialog", (dialog) => {
-    asked.push(dialog.message());
-    void dialog.dismiss();
-  });
 
   await tripName(page).fill("Only a name");
   await newTripButton(page).click();
 
   await expect(tripName(page)).toHaveValue("");
-  expect(asked).toEqual([]);
+  // Updated for Base UI (#31): no in-page confirmation was shown.
+  await expect(confirmDialog(page)).toHaveCount(0);
 });
 
 test("unreadable stored data opens an empty trip without crashing", async ({ page }) => {

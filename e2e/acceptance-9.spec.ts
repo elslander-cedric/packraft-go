@@ -4,6 +4,7 @@
 // server is never reached (ADR 0019).
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
+import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
 
 type Px = { x: number; y: number };
@@ -183,8 +184,9 @@ test("#9: new trip clears everything; a late route answer does not bring legs ba
   await expect(rows(page).first().getByRole("status")).toBeVisible();
 
   // Updated in round 2: new trip asks for confirmation when the trip has points; accept it.
-  page.once("dialog", (dialog) => void dialog.accept());
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await newTripBtn(page).click();
+  await answerConfirmation(page, "newTrip", "confirm");
   g.open(SNAPPED);
   await page.waitForTimeout(500);
 
@@ -264,54 +266,45 @@ test("#9: blocked browser storage does not crash the planner", async ({ page }) 
 // Round 2 rule (approved by Cedric): New trip asks "Start a new trip? Your current
 // trip will be lost." when the trip has at least one point, does nothing on cancel,
 // and does not ask for an empty trip.
-function watchDialogs(page: Page, answer: () => "accept" | "dismiss") {
-  const seen: string[] = [];
-  page.on("dialog", (dialog) => {
-    seen.push(`${dialog.type()}: ${dialog.message()}`);
-    void (answer() === "accept" ? dialog.accept() : dialog.dismiss());
-  });
-  return seen;
-}
-const CONFIRM = `confirm: ${strings.newTripConfirm}`;
+// Updated for Base UI (#31): the question is an in-page Alert Dialog (title +
+// message, same wording) answered with its buttons, instead of window.confirm.
 
 test("#9 round 2: a single point is enough to ask; cancel keeps it, OK clears it, and an empty trip is not asked about", async ({ page }) => {
   await serveOffline(page, { brouter: () => SNAPPED });
   const c = await openMap(page);
-  let answer: "accept" | "dismiss" = "dismiss";
-  const seen = watchDialogs(page, () => answer);
-  expect(strings.newTripConfirm).toBe("Start a new trip? Your current trip will be lost.");
+  expect(`${strings.newTripConfirm.title} ${strings.newTripConfirm.message}`).toBe(
+    "Start a new trip? Your current trip will be lost.",
+  );
 
   await page.mouse.click(c.x, c.y);
   await expect(pointMarkers(page)).toHaveCount(1);
   await expect.poll(async () => (await stored(page))?.trip.points.length).toBe(1);
 
   await newTripBtn(page).click();
-  await expect.poll(() => seen).toEqual([CONFIRM]);
+  await answerConfirmation(page, "newTrip", "cancel");
   await page.waitForTimeout(300);
   await expect(pointMarkers(page)).toHaveCount(1);
   expect((await stored(page)).trip.points).toHaveLength(1);
 
   // Cancelling twice in a row still changes nothing.
   await newTripBtn(page).click();
-  await expect.poll(() => seen).toEqual([CONFIRM, CONFIRM]);
+  await answerConfirmation(page, "newTrip", "cancel");
   await expect(pointMarkers(page)).toHaveCount(1);
 
-  answer = "accept";
   await newTripBtn(page).click();
-  await expect.poll(() => seen).toHaveLength(3);
+  await answerConfirmation(page, "newTrip", "confirm");
   await expect(pointMarkers(page)).toHaveCount(0);
   expect((await stored(page)).trip).toEqual({ name: "", points: [], legs: [] });
 
   // Now empty: no question.
   await newTripBtn(page).click();
   await page.waitForTimeout(300);
-  expect(seen).toHaveLength(3);
+  await expect(confirmDialog(page)).toHaveCount(0);
 });
 
 test("#9 round 2: a trip restored after reload is asked about; a trip emptied by undo is not", async ({ page }) => {
   await serveOffline(page, { brouter: () => SNAPPED });
   let c = await openMap(page);
-  const seen = watchDialogs(page, () => "dismiss");
 
   await page.mouse.click(c.x - 150, c.y);
   await page.mouse.click(c.x + 150, c.y);
@@ -320,7 +313,7 @@ test("#9 round 2: a trip restored after reload is asked about; a trip emptied by
   await expect(pointMarkers(page)).toHaveCount(2);
 
   await newTripBtn(page).click();
-  await expect.poll(() => seen).toEqual([CONFIRM]);
+  await answerConfirmation(page, "newTrip", "cancel");
   await expect(pointMarkers(page)).toHaveCount(2);
   await reload(page);
   await expect(pointMarkers(page)).toHaveCount(2);
@@ -336,5 +329,5 @@ test("#9 round 2: a trip restored after reload is asked about; a trip emptied by
   await tripName(page).fill("Named but empty");
   await newTripBtn(page).click();
   await expect(tripName(page)).toHaveValue("");
-  expect(seen).toEqual([CONFIRM]);
+  await expect(confirmDialog(page)).toHaveCount(0);
 });
