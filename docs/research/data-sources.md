@@ -8,11 +8,12 @@ Researched 2026-10-12. This decides what packraft-go can *show* versus only *lin
 |---|---|---|---|
 | Walloon live river status (kayak.spw.wallonie.be) | No public API found | No terms published | **No**, unless the SPW agrees to a feed |
 | Walloon stretches + put-in/take-out points (Metawal dataset) | Shapefile / FGDB, from 2014 | Restricted; redistribution forbidden | **No** |
-| Walloon rules (AGW 2009, annexes) | Public legal text (PDF) | Public law | **Yes**, if encoded by hand |
+| Walloon rules (AGW 2009, annexes) | Public legal text (PDF), **now extracted** to [data/walloon-stretches.json](data/walloon-stretches.json) | Public law | **Yes**. Stretch ends still need placing on the map (about 45 landmarks, 2–4 h of curation) |
 | Walloon hydrometry (live river flows) | Probably | **[UNVERIFIED]** | To check: needed to compute daily status ourselves |
 | Sport Vlaanderen routes (RouteYou) | Internal API only | No open licence found | **No**, without permission |
 | Flemish waterway network (De Vlaamse Waterweg RIS-index) | WFS/WMS | Modellicentie Gratis Hergebruik (open) | **Yes** |
-| Flemish rules (forbidden waters, lock ban) | Prose only | Public | **Yes**, if encoded by hand |
+| Flemish rules (forbidden waters, ports, lock ban) | Prose only | Public | **Yes**, if encoded by hand. A short list, since non-navigable rivers are allowed by default |
+| Flemish river categories and managers (VHA Waterlopen) | WFS | Open Data Licentie Vlaanderen | **Yes** |
 | OpenStreetMap paddling tags in Belgium | Yes (Overpass) | ODbL (open) | Too sparse to rely on; locks and waterway classes are usable |
 
 **Conclusion:** there's no ready-made open feed for "can I paddle here today?". The realistic open route for Wallonia is to **encode the AGW rules ourselves** (stretch list, categories, seasons, hours, thresholds) and combine them with **live flows from Walloon hydrometry**, if its licence allows. Otherwise, the alternatives are asking the SPW for a feed or linking to kayak.spw.wallonie.be.
