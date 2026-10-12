@@ -314,7 +314,9 @@ test("camps persist through autosave: marking and unmarking are both stored", as
   await expect(dayRows(page).nth(0)).toContainText(strings.dayLegs(1, 2));
 });
 
-test("an older save file without camps opens as a trip without camps, replacing a trip that had some", async ({
+// Updated: v1 dropped (#33). A version 1 file used to open as a trip without
+// camps; now it is refused and the trip with its camps stays.
+test("a version 1 save file is refused as an unknown version, keeping the trip and its camps", async ({
   page,
 }) => {
   await serveOffline(page, { brouter: byProfile });
@@ -354,12 +356,15 @@ test("an older save file without camps opens as a trip without camps, replacing 
     mimeType: "application/json",
     buffer: Buffer.from(older),
   });
-  await expect(pointMarkers(page)).toHaveCount(3);
-  await expect(campMarkers(page)).toHaveCount(0);
-  await expect(dayRows(page)).toHaveCount(1);
+  await expect(
+    page.getByRole("alert").filter({ hasText: strings.openFileUnknownVersion }),
+  ).toBeVisible();
   await expect(
     page.getByRole("alert").filter({ hasText: strings.openFileInvalid }),
   ).toHaveCount(0);
+  await expect(pointMarkers(page)).toHaveCount(4);
+  await expect(campMarkers(page)).toHaveCount(1);
+  await expect(dayRows(page)).toHaveCount(2);
 });
 
 test("a save file with a camp on a point that does not exist is refused and the current trip is untouched", async ({
@@ -369,9 +374,10 @@ test("a save file with a camp on a point that does not exist is refused and the 
   page.on("dialog", (d) => void d.accept());
   const click = await drawThreeLegs(page);
   await toggleCampAt(page, click, 1);
+  // Updated: v1 dropped (#33). Version 2, so this stays about bad camps, not the version.
   const bad = JSON.stringify({
     format: "packraft-go-trip",
-    version: 1,
+    version: 2,
     trip: {
       name: "Bad",
       points: [

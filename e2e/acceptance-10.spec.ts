@@ -201,7 +201,8 @@ const INVALID: [string, string, string][] = [
   ["an empty file", "", strings.openFileInvalid],
   ["JSON that is not a trip", JSON.stringify({ hello: "world" }), strings.openFileInvalid],
   ["a newer version", JSON.stringify({ format: "packraft-go-trip", version: 99, trip: { name: "x", points: [], legs: [] } }), strings.openFileUnknownVersion],
-  ["legs not matching points", JSON.stringify({ format: "packraft-go-trip", version: 1, trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] } }), strings.openFileInvalid],
+  // Updated: v1 dropped (#33). Version 2, so this stays a damaged file, not an unknown version.
+  ["legs not matching points", JSON.stringify({ format: "packraft-go-trip", version: 2, trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] } }), strings.openFileInvalid],
   ["a GPX file", '<?xml version="1.0"?><gpx version="1.1"><trk><name>x</name></trk></gpx>', strings.openFileInvalid],
 ];
 
@@ -227,11 +228,14 @@ for (const [label, text, message] of INVALID) {
   });
 }
 
-// Added in round 2 of #8: files saved before the version 2 bump still open.
-test("#10: a version 1 file (saved before camps) still opens, as a trip without camps", async ({ page }) => {
-  const net = await serveOffline(page, { brouter: byProfile });
-  await openMap(page);
+// Updated: v1 dropped (#33). A version 1 file used to open as a trip without
+// camps; now it is refused as an unknown version and the current trip stays.
+test("#10: a version 1 file is refused as an unknown version and leaves the trip and storage unchanged", async ({ page }) => {
+  const { net } = await drawMixedTrip(page, "Keep me");
   const seen = watchDialogs(page, () => "accept");
+  await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").trip?.legs?.length).toBe(3);
+  const storedBefore = await storedText(page);
+  const calls = net.brouter.length;
   const versionOne = JSON.stringify({
     format: "packraft-go-trip",
     version: 1,
@@ -246,16 +250,14 @@ test("#10: a version 1 file (saved before camps) still opens, as a trip without 
   });
 
   await open(page, "old.packraft.json", versionOne);
-  await expect(tripName(page)).toHaveValue("From version 1");
-  await expect(pointMarkers(page)).toHaveCount(2);
-  await expect(legLines(page)).toHaveCount(1);
-  await expect(mapRegion(page).locator(".camp-marker")).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({ hasText: strings.openFileUnknownVersion })).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: strings.openFileInvalid })).toHaveCount(0);
-  await expect(page.getByRole("alert").filter({ hasText: strings.openFileUnknownVersion })).toHaveCount(0);
+  await page.waitForTimeout(300);
   expect(seen).toEqual([]);
-  expect(net.brouter).toHaveLength(0);
-  // Saved again, it is written as version 2.
-  await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").version).toBe(2);
+  await expect(tripName(page)).toHaveValue("Keep me");
+  await expect(pointMarkers(page)).toHaveCount(4);
+  expect(await storedText(page)).toBe(storedBefore);
+  expect(net.brouter).toHaveLength(calls);
 });
 
 test("#10: the error goes away after a successful open, and the same file can be opened twice", async ({ page }) => {
