@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { findHardCodedText } from "@/testing/hardCodedText";
 import { strings } from "./strings";
 
 const SRC = path.resolve(__dirname, "..");
@@ -27,20 +28,10 @@ describe("strings module", () => {
 
   it("components contain no hard-coded visible text", () => {
     expect(components.length).toBeGreaterThan(0);
-    const offenders: string[] = [];
-    for (const file of components) {
-      const src = readFileSync(file, "utf8").replace(/\/\/.*$|\/\*[\s\S]*?\*\//gm, "");
-      // Text between JSX tags, e.g. <p>Hello</p>.
-      for (const m of src.matchAll(/>\s*([^<>{}\s][^<>{}]*?)\s*</g)) {
-        if (/[A-Za-z]/.test(m[1]) && !/=>|&&|\|\|/.test(m[1])) {
-          offenders.push(`${path.relative(SRC, file)}: "${m[1]}"`);
-        }
-      }
-      // Literal accessible/visible attributes.
-      for (const m of src.matchAll(/\b(aria-label|title|alt|placeholder)="([^"]+)"/g)) {
-        offenders.push(`${path.relative(SRC, file)}: ${m[1]}="${m[2]}"`);
-      }
-    }
+    // The checker parses the code (#26); its own tests cover what it catches and ignores.
+    const offenders = components.flatMap((file) =>
+      findHardCodedText(readFileSync(file, "utf8")).map((finding) => `${path.relative(SRC, file)}: ${finding}`),
+    );
     expect(offenders).toEqual([]);
   });
 });
