@@ -81,7 +81,9 @@ export default function TripPlanner({ router }: { router?: Router }) {
     setFileError(null);
   };
   // A trip waiting to replace the current one until the planner answers the confirmation.
-  const [pendingReplace, setPendingReplace] = useState<{ next: Trip; question: Confirmation } | null>(null);
+  const [pendingTrip, setPendingTrip] = useState<Trip | null>(null);
+  // The last question asked; kept after it is answered, so the closing dialog keeps its text and focus target.
+  const [question, setQuestion] = useState<Confirmation>("newTrip");
   const newTripButton = useRef(null as HTMLButtonElement | null);
   const openFileButton = useRef(null as HTMLButtonElement | null);
   const applyReplace = (next: Trip) => {
@@ -90,13 +92,15 @@ export default function TripPlanner({ router }: { router?: Router }) {
     setFileError(null);
   };
   /** Replaces the current trip, asking first when that would lose points (it cannot be undone). */
-  const replaceTrip = (next: Trip, question: Confirmation) => {
-    if (newTripNeedsConfirmation(trip)) setPendingReplace({ next, question });
-    else applyReplace(next);
+  const replaceTrip = (next: Trip, asking: Confirmation) => {
+    if (newTripNeedsConfirmation(trip)) {
+      setQuestion(asking);
+      setPendingTrip(next);
+    } else applyReplace(next);
   };
   const confirmReplace = () => {
-    if (pendingReplace) applyReplace(pendingReplace.next);
-    setPendingReplace(null);
+    if (pendingTrip) applyReplace(pendingTrip);
+    setPendingTrip(null);
   };
   const newTrip = () => replaceTrip(emptyTrip(), "newTrip");
   const saveFile = () => {
@@ -130,7 +134,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       // While a confirmation is open, keys belong to it (Escape cancels it).
-      if (pendingReplace || typingInField(event)) return;
+      if (pendingTrip || typingInField(event)) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
         undo();
@@ -146,7 +150,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
   });
 
   const summary = summarise(trip, settings ?? defaultSettings);
-  const confirmation = confirmations[pendingReplace?.question ?? "newTrip"];
+  const confirmation = confirmations[question];
 
   return (
     <div className="planner">
@@ -187,14 +191,14 @@ export default function TripPlanner({ router }: { router?: Router }) {
         {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
       </div>
       <ConfirmDialog
-        open={pendingReplace !== null}
+        open={pendingTrip !== null}
         title={confirmation.title}
         message={confirmation.message}
         confirmLabel={confirmation.confirm}
         cancelLabel={strings.confirmCancel}
         onConfirm={confirmReplace}
-        onCancel={() => setPendingReplace(null)}
-        returnFocusTo={pendingReplace?.question === "openFile" ? openFileButton : newTripButton}
+        onCancel={() => setPendingTrip(null)}
+        returnFocusTo={question === "openFile" ? openFileButton : newTripButton}
       />
     </div>
   );

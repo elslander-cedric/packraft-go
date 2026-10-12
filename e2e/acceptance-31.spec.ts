@@ -75,13 +75,17 @@ test.describe("confirmations are in-page Alert Dialogs", () => {
     await expect(newTrip).toBeFocused();
     await expect(pointMarkers(page)).toHaveCount(2);
 
-    // Shortcuts don't reach the planner while the question is open.
+    // Shortcuts don't reach the planner while the question is open. (The page
+    // behind a modal dialog is hidden from the accessibility tree, so check after closing.)
     await newTrip.click();
     await expect(dialog).toBeVisible();
     await page.keyboard.press("ControlOrMeta+z");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
     await expect(pointMarkers(page)).toHaveCount(2);
 
     // Confirm, by keyboard: replaces the trip.
+    await newTrip.click();
     await dialog.getByRole("button", { name: strings.newTripConfirm.confirm }).focus();
     await page.keyboard.press("Enter");
     await expect(dialog).toHaveCount(0);
