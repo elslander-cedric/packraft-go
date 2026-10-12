@@ -129,7 +129,16 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
   const map = useMap();
   const [preview, setPreview] = useState<DragPreview | null>(null);
   // The browser sends a click after a drag ends; that click must not add or select a point.
-  const swallowNextClick = useRef(false);
+  // A click always belongs to the press that started it, so this is reset on every press
+  // (not after a timer, which a busy page can run after the next click: #19).
+  const pressWasDrag = useRef(false);
+  useEffect(() => {
+    const container = map.getContainer();
+    const press = () => (pressWasDrag.current = false);
+    // Capture phase: runs before Leaflet's own handlers, including a point's mousedown.
+    container.addEventListener("mousedown", press, true);
+    return () => container.removeEventListener("mousedown", press, true);
+  }, [map]);
   // Leaflet starts panning the map on the same press that would grab a point, so
   // panning is off while the mouse is over a point or a point is being dragged.
   const overPoint = useRef(false);
@@ -141,7 +150,7 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
 
   useMapEvents({
     click: (event) => {
-      if (swallowNextClick.current) return;
+      if (pressWasDrag.current) return;
       onMapClick({ lat: event.latlng.lat, lng: event.latlng.lng });
     },
   });
@@ -166,8 +175,7 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
       updateMapPanning();
       setPreview(null);
       if (dropAt) {
-        swallowNextClick.current = true;
-        setTimeout(() => (swallowNextClick.current = false), 0);
+        pressWasDrag.current = true;
         onPointDrag(index, dropAt);
       }
     };
@@ -188,7 +196,7 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
     mouseout: leavePoint,
     mousedown: (event) => startDrag(index, (event as LeafletMouseEvent).originalEvent),
     click: () => {
-      if (!swallowNextClick.current) onPointClick(index);
+      if (!pressWasDrag.current) onPointClick(index);
     },
   });
 
