@@ -46,16 +46,20 @@ const typingInField = (event: KeyboardEvent) =>
  */
 export default function TripPlanner({ router }: { router?: Router }) {
   // Starts from the stored trip, so this component is only rendered in the browser (see ClientTripPlanner).
-  const [trip, setTrip] = useState(loadStoredTrip);
+  const [stored] = useState(loadStoredTrip);
+  const [trip, setTrip] = useState(stored.trip);
+  // A stored save from a newer or unknown version is kept, not overwritten, until
+  // the planner starts a new trip or opens a file (#28).
+  const [keepStoredSave, setKeepStoredSave] = useState(stored.unknownVersion);
   // Shown after a file could not be opened, until the planner does something else.
   const [fileError, setFileError] = useState<string | null>(null);
   const [autoRouter] = useState(() => createAutoRouter(router ?? createBRouterRouter(), setTrip));
 
   // Every change is saved. Restored legs keep their routed results, so syncing routes nothing new.
   useEffect(() => {
-    storeTrip(trip);
+    if (!keepStoredSave) storeTrip(trip);
     void autoRouter.sync(trip);
-  }, [autoRouter, trip]);
+  }, [autoRouter, trip, keepStoredSave]);
 
   // Settings live in browser storage (null only without one, e.g. on a server);
   // until they are read, figures use the defaults.
@@ -90,6 +94,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
     setTrip(next);
     setSelectedPoint(null);
     setFileError(null);
+    setKeepStoredSave(false);
   };
   /** Replaces the current trip, asking first when that would lose points (it cannot be undone). */
   const replaceTrip = (next: Trip, asking: Confirmation) => {
@@ -162,6 +167,11 @@ export default function TripPlanner({ router }: { router?: Router }) {
         onPointDrag={(index, to) => edit({ type: "movePoint", index, to })}
       />
       <div className="sidebar">
+        {keepStoredSave && (
+          <p className="autosave-warning" role="alert">
+            {strings.autosaveUnknownVersion}
+          </p>
+        )}
         <TripToolbar
           name={trip.name}
           fileError={fileError}

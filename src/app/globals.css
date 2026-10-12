@@ -113,6 +113,15 @@ body {
   font-size: 0.8rem;
 }
 
+/* An autosave from a newer or unknown version is kept (#28). */
+.autosave-warning {
+  margin: 0;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-danger);
+  color: var(--color-danger);
+  font-size: 0.8rem;
+}
+
 .edit-toolbar {
   display: flex;
   flex-wrap: wrap;

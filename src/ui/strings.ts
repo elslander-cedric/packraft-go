@@ -34,6 +34,10 @@ export const strings = {
   openFileInvalid: "This is not a packraft-go trip file, or it is damaged. Your current trip is unchanged.",
   openFileUnknownVersion:
     "This trip file is from a newer or unknown version of packraft-go and can't be opened here. Your current trip is unchanged.",
+  // Shown while the autosaved trip is from a newer or unknown version and is kept, not overwritten (#28).
+  autosaveUnknownVersion:
+    "Your saved trip is from a newer or unknown version of packraft-go. Reload the page to update. " +
+    "It is kept until you start a new trip or open a file; changes made here are not saved.",
   exportGpxButton: "Export GPX",
   exportGpxHint: "Download the trip as a GPX file for a GPS device or outdoor app: one track per leg, camps as waypoints.",
   exportGpxDisabledReason: "Nothing to export yet: click the map twice to add a leg.",

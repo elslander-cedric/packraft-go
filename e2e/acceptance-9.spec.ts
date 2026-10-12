@@ -235,7 +235,10 @@ for (const [label, text] of [
     await page.mouse.click(c.x + 150, c.y);
     await expect(legLines(page)).toHaveClass(/leg-routed/);
     await reload(page);
-    await expect(legLines(page)).toHaveCount(1);
+    // Updated (#28): a newer-version save is kept, not overwritten by the drawing, so it reloads empty with a warning.
+    const kept = label === "a newer version";
+    await expect(legLines(page)).toHaveCount(kept ? 0 : 1);
+    await expect(page.getByRole("alert").filter({ hasText: strings.autosaveUnknownVersion })).toHaveCount(kept ? 1 : 0);
     await page.waitForTimeout(300);
     expect(net.brouter).toHaveLength(1);
     expect(errors).toEqual([]);
