@@ -128,6 +128,19 @@ The **Arrêté du Gouvernement wallon (AGW) of 19 March 2009**, "réglementant l
 
 ---
 
+## Brussels-Capital Region
+
+Details and sources: [brussels.md](brussels.md).
+
+- **Canal and port:** paddling is allowed without a permit under the Brussels police regulation for the canal and port (decree of 4 March 2010, art. 127). Commercial traffic has priority (art. 128).
+  - **Caveat:** read literally, art. 45–46 require every boat to carry a VHF radio and report to the Capitainerie (+32 2 247 91 21). **[UNVERIFIED]:** whether this is enforced for paddlers.
+  - **Locks:** portage around the Anderlecht and Molenbeek locks.
+  - **Swimming** in the canal is forbidden.
+- **Ponds:** boats need permission.
+- **Small streams and the Senne:** no rule found either way **[UNVERIFIED]**. The Senne is mostly underground.
+
+---
+
 ## Packrafts
 
 - **Flanders:** inflatable kayaks and canoes are explicitly "small vessels propelled by muscle power", the same as hard-shell boats ([visuris.be/kano](https://www.visuris.be/kano)). A packraft follows the kayak rules.

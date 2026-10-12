@@ -3,7 +3,7 @@
 Date: 2026-10-10
 
 ## Status
-Accepted
+Superseded by ADR 0024 (v2 shows access status; the disclaimer stays).
 
 ## Context
 Many Walloon rivers restrict kayaking by season, water level or stretch. Encoding these rules is work and must be kept up to date.

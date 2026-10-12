@@ -31,6 +31,8 @@ Improvements for packraft-go, beyond v1. GitHub issues are the source of truth f
 - [ ] **Official paddle routes as suggestions/overlays**: only if the licence allows. Research: [paddle routes](docs/research/paddle-routes.md)
 
 ### Left out of v1, could come later
+- [ ] **Live Flemish water levels** (waterinfo.be) for VMM agreement stretches such as the Kleine Nete (min 50 cm at Retie). ADR 0024
+- [ ] **Community / shared access points** (needs a backend). ADR 0023
 - [ ] **Automatic route-finding**: suggest the hike/paddle mix between a start and an end. ADR 0003
 - [ ] **Overpass + Turf.js fallback** for paddle legs, if BRouter's experimental river profile fails on real rivers. ADR 0014
 - [ ] **Whole-trip GPX export** as one file (one track), next to the per-section ZIP, for apps that handle long courses. ADR 0021
