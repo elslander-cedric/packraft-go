@@ -4,6 +4,7 @@
 // Escape; no element.focus() or mouse on the controls themselves.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
+import { expectInitialFocus } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
@@ -100,6 +101,7 @@ test.describe("#31 tester: confirmations by keyboard alone", () => {
 
     // Confirm by keyboard clears the trip.
     await page.keyboard.press("Enter");
+    await expectInitialFocus(page);
     await page.keyboard.press("Tab");
     await expect(confirm).toBeFocused();
     await page.keyboard.press("Enter");
@@ -142,6 +144,7 @@ test.describe("#31 tester: confirmations by keyboard alone", () => {
       await expect(dialog(page)).toBeVisible();
       await expect(dialog(page)).toContainText(strings.openFileConfirm.title);
       await expect(dialog(page)).toContainText(strings.openFileConfirm.message);
+      await expectInitialFocus(page);
     };
 
     await choose();

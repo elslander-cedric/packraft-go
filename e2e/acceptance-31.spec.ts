@@ -3,7 +3,7 @@
 // and toolbars work by keyboard alone; disabled toolbar buttons say why.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
-import { confirmDialog } from "./support/confirmDialog";
+import { confirmDialog, expectInitialFocus } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
@@ -86,6 +86,7 @@ test.describe("confirmations are in-page Alert Dialogs", () => {
 
     // Confirm, by keyboard: replaces the trip.
     await newTrip.click();
+    await expectInitialFocus(page);
     await dialog.getByRole("button", { name: strings.newTripConfirm.confirm }).focus();
     await page.keyboard.press("Enter");
     await expect(dialog).toHaveCount(0);
@@ -132,6 +133,7 @@ test.describe("confirmations are in-page Alert Dialogs", () => {
     await expect(dialog).toBeVisible();
     await expect(dialog).toHaveAccessibleName(strings.openFileConfirm.title);
     await expect(dialog).toHaveAccessibleDescription(strings.openFileConfirm.message);
+    await expectInitialFocus(page);
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
     await expect(openFile).toBeFocused();
@@ -139,6 +141,7 @@ test.describe("confirmations are in-page Alert Dialogs", () => {
     await expect(pointMarkers(page)).toHaveCount(1);
 
     await chooseFile(page, "trip.packraft.json", text);
+    await expectInitialFocus(page);
     await dialog.getByRole("button", { name: strings.openFileConfirm.confirm }).click();
     await expect(dialog).toHaveCount(0);
     await expect(openFile).toBeFocused();
