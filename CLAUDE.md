@@ -30,6 +30,7 @@ CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on eve
 - `src/routing/`: BRouter adapter (implements the core's `Router`). Recorded BRouter responses live in `src/routing/fixtures/` and are shared by unit and e2e tests; `serveOffline(page, { brouter })` replays them.
 - `src/persistence/`: browser storage wrapper for autosave of the trip and settings (ADR 0011). Uses the core's versioned save format; never stores undo history. `tripStorage.ts` keeps the trip under `packraft-go.trip`; `settingsStorage.ts` keeps the planner's settings (pace factor, paddling speed) under their own key, `packraft-go.settings`, validated by `src/core/settings.ts`.
 - `src/testing/`: shared test helpers (e.g. the offline GPX 1.1 structure checker). Test-only; never imported by app code.
+- `src/ui/components/`: thin wrappers around Base UI (ADR 0020): `ConfirmDialog` (Alert Dialog), `ToggleGroup`, `NumberField`, `Toolbar`/`ToolbarButton` (with Tooltip) and `Button`, each with its own stylesheet. Screens import these, never `@base-ui/react`; `boundary.test.ts` enforces this. Wrappers take their text as props from the screens. Design tokens (colours, spacing) are CSS variables at the top of `src/app/globals.css`. In e2e tests, answer confirmations with `e2e/support/confirmDialog.ts`.
 - `src/ui/strings.ts`: all user-facing text (ADR 0013).
 
 ## Conventions
