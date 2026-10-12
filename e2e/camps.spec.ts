@@ -3,6 +3,7 @@
 // the river profile the recorded Lesse track (5.9 km, about 1 h 11 min at 5 km/h).
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
+import { answerConfirmation } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
@@ -138,8 +139,9 @@ test("camps are kept through save to file and open file", async ({ page }) => {
     page.getByRole("button", { name: strings.saveFileButton }).click(),
   ]);
   const saved = await download.path();
-  page.once("dialog", (dialog) => void dialog.accept());
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await page.getByRole("button", { name: strings.newTripButton }).click();
+  await answerConfirmation(page, "newTrip", "confirm");
   await expect(points(page)).toHaveCount(0);
   await expect(campMarkers(page)).toHaveCount(0);
 

@@ -1,5 +1,6 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import type { Settings } from "@/core/settings";
+import { NumberField } from "./components/NumberField";
 import { strings } from "./strings";
 
 export type SettingsPanelProps = {
@@ -19,32 +20,21 @@ type SettingFieldProps = {
 
 /** A number field that keeps what the planner types, even while it is not yet a usable value. */
 function SettingField({ label, hint, initialValue, step, onChange }: SettingFieldProps) {
-  const [text, setText] = useState(String(initialValue));
-  const id = useId();
-  const usable = Number(text) > 0 && Number.isFinite(Number(text));
+  const [value, setValue] = useState<number | null>(initialValue);
+  const usable = value !== null && value > 0 && Number.isFinite(value);
   return (
-    <div className="setting">
-      <label htmlFor={id}>{label}</label>
-      <input
-        id={id}
-        type="number"
-        inputMode="decimal"
-        min={step}
-        step={step}
-        value={text}
-        aria-invalid={!usable}
-        aria-describedby={hint ? `${id}-hint` : undefined}
-        onChange={(event) => {
-          setText(event.target.value);
-          onChange(Number(event.target.value));
-        }}
-      />
-      {hint && (
-        <p id={`${id}-hint`} className="setting-hint">
-          {hint}
-        </p>
-      )}
-    </div>
+    <NumberField
+      label={label}
+      hint={hint}
+      defaultValue={initialValue}
+      step={step}
+      invalid={!usable}
+      onValueChange={(next) => {
+        setValue(next);
+        // An empty field has no value to use.
+        if (next !== null) onChange(next);
+      }}
+    />
   );
 }
 

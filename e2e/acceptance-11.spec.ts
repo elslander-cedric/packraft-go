@@ -7,6 +7,7 @@ import { DOMParser } from "@xmldom/xmldom";
 import { expect, test, type Page } from "@playwright/test";
 import { parseGpx11 } from "../src/testing/gpx11";
 import { strings } from "../src/ui/strings";
+import { answerConfirmation } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
 
 const KEY = "packraft-go.trip";
@@ -163,8 +164,9 @@ test("#11: Export GPX is disabled until the trip has a leg, and again when it ha
   await expect(exportBtn(page)).toBeDisabled();
   await click(80, 0);
   await expect(exportBtn(page)).toBeEnabled();
-  page.once("dialog", (d) => void d.accept());
+  // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await newTripBtn(page).click();
+  await answerConfirmation(page, "newTrip", "confirm");
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect(exportBtn(page)).toBeDisabled();
   // A disabled button downloads nothing.

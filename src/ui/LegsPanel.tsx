@@ -1,14 +1,14 @@
 import type { TripSummary } from "@/core/summarise";
 import type { Leg, LegMode } from "@/core/trip";
+import { Button } from "./components/Button";
+import { ToggleGroup, type ToggleOption } from "./components/ToggleGroup";
 import { formatDistance, formatElevation, formatTimeEstimate } from "./format";
 import { strings } from "./strings";
 
-const modes: readonly LegMode[] = ["hike", "paddle"];
-
-const modeLabel: Record<LegMode, string> = {
-  hike: strings.legModeHike,
-  paddle: strings.legModePaddle,
-};
+const modes: readonly ToggleOption<LegMode>[] = [
+  { value: "hike", label: strings.legModeHike, className: "leg-mode leg-mode-hike" },
+  { value: "paddle", label: strings.legModePaddle, className: "leg-mode leg-mode-paddle" },
+];
 
 export type LegsPanelProps = {
   summary: TripSummary;
@@ -24,19 +24,13 @@ type ModeSwitchProps = { legIndex: number; mode: LegMode; onSetMode: (mode: LegM
 /** Hike / Paddle switch for one leg; the leg's current mode is pressed. */
 function ModeSwitch({ legIndex, mode, onSetMode }: ModeSwitchProps) {
   return (
-    <span role="group" aria-label={strings.legModeLabel(legIndex + 1)} className="leg-mode-switch">
-      {modes.map((m) => (
-        <button
-          key={m}
-          type="button"
-          className={`leg-mode leg-mode-${m}`}
-          aria-pressed={m === mode}
-          onClick={() => onSetMode(m)}
-        >
-          {modeLabel[m]}
-        </button>
-      ))}
-    </span>
+    <ToggleGroup
+      label={strings.legModeLabel(legIndex + 1)}
+      value={mode}
+      options={modes}
+      onChange={onSetMode}
+      className="leg-mode-switch"
+    />
   );
 }
 
@@ -77,9 +71,7 @@ export default function LegsPanel({ summary, legs, onRetry, onSetMode }: LegsPan
                         ? strings.legRouteFailedNoRiver
                         : strings.legRouteFailed[route.failure.kind]}
                     </span>
-                    <button type="button" onClick={() => onRetry(i)}>
-                      {strings.retryRouting}
-                    </button>
+                    <Button onClick={() => onRetry(i)}>{strings.retryRouting}</Button>
                   </span>
                 )}
               </li>

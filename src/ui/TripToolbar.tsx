@@ -1,5 +1,8 @@
-import { useRef } from "react";
+import { useRef, type Ref } from "react";
+import { Toolbar, ToolbarButton } from "./components/Toolbar";
 import { strings } from "./strings";
+
+type ButtonRef = Ref<HTMLButtonElement>;
 
 type TripToolbarProps = {
   name: string;
@@ -11,16 +14,30 @@ type TripToolbarProps = {
   /** Null while there is nothing to export (no legs). */
   onExportGpx: (() => void) | null;
   onOpenFile: (file: File) => void;
+  /** The New trip and Open file buttons, so focus can return to them after a confirmation. */
+  newTripButtonRef?: ButtonRef;
+  openFileButtonRef?: ButtonRef;
 };
 
 /** The trip's name and actions on the whole trip. */
-export default function TripToolbar({ name, fileError, onRename, onNewTrip, onSaveFile, onExportGpx, onOpenFile }: TripToolbarProps) {
+export default function TripToolbar({
+  name,
+  fileError,
+  onRename,
+  onNewTrip,
+  onSaveFile,
+  onExportGpx,
+  onOpenFile,
+  newTripButtonRef,
+  openFileButtonRef,
+}: TripToolbarProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   const chooseFile = () => {
     fileInput.current?.click();
   };
   return (
-    <div className="trip-toolbar" role="toolbar" aria-label={strings.tripToolbarLabel}>
+    <div className="trip-toolbar">
+      {/* The name is outside the toolbar: in a toolbar the arrow keys move between buttons, not the text cursor. */}
       <label className="trip-name">
         <span>{strings.tripNameLabel}</span>
         <input
@@ -30,18 +47,24 @@ export default function TripToolbar({ name, fileError, onRename, onNewTrip, onSa
           onChange={(event) => onRename(event.target.value)}
         />
       </label>
-      <button type="button" onClick={onNewTrip} title={strings.newTripHint}>
-        {strings.newTripButton}
-      </button>
-      <button type="button" onClick={onSaveFile} title={strings.saveFileHint}>
-        {strings.saveFileButton}
-      </button>
-      <button type="button" onClick={onExportGpx ?? undefined} disabled={!onExportGpx} title={strings.exportGpxHint}>
-        {strings.exportGpxButton}
-      </button>
-      <button type="button" onClick={chooseFile} title={strings.openFileHint}>
-        {strings.openFileButton}
-      </button>
+      <Toolbar label={strings.tripToolbarLabel}>
+        <ToolbarButton ref={newTripButtonRef} onClick={onNewTrip} hint={strings.newTripHint}>
+          {strings.newTripButton}
+        </ToolbarButton>
+        <ToolbarButton onClick={onSaveFile} hint={strings.saveFileHint}>
+          {strings.saveFileButton}
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => onExportGpx?.()}
+          hint={strings.exportGpxHint}
+          disabledReason={onExportGpx ? null : strings.exportGpxDisabledReason}
+        >
+          {strings.exportGpxButton}
+        </ToolbarButton>
+        <ToolbarButton ref={openFileButtonRef} onClick={chooseFile} hint={strings.openFileHint}>
+          {strings.openFileButton}
+        </ToolbarButton>
+      </Toolbar>
       <input
         ref={fileInput}
         type="file"

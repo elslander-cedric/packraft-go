@@ -1,0 +1,37 @@
+/* Shared by every button in the planner: plain buttons, toolbar buttons, dialog actions. */
+.button {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.button:hover:not([data-disabled]) {
+  background: var(--color-surface-hover);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.button[data-disabled] {
+  border-color: var(--color-border);
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+.button-danger {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: var(--color-on-accent);
+}
+
+.button-danger:hover:not([data-disabled]) {
+  background: var(--color-danger-hover);
+}

@@ -1,8 +1,49 @@
+/* Design tokens (ADR 0020). Component stylesheets live next to their
+   wrappers in src/ui/components/ and use these variables. */
+:root {
+  --color-text: #222;
+  --color-muted: #666;
+  --color-surface: #fff;
+  --color-surface-hover: #f2f2f2;
+  --color-border: #ccc;
+  --color-border-strong: #999;
+  --color-focus: #1b6fb5;
+  --color-on-accent: #fff;
+  --color-danger: #b00020;
+  --color-danger-hover: #8c0019;
+  /* Hike and paddle legs carry the same colour in the list as on the map. */
+  --color-hike: #b5491b;
+  --color-paddle: #1b6fb5;
+  --color-paddle-tint: #eef5fc;
+  --color-camp: #2e6b30;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --radius: 3px;
+  --shadow-popup: 0 0.25rem 1rem rgb(0 0 0 / 20%);
+  /* Above Leaflet's panes and controls (z-index up to 1000). */
+  --z-overlay: 2000;
+}
+
 html,
 body {
   margin: 0;
   height: 100%;
   font-family: system-ui, sans-serif;
+  color: var(--color-text);
+}
+
+/* Read by screen readers, not shown. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .app {
@@ -34,7 +75,7 @@ body {
   display: flex;
   flex-direction: column;
   width: 18rem;
-  border-left: 1px solid #ccc;
+  border-left: 1px solid var(--color-border);
   font-size: 0.9rem;
 }
 
@@ -62,13 +103,13 @@ body {
 
 .trip-name span {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--color-muted);
 }
 
 .file-error {
   flex-basis: 100%;
   margin: 0;
-  color: #b00020;
+  color: var(--color-danger);
   font-size: 0.8rem;
 }
 
@@ -82,7 +123,7 @@ body {
 .edit-hint {
   flex-basis: 100%;
   margin: 0;
-  color: #666;
+  color: var(--color-muted);
   font-size: 0.8rem;
 }
 
@@ -114,49 +155,34 @@ body {
 
 /* Hike and paddle rows carry the colour of their line on the map. */
 .leg-row-hike {
-  border-left: 4px solid #b5491b;
+  border-left: 4px solid var(--color-hike);
   padding-left: 0.4rem;
 }
 
 .leg-row-paddle {
-  border-left: 6px solid #1b6fb5;
+  border-left: 6px solid var(--color-paddle);
   padding-left: 0.4rem;
-  background: #eef5fc;
+  background: var(--color-paddle-tint);
 }
 
 .leg-mode-switch {
-  display: inline-flex;
+  align-self: start;
 }
 
-.leg-mode {
-  padding: 0.05rem 0.4rem;
-  border: 1px solid #999;
-  background: #fff;
-  color: #333;
-  font-size: 0.8rem;
-  cursor: pointer;
+.toggle.leg-mode-hike[data-pressed] {
+  border-color: var(--color-hike);
+  background: var(--color-hike);
 }
 
-.leg-mode + .leg-mode {
-  border-left: none;
-}
-
-.leg-mode-hike[aria-pressed="true"] {
-  background: #b5491b;
-  border-color: #b5491b;
-  color: #fff;
-}
-
-.leg-mode-paddle[aria-pressed="true"] {
-  background: #1b6fb5;
-  border-color: #1b6fb5;
-  color: #fff;
+.toggle.leg-mode-paddle[data-pressed] {
+  border-color: var(--color-paddle);
+  background: var(--color-paddle);
 }
 
 .leg-routing,
 .leg-route-failed {
   grid-column: 1 / -1;
-  color: #666;
+  color: var(--color-muted);
   font-size: 0.85rem;
 }
 
@@ -164,7 +190,7 @@ body {
   color: #a32020;
 }
 
-.leg-route-failed button {
+.leg-route-failed .button {
   margin-left: 0.5rem;
 }
 
@@ -183,7 +209,7 @@ path.leg-pending {
 }
 
 .legs-panel-empty {
-  color: #666;
+  color: var(--color-muted);
 }
 
 .trip-total,
@@ -199,10 +225,9 @@ path.leg-pending {
   margin-top: 0.25rem;
 }
 
-.time-estimate-note,
-.setting-hint {
+.time-estimate-note {
   margin: 0;
-  color: #666;
+  color: var(--color-muted);
   font-size: 0.8rem;
 }
 
@@ -211,7 +236,7 @@ path.leg-pending {
   min-height: 6rem;
   max-height: 40%;
   padding: 0 1rem 0.5rem;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid var(--color-border);
   overflow-y: auto;
 }
 
@@ -230,7 +255,7 @@ path.leg-pending {
   flex-wrap: wrap;
   column-gap: 0.75rem;
   padding: 0.25rem 0 0.25rem 0.4rem;
-  border-left: 4px solid #2e6b30;
+  border-left: 4px solid var(--color-camp);
   margin-bottom: 0.25rem;
 }
 
@@ -250,13 +275,13 @@ path.leg-pending {
 }
 
 .day-legs {
-  color: #666;
+  color: var(--color-muted);
 }
 
-.camp-toggle[aria-pressed="true"] {
-  background: #2e6b30;
-  border-color: #2e6b30;
-  color: #fff;
+.button.camp-toggle[aria-pressed="true"] {
+  border-color: var(--color-camp);
+  background: var(--color-camp);
+  color: var(--color-on-accent);
 }
 
 .camp-marker svg {
@@ -265,26 +290,15 @@ path.leg-pending {
 
 .settings-panel {
   padding: 0 1rem 1rem;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid var(--color-border);
 }
 
 .settings-panel h2 {
   font-size: 1rem;
 }
 
-.setting {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.settings-panel .number-field {
   margin-bottom: 0.75rem;
-}
-
-.setting input {
-  width: 6rem;
-}
-
-.setting input[aria-invalid="true"] {
-  outline: 2px solid #c0392b;
 }
 
 .map-loading {

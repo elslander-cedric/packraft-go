@@ -1,0 +1,40 @@
+.confirm-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  /* Above the Leaflet map's panes and controls. */
+  z-index: var(--z-overlay);
+  background: rgb(0 0 0 / 30%);
+}
+
+.confirm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: var(--z-overlay);
+  box-sizing: border-box;
+  width: 24rem;
+  max-width: calc(100vw - 2rem);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-popup);
+  transform: translate(-50%, -50%);
+}
+
+.confirm-dialog-title {
+  margin: 0 0 var(--space-1);
+  font-size: 1rem;
+}
+
+.confirm-dialog-message {
+  margin: 0 0 var(--space-3);
+  font-size: 0.9rem;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
