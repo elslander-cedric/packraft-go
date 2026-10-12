@@ -109,7 +109,7 @@ The **Arrêté du Gouvernement wallon (AGW) of 19 March 2009**, "réglementant l
 | Ourthe (Durbuy) | 1.9 m³/s | 50 m³/s |
 | Semois (Membre) | 2.2 m³/s | 50 m³/s |
 
-  **[UNVERIFIED]:** the full Annex 2 table wasn't opened.
+  The full Annex 2 table (26 stretches) is in [hydrometry.md](hydrometry.md).
 - **Temporary closures and exceptions (art. 7–8):** the minister can close stretches (for nature or works) or grant exceptions.
 - **Practical rules** ([wallonie.be, updated 23/07/2026](https://www.wallonie.be/fr/demarches/sinformer-sur-la-pratique-du-canoe-kayak-en-wallonie)):
   - about 450 km of river open in total
@@ -141,6 +141,6 @@ The **Arrêté du Gouvernement wallon (AGW) of 19 March 2009**, "réglementant l
 1. ~~Are the ports off-limits?~~ Antwerp and Ghent are confirmed (see above). Still open: the Boudewijnkanaal (Zeebrugge regulation).
 2. ~~Dates of the Flemish regulations?~~ Answered in [flanders.md](flanders.md).
 3. ~~General ban on non-navigable rivers?~~ No: they're allowed by default (BVR 7 May 2021, art. 21). Still open: whether managers have imposed any bans.
-4. What do the full Walloon Annex 1 (river list) and Annex 2 (all thresholds) say? The PDFs are linked from Wallex.
+4. ~~What do Walloon Annexes 1 and 2 say?~~ Extracted: [walloon-stretches.md](walloon-stretches.md) (Annex 1, 22 entries) and [hydrometry.md](hydrometry.md) (Annex 2).
 5. Which Walloon rivers are open only to federation members, and under which legal instrument?
 6. What is the official classification of packrafts for kayak.spw.wallonie.be's "kayaks only" status?
