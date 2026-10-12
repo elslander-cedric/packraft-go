@@ -220,7 +220,8 @@ test.describe("keyboard alone", () => {
     await page.keyboard.press("ArrowRight");
     await expect(button(page, strings.exportGpxButton)).toBeFocused();
     const [gpx] = await Promise.all([page.waitForEvent("download"), page.keyboard.press("Enter")]);
-    expect(gpx.suggestedFilename()).toMatch(/\.gpx$/);
+    // Updated: ADR 0021 (#41). Export GPX downloads a ZIP of GPX files.
+    expect(gpx.suggestedFilename()).toMatch(/\.zip$/);
     await page.keyboard.press("ArrowRight");
     await expect(button(page, strings.openFileButton)).toBeFocused();
 
