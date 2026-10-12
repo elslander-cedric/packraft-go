@@ -20,6 +20,17 @@ export function formatDuration(hours: number): string {
   return `${h} ${strings.hourUnit} ${String(min).padStart(2, "0")} ${strings.minuteUnit}`;
 }
 
+/** A day's calendar date ("YYYY-MM-DD") for display, e.g. "Sat 31 Oct 2026". Read in UTC, so it never shifts a day. */
+export function formatDayDate(date: string): string {
+  const day = new Date(`${date}T00:00:00Z`);
+  return strings.dayDate(
+    strings.weekdayNames[day.getUTCDay()],
+    day.getUTCDate(),
+    strings.monthNames[day.getUTCMonth()],
+    day.getUTCFullYear(),
+  );
+}
+
 /**
  * A time estimate for display (ADR 0009, amended): "…" while it waits for
  * routing, and marked when it counts distance only.

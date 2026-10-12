@@ -1,12 +1,17 @@
 import { useRef, type Ref } from "react";
+import { Button } from "./components/Button";
 import { Toolbar, ToolbarButton } from "./components/Toolbar";
 import { strings } from "./strings";
 
 type TripToolbarProps = {
   name: string;
+  /** The trip's start date ("YYYY-MM-DD"), or undefined for an undated trip. */
+  startDate: string | undefined;
   /** Message to show when the last file could not be opened, or null. */
   fileError: string | null;
   onRename: (name: string) => void;
+  /** Called with the chosen date, or undefined when the date is cleared. */
+  onSetStartDate: (date: string | undefined) => void;
   onNewTrip: () => void;
   onSaveFile: () => void;
   /** Null while there is nothing to export (no legs). */
@@ -20,8 +25,10 @@ type TripToolbarProps = {
 /** The trip's name and actions on the whole trip. */
 export default function TripToolbar({
   name,
+  startDate,
   fileError,
   onRename,
+  onSetStartDate,
   onNewTrip,
   onSaveFile,
   onExportGpx,
@@ -43,6 +50,20 @@ export default function TripToolbar({
           onChange={(event) => onRename(event.target.value)}
         />
       </label>
+      <div className="trip-start-date">
+        <label>
+          <span>{strings.startDateLabel}</span>
+          <input
+            type="date"
+            value={startDate ?? ""}
+            // An empty value means the field was cleared (or holds no complete date yet).
+            onChange={(event) => onSetStartDate(event.target.value || undefined)}
+          />
+        </label>
+        {startDate !== undefined && (
+          <Button onClick={() => onSetStartDate(undefined)}>{strings.clearStartDateButton}</Button>
+        )}
+      </div>
       <Toolbar label={strings.tripToolbarLabel}>
         <ToolbarButton ref={newTripButtonRef} onClick={onNewTrip} hint={strings.newTripHint}>
           {strings.newTripButton}

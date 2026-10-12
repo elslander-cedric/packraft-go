@@ -107,6 +107,25 @@ body {
   color: var(--color-muted);
 }
 
+/* The start date and its clear button share a row below the name (#52). */
+.trip-start-date {
+  display: flex;
+  flex-basis: 100%;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.trip-start-date label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.trip-start-date span {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
 .file-error {
   flex-basis: 100%;
   margin: 0;
