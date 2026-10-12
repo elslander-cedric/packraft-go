@@ -55,6 +55,11 @@ Low priority. File one if it starts to bother you.
 - [ ] `npm audit`: high-severity issues in a dev-only lint dependency (`eslint-config-next` → `braces`). Re-check when Next.js updates.
 - [ ] GitHub commits show the author's personal email; switch future commits to GitHub's noreply address if wanted.
 
+- [ ] On short screens (800 px tall), the trip totals sit below the visible legs panel; consider collapsing Settings. (from #27)
+- [ ] Day rows: "Descent" wraps to its own line; restore the tidy 2×2 figure grid. (from #27)
+- [ ] GPX: "Day 1" appears in section file names when the only camp is on the start or end point (no second day exists). (from #41)
+- [ ] GPX: where a routed leg meets an unrouted leg inside one section, the dropped join point can cause a small jump. (from #41)
+
 ## Process
 - [ ] Before v2: plan a real trip with v1 and note what's missing.
 - [x] Research access rules, routes and data sources for Flanders and Wallonia: see [docs/research/](docs/research/).
