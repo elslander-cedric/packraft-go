@@ -26,12 +26,12 @@ export type TripMapProps = {
 };
 
 // Hike legs are thin and earth-coloured, paddle legs wider and water-blue, so the mix shows at a glance.
-const legStyle: Record<LegMode, { color: string; weight: number }> = {
+export const legStyle: Record<LegMode, { color: string; weight: number }> = {
   hike: { color: "#b5491b", weight: 4 },
   paddle: { color: "#1b6fb5", weight: 6 },
 };
 
-const modeChangeStyle: Record<ModeChange["kind"], { color: string }> = {
+export const modeChangeStyle: Record<ModeChange["kind"], { color: string }> = {
   "put-in": { color: "#1a8f3a" },
   "take-out": { color: "#7a3fb5" },
 };
