@@ -175,6 +175,8 @@ export const strings = {
     tripLabel: "Your trip",
     tripEmpty: "No trip on this phone yet. Plan your trip on a computer; it shows here once it's saved in this browser.",
     readOnlyNote: "Read-only on a phone. Plan and edit trips on a computer.",
+    openFileButton: "Open trip file",
+    openFileExplanation: "Choose a trip file saved on a computer. It's stored on this phone and works offline.",
     showPositionButton: "Show my position",
     positionExplanation:
       "Your browser will ask to share your location. It's only used to show where you are on this map and never leaves your phone.",
