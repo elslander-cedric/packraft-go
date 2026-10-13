@@ -1,5 +1,6 @@
 // Save format (spec #2, ADR 0011): the trip as versioned JSON, including
 // routed results, so a restored trip needs no routing requests (ADR 0014).
+import { isCalendarDate } from "./calendarDate";
 import { tripFileName } from "./fileName";
 import type { LegRoute, RoutedPoint } from "./router";
 import { emptyTrip, type LatLng, type Leg, type LegMode, type Trip } from "./trip";
@@ -7,10 +8,11 @@ import { emptyTrip, type LatLng, type Leg, type LegMode, type Trip } from "./tri
 export const SAVE_FORMAT = "packraft-go-trip";
 /**
  * The save format's version (ADR 0011, amended): the only version the app
- * saves and the only one it opens. Version 2 added camps (#8); version 1 was
- * never used for real trips and is refused like any other version (#33).
+ * saves and the only one it opens. The format was reset for v2 (#52): version 1
+ * holds camps and the optional start date. The earlier "version 2" format is
+ * refused like any other version; there is no code to read older formats.
  */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 1;
 
 /**
  * A save that cannot be opened is either damaged or not a trip (no reason), or
@@ -36,14 +38,16 @@ const savedLeg = (leg: Leg): Leg => {
 
 /**
  * The trip as save-file text, always in the current version. Undo history is
- * not saved. `camps` (point indices) is only written when the trip has camps.
+ * not saved. `camps` (point indices) is only written when the trip has camps,
+ * `startDate` ("YYYY-MM-DD") only when the trip has one.
  */
 export function serialiseTrip(trip: Trip): string {
   const camps = trip.camps?.length ? { camps: trip.camps } : {};
+  const startDate = trip.startDate === undefined ? {} : { startDate: trip.startDate };
   return JSON.stringify({
     format: SAVE_FORMAT,
     version: SAVE_VERSION,
-    trip: { name: trip.name, points: trip.points, legs: trip.legs.map(savedLeg), ...camps },
+    trip: { name: trip.name, points: trip.points, legs: trip.legs.map(savedLeg), ...camps, ...startDate },
   });
 }
 
@@ -155,7 +159,15 @@ function readTrip(trip: Fields): Trip {
   if (legs.length !== Math.max(points.length - 1, 0)) throw invalid;
   // Without a camps list the trip has no camps.
   const camps = readCamps(trip.camps, points.length);
-  return camps.length > 0 ? { name: trip.name, points, legs, camps } : { name: trip.name, points, legs };
+  // Without a start date the trip is undated.
+  if (trip.startDate !== undefined && !isCalendarDate(trip.startDate)) throw invalid;
+  return {
+    name: trip.name,
+    points,
+    legs,
+    ...(camps.length > 0 ? { camps } : {}),
+    ...(trip.startDate === undefined ? {} : { startDate: trip.startDate }),
+  };
 }
 
 /** Camps as distinct indices of existing points, in ascending order; none when the field is absent. */

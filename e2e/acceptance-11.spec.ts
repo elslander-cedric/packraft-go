@@ -60,7 +60,8 @@ function strictXml(text: string) {
 }
 
 async function openSave(page: Page, trip: object) {
-  const text = JSON.stringify({ format: "packraft-go-trip", version: 2, trip });
+  // Updated: format reset (#52). Opened files are version 1.
+  const text = JSON.stringify({ format: "packraft-go-trip", version: 1, trip });
   const [chooser] = await Promise.all([page.waitForEvent("filechooser"), openBtn(page).click()]);
   await chooser.setFiles({ name: "t.packraft.json", mimeType: "application/json", buffer: Buffer.from(text, "utf8") });
 }

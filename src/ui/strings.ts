@@ -13,6 +13,9 @@ export const strings = {
   tripToolbarLabel: "Trip",
   tripNameLabel: "Trip name",
   tripNamePlaceholder: "Untitled trip",
+  // The trip's optional start date (#52, GLOSSARY "Start date"); days get dates from it.
+  startDateLabel: "Start date",
+  clearStartDateButton: "Clear date",
   newTripButton: "New trip",
   newTripHint: "Start an empty trip. The current trip is replaced.",
   // Asked in an in-page dialog before a trip with points is replaced (#31).
@@ -59,6 +62,10 @@ export const strings = {
   campMarker: "Camp",
   daysPanelLabel: "Days",
   dayLabel: (n: number) => `Day ${n}`,
+  // A day's calendar date from the trip's start date (#52), e.g. "Sat 31 Oct 2026".
+  dayDate: (weekday: string, day: number, month: string, year: number) => `${weekday} ${day} ${month} ${year}`,
+  weekdayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  monthNames: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   // Which legs a day covers, e.g. "Legs 1–2" or "Leg 3".
   dayLegs: (first: number, last: number) => (first === last ? `Leg ${first}` : `Legs ${first}–${last}`),
   dayHikeDistance: "Hike",

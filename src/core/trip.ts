@@ -1,5 +1,15 @@
 // Trip planner core: pure TypeScript, no React, no network (spec #2, Seam 1).
-import { canUndo, deletePoint, movePoint, setLegMode, toggleCamp, undoLastEdit, withUndoStep } from "./edits";
+import {
+  canUndo,
+  deletePoint,
+  movePoint,
+  setLegMode,
+  toggleCamp,
+  undoLastEdit,
+  withStartDate,
+  withUndoStep,
+} from "./edits";
+import { isCalendarDate, type CalendarDate } from "./calendarDate";
 import type { LegRoute } from "./router";
 
 export { canUndo };
@@ -26,6 +36,11 @@ export type Trip = {
    * Absent or empty when the trip has no camps. Use `isCamp` to read it.
    */
   readonly camps?: readonly number[];
+  /**
+   * The calendar date of the trip's first day (GLOSSARY "Start date"). Absent
+   * when the trip is undated. Day n falls on the start date + n - 1.
+   */
+  readonly startDate?: CalendarDate;
   /** The trip as it was before each edit, oldest first. Undo goes back one step. */
   readonly undoSteps?: readonly TripState[];
 };
@@ -60,6 +75,16 @@ export function newTripNeedsConfirmation(trip: Trip): boolean {
  */
 export function renameTrip(trip: Trip, name: string): Trip {
   return trip.name === name ? trip : { ...trip, name };
+}
+
+/**
+ * Sets the trip's start date, or clears it with `undefined`. Like naming, this
+ * is not an edit of the route, so it is not undone: undo keeps the current
+ * start date. Text that is not a calendar date is ignored.
+ */
+export function setStartDate(trip: Trip, date: CalendarDate | undefined): Trip {
+  if (date === trip.startDate) return trip;
+  return date === undefined || isCalendarDate(date) ? withStartDate(trip, date) : trip;
 }
 
 /** Returns a new trip with the edit applied; the input trip is not changed. */

@@ -83,7 +83,8 @@ test("#10: the saved file is exactly the autosave format, named after the trip",
   expect(file.text).toBe(await storedText(page));
   const parsed = JSON.parse(file.text);
   // Updated in round 2 of #8: the save format is now version 2 (it includes camps).
-  expect(parsed).toMatchObject({ format: "packraft-go-trip", version: 2 });
+  // Updated: format reset (#52). The save format is version 1 again.
+  expect(parsed).toMatchObject({ format: "packraft-go-trip", version: 1 });
   expect(parsed.trip).not.toHaveProperty("undoSteps");
 });
 
@@ -200,7 +201,8 @@ const INVALID: [string, string, string][] = [
   ["JSON that is not a trip", JSON.stringify({ hello: "world" }), strings.openFileInvalid],
   ["a newer version", JSON.stringify({ format: "packraft-go-trip", version: 99, trip: { name: "x", points: [], legs: [] } }), strings.openFileUnknownVersion],
   // Updated: v1 dropped (#33). Version 2, so this stays a damaged file, not an unknown version.
-  ["legs not matching points", JSON.stringify({ format: "packraft-go-trip", version: 2, trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] } }), strings.openFileInvalid],
+  // Updated: format reset (#52). Version 1, the current version.
+  ["legs not matching points", JSON.stringify({ format: "packraft-go-trip", version: 1, trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] } }), strings.openFileInvalid],
   ["a GPX file", '<?xml version="1.0"?><gpx version="1.1"><trk><name>x</name></trk></gpx>', strings.openFileInvalid],
 ];
 
@@ -228,16 +230,17 @@ for (const [label, text, message] of INVALID) {
 
 // Updated: v1 dropped (#33). A version 1 file used to open as a trip without
 // camps; now it is refused as an unknown version and the current trip stays.
-test("#10: a version 1 file is refused as an unknown version and leaves the trip and storage unchanged", async ({ page }) => {
+// Updated: format reset (#52). Version 1 is current again; the old version 2 is the one refused.
+test("#10: an old version 2 file is refused as an unknown version and leaves the trip and storage unchanged", async ({ page }) => {
   const { net } = await drawMixedTrip(page, "Keep me");
   await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").trip?.legs?.length).toBe(3);
   const storedBefore = await storedText(page);
   const calls = net.brouter.length;
-  const versionOne = JSON.stringify({
+  const versionTwo = JSON.stringify({
     format: "packraft-go-trip",
-    version: 1,
+    version: 2,
     trip: {
-      name: "From version 1",
+      name: "From version 2",
       points: [
         { lat: 50.3, lng: 5.6 },
         { lat: 50.31, lng: 5.61 },
@@ -246,7 +249,7 @@ test("#10: a version 1 file is refused as an unknown version and leaves the trip
     },
   });
 
-  await open(page, "old.packraft.json", versionOne);
+  await open(page, "old.packraft.json", versionTwo);
   await expect(page.getByRole("alert").filter({ hasText: strings.openFileUnknownVersion })).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: strings.openFileInvalid })).toHaveCount(0);
   await page.waitForTimeout(300);
