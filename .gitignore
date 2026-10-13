@@ -17,3 +17,6 @@ AGENTS.md
 
 # Agent worktrees
 .claude/worktrees/
+
+# Local OSM cache for scripts/walloon-stretches (#54)
+.cache/
