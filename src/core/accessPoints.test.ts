@@ -131,18 +131,26 @@ describe("access points format", () => {
 
 describe("access points autosave", () => {
   it("nothing stored gives no access points", () => {
-    expect(restoreStoredAccessPoints(null)).toEqual({ accessPoints: [], unknownVersion: false });
+    expect(restoreStoredAccessPoints(null)).toEqual({ accessPoints: [], unknownVersion: false, damaged: false });
   });
 
   it("restores what was stored", () => {
     expect(restoreStoredAccessPoints(serialiseAccessPoints([marked]))).toEqual({
       accessPoints: [marked],
       unknownVersion: false,
+      damaged: false,
     });
   });
 
   it("flags a save from an unknown version, so it is kept rather than overwritten", () => {
-    expect(restoreStoredAccessPoints(file([marked], 2))).toEqual({ accessPoints: [], unknownVersion: true });
+    expect(restoreStoredAccessPoints(file([marked], 2))).toEqual({ accessPoints: [], unknownVersion: true, damaged: false });
+  });
+
+  it.each([
+    ["not JSON", "{oops"],
+    ["an invalid point", file([{ ...marked, use: "launch" }])],
+  ])("flags a damaged save (%s), so it can be backed up before it is replaced", (_, stored) => {
+    expect(restoreStoredAccessPoints(stored)).toEqual({ accessPoints: [], unknownVersion: false, damaged: true });
   });
 });
 

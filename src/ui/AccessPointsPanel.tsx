@@ -35,9 +35,14 @@ export default function AccessPointsPanel({ access }: { access: AccessPointsStat
   return (
     <aside className="access-points-panel" aria-label={text.panelLabel}>
       <h2>{text.panelLabel}</h2>
-      {access.unknownVersion && (
+      {access.savingPaused && (
         <p className="access-points-warning" role="alert">
-          {text.autosaveUnknownVersion}
+          {access.savingPaused === "unknown-version" ? text.autosaveUnknownVersion : text.damagedNotBackedUp}
+        </p>
+      )}
+      {access.backupKey && (
+        <p className="access-points-warning" role="status">
+          {text.damagedBackedUp(access.backupKey)}
         </p>
       )}
       <Toolbar label={text.toolbarLabel}>

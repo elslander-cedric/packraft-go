@@ -160,17 +160,26 @@ export function parseAccessPoints(text: string): AccessPointsParseResult {
 }
 
 /**
- * The access points to start with, from browser storage, and whether storage
- * holds a save from an unknown version. Such a save should be kept, not
- * overwritten, since a newer deployment may be able to read it. Anything
- * unreadable gives no access points.
+ * The access points to start with, from browser storage, and what was wrong
+ * with the save when it could not be read:
+ * - `unknownVersion`: it is from an unknown version. Keep it, don't overwrite
+ *   it, since a newer deployment may be able to read it.
+ * - `damaged`: it is damaged or not access points. Back it up before it is
+ *   replaced (round 2 of #55): it may still hold points worth recovering.
+ * Either way the collection starts empty.
  */
-export type StoredAccessPoints = { readonly accessPoints: AccessPoints; readonly unknownVersion: boolean };
+export type StoredAccessPoints = {
+  readonly accessPoints: AccessPoints;
+  readonly unknownVersion: boolean;
+  readonly damaged: boolean;
+};
 
 export function restoreStoredAccessPoints(stored: string | null): StoredAccessPoints {
   const parsed = stored === null ? null : parseAccessPoints(stored);
-  if (parsed?.ok) return { accessPoints: parsed.accessPoints, unknownVersion: false };
-  return { accessPoints: [], unknownVersion: parsed?.reason === "unknown-version" };
+  if (parsed === null) return { accessPoints: [], unknownVersion: false, damaged: false };
+  if (parsed.ok) return { accessPoints: parsed.accessPoints, unknownVersion: false, damaged: false };
+  const unknownVersion = parsed.reason === "unknown-version";
+  return { accessPoints: [], unknownVersion, damaged: !unknownVersion };
 }
 
 // Readers below throw `invalid` on the first thing that does not fit; parseAccessPoints catches it.

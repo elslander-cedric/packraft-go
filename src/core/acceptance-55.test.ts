@@ -107,11 +107,12 @@ describe("format", () => {
     const text = JSON.stringify({ format: "packraft-go-access-points", version: v, accessPoints: [] });
     expect(parseAccessPoints(text)).toEqual({ ok: false, reason: "unknown-version" });
   });
-  it("restore: damaged -> empty, not flagged; unknown version -> flagged; null -> empty", () => {
-    expect(restoreStoredAccessPoints("{bad")).toEqual({ accessPoints: [], unknownVersion: false });
-    expect(restoreStoredAccessPoints(null)).toEqual({ accessPoints: [], unknownVersion: false });
+  // Updated: round 2 (#55). A damaged save is now flagged as damaged, so it can be backed up.
+  it("restore: damaged -> empty, flagged damaged; unknown version -> flagged; null -> empty", () => {
+    expect(restoreStoredAccessPoints("{bad")).toEqual({ accessPoints: [], unknownVersion: false, damaged: true });
+    expect(restoreStoredAccessPoints(null)).toEqual({ accessPoints: [], unknownVersion: false, damaged: false });
     expect(
       restoreStoredAccessPoints(JSON.stringify({ format: "packraft-go-access-points", version: 7, accessPoints: [] })),
-    ).toEqual({ accessPoints: [], unknownVersion: true });
+    ).toEqual({ accessPoints: [], unknownVersion: true, damaged: false });
   });
 });

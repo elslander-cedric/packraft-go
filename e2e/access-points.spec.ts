@@ -192,6 +192,43 @@ test("export, then import into a fresh profile; importing again adds no duplicat
   await fresh.close();
 });
 
+test("while saving is paused for an unknown-version save, an import says it was not saved", async ({ page }) => {
+  // Round 2 of #55: messages must not claim success while changes aren't saved.
+  const newer = JSON.stringify({ format: "packraft-go-access-points", version: 2, accessPoints: [] });
+  await serveOffline(page);
+  await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [ACCESS_POINTS_KEY, newer]);
+  await openMap(page);
+  await expect(panel(page).getByRole("alert").filter({ hasText: text.autosaveUnknownVersion })).toBeVisible();
+
+  const imported = JSON.stringify({
+    format: "packraft-go-access-points",
+    version: 1,
+    accessPoints: [
+      {
+        id: "b",
+        position: { lat: 50.6, lng: 5.6 },
+        use: "both",
+        kind: "jetty",
+        note: "",
+        checkedOnSite: null,
+        createdAt: "2026-10-12T08:00:00.000Z",
+        updatedAt: "2026-10-12T08:00:00.000Z",
+      },
+    ],
+  });
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    panel(page).getByRole("button", { name: text.importButton }).click(),
+  ]);
+  await chooser.setFiles({ name: "points.json", mimeType: "application/json", buffer: Buffer.from(imported) });
+
+  const message = text.importedNotSaved(text.notSaved["unknown-version"], 1);
+  await expect(panel(page).getByRole("alert").filter({ hasText: message })).toBeVisible();
+  await expect(panel(page)).not.toContainText(text.imported(1, 0));
+  await expect(markers(page)).toHaveCount(1);
+  expect(await page.evaluate((key) => localStorage.getItem(key), ACCESS_POINTS_KEY)).toBe(newer);
+});
+
 test("an invalid access points file is refused and leaves your points untouched", async ({ page }) => {
   await serveOffline(page);
   const middle = await openMap(page);

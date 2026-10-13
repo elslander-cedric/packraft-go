@@ -117,6 +117,21 @@ export const strings = {
     autosaveUnknownVersion:
       "Your saved access points are from a newer or unknown version of packraft-go. Reload the page to update. " +
       "They are kept; access point changes made here are not saved.",
+    // A damaged autosave is copied to a backup key before it is replaced (round 2 of #55).
+    damagedBackedUp: (key: string) =>
+      `Your saved access points were damaged and couldn't be read, so you start with none. ` +
+      `The damaged data was kept as a backup in this browser's storage, under "${key}".`,
+    damagedNotBackedUp:
+      "Your saved access points are damaged and couldn't be read or backed up. " +
+      "They are kept; access point changes made here are not saved.",
+    // While saving is paused, an import says it was not saved, never that it was.
+    notSaved: {
+      "unknown-version": "Not saved: your saved access points are from a newer or unknown version of packraft-go.",
+      damaged: "Not saved: your saved access points are damaged and are kept as they are.",
+    },
+    importedNotSaved: (notSaved: string, added: number) =>
+      `${notSaved} ${added === 1 ? "1 access point was" : `${added} access points were`} ` +
+      "added on this page only and will be lost when you reload.",
     // The marker's accessible name, e.g. "Access point: Put-in, Official aire".
     marker: (use: string, kind: string) => `Access point: ${use}, ${kind}`,
     detailsLabel: "Access point",

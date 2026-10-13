@@ -26,6 +26,9 @@ const now = () => new Date().toISOString();
 /** What the last import said: how it went, or why the file was refused. */
 export type ImportMessage = { readonly kind: "done" | "error"; readonly text: string };
 
+/** Why autosave is paused: the stored save is kept as it is. */
+export type SavingPaused = "unknown-version" | "damaged";
+
 /** Your access points and what the planner can do with them (#55, ADR 0023). */
 export type AccessPointsState = ReturnType<typeof useAccessPoints>;
 
@@ -38,8 +41,14 @@ export type AccessPointsState = ReturnType<typeof useAccessPoints>;
 export function useAccessPoints() {
   const [stored] = useState(loadStoredAccessPoints);
   const [points, setPoints] = useState<AccessPoints>(stored.accessPoints);
-  // A stored save from an unknown version is kept, not overwritten.
-  const keepStoredSave = stored.unknownVersion;
+  // Saving is paused, so the stored save is kept rather than overwritten, while
+  // it is from an unknown version, or damaged and could not be backed up.
+  const savingPaused: SavingPaused | null = stored.unknownVersion
+    ? "unknown-version"
+    : stored.damaged && stored.backupKey === null
+      ? "damaged"
+      : null;
+  const keepStoredSave = savingPaused !== null;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
   const [importMessage, setImportMessage] = useState<ImportMessage | null>(null);
@@ -65,7 +74,10 @@ export function useAccessPoints() {
     selected,
     placing,
     importMessage,
-    unknownVersion: keepStoredSave,
+    /** Why changes are not being saved, or null while they are. */
+    savingPaused,
+    /** Where a damaged save was backed up on load, or null. */
+    backupKey: stored.backupKey,
     togglePlacing: () => {
       setPlacing((current) => !current);
       setImportMessage(null);
@@ -100,7 +112,15 @@ export function useAccessPoints() {
       }
       const merged = mergeAccessPoints(points, read.accessPoints, newId);
       setPoints(merged.accessPoints);
-      setImportMessage({ kind: "done", text: strings.accessPoints.imported(merged.added, merged.alreadyThere) });
+      // Never claim an import worked while it can't be saved (round 2 of #55).
+      setImportMessage(
+        savingPaused
+          ? {
+              kind: "error",
+              text: strings.accessPoints.importedNotSaved(strings.accessPoints.notSaved[savingPaused], merged.added),
+            }
+          : { kind: "done", text: strings.accessPoints.imported(merged.added, merged.alreadyThere) },
+      );
     },
   };
 }

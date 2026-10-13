@@ -101,6 +101,16 @@ test("damaged autosave: starts empty without crashing, and is overwritten by the
   const mid = await openWith(page, "{corrupt");
   await expect(markers(page)).toHaveCount(0);
   await expect(page.getByRole("alert").filter({ hasText: text.autosaveUnknownVersion })).toHaveCount(0);
+  // Updated: round 2 (#55). The damaged save is kept under a backup key, and a notice says so,
+  // before it is replaced by an empty one.
+  const backups = await page.evaluate(() =>
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("packraft-go.access-points.backup-"))
+      .map((k) => [k, localStorage.getItem(k)]),
+  );
+  expect(backups).toHaveLength(1);
+  expect(backups[0][1]).toBe("{corrupt");
+  await expect(panel(page)).toContainText(text.damagedBackedUp(backups[0][0]!));
   // Note: the damaged save is replaced by an empty one right on load (not only on the next change), like the trip.
   expect(JSON.parse((await stored(page))!).accessPoints).toEqual([]);
   await panel(page).getByRole("button", { name: text.addButton }).click();
