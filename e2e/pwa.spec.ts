@@ -80,3 +80,18 @@ test("map tiles and routing answers are never cached", async ({ page }) => {
   const origin = new URL(page.url()).origin;
   expect(urls.filter((url) => !url.startsWith(origin))).toEqual([]);
 });
+
+test("the phone layout also opens offline after one visit", async ({ page, context }) => {
+  await page.setViewportSize({ width: 412, height: 915 });
+  await serveOffline(page);
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: strings.phone.showPositionButton })).toBeVisible();
+  await waitForServiceWorker(page);
+
+  await context.setOffline(true);
+  await page.reload();
+
+  await expect(mapRegion(page)).toBeVisible();
+  await expect(page.getByRole("button", { name: strings.phone.showPositionButton })).toBeVisible();
+  await expect(page.getByRole("region", { name: strings.phone.tripLabel })).toBeVisible();
+});

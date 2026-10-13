@@ -1,0 +1,99 @@
+/* Phone layout (#56, ADR 0023): the map on top, the position control and the
+   trip below. Touch-friendly: large tap targets, readable text. */
+.phone {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.phone-map {
+  flex: none;
+  height: 55vh;
+}
+
+.phone-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.phone-position {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.phone-position p {
+  margin: 0;
+}
+
+/* At least 44 px tall: easy to hit with a wet thumb. */
+.phone-button {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  font-size: 1rem;
+}
+
+.phone-position-explanation,
+.phone-trip-note {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.phone-position-alert {
+  color: var(--color-danger);
+}
+
+.phone-trip h2 {
+  margin: 0 0 var(--space-1);
+  font-size: 1.2rem;
+}
+
+.phone-trip h3 {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: 1rem;
+}
+
+.phone-trip p {
+  margin: 0 0 var(--space-2);
+}
+
+.phone-trip-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+
+.phone-days,
+.phone-legs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.phone-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) 0 var(--space-2) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  border-left: 4px solid transparent;
+  font-size: 0.95rem;
+}
+
+.phone-row-heading {
+  flex-basis: 100%;
+  font-weight: 600;
+}
+
+.phone-row-hike {
+  border-left-color: var(--color-hike);
+}
+
+.phone-row-paddle {
+  border-left-color: var(--color-paddle);
+  background: var(--color-paddle-tint);
+}

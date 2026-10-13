@@ -7,9 +7,9 @@ import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
 
-// A phone, minus the browser choice (which can't be set per file).
-const { defaultBrowserType: _browser, ...phone } = devices["Pixel 7"];
-test.use(phone);
+// A phone (the browser itself can't be chosen per file).
+const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
+test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const tripView = (page: Page) => page.getByRole("region", { name: strings.phone.tripLabel });
@@ -38,6 +38,7 @@ const TRIP: Trip = {
           { lat: 50.26, lng: 5.44, elevation: 200 },
           { lat: 50.27, lng: 5.45, elevation: 260 },
         ],
+        climbM: 60,
       },
     },
     {
@@ -184,7 +185,7 @@ test("a denied location permission shows an explanation and no position", async 
 
   await showPosition(page).click();
 
-  await expect(page.getByRole("alert")).toContainText(strings.phone.positionDenied);
+  await expect(page.getByRole("alert").filter({ hasText: strings.phone.positionDenied })).toBeVisible();
   await expect(positionMarker(page)).toHaveCount(0);
 });
 
