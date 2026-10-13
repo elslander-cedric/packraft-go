@@ -83,10 +83,20 @@ describe("building a water record", () => {
   });
 
   it("keeps only the part between the spec's end points", async () => {
-    const spec: WaterSpec = { ...lierSpec, between: { from: [4.5615, 51.1265], to: [4.5655, 51.1335] } };
-    const record = await waterRecord(spec, aroundLier, saved(extract("lier-nete-diversion.json")).overpass);
+    const answer = extract("lier-nete-diversion.json");
+    const whole = await waterRecord(lierSpec, aroundLier, saved(answer).overpass);
+    const wholeLine = whole.geometry.type === "LineString" ? whole.geometry.coordinates : [];
+    // Two places on the channel, a third and two thirds of the way along it.
+    const from = wholeLine[Math.floor(wholeLine.length / 3)];
+    const to = wholeLine[Math.floor((2 * wholeLine.length) / 3)];
+    const spec: WaterSpec = { ...lierSpec, between: { from, to } };
+    const record = await waterRecord(spec, aroundLier, saved(answer).overpass);
     const line = record.geometry.type === "LineString" ? record.geometry.coordinates : [];
-    expect(line.every(([, lat]) => lat >= 51.126 && lat <= 51.134)).toBe(true);
+    const near = (a: readonly number[], b: readonly number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.0005;
+    const ends = [line[0], line[line.length - 1]];
+    expect(ends.some((end) => near(end, from))).toBe(true);
+    expect(ends.some((end) => near(end, to))).toBe(true);
+    expect(line.length).toBeLessThan(wholeLine.length);
   });
 
   it("refuses to build a water with no geometry, rather than shipping an empty record", async () => {

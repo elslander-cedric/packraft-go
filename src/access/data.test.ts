@@ -92,7 +92,7 @@ describe("built-in access data", () => {
   });
 
   it.each([
-    ["the Ghent–Terneuzen canal at Zelzate", 51.2, 3.8115, "flanders-ghent-terneuzen-canal"],
+    ["the Ghent–Terneuzen canal at Zelzate", 51.195, 3.8019, "flanders-ghent-terneuzen-canal"],
     ["the Groenerei in Bruges", 51.20866, 3.2292, "flanders-bruges-reien"],
     ["the Churchilldok in the port of Antwerp", 51.2806, 4.3667, "flanders-port-antwerp"],
   ])("water on %s is forbidden", (_, lat, lng, id) => {

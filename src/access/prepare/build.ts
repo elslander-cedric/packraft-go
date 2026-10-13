@@ -31,6 +31,11 @@ export const geometryQuery = (statements: string) => `[out:json][timeout:180];\n
 const roundLine = (line: Line): Line => line.map(roundPosition);
 const roundPolygon = (polygon: Polygon): Polygon => polygon.map(roundLine);
 
+const middleOf = (ring: Line): Line[number] => [
+  ring.reduce((sum, p) => sum + p[0], 0) / ring.length,
+  ring.reduce((sum, p) => sum + p[1], 0) / ring.length,
+];
+
 function multiPolygon(polygons: Polygon[]): Geometry {
   return polygons.length === 1
     ? { type: "Polygon", coordinates: polygons[0] }
@@ -56,17 +61,17 @@ export async function regionRecord(spec: RegionSpec, overpass: Overpass): Promis
  * cut between its end points, simplified and rounded.
  */
 export async function waterRecord(spec: WaterSpec, regionArea: readonly Polygon[], overpass: Overpass): Promise<AccessRecord> {
-  const { query, shape, include, envelope, withinRelation, between, toleranceM, ...record } = spec;
+  const { query, shape, include, envelope, between, toleranceM, ...record } = spec;
   const answer = await overpass(geometryQuery(query));
   const limits = [insideAny(regionArea), ...(envelope ? [insideAny([[envelope]])] : [])];
-  if (withinRelation !== undefined) limits.push(insideAny(relationArea(answer, withinRelation)));
   const inLimits = (p: Line[number]) => limits.every((inside) => inside(p));
 
   let geometry: Geometry;
   if (shape === "areas") {
-    // An area belongs to the water when its first corner is inside the limits.
+    // An area belongs to the water when its middle (the mean of its outer corners) is inside the limits:
+    // a dock's corners often lie on the quay that edges a mapped port area.
     const areas = areasOf(answer, include ?? (() => true))
-      .filter((polygon) => inLimits(polygon[0][0]))
+      .filter((polygon) => inLimits(middleOf(polygon[0])))
       .map((polygon) => simplifyPolygon(polygon, toleranceM))
       .filter((polygon): polygon is Polygon => polygon !== null)
       .map(roundPolygon);

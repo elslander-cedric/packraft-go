@@ -102,8 +102,6 @@ export type WaterSpec = Omit<AccessRecord, "geometry" | "scope" | "researched"> 
   include?: (tags: Record<string, string>) => boolean;
   /** Keeps only the parts inside this envelope ([lng, lat] ring), drawn by hand around the place the rule names. */
   envelope?: Position[];
-  /** Keeps only areas inside this OSM area relation (e.g. a mapped port area). */
-  withinRelation?: number;
   /** Keeps only the part of the (merged) line between these two places. */
   between?: { from: Position; to: Position };
   /** Douglas–Peucker tolerance in metres. */
@@ -194,11 +192,13 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     region: "flanders",
     rule: forbidden("All pleasure boating and water recreation is banned in the docks without written permission."),
     source: sources.ghentHpv,
-    query: 'nwr["waterway"="dock"](51.03,3.70,51.25,3.90); nwr["natural"="water"](51.03,3.70,51.25,3.90); relation(17383856);',
+    query: 'nwr["waterway"="dock"](51.03,3.70,51.25,3.90); nwr["natural"="water"](51.03,3.70,51.25,3.90);',
     shape: "areas",
     include: isDock,
-    withinRelation: 17383856,
-    unverified: "The port's edge is approximated by the docks inside OpenStreetMap's port area.",
+    // The docks along the canal from the city's ring road to Zelzate, east of the Ringvaart (which stays open).
+    // OSM's own port area (relation 17383856) only covers the southern docks, so it isn't used.
+    envelope: box(3.74, 51.075, 3.86, 51.21),
+    unverified: "The port's edge is approximated by the docks mapped in OpenStreetMap.",
     toleranceM: 10,
   },
   {
