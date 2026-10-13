@@ -18,5 +18,5 @@ AGENTS.md
 # Agent worktrees
 .claude/worktrees/
 
-# OpenStreetMap answers cached by scripts/prepare-access-data.mts
+# Local OpenStreetMap caches for the data-prep scripts (#53 prepare-access-data, #54 walloon-stretches)
 /.cache/

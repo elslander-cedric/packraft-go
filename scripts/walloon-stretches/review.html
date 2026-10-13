@@ -1,0 +1,211 @@
+<!doctype html>
+<!-- Review page for the Walloon stretch end points (#54). Served by review.mts; not part of the app. -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Review: Walloon stretch end points</title>
+<link rel="stylesheet" href="/leaflet/leaflet.css" />
+<style>
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
+  aside { overflow: auto; border-right: 1px solid #ccc; padding: 12px; }
+  #map { height: 100vh; }
+  h1 { font-size: 17px; margin: 0 0 6px; }
+  .summary { margin: 0 0 10px; }
+  .summary strong { font-size: 16px; }
+  .help { color: #444; font-size: 13px; margin: 0 0 10px; }
+  .legend span { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin: 0 4px 0 10px; vertical-align: -1px; }
+  label.filter { display: block; margin: 8px 0; }
+  .stretch { border-top: 1px solid #eee; padding: 6px 0; }
+  .stretch h2 { font-size: 14px; margin: 0; cursor: pointer; }
+  .stretch h2 small { font-weight: normal; color: #555; }
+  .end { margin: 4px 0 4px 8px; padding: 4px 6px; border-left: 4px solid #999; cursor: pointer; }
+  .end.needsReview { border-color: #e67e00; background: #fff4e5; }
+  .end.confident { border-color: #2e8b57; }
+  .end.reviewed { border-color: #1f6fd1; }
+  .end .reason { color: #444; font-size: 12px; }
+  .problems { color: #b00020; font-size: 13px; }
+  .popup h3 { margin: 0 0 4px; font-size: 14px; }
+  .popup .fr { font-style: italic; }
+  .popup .reason { font-size: 12px; color: #444; margin: 4px 0; }
+  .popup button { margin: 4px 4px 0 0; padding: 4px 10px; font-size: 13px; cursor: pointer; }
+  .popup input { width: 100%; box-sizing: border-box; margin-top: 4px; }
+  .saving { position: fixed; top: 8px; right: 8px; background: #333; color: #fff; padding: 4px 10px; border-radius: 4px; display: none; z-index: 1000; }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Walloon stretch end points</h1>
+  <p class="summary" id="summary">Loading…</p>
+  <p class="help">
+    Orange points need your review. Click one to read the Annex 1 text, then
+    <b>Confirm</b> it, or <b>drag</b> it to the right place on the river and press <b>Save move</b>.
+    Every choice is saved at once to <code>docs/research/data/walloon-stretches-review.json</code>.
+    Shared points (where one stretch ends and the next starts) are reviewed once.
+  </p>
+  <div class="legend">
+    <span style="background:#e67e00"></span>needs review
+    <span style="background:#2e8b57"></span>confident
+    <span style="background:#1f6fd1"></span>reviewed
+  </div>
+  <label class="filter"><input type="checkbox" id="onlyReview" checked /> Only list stretches with points to review</label>
+  <div class="problems" id="problems"></div>
+  <div id="list"></div>
+</aside>
+<div id="map"></div>
+<div class="saving" id="saving">Saving…</div>
+<script src="/leaflet/leaflet.js"></script>
+<script>
+  const COLOURS = { needsReview: "#e67e00", confident: "#2e8b57", reviewed: "#1f6fd1" };
+  const CATEGORY_LINE = { "1.A": "#1f6fd1", "1.B": "#7b3fbf", "1.C": "#00897b" };
+  const map = L.map("map").setView([50.2, 5.5], 9);
+  L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+    maxZoom: 17,
+    attribution: "Map data © OpenStreetMap contributors, SRTM | Map style © OpenTopoMap (CC-BY-SA)",
+  }).addTo(map);
+  const layer = L.layerGroup().addTo(map);
+  const markers = new Map();
+  let state = null;
+  let openId = null;
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  async function send(decision) {
+    document.getElementById("saving").style.display = "block";
+    try {
+      const res = await fetch("/api/decision", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(decision) });
+      const next = await res.json();
+      if (!res.ok) throw new Error(next.error ?? res.statusText);
+      state = next;
+      render();
+    } catch (e) {
+      alert("Saving failed: " + e.message);
+    } finally {
+      document.getElementById("saving").style.display = "none";
+    }
+  }
+
+  function popupHtml(s, endName, end, moved) {
+    const id = `${s.id}.${endName}`;
+    const decided = state.decisions[id];
+    return `<div class="popup">
+      <h3>${esc(s.id)} ${endName === "from" ? "start" : "end"}: ${esc(s.river)} (${esc(s.category)})</h3>
+      <div class="fr">${esc(end.fr)}</div>
+      <div>${esc(end.en)}</div>
+      <div class="reason"><b>${esc(end.status)}</b>: ${esc(end.reason)}</div>
+      ${s.note ? `<div class="reason">Note: ${esc(s.note)}</div>` : ""}
+      ${moved ? `<div class="reason"><b>Moved, not saved yet.</b> It will be snapped to the river.</div>` : ""}
+      <input id="note" placeholder="Optional note (why)" />
+      ${moved ? `<button data-act="move" data-id="${id}">Save move</button>` : `<button data-act="confirm" data-id="${id}">Confirm</button>`}
+      ${moved ? `<button data-act="cancel">Cancel</button>` : ""}
+      ${decided ? `<button data-act="clear" data-id="${id}">Undo my review</button>` : ""}
+    </div>`;
+  }
+
+  function wirePopup(marker, s, endName, end) {
+    const el = marker.getPopup().getElement();
+    if (!el) return;
+    el.querySelectorAll("button").forEach((b) =>
+      b.addEventListener("click", () => {
+        const note = el.querySelector("#note")?.value.trim() || undefined;
+        const id = b.dataset.id;
+        if (b.dataset.act === "confirm") send({ id, action: "confirm", lat: end.point.lat, lng: end.point.lng, note });
+        if (b.dataset.act === "move") {
+          const p = marker.getLatLng();
+          send({ id, action: "move", lat: p.lat, lng: p.lng, note });
+        }
+        if (b.dataset.act === "clear") send({ id, action: "clear" });
+        if (b.dataset.act === "cancel") render();
+      }),
+    );
+  }
+
+  function render() {
+    layer.clearLayers();
+    markers.clear();
+    const { draft, needingReview, problems, finalWritten } = state;
+    document.getElementById("summary").innerHTML =
+      `<strong>${needingReview.length}</strong> point(s) still need review, ${draft.stretches.length} stretches.` +
+      (finalWritten ? " All points are resolved: the shipped dataset has been written." : "");
+    document.getElementById("problems").innerHTML = problems.map((p) => `<div>Problem: ${esc(p)}</div>`).join("");
+    const only = document.getElementById("onlyReview").checked;
+    const list = [];
+    for (const s of draft.stretches) {
+      L.polyline(s.line.map(([lng, lat]) => [lat, lng]), { color: CATEGORY_LINE[s.category], weight: 5, opacity: 0.8 })
+        .bindTooltip(`${s.id} ${s.river} (${s.category}, ${s.lengthKm} km)`)
+        .addTo(layer);
+      const ends = [];
+      for (const endName of ["from", "to"]) {
+        const end = s[endName];
+        const id = `${s.id}.${endName}`;
+        const shared = Boolean(end.sameAs);
+        if (!shared) {
+          const size = end.status === "needsReview" ? 20 : 14;
+          // A draggable marker drawn as a coloured dot, centred on the point.
+          const handle = L.marker([end.point.lat, end.point.lng], {
+            draggable: true,
+            title: `${id}: ${end.en}`,
+            zIndexOffset: end.status === "needsReview" ? 1000 : 0,
+            icon: L.divIcon({
+              className: "",
+              iconSize: [size, size],
+              iconAnchor: [size / 2, size / 2],
+              popupAnchor: [0, -size / 2],
+              html: `<div style="width:${size}px;height:${size}px;border-radius:50%;box-sizing:border-box;border:2px solid #fff;box-shadow:0 0 3px #000;background:${COLOURS[end.status]}"></div>`,
+            }),
+          });
+          handle.bindPopup(() => popupHtml(s, endName, end, false), { minWidth: 280 });
+          handle.on("popupopen", () => {
+            openId = id;
+            wirePopup(handle, s, endName, end);
+          });
+          handle.on("popupclose", () => {
+            if (openId === id) openId = null;
+          });
+          handle.on("dragend", () => {
+            handle.setPopupContent(popupHtml(s, endName, end, true));
+            if (handle.isPopupOpen()) wirePopup(handle, s, endName, end);
+            else handle.openPopup(); // popupopen wires the buttons
+          });
+          handle.addTo(layer);
+          markers.set(id, handle);
+        }
+        ends.push(`<div class="end ${end.status}" data-id="${shared ? end.sameAs : id}">
+          <b>${endName === "from" ? "Start" : "End"}</b>: ${esc(end.en)}${shared ? ` <i>(same point as ${esc(end.sameAs)})</i>` : ""}
+          <div class="reason">${esc(end.status)}${shared ? "" : `: ${esc(end.reason)}`}</div></div>`);
+      }
+      const toReview = ["from", "to"].some((e) => needingReview.includes(`${s.id}.${e}`));
+      if (!only || toReview)
+        list.push(`<div class="stretch"><h2 data-stretch="${s.id}">${esc(s.id)} ${esc(s.river)} <small>${esc(s.category)}, ${s.lengthKm} km</small></h2>${ends.join("")}</div>`);
+    }
+    const listEl = document.getElementById("list");
+    listEl.innerHTML = list.join("") || "<p>Nothing left to review.</p>";
+    listEl.querySelectorAll(".end").forEach((el) =>
+      el.addEventListener("click", () => {
+        const m = markers.get(el.dataset.id);
+        if (m) {
+          map.setView(m.getLatLng(), 15);
+          m.openPopup();
+        }
+      }),
+    );
+    listEl.querySelectorAll("h2").forEach((el) =>
+      el.addEventListener("click", () => {
+        const s = draft.stretches.find((x) => x.id === el.dataset.stretch);
+        map.fitBounds(s.line.map(([lng, lat]) => [lat, lng]), { padding: [30, 30] });
+      }),
+    );
+    if (openId && markers.has(openId)) markers.get(openId).openPopup();
+  }
+
+  document.getElementById("onlyReview").addEventListener("change", render);
+  fetch("/api/state")
+    .then((r) => r.json())
+    .then((s) => {
+      if (s.error) throw new Error(s.error);
+      state = s;
+      render();
+    })
+    .catch((e) => (document.getElementById("summary").textContent = "Could not load: " + e.message));
+</script>
+</body>
+</html>
