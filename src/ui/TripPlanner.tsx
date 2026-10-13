@@ -21,6 +21,7 @@ import ClientTripMap from "@/map/ClientTripMap";
 import { downloadGpxZip, downloadTripFile, readTripFile } from "@/persistence/tripFile";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
+import AccessPointsPanel from "./AccessPointsPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import DaysPanel from "./DaysPanel";
 import EditToolbar from "./EditToolbar";
@@ -28,6 +29,7 @@ import LegsPanel from "./LegsPanel";
 import SettingsPanel from "./SettingsPanel";
 import { strings } from "./strings";
 import TripToolbar from "./TripToolbar";
+import { useAccessPoints } from "./useAccessPoints";
 import { useSettings } from "./useSettings";
 
 /** The questions asked before a trip with points is replaced. */
@@ -70,6 +72,9 @@ export default function TripPlanner({ router }: { router?: Router }) {
     const changed = withSetting(settings, name, value);
     if (changed !== settings) setSettings(changed);
   };
+
+  // Your access points (#55): their own collection, apart from the trip.
+  const access = useAccessPoints();
 
   const retry = (legIndex: number) => {
     setTrip((current) => retryLeg(current, legIndex));
@@ -163,9 +168,16 @@ export default function TripPlanner({ router }: { router?: Router }) {
       <ClientTripMap
         trip={trip}
         selectedPoint={selectedPoint}
-        onMapClick={(at: LatLng) => edit({ type: "addPoint", at })}
+        // While an access point is being placed, the click places it instead of a trip point.
+        onMapClick={(at: LatLng) => (access.placing ? access.placeAt(at) : edit({ type: "addPoint", at }))}
         onPointClick={(index) => setSelectedPoint((current) => (current === index ? null : index))}
         onPointDrag={(index, to) => edit({ type: "movePoint", index, to })}
+        accessPoints={{
+          points: access.points,
+          selectedId: access.selected?.id ?? null,
+          onSelect: access.select,
+          onMove: (id, position) => access.update(id, { position }),
+        }}
       />
       <div className="sidebar">
         {keepStoredSave && (
@@ -201,6 +213,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
           onSetMode={(index, mode) => edit({ type: "setLegMode", index, mode })}
         />
         <DaysPanel days={summary.days} />
+        <AccessPointsPanel access={access} />
         {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
       </div>
       <ConfirmDialog

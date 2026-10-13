@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type ModeChange, type Trip } from "@/core/trip";
 import { strings } from "@/ui/strings";
+import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 import { baseLayer, initialMapView } from "./mapConfig";
 
 export type TripMapProps = {
@@ -23,15 +24,17 @@ export type TripMapProps = {
   onPointClick: (index: number) => void;
   /** The planner dragged an existing point and dropped it at `to`. */
   onPointDrag: (index: number, to: LatLng) => void;
+  /** Your access points (#55), drawn in their own layer. */
+  accessPoints?: AccessPointLayerProps;
 };
 
 // Hike legs are thin and earth-coloured, paddle legs wider and water-blue, so the mix shows at a glance.
-const legStyle: Record<LegMode, { color: string; weight: number }> = {
+export const legStyle: Record<LegMode, { color: string; weight: number }> = {
   hike: { color: "#b5491b", weight: 4 },
   paddle: { color: "#1b6fb5", weight: 6 },
 };
 
-const modeChangeStyle: Record<ModeChange["kind"], { color: string }> = {
+export const modeChangeStyle: Record<ModeChange["kind"], { color: string }> = {
   "put-in": { color: "#1a8f3a" },
   "take-out": { color: "#7a3fb5" },
 };
@@ -268,6 +271,7 @@ export default function TripMap(props: TripMapProps) {
         attribution={baseLayer.attribution}
       />
       <TripLayers {...props} />
+      {props.accessPoints && <AccessPointLayer {...props.accessPoints} />}
     </MapContainer>
   );
 }
