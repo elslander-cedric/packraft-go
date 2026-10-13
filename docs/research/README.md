@@ -15,3 +15,5 @@ Each document records when it was researched and links a source for every claim.
 | [data-sources.md](data-sources.md) | Which access, route and waterway data is machine-readable, and under what licence |
 
 Researched 2026-10-12, from sources the user supplied (Sport Vlaanderen, Peddelsport Vlaanderen, kayak.spw.wallonie.be) and the official sources they lead to.
+
+The stretch geometry shipped with the app is built from `data/walloon-stretches.json`, OpenStreetMap and Cedric's review decisions (`data/walloon-stretches-review.json`). How to re-run the script and the review page: see "Walloon stretch geometry" in the repo's `CLAUDE.md`.
