@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "check:brouter": "tsx scripts/check-brouter.mts"
+    "check:brouter": "tsx scripts/check-brouter.mts",
+    "prepare:access-data": "tsx scripts/prepare-access-data.mts"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",

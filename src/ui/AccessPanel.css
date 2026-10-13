@@ -1,0 +1,106 @@
+/* The access layer's controls and detail panel float over the map's top-right corner. */
+.map {
+  position: relative;
+}
+
+.access-overlay {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  /* Above Leaflet's panes and controls (z-index up to 1000). */
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  max-width: 20rem;
+  max-height: calc(100% - 3rem);
+  font-size: 0.85rem;
+}
+
+.access-controls,
+.access-detail {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popup);
+}
+
+.access-legend ul {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.access-legend li,
+.access-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.access-swatch {
+  display: inline-block;
+  width: 1.4rem;
+  height: 0.5rem;
+  border-radius: 2px;
+}
+
+.access-legend-note {
+  margin: var(--space-1) 0 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.access-detail {
+  overflow-y: auto;
+  width: 20rem;
+}
+
+.access-detail header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.access-detail h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.access-detail h4 {
+  margin: var(--space-2) 0 0;
+  font-size: 0.85rem;
+}
+
+.access-status {
+  margin: var(--space-2) 0;
+  font-weight: bold;
+}
+
+.access-reasons,
+.access-conditions {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.access-reasons > li + li {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.access-reasons p {
+  margin: var(--space-1) 0;
+}
+
+.access-source,
+.access-unverified {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.access-selected {
+  filter: drop-shadow(0 0 2px #000);
+}

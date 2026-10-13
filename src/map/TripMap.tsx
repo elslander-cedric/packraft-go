@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type ModeChange, type Trip } from "@/core/trip";
 import { strings } from "@/ui/strings";
+import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import { baseLayer, initialMapView } from "./mapConfig";
 
 export type TripMapProps = {
@@ -23,6 +24,8 @@ export type TripMapProps = {
   onPointClick: (index: number) => void;
   /** The planner dragged an existing point and dropped it at `to`. */
   onPointDrag: (index: number, to: LatLng) => void;
+  /** The access layer to draw under the trip, when it is switched on. */
+  access?: AccessLayerProps | null;
 };
 
 // Hike legs are thin and earth-coloured, paddle legs wider and water-blue, so the mix shows at a glance.
@@ -254,7 +257,7 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
 }
 
 // Imports Leaflet, which needs `window`: only load this through ClientTripMap.
-export default function TripMap(props: TripMapProps) {
+export default function TripMap({ access, ...props }: TripMapProps) {
   return (
     <MapContainer
       center={[...initialMapView.center]}
@@ -267,6 +270,7 @@ export default function TripMap(props: TripMapProps) {
         maxZoom={baseLayer.maxZoom}
         attribution={baseLayer.attribution}
       />
+      {access && <AccessLayer {...access} />}
       <TripLayers {...props} />
     </MapContainer>
   );
