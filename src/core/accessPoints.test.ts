@@ -1,7 +1,15 @@
 // Access points (#55, ADR 0023, GLOSSARY "Access point"): the planner's own
 // collection, separate from trips. Edits, the versioned format, and merge-import.
 import { describe, expect, it } from "vitest";
-import { addAccessPoint, deleteAccessPoint, updateAccessPoint, type AccessPoint } from "./accessPoints";
+import {
+  addAccessPoint,
+  deleteAccessPoint,
+  parseAccessPoints,
+  restoreStoredAccessPoints,
+  serialiseAccessPoints,
+  updateAccessPoint,
+  type AccessPoint,
+} from "./accessPoints";
 
 const T1 = "2026-10-13T08:00:00.000Z";
 const T2 = "2026-10-14T09:30:00.000Z";
@@ -60,5 +68,79 @@ describe("access point collection edits", () => {
     const points = addAccessPoint(addAccessPoint([], { id: "a", at: durbuy, now: T1 }), { id: "b", at: barvaux, now: T1 });
     expect(deleteAccessPoint(points, "a")).toEqual([points[1]]);
     expect(deleteAccessPoint(points, "zzz")).toBe(points);
+  });
+});
+
+const marked: AccessPoint = {
+  id: "a",
+  position: durbuy,
+  use: "put-in",
+  kind: "slipway",
+  note: "Park at the church",
+  checkedOnSite: "2026-10-13",
+  createdAt: T1,
+  updatedAt: T2,
+};
+const unchecked: AccessPoint = { ...marked, id: "b", position: barvaux, use: "both", kind: "jetty", note: "", checkedOnSite: null };
+
+const file = (points: unknown, version: unknown = 1) =>
+  JSON.stringify({ format: "packraft-go-access-points", version, accessPoints: points });
+
+describe("access points format", () => {
+  it("is versioned, starting at version 1, under its own format name", () => {
+    expect(JSON.parse(serialiseAccessPoints([marked]))).toEqual({
+      format: "packraft-go-access-points",
+      version: 1,
+      accessPoints: [marked],
+    });
+  });
+
+  it("round-trips every field", () => {
+    expect(parseAccessPoints(serialiseAccessPoints([marked, unchecked]))).toEqual({
+      ok: true,
+      accessPoints: [marked, unchecked],
+    });
+  });
+
+  it("ignores fields it does not know", () => {
+    const parsed = parseAccessPoints(file([{ ...marked, colour: "red" }]));
+    expect(parsed).toEqual({ ok: true, accessPoints: [marked] });
+  });
+
+  it.each([
+    ["not JSON", "{oops"],
+    ["a trip file", JSON.stringify({ format: "packraft-go-trip", version: 1, trip: {} })],
+    ["no list", file(undefined)],
+    ["a position out of range", file([{ ...marked, position: { lat: 95, lng: 5 } }])],
+    ["an unknown use", file([{ ...marked, use: "launch" }])],
+    ["an unknown kind", file([{ ...marked, kind: "beach" }])],
+    ["a note that is not text", file([{ ...marked, note: 3 }])],
+    ["an impossible checked date", file([{ ...marked, checkedOnSite: "2026-13-01" }])],
+    ["a missing id", file([{ ...marked, id: "" }])],
+    ["a repeated id", file([marked, { ...unchecked, id: "a" }])],
+    ["a timestamp that is not a time", file([{ ...marked, createdAt: "yesterday" }])],
+  ])("refuses an invalid file (%s)", (_, text) => {
+    expect(parseAccessPoints(text)).toEqual({ ok: false });
+  });
+
+  it("refuses another version as an unknown version", () => {
+    expect(parseAccessPoints(file([marked], 2))).toEqual({ ok: false, reason: "unknown-version" });
+  });
+});
+
+describe("access points autosave", () => {
+  it("nothing stored gives no access points", () => {
+    expect(restoreStoredAccessPoints(null)).toEqual({ accessPoints: [], unknownVersion: false });
+  });
+
+  it("restores what was stored", () => {
+    expect(restoreStoredAccessPoints(serialiseAccessPoints([marked]))).toEqual({
+      accessPoints: [marked],
+      unknownVersion: false,
+    });
+  });
+
+  it("flags a save from an unknown version, so it is kept rather than overwritten", () => {
+    expect(restoreStoredAccessPoints(file([marked], 2))).toEqual({ accessPoints: [], unknownVersion: true });
   });
 });

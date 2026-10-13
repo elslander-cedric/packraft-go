@@ -74,3 +74,108 @@ export function updateAccessPoint(
 export function deleteAccessPoint(points: AccessPoints, id: string): AccessPoints {
   return points.some((point) => point.id === id) ? points.filter((point) => point.id !== id) : points;
 }
+
+export const ACCESS_POINTS_FORMAT = "packraft-go-access-points";
+/**
+ * The access points format's version: its own, separate from the trip save
+ * format (ADR 0023). The only version the app writes and reads.
+ */
+export const ACCESS_POINTS_VERSION = 1;
+
+/**
+ * Access points that cannot be read are damaged or not access points (no
+ * reason), or from a version this app does not know (`unknown-version`).
+ */
+export type AccessPointsParseResult =
+  | { readonly ok: true; readonly accessPoints: AccessPoints }
+  | { readonly ok: false; readonly reason?: "unknown-version" };
+
+/** The access points as text, for browser storage and for the export file. */
+export function serialiseAccessPoints(points: AccessPoints): string {
+  return JSON.stringify({ format: ACCESS_POINTS_FORMAT, version: ACCESS_POINTS_VERSION, accessPoints: points });
+}
+
+/**
+ * Reads access points back from their text. A file is accepted or refused as a
+ * whole; fields the format does not know are ignored.
+ */
+export function parseAccessPoints(text: string): AccessPointsParseResult {
+  try {
+    const file = object(JSON.parse(text));
+    if (file.format !== ACCESS_POINTS_FORMAT || typeof file.version !== "number") throw invalid;
+    if (file.version !== ACCESS_POINTS_VERSION) return { ok: false, reason: "unknown-version" };
+    const accessPoints = list(file.accessPoints).map(readAccessPoint);
+    if (new Set(accessPoints.map((point) => point.id)).size !== accessPoints.length) throw invalid;
+    return { ok: true, accessPoints };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/**
+ * The access points to start with, from browser storage, and whether storage
+ * holds a save from an unknown version. Such a save should be kept, not
+ * overwritten, since a newer deployment may be able to read it. Anything
+ * unreadable gives no access points.
+ */
+export type StoredAccessPoints = { readonly accessPoints: AccessPoints; readonly unknownVersion: boolean };
+
+export function restoreStoredAccessPoints(stored: string | null): StoredAccessPoints {
+  const parsed = stored === null ? null : parseAccessPoints(stored);
+  if (parsed?.ok) return { accessPoints: parsed.accessPoints, unknownVersion: false };
+  return { accessPoints: [], unknownVersion: parsed?.reason === "unknown-version" };
+}
+
+// Readers below throw `invalid` on the first thing that does not fit; parseAccessPoints catches it.
+const invalid = new Error("invalid access points");
+
+type Fields = Record<string, unknown>;
+
+function object(value: unknown): Fields {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw invalid;
+  return value as Fields;
+}
+
+function list(value: unknown): unknown[] {
+  if (!Array.isArray(value)) throw invalid;
+  return value;
+}
+
+function number(value: unknown, min: number, max: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) throw invalid;
+  return value;
+}
+
+function text(value: unknown): string {
+  if (typeof value !== "string") throw invalid;
+  return value;
+}
+
+function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T {
+  if (!allowed.includes(value as T)) throw invalid;
+  return value as T;
+}
+
+function timestamp(value: unknown): Timestamp {
+  if (Number.isNaN(Date.parse(text(value)))) throw invalid;
+  return value as Timestamp;
+}
+
+function readAccessPoint(value: unknown): AccessPoint {
+  const point = object(value);
+  const position = object(point.position);
+  const id = text(point.id);
+  if (id === "") throw invalid;
+  const checkedOnSite = point.checkedOnSite ?? null;
+  if (checkedOnSite !== null && !isCalendarDate(checkedOnSite)) throw invalid;
+  return {
+    id,
+    position: { lat: number(position.lat, -90, 90), lng: number(position.lng, -180, 180) },
+    use: oneOf(point.use, accessPointUses),
+    kind: oneOf(point.kind, accessPointKinds),
+    note: text(point.note),
+    checkedOnSite,
+    createdAt: timestamp(point.createdAt),
+    updatedAt: timestamp(point.updatedAt),
+  };
+}
