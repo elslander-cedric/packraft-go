@@ -13,6 +13,9 @@ export const ANNEX_PATH = path.join(ROOT, "docs", "research", "data", "walloon-s
 export const REVIEW_PATH = path.join(ROOT, "docs", "research", "data", "walloon-stretches-review.json");
 export const FINAL_PATH = path.join(ROOT, "src", "data", "walloon-stretches.json");
 
+/** Only Cedric reviews end points (ADR 0024). */
+const REVIEWER = "Cedric";
+
 export type ReviewFile = { reviewedAt?: string; decisions: ReviewDecisions };
 
 export async function readReview(): Promise<ReviewFile> {
@@ -32,7 +35,11 @@ export async function buildDataset({ offline = false } = {}) {
   const review = await readReview();
   const osm = await loadOsmData({ offline });
   const { stretches, problems } = buildStretches({ annex, rivers: RIVERS, recipes: STRETCH_RECIPES, osm, review: review.decisions });
-  const draft = toDataset(stretches);
+  const count = Object.keys(review.decisions).length;
+  const draft = toDataset(
+    stretches,
+    review.reviewedAt && count > 0 ? { reviewedBy: REVIEWER, reviewedAt: review.reviewedAt, decisions: count } : undefined,
+  );
   const needingReview = endsNeedingReview(stretches);
   let finalPath: string | undefined;
   if (needingReview.length === 0 && problems.length === 0) {

@@ -1,0 +1,180 @@
+{
+  "decisions": {
+    "1C5c.to": {
+      "action": "confirm",
+      "lat": 50.13321,
+      "lng": 5.67826
+    },
+    "1A1.from": {
+      "action": "confirm",
+      "lat": 50.48158,
+      "lng": 5.70758
+    },
+    "1A2.from": {
+      "action": "confirm",
+      "lat": 50.22894,
+      "lng": 4.90574
+    },
+    "1A3a.to": {
+      "action": "confirm",
+      "lat": 50.16726,
+      "lng": 5.62792
+    },
+    "1A3b.to": {
+      "action": "confirm",
+      "lat": 50.35231,
+      "lng": 5.49755
+    },
+    "1A3c.to": {
+      "action": "confirm",
+      "lat": 50.62309,
+      "lng": 5.57966
+    },
+    "1A4.from": {
+      "action": "confirm",
+      "lat": 49.78794,
+      "lng": 5.22797
+    },
+    "1A4.to": {
+      "action": "confirm",
+      "lat": 49.86819,
+      "lng": 4.8487
+    },
+    "1B2a.from": {
+      "action": "confirm",
+      "lat": 50.18952,
+      "lng": 5.00842
+    },
+    "1B2a.to": {
+      "action": "confirm",
+      "lat": 50.20112,
+      "lng": 4.98603
+    },
+    "1B2b.to": {
+      "action": "confirm",
+      "lat": 50.22659,
+      "lng": 4.91148
+    },
+    "1B3.from": {
+      "action": "confirm",
+      "lat": 50.08573,
+      "lng": 4.56387
+    },
+    "1B3.to": {
+      "action": "confirm",
+      "lat": 50.0859,
+      "lng": 4.69521
+    },
+    "1B4a.from": {
+      "action": "confirm",
+      "lat": 49.73737,
+      "lng": 5.36516
+    },
+    "1B4a.to": {
+      "action": "confirm",
+      "lat": 49.71029,
+      "lng": 5.30308
+    },
+    "1B4b.to": {
+      "action": "confirm",
+      "lat": 49.70902,
+      "lng": 5.26292
+    },
+    "1C1a.to": {
+      "action": "confirm",
+      "lat": 50.38606,
+      "lng": 5.99169
+    },
+    "1C1b.from": {
+      "action": "confirm",
+      "lat": 50.28756,
+      "lng": 5.9139
+    },
+    "1C1b.to": {
+      "action": "confirm",
+      "lat": 50.37609,
+      "lng": 5.8728
+    },
+    "1C2a.to": {
+      "action": "confirm",
+      "lat": 50.07934,
+      "lng": 5.15489
+    },
+    "1C2b.from": {
+      "action": "confirm",
+      "lat": 50.12793,
+      "lng": 5.18551
+    },
+    "1C2c.from": {
+      "action": "confirm",
+      "lat": 50.05427,
+      "lng": 5.26508
+    },
+    "1C2c.to": {
+      "action": "confirm",
+      "lat": 50.13637,
+      "lng": 5.16064
+    },
+    "1C3.from": {
+      "action": "confirm",
+      "lat": 49.99906,
+      "lng": 4.93814
+    },
+    "1C3.to": {
+      "action": "confirm",
+      "lat": 50.05779,
+      "lng": 4.82855
+    },
+    "1C4a.from": {
+      "action": "confirm",
+      "lat": 49.85415,
+      "lng": 5.69976
+    },
+    "1C4a.to": {
+      "action": "confirm",
+      "lat": 49.87573,
+      "lng": 5.78257
+    },
+    "1C4b.from": {
+      "action": "confirm",
+      "lat": 50.21285,
+      "lng": 6.17263
+    },
+    "1C4b.to": {
+      "action": "confirm",
+      "lat": 50.1315,
+      "lng": 6.13856
+    },
+    "1C5a.to": {
+      "action": "confirm",
+      "lat": 50.37775,
+      "lng": 5.52034
+    },
+    "1C5b.from": {
+      "action": "confirm",
+      "lat": 50.07301,
+      "lng": 5.52377
+    },
+    "1C5b.to": {
+      "action": "confirm",
+      "lat": 50.13321,
+      "lng": 5.67826
+    },
+    "1C6a.from": {
+      "action": "confirm",
+      "lat": 49.6844,
+      "lng": 5.51323
+    },
+    "1C6b.from": {
+      "action": "confirm",
+      "lat": 49.80575,
+      "lng": 5.36249
+    },
+    "1C6b.to": {
+      "action": "confirm",
+      "lat": 49.76346,
+      "lng": 5.39605
+    }
+  },
+  "reviewedAt": "2026-10-13"
+}

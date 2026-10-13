@@ -57,17 +57,23 @@ export type WalloonStretchDataset = {
   dataset: "walloon-stretches";
   formatVersion: 1;
   researchDate: string;
+  /** Who reviewed the uncertain end points, and when (the review page, #54). */
+  review?: { reviewedBy: string; reviewedAt: string; decisions: number };
   credit: string;
   licence: string;
   sources: typeof SOURCES;
   stretches: ShippedStretch[];
 };
 
-export function toDataset(stretches: readonly DraftStretch[]): WalloonStretchDataset {
+export function toDataset(
+  stretches: readonly DraftStretch[],
+  review?: { reviewedBy: string; reviewedAt: string; decisions: number },
+): WalloonStretchDataset {
   return {
     dataset: "walloon-stretches",
     formatVersion: 1,
     researchDate: RESEARCH_DATE,
+    ...(review ? { review } : {}),
     credit: "© OpenStreetMap contributors; AGW 19 March 2009, Annexes 1 and 2",
     licence: "Geometry derived from OpenStreetMap data, ODbL 1.0",
     sources: SOURCES,
