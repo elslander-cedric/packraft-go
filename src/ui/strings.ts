@@ -188,8 +188,30 @@ export const strings = {
     positionTimeout: "Finding your position took too long. Try again.",
     positionUnsupported: "This browser can't share your location.",
   },
-  navigationRulesNotice:
-    "Check local navigation rules before paddling. packraft-go does not check whether a river may be paddled.",
+  // The disclaimer shown above the map (ADR 0024).
+  navigationRulesNotice: "Indicative only; you're responsible for checking local rules.",
+  // The access layer (#53): where paddling is allowed (GLOSSARY: Access status).
+  accessLayerToggle: "Access layer",
+  accessLegendLabel: "Access status",
+  accessState: {
+    open: "Open",
+    "closed-today": "Closed today",
+    forbidden: "Forbidden",
+    unknown: "Unknown",
+  },
+  accessLegendNote: "In Flanders, water that isn't marked is open by default.",
+  accessDetailLabel: "Access details",
+  accessDetailClose: "Close",
+  accessNoRule: "No access rules are known for this place.",
+  accessConditionsHeading: "Extra rules",
+  accessSourceLabel: "Source:",
+  accessResearched: (date: string) => `Researched ${date}`,
+  accessUnverified: (what: string) => `Not confirmed: ${what}`,
+  accessDataCredit: "Access geometry © OpenStreetMap contributors (ODbL).",
+  // Shown in the map's attribution control while the access layer is on. Contains HTML links.
+  accessAttribution:
+    'Access data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
+    '(<a href="https://opendatacommons.org/licenses/odbl/">ODbL</a>)',
   // Shown in the map's attribution control. Contains HTML links.
   mapAttribution:
     'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +

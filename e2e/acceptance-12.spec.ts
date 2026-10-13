@@ -139,7 +139,7 @@ test.describe("#12 acceptance", () => {
     expect(res.status()).toBe(200);
     const html = await res.text();
     // The notice is server-rendered; Leaflet's container is not.
-    expect(html).toContain("Check local navigation rules");
+    expect(html).toContain("Indicative only");
     expect(html).not.toContain("leaflet-container");
     expect(html).not.toMatch(/window is not defined/i);
 
@@ -161,7 +161,7 @@ test.describe("#12 acceptance", () => {
     const notice = page.getByText(strings.navigationRulesNotice);
     await expect(notice).toBeVisible();
     await expect(notice).toBeInViewport({ ratio: 1 });
-    await expect(notice).toContainText("Check local navigation rules");
+    await expect(notice).toContainText("checking local rules");
 
     const attribution = page.locator(".leaflet-control-attribution");
     await expect(attribution).toBeInViewport({ ratio: 1 });

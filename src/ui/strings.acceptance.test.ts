@@ -20,7 +20,7 @@ const components = sourceFiles(SRC).filter((f) => f.endsWith(".tsx"));
 
 describe("strings module", () => {
   it("exports the texts the skeleton shows", () => {
-    expect(strings.navigationRulesNotice).toMatch(/check local navigation rules/i);
+    expect(strings.navigationRulesNotice).toMatch(/indicative only.*checking local rules/i);
     expect(strings.mapAttribution).toContain("OpenStreetMap");
     expect(strings.mapAttribution).toContain("OpenTopoMap");
     expect(strings.mapAttribution).toContain("BRouter");
