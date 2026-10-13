@@ -126,6 +126,9 @@ export const ACCESS_POINTS_FORMAT = "packraft-go-access-points";
  */
 export const ACCESS_POINTS_VERSION = 1;
 
+/** The export file's name. The trip save files end in ".packraft.json"; this one is told apart by its name. */
+export const ACCESS_POINTS_FILE_NAME = "packraft-go-access-points.json";
+
 /**
  * Access points that cannot be read are damaged or not access points (no
  * reason), or from a version this app does not know (`unknown-version`).
