@@ -12,6 +12,7 @@ import {
   isCamp,
   newTripNeedsConfirmation,
   renameTrip,
+  setStartDate,
   type Edit,
   type LatLng,
   type Trip,
@@ -82,6 +83,10 @@ export default function TripPlanner({ router }: { router?: Router }) {
   };
   const rename = (name: string) => {
     setTrip((current) => renameTrip(current, name));
+    setFileError(null);
+  };
+  const changeStartDate = (date: string | undefined) => {
+    setTrip((current) => setStartDate(current, date));
     setFileError(null);
   };
   // A trip waiting to replace the current one until the planner answers the confirmation.
@@ -172,6 +177,8 @@ export default function TripPlanner({ router }: { router?: Router }) {
           name={trip.name}
           fileError={fileError}
           onRename={rename}
+          startDate={trip.startDate}
+          onSetStartDate={changeStartDate}
           onNewTrip={newTrip}
           onSaveFile={saveFile}
           onExportGpx={trip.legs.length > 0 ? exportGpx : null}

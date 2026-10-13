@@ -16,7 +16,8 @@ const saved = JSON.parse(serialiseTrip(trip));
 const withVersion = (version: unknown) => JSON.stringify({ ...saved, version });
 
 describe("restoring the autosave", () => {
-  it("restores a version 2 save, with nothing to keep", () => {
+  // Updated: format reset (#52). The current version is 1.
+  it("restores a version 1 save, with nothing to keep", () => {
     expect(restoreStoredTrip(serialiseTrip(trip))).toEqual({ trip, unknownVersion: false });
   });
 
@@ -24,13 +25,15 @@ describe("restoring the autosave", () => {
     expect(restoreStoredTrip(null)).toEqual({ trip: emptyTrip(), unknownVersion: false });
   });
 
-  it.each([3, 99, 1, 0, 1.5])("starts empty but flags a version %s save as an unknown version", (version) => {
+  // Updated: format reset (#52). The old version 2 is unknown; version 1 is current.
+  it.each([3, 99, 2, 0, 1.5])("starts empty but flags a version %s save as an unknown version", (version) => {
     expect(restoreStoredTrip(withVersion(version))).toEqual({ trip: emptyTrip(), unknownVersion: true });
   });
 
   it.each([
     ["unparseable text", "{corrupt"],
-    ["damaged version 2 data", JSON.stringify({ ...saved, trip: { ...saved.trip, legs: [] } })],
+    // Updated: format reset (#52). Damaged data in the current version, 1.
+    ["damaged version 1 data", JSON.stringify({ ...saved, trip: { ...saved.trip, legs: [] } })],
     ["another format", JSON.stringify({ ...saved, format: "something-else" })],
     ["a version that is not a number", withVersion("3")],
   ])("starts empty without flagging %s, which is corrupt, not newer", (_, text) => {

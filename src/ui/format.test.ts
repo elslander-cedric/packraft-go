@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { formatDistance, formatDuration, formatElevation, formatTimeEstimate } from "./format";
+import { formatDayDate, formatDistance, formatDuration, formatElevation, formatTimeEstimate } from "./format";
 import { strings } from "./strings";
+
+// Day dates (#52): a day's calendar date, written out so it reads at a glance.
+describe("formatDayDate", () => {
+  it("shows the weekday, day, month and year", () => {
+    expect(formatDayDate("2026-10-31")).toBe("Sat 31 Oct 2026");
+    expect(formatDayDate("2027-01-01")).toBe("Fri 1 Jan 2027");
+  });
+
+  it("does not shift with the time zone", () => {
+    expect(formatDayDate("2026-03-29")).toBe("Sun 29 Mar 2026");
+  });
+});
 
 describe("formatTimeEstimate", () => {
   it("shows an estimated time as hours and minutes", () => {
