@@ -107,6 +107,25 @@ export const strings = {
   legRouteFailedNoRiver:
     "No river route found between these points. Shown as a straight line; move a point onto the river or retry.",
   retryRouting: "Retry",
+  // Phone layout (#56, ADR 0023): the map, your position on request, and your trip read-only.
+  // Planning stays on a computer.
+  phone: {
+    tripLabel: "Your trip",
+    tripEmpty: "No trip on this phone yet. Plan your trip on a computer; it shows here once it's saved in this browser.",
+    readOnlyNote: "Read-only on a phone. Plan and edit trips on a computer.",
+    showPositionButton: "Show my position",
+    positionExplanation:
+      "Your browser will ask to share your location. It's only used to show where you are on this map and never leaves your phone.",
+    positionLocating: "Finding your position…",
+    // `accuracy` is formatted, e.g. "12 m".
+    positionAccuracy: (accuracy: string) => `Your position, accurate to about ${accuracy}.`,
+    positionMarker: "Your position",
+    positionDenied:
+      "Location permission was denied, so your position can't be shown. To show it, allow location for this site in your browser settings, then try again.",
+    positionUnavailable: "Your position isn't available right now. Try again in the open, away from steep valley sides.",
+    positionTimeout: "Finding your position took too long. Try again.",
+    positionUnsupported: "This browser can't share your location.",
+  },
   navigationRulesNotice:
     "Check local navigation rules before paddling. packraft-go does not check whether a river may be paddled.",
   // Shown in the map's attribution control. Contains HTML links.
