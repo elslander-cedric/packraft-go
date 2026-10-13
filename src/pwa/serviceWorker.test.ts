@@ -20,7 +20,10 @@ function loadServiceWorker() {
     skipWaiting: vi.fn(),
     clients: { claim: vi.fn() },
   };
-  vm.runInNewContext(SOURCE, { self: scope, caches: {}, fetch: vi.fn(), URL, Promise, Response });
+  // Requests never settle: these tests only look at which requests are answered.
+  const pending = () => new Promise(() => {});
+  const caches = { match: pending, open: pending, keys: pending, delete: pending };
+  vm.runInNewContext(SOURCE, { self: scope, caches, fetch: pending, URL, Promise, Response });
   return listeners;
 }
 
