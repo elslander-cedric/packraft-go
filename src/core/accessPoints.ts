@@ -3,6 +3,7 @@
 // separate from trips, so every trip can use them. Pure: ids and times are
 // passed in by the caller.
 import { isCalendarDate, type CalendarDate } from "./calendarDate";
+import { distanceKm } from "./summarise";
 import type { LatLng } from "./trip";
 
 /** Whether you get onto the water here, off it, or both. */
@@ -73,6 +74,49 @@ export function updateAccessPoint(
 /** The collection without the point `id` (unchanged when there is no such point). */
 export function deleteAccessPoint(points: AccessPoints, id: string): AccessPoints {
   return points.some((point) => point.id === id) ? points.filter((point) => point.id !== id) : points;
+}
+
+/**
+ * Imported points closer than this to one of yours, with all the same fields,
+ * are the same point: positions marked by GPS or by hand differ a little.
+ */
+export const DUPLICATE_DISTANCE_M = 5;
+
+const samePoint = (a: AccessPoint, b: AccessPoint) =>
+  a.use === b.use &&
+  a.kind === b.kind &&
+  a.note === b.note &&
+  a.checkedOnSite === b.checkedOnSite &&
+  distanceKm(a.position, b.position) * 1000 <= DUPLICATE_DISTANCE_M;
+
+/** Your access points after an import, and how many imported points were new or already there. */
+export type MergedAccessPoints = {
+  readonly accessPoints: AccessPoints;
+  readonly added: number;
+  readonly alreadyThere: number;
+};
+
+/**
+ * Merges imported access points into yours (ADR 0023: a friend's file, or your
+ * own from another device). Yours are kept as they are; each imported point is
+ * added after them unless an identical one is already there (same fields,
+ * within a few metres; ids and timestamps aside). An added point whose id is
+ * already taken gets a new one from `newId`.
+ */
+export function mergeAccessPoints(
+  yours: AccessPoints,
+  imported: AccessPoints,
+  newId: () => string,
+): MergedAccessPoints {
+  const merged = [...yours];
+  let added = 0;
+  for (const point of imported) {
+    if (merged.some((existing) => samePoint(existing, point))) continue;
+    const idTaken = merged.some((existing) => existing.id === point.id);
+    merged.push(idTaken ? { ...point, id: newId() } : point);
+    added++;
+  }
+  return { accessPoints: merged, added, alreadyThere: imported.length - added };
 }
 
 export const ACCESS_POINTS_FORMAT = "packraft-go-access-points";

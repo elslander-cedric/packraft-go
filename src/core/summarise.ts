@@ -75,7 +75,7 @@ export type TripSummary = {
 const EARTH_MEAN_RADIUS_KM = 6371.0088;
 
 /** Great-circle distance between two points (haversine formula). */
-function distanceKm(a: LatLng, b: LatLng): number {
+export function distanceKm(a: LatLng, b: LatLng): number {
   const rad = Math.PI / 180;
   const dLat = (b.lat - a.lat) * rad;
   const dLng = (b.lng - a.lng) * rad;

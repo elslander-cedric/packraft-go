@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   addAccessPoint,
   deleteAccessPoint,
+  mergeAccessPoints,
   parseAccessPoints,
   restoreStoredAccessPoints,
   serialiseAccessPoints,
@@ -142,5 +143,64 @@ describe("access points autosave", () => {
 
   it("flags a save from an unknown version, so it is kept rather than overwritten", () => {
     expect(restoreStoredAccessPoints(file([marked], 2))).toEqual({ accessPoints: [], unknownVersion: true });
+  });
+});
+
+describe("importing access points", () => {
+  let next = 0;
+  const newId = () => `new-${++next}`;
+
+  // About 3 m north of Durbuy (1e-5 degrees of latitude is about 1.1 m).
+  const nearDurbuy = { lat: durbuy.lat + 0.000027, lng: durbuy.lng };
+  // About 20 m north of Durbuy.
+  const offDurbuy = { lat: durbuy.lat + 0.00018, lng: durbuy.lng };
+
+  it("adds the imported points after your own", () => {
+    expect(mergeAccessPoints([marked], [unchecked], newId)).toEqual({
+      accessPoints: [marked, unchecked],
+      added: 1,
+      alreadyThere: 0,
+    });
+  });
+
+  it("skips a point identical to one you have, even a few metres away and with other timestamps", () => {
+    const friendsCopy = { ...marked, id: "friend-1", position: nearDurbuy, createdAt: T2, updatedAt: T2 };
+    expect(mergeAccessPoints([marked], [friendsCopy], newId)).toEqual({
+      accessPoints: [marked],
+      added: 0,
+      alreadyThere: 1,
+    });
+  });
+
+  it("re-importing your own export changes nothing", () => {
+    const parsed = parseAccessPoints(serialiseAccessPoints([marked, unchecked]));
+    if (!parsed.ok) throw new Error("export should parse");
+    expect(mergeAccessPoints([marked, unchecked], parsed.accessPoints, newId)).toEqual({
+      accessPoints: [marked, unchecked],
+      added: 0,
+      alreadyThere: 2,
+    });
+  });
+
+  it.each([
+    ["further than a few metres away", { position: offDurbuy }],
+    ["with another use", { use: "take-out" as const }],
+    ["with another kind", { kind: "official-aire" as const }],
+    ["with another note", { note: "Park by the mill" }],
+    ["with another checked date", { checkedOnSite: null }],
+  ])("keeps a point that differs: %s", (_, change) => {
+    const other = { ...marked, id: "friend-1", ...change };
+    expect(mergeAccessPoints([marked], [other], newId).accessPoints).toEqual([marked, other]);
+  });
+
+  it("gives an imported point a new id when its id is already taken by a different point", () => {
+    const clash = { ...unchecked, id: marked.id };
+    const merged = mergeAccessPoints([marked], [clash], () => "fresh");
+    expect(merged.accessPoints).toEqual([marked, { ...clash, id: "fresh" }]);
+  });
+
+  it("does not add the same point twice from one file", () => {
+    const twice = [unchecked, { ...unchecked, id: "copy" }];
+    expect(mergeAccessPoints([], twice, newId)).toMatchObject({ accessPoints: [unchecked], added: 1, alreadyThere: 1 });
   });
 });
