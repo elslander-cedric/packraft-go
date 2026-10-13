@@ -34,7 +34,6 @@ test("with the layer on, planning still works off the coloured waters; on them i
   expect(await pts.count()).toBe(afterOff);
   // Click 8px off the line.
   await page.mouse.click(at.x, at.y + 12);
-  console.log("points after off-line click", afterOff, "after 12px click", await pts.count());
   expect(afterOff).toBeGreaterThan(0);
 
   expect(network.blocked).toEqual([]);
