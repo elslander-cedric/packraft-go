@@ -27,8 +27,8 @@ export const KIWIS_STATIONS: Readonly<Record<string, string>> = {
   Martilly: "L7130",
 };
 
-/** The most likely station, not a confirmed one (ADR 0024). */
-export const ASSUMED_GAUGES: readonly string[] = ["Martelange", "Membre"];
+/** The most likely station, not a confirmed one (ADR 0024; Martinrive and Gendron added 2026-10-13). */
+export const ASSUMED_GAUGES: readonly string[] = ["Martelange", "Membre", "Martinrive", "Gendron"];
 
 /** Annex 2 gauges with no KiWIS station: flow status is unknown (ADR 0024). */
 export const GAUGES_WITHOUT_STATION: Readonly<Record<string, string>> = {

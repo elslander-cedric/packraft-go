@@ -82,9 +82,9 @@ describe("shipped Walloon stretch dataset", () => {
     expect(stretches.filter((s) => !s.gauge).map((s) => s.id)).toEqual(["1C2b"]);
   });
 
-  it("flags exactly the Martelange and Membre gauges as assumed (ADR 0024)", () => {
+  it("flags exactly the Martelange, Membre, Martinrive and Gendron gauges as assumed (ADR 0024)", () => {
     const assumed = new Set(stretches.filter((s) => s.gauge?.assumed).map((s) => s.gauge!.name));
-    expect([...assumed].sort()).toEqual(["Martelange", "Membre"]);
+    expect([...assumed].sort()).toEqual(["Gendron", "Martelange", "Martinrive", "Membre"]);
   });
 
   it("leaves no end point needing review", () => {
