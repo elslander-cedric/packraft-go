@@ -94,6 +94,53 @@ export const strings = {
   paceFactorLabel: "Hiking pace factor",
   paceFactorHint: "1.0 is Naismith's pace; 1.2 is 20% slower, 0.8 is 20% faster.",
   paddleSpeedLabel: "Paddling speed (km/h)",
+  // Your access points (#55, ADR 0023, GLOSSARY "Access point"): your own collection, apart from trips.
+  accessPoints: {
+    panelLabel: "Access points",
+    toolbarLabel: "Access point actions",
+    count: (n: number) => (n === 0 ? "No access points yet." : n === 1 ? "1 access point" : `${n} access points`),
+    addButton: "Add access point",
+    addHint: "Then click the map where you can get onto or off the water.",
+    placingHint: "Click the map to place the access point. Press Escape to cancel.",
+    exportButton: "Export points",
+    exportHint: "Download your access points as a file: a backup, or to move or share them.",
+    exportDisabledReason: "No access points to export yet.",
+    importButton: "Import points",
+    importHint: "Add the access points from a file to yours. Points you already have are not added twice.",
+    imported: (added: number, alreadyThere: number) =>
+      `Imported ${added === 1 ? "1 access point" : `${added} access points`}` +
+      (alreadyThere === 0 ? "." : `; ${alreadyThere} ${alreadyThere === 1 ? "was" : "were"} already there.`),
+    importInvalid: "This is not a packraft-go access points file, or it is damaged. Your access points are unchanged.",
+    importUnknownVersion:
+      "This access points file is from a newer or unknown version of packraft-go and can't be imported here. " +
+      "Your access points are unchanged.",
+    autosaveUnknownVersion:
+      "Your saved access points are from a newer or unknown version of packraft-go. Reload the page to update. " +
+      "They are kept; access point changes made here are not saved.",
+    // The marker's accessible name, e.g. "Access point: Put-in, Official aire".
+    marker: (use: string, kind: string) => `Access point: ${use}, ${kind}`,
+    detailsLabel: "Access point",
+    moveHint: "Drag the marker on the map to move it.",
+    useLabel: "Use",
+    uses: { "put-in": "Put-in", "take-out": "Take-out", both: "Both" },
+    kindLabel: "Kind",
+    kinds: { "official-aire": "Official aire", slipway: "Slipway", jetty: "Jetty", "informal-bank": "Informal bank" },
+    noteLabel: "Note",
+    notePlaceholder: "e.g. steep bank, park at the church",
+    checkedOnSiteLabel: "Checked on site",
+    checkedTodayButton: "Checked today",
+    notCheckedButton: "Not checked",
+    // When it was added and last changed; `date` is formatted, e.g. "Tue 13 Oct 2026".
+    added: (date: string) => `Added ${date}`,
+    changed: (date: string) => `changed ${date}`,
+    deleteButton: "Delete access point",
+    deleteConfirm: {
+      title: "Delete this access point?",
+      message: "It is removed from your access points. This can't be undone.",
+      confirm: "Delete access point",
+    },
+    closeButton: "Done",
+  },
   climbLabel: "Climb",
   descentLabel: "Descent",
   dropLabel: "Drop",
