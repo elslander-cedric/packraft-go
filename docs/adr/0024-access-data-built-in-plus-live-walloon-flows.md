@@ -21,7 +21,7 @@ v2 shows access status on the map (ADR 0022). Rules are known from the research 
 - **The 08:00 forecast rule is approximated** by the flow measured at 08:00 and labelled "based on measured flow; the official status may differ".
 - **Gauges:**
   - Wanlin (Lesse) has no matching gauge, so its flow status is unknown. Season and hours are still checked.
-  - Martelange and Membre use the most likely gauge, marked as assumed in the data.
+  - Martelange, Membre, Martinrive and Gendron use the most likely gauge, marked as assumed in the data and shown as assumed in the app. Martinrive and Gendron were added on 2026-10-13: their match to Annex 2 is also unconfirmed.
 - **A packraft is treated as a kayak** under the Walloon AGW. "Kayaks only" counts as open, and the rule for 4–10 person inflatables doesn't apply. This is our reading of the law, not an official statement.
 - **Flemish agreement stretches** (VMM): rules are shown as text (hours, water-level limits, a link). No live Flemish levels in v2.
 - **Opening hours** are shown on paddle legs as information, not checked.
