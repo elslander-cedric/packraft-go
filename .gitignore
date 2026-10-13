@@ -18,5 +18,5 @@ AGENTS.md
 # Agent worktrees
 .claude/worktrees/
 
-# Local OSM cache for scripts/walloon-stretches (#54)
-.cache/
+# Local OpenStreetMap caches for the data-prep scripts (#53 prepare-access-data, #54 walloon-stretches)
+/.cache/
