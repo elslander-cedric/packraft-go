@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- packraft-go app icon (#56): a hill (hike) above a packraft on water (paddle).
+       Full-bleed background so it also works as a maskable icon; the drawing stays
+       inside the central safe zone. -->
+  <rect width="512" height="512" fill="#1b6fb5"/>
+  <path d="M136 252 L216 156 L258 204 L294 168 L376 252 Z" fill="#b5491b"/>
+  <path d="M120 268 H392 Q392 324 336 324 H176 Q120 324 120 268 Z" fill="#ffd400"/>
+  <path d="M112 360 Q144 340 176 360 T240 360 T304 360 T368 360 T400 356" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
+</svg>

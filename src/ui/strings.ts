@@ -94,6 +94,68 @@ export const strings = {
   paceFactorLabel: "Hiking pace factor",
   paceFactorHint: "1.0 is Naismith's pace; 1.2 is 20% slower, 0.8 is 20% faster.",
   paddleSpeedLabel: "Paddling speed (km/h)",
+  // Your access points (#55, ADR 0023, GLOSSARY "Access point"): your own collection, apart from trips.
+  accessPoints: {
+    panelLabel: "Access points",
+    toolbarLabel: "Access point actions",
+    count: (n: number) => (n === 0 ? "No access points yet." : n === 1 ? "1 access point" : `${n} access points`),
+    addButton: "Add access point",
+    addHint: "Then click the map where you can get onto or off the water.",
+    placingHint: "Click the map to place the access point. Press Escape to cancel.",
+    exportButton: "Export points",
+    exportHint: "Download your access points as a file: a backup, or to move or share them.",
+    exportDisabledReason: "No access points to export yet.",
+    importButton: "Import points",
+    importHint: "Add the access points from a file to yours. Points you already have are not added twice.",
+    imported: (added: number, alreadyThere: number) =>
+      `Imported ${added === 1 ? "1 access point" : `${added} access points`}` +
+      (alreadyThere === 0 ? "." : `; ${alreadyThere} ${alreadyThere === 1 ? "was" : "were"} already there.`),
+    importInvalid: "This is not a packraft-go access points file, or it is damaged. Your access points are unchanged.",
+    importUnknownVersion:
+      "This access points file is from a newer or unknown version of packraft-go and can't be imported here. " +
+      "Your access points are unchanged.",
+    autosaveUnknownVersion:
+      "Your saved access points are from a newer or unknown version of packraft-go. Reload the page to update. " +
+      "They are kept; access point changes made here are not saved.",
+    // A damaged autosave is copied to a backup key before it is replaced (round 2 of #55).
+    damagedBackedUp: (key: string) =>
+      `Your saved access points were damaged and couldn't be read, so you start with none. ` +
+      `The damaged data was kept as a backup in this browser's storage, under "${key}".`,
+    damagedNotBackedUp:
+      "Your saved access points are damaged and couldn't be read or backed up. " +
+      "They are kept; access point changes made here are not saved.",
+    // While saving is paused, an import says it was not saved, never that it was.
+    notSaved: {
+      "unknown-version": "Not saved: your saved access points are from a newer or unknown version of packraft-go.",
+      damaged: "Not saved: your saved access points are damaged and are kept as they are.",
+    },
+    importedNotSaved: (notSaved: string, added: number) =>
+      `${notSaved} ${added === 1 ? "1 access point was" : `${added} access points were`} ` +
+      "added on this page only and will be lost when you reload.",
+    // The marker's accessible name, e.g. "Access point: Put-in, Official aire".
+    marker: (use: string, kind: string) => `Access point: ${use}, ${kind}`,
+    detailsLabel: "Access point",
+    moveHint: "Drag the marker on the map to move it.",
+    useLabel: "Use",
+    uses: { "put-in": "Put-in", "take-out": "Take-out", both: "Both" },
+    kindLabel: "Kind",
+    kinds: { "official-aire": "Official aire", slipway: "Slipway", jetty: "Jetty", "informal-bank": "Informal bank" },
+    noteLabel: "Note",
+    notePlaceholder: "e.g. steep bank, park at the church",
+    checkedOnSiteLabel: "Checked on site",
+    checkedTodayButton: "Checked today",
+    notCheckedButton: "Not checked",
+    // When it was added and last changed; `date` is formatted, e.g. "Tue 13 Oct 2026".
+    added: (date: string) => `Added ${date}`,
+    changed: (date: string) => `changed ${date}`,
+    deleteButton: "Delete access point",
+    deleteConfirm: {
+      title: "Delete this access point?",
+      message: "It is removed from your access points. This can't be undone.",
+      confirm: "Delete access point",
+    },
+    closeButton: "Done",
+  },
   climbLabel: "Climb",
   descentLabel: "Descent",
   dropLabel: "Drop",
@@ -107,6 +169,25 @@ export const strings = {
   legRouteFailedNoRiver:
     "No river route found between these points. Shown as a straight line; move a point onto the river or retry.",
   retryRouting: "Retry",
+  // Phone layout (#56, ADR 0023): the map, your position on request, and your trip read-only.
+  // Planning stays on a computer.
+  phone: {
+    tripLabel: "Your trip",
+    tripEmpty: "No trip on this phone yet. Plan your trip on a computer; it shows here once it's saved in this browser.",
+    readOnlyNote: "Read-only on a phone. Plan and edit trips on a computer.",
+    showPositionButton: "Show my position",
+    positionExplanation:
+      "Your browser will ask to share your location. It's only used to show where you are on this map and never leaves your phone.",
+    positionLocating: "Finding your position…",
+    // `accuracy` is formatted, e.g. "12 m".
+    positionAccuracy: (accuracy: string) => `Your position, accurate to about ${accuracy}.`,
+    positionMarker: "Your position",
+    positionDenied:
+      "Location permission was denied, so your position can't be shown. To show it, allow location for this site in your browser settings, then try again.",
+    positionUnavailable: "Your position isn't available right now. Try again in the open, away from steep valley sides.",
+    positionTimeout: "Finding your position took too long. Try again.",
+    positionUnsupported: "This browser can't share your location.",
+  },
   // The disclaimer shown above the map (ADR 0024).
   navigationRulesNotice: "Indicative only; you're responsible for checking local rules.",
   // The access layer (#53): where paddling is allowed (GLOSSARY: Access status).
