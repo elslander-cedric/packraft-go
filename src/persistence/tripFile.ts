@@ -7,7 +7,7 @@ import { parseTrip, saveFileName, serialiseTrip, type ParseResult } from "@/core
 import type { Trip } from "@/core/trip";
 
 /** Hands `data` to the browser as a downloaded file called `fileName`. */
-function download(data: BlobPart, fileName: string, type: string): void {
+export function download(data: BlobPart, fileName: string, type: string): void {
   const url = URL.createObjectURL(new Blob([data], { type }));
   const link = document.createElement("a");
   link.href = url;
