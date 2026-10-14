@@ -216,7 +216,6 @@ export const strings = {
     legStatusInGeneral: (state: string) => `Access in general (no start date): ${state}`,
     dayStatus: (state: string) => `Access: ${state}`,
     checkFlowOnTheDay: "Rules OK; check the flow on the day.",
-    warningsLabel: "Access warnings",
     warningKind: {
       forbidden: "Forbidden",
       closed: "Closed on this date",

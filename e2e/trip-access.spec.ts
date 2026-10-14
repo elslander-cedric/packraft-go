@@ -60,7 +60,7 @@ test("a paddle leg on a forbidden Flemish canal shows a warning with its reason;
   await expect(paddle.locator(".leg-access-status")).toHaveText(
     strings.tripAccess.legStatusOn("Sat 10 Jul 2027", strings.accessState.forbidden),
   );
-  const warning = paddle.getByRole("listitem").filter({ hasText: "Ghent–Terneuzen canal" });
+  const warning = paddle.locator(".access-warning").filter({ hasText: "Ghent–Terneuzen canal" });
   await expect(warning).toContainText(strings.tripAccess.warningKind.forbidden);
   await expect(warning).toContainText("De Vlaamse Waterweg excludes the Ghent–Terneuzen canal");
   await expect(warning.getByRole("link")).toHaveAttribute("href", /^https:\/\//);

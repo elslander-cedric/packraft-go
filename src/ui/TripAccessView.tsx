@@ -6,7 +6,8 @@ import { strings } from "./strings";
 import "./TripAccessView.css";
 
 // Access status and warnings on leg rows, day rows and the trip summary (#58).
-// Renders the core's trip access; no domain logic.
+// Renders the core's trip access; no domain logic. Warnings are paragraphs, not
+// list items, so leg and day rows keep exactly one list item each.
 
 function Swatch({ state }: { state: AccessState }) {
   return <span className="access-swatch" style={{ background: accessColours[state] }} aria-hidden="true" />;
@@ -16,7 +17,7 @@ function Swatch({ state }: { state: AccessState }) {
 function Warning({ warning, place }: { warning: AccessWarning; place?: string }) {
   const { reason } = warning;
   return (
-    <li className={`access-warning access-warning-${warning.kind}`}>
+    <p className={`access-warning access-warning-${warning.kind}`}>
       {place && <span className="access-warning-place">{`${place}: `}</span>}
       <strong>{`${strings.tripAccess.warningKind[warning.kind]}: `}</strong>
       {reason.kind === "no-rule" ? (
@@ -29,7 +30,7 @@ function Warning({ warning, place }: { warning: AccessWarning; place?: string })
           </a>
         </>
       )}
-    </li>
+    </p>
   );
 }
 
@@ -38,11 +39,11 @@ type Placed = (warning: AccessWarning) => string | undefined;
 function WarningList({ warnings, place }: { warnings: readonly AccessWarning[]; place?: Placed }) {
   if (warnings.length === 0) return null;
   return (
-    <ul className="access-warnings" aria-label={strings.tripAccess.warningsLabel}>
+    <div className="access-warnings">
       {warnings.map((warning, i) => (
         <Warning key={i} warning={warning} place={place?.(warning)} />
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -66,22 +67,22 @@ export function LegAccessView({ access }: { access: LegAccess }) {
           : strings.tripAccess.legStatusOn(formatDayDate(date), state)}
       </p>
       {generalRules.length > 0 && (
-        <ul className="leg-access-rules">
+        <div className="leg-access-rules">
           {generalRules.map((reason) => (
-            <li key={reason.recordId}>{`${reason.name}. ${reason.ruleText}`}</li>
+            <p key={reason.recordId}>{`${reason.name}. ${reason.ruleText}`}</p>
           ))}
-        </ul>
+        </div>
       )}
       {access.checkFlowOnTheDay && <p className="leg-access-flow">{strings.tripAccess.checkFlowOnTheDay}</p>}
       <WarningList warnings={access.warnings} />
       {extraRules.map((reason) => (
         <div key={reason.recordId} className="leg-access-extra">
-          <span>{`${strings.accessConditionsHeading} (${reason.name}):`}</span>
-          <ul className="access-conditions">
-            {reason.conditions?.map((condition) => (
-              <li key={condition}>{condition}</li>
-            ))}
-          </ul>
+          {reason.conditions?.length ? <span>{`${strings.accessConditionsHeading} (${reason.name}):`}</span> : null}
+          {reason.conditions?.map((condition) => (
+            <p key={condition} className="leg-access-condition">
+              {condition}
+            </p>
+          ))}
           {reason.link && (
             <a href={reason.link.url} target="_blank" rel="noreferrer">
               {reason.link.title}
