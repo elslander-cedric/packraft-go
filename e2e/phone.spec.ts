@@ -5,6 +5,7 @@ import { serialiseTrip } from "../src/core/saveFile";
 import type { Trip } from "../src/core/trip";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
+import { answerConfirmation } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
 
 // A phone (the browser itself can't be chosen per file).
@@ -187,6 +188,89 @@ test("a denied location permission shows an explanation and no position", async 
 
   await expect(page.getByRole("alert").filter({ hasText: strings.phone.positionDenied })).toBeVisible();
   await expect(positionMarker(page)).toHaveCount(0);
+});
+
+const openTripFileButton = (page: Page) => page.getByRole("button", { name: strings.phone.openFileButton });
+
+/** Chooses `content` as the trip file in the phone's file picker. */
+async function chooseTripFile(page: Page, content: string, name = "trip.packraft.json") {
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), openTripFileButton(page).click()]);
+  await chooser.setFiles({ name, mimeType: "application/json", buffer: Buffer.from(content) });
+}
+
+const OTHER_TRIP: Trip = { ...TRIP, name: "Lesse day" };
+
+test("a trip file opened on the phone is shown read-only and survives a reload", async ({ page }) => {
+  const network = await serveOffline(page);
+  await openPhone(page);
+  await expect(tripView(page)).toContainText(strings.phone.tripEmpty);
+
+  await chooseTripFile(page, serialiseTrip(TRIP));
+
+  await expect(tripView(page).getByRole("heading", { name: "Ourthe weekend" })).toBeVisible();
+  await expect(legLines(page)).toHaveCount(3);
+  await expect(tripView(page).getByRole("button")).toHaveCount(0);
+
+  await page.reload();
+  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await expect(tripView(page).getByRole("heading", { name: "Ourthe weekend" })).toBeVisible();
+  await expect(legLines(page)).toHaveCount(3);
+  expect(network.brouter).toEqual([]);
+});
+
+test("opening a trip file on a phone with a trip asks first; cancel keeps the trip, confirm replaces it", async ({
+  page,
+}) => {
+  await serveOffline(page);
+  await storeTripBeforeLoad(page, TRIP);
+  await openPhone(page);
+
+  await chooseTripFile(page, serialiseTrip(OTHER_TRIP));
+  await answerConfirmation(page, "openFile", "cancel");
+  await expect(tripView(page).getByRole("heading", { name: "Ourthe weekend" })).toBeVisible();
+
+  await chooseTripFile(page, serialiseTrip(OTHER_TRIP));
+  await answerConfirmation(page, "openFile", "confirm");
+  await expect(tripView(page).getByRole("heading", { name: "Lesse day" })).toBeVisible();
+  await page.reload();
+  await expect(tripView(page).getByRole("heading", { name: "Lesse day" })).toBeVisible();
+});
+
+test("an invalid or unknown-version file gives the error and leaves the phone's trip untouched", async ({ page }) => {
+  await serveOffline(page);
+  await storeTripBeforeLoad(page, TRIP);
+  await openPhone(page);
+  const before = await page.evaluate((key) => localStorage.getItem(key), TRIP_KEY);
+
+  await chooseTripFile(page, "this is not a trip");
+  await expect(page.getByRole("alert").filter({ hasText: strings.openFileInvalid })).toBeVisible();
+
+  const future = JSON.stringify({ ...JSON.parse(serialiseTrip(OTHER_TRIP)), version: 999 });
+  await chooseTripFile(page, future);
+  await expect(page.getByRole("alert").filter({ hasText: strings.openFileUnknownVersion })).toBeVisible();
+
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(tripView(page).getByRole("heading", { name: "Ourthe weekend" })).toBeVisible();
+  expect(await page.evaluate((key) => localStorage.getItem(key), TRIP_KEY)).toBe(before);
+});
+
+test("a phone held sideways keeps the phone layout", async ({ page }) => {
+  await page.setViewportSize({ width: 863, height: 360 });
+  await serveOffline(page);
+  await openPhone(page);
+  await expect(showPosition(page)).toBeVisible();
+  await expect(page.getByRole("button", { name: strings.newTripButton })).toHaveCount(0);
+});
+
+test.describe("a desktop window of a similar size", () => {
+  test.use({ viewport: { width: 863, height: 360 }, isMobile: false, hasTouch: false });
+
+  test("still gets the desktop planner", async ({ page }) => {
+    await serveOffline(page);
+    await page.goto("/");
+    await expect(page.getByRole("button", { name: strings.newTripButton })).toBeVisible();
+    await expect(showPosition(page)).toHaveCount(0);
+  });
 });
 
 test("a wide screen still gets the desktop planner", async ({ page }) => {
