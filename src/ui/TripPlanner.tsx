@@ -36,7 +36,7 @@ import { strings } from "./strings";
 import { TripAccessSummary } from "./TripAccessView";
 import TripToolbar from "./TripToolbar";
 import { useAccessPoints } from "./useAccessPoints";
-import { localToday, useAccessRules } from "./useAccessRules";
+import { localToday, useAccessRules, useBuiltInLocks } from "./useAccessRules";
 import { useWalloonFlows } from "./useWalloonFlows";
 import { useSettings } from "./useSettings";
 
@@ -185,14 +185,16 @@ export default function TripPlanner({ router }: { router?: Router }) {
 
   const summary = summarise(trip, settings ?? defaultSettings);
   // Access status and warnings on paddle legs (#58): the rules load once the trip has a paddle leg.
-  const rules = useAccessRules(trip.legs.some((leg) => leg.mode === "paddle"));
+  const hasPaddle = trip.legs.some((leg) => leg.mode === "paddle");
+  const rules = useAccessRules(hasPaddle);
+  const locks = useBuiltInLocks(hasPaddle) ?? undefined; // Lock warnings (#60).
   const today = localToday();
-  const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today }) : null), [trip, rules, today]);
+  const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today, locks }) : null), [trip, rules, today, locks]);
   // Paddle legs dated today use the live Walloon flows (#61), asked for only when there are some.
   const flows = useWalloonFlows(rules, rulesAccess?.legs.some((leg) => leg?.date === today) ?? false);
   const waterAccess = useMemo(
-    () => (rules && flows ? tripAccess(trip, rules, { today, flows }) : rulesAccess),
-    [trip, rules, today, flows, rulesAccess],
+    () => (rules && flows ? tripAccess(trip, rules, { today, flows, locks }) : rulesAccess),
+    [trip, rules, today, flows, locks, rulesAccess],
   );
   const aire = useMemo(() => (rules ? aireWarnings(trip, rules, access.points) : []), [trip, rules, access.points]);
   const confirmation = confirmations[question];

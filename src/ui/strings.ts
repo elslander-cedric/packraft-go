@@ -262,6 +262,8 @@ export const strings = {
     summaryLabel: "Access summary",
     summaryCount: (n: number) => (n === 1 ? "1 access warning" : `${n} access warnings`),
     summaryNone: "No access warnings.",
+    // Lock warning (#60): the lock's name is the lock's own, from the data.
+    lockWarning: (name: string) => `Lock at ${name}: portage required.`,
     neverBlocks: "Warnings are information only: you can still plan, save and export.",
   },
   // Live Walloon flows on a stretch for today (#61, ADR 0024).
