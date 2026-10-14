@@ -7,6 +7,7 @@ import { summarise } from "@/core/summarise";
 import { AccessDetailPanel, AccessLayerControls, LockDetailPanel, type AccessTripDay } from "@/ui/AccessPanel";
 import { strings } from "@/ui/strings";
 import { localToday, useAccessRules, useBuiltInLocks } from "@/ui/useAccessRules";
+import { useWalloonFlows } from "@/ui/useWalloonFlows";
 import type { TripMapProps } from "./TripMap";
 
 // Leaflet touches `window` on import, so the map is never rendered on the server.
@@ -23,7 +24,13 @@ export default function ClientTripMap(props: Omit<TripMapProps, "access">) {
   // The date the layer is for: today unless the planner picks another (#59).
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const date = pickedDate ?? localToday();
-  const features = useMemo(() => (rules ? accessFeatures(rules, { date, today: localToday() }) : []), [rules, date]);
+  const today = localToday();
+  // Live Walloon flows (#61), only while the layer shows today.
+  const flows = useWalloonFlows(rules, accessOn && date === today);
+  const features = useMemo(
+    () => (rules ? accessFeatures(rules, { date, today, ...(flows && { flows }) }) : []),
+    [rules, date, today, flows],
+  );
   const tripDays = useMemo<AccessTripDay[]>(
     () =>
       props.trip.startDate === undefined

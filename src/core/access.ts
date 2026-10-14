@@ -2,6 +2,7 @@
 // Pure evaluation over rule data that is passed in, like the router: the core
 // never loads data, calls a network or reads a clock.
 import { agwDay, agwHoursTable, type AgwCategory, type AgwClosure } from "./agw";
+import { flowCheck, type FlowFigures, type FlowReadings, type FlowUnknown, type FlowVerdict } from "./flow";
 import {
   boundsOf,
   insideArea,
@@ -121,7 +122,12 @@ export type AccessContext = {
   readonly date?: string;
   /** Today's date, YYYY-MM-DD, when known: flow readings only apply to today, not to later dates. */
   readonly today?: string;
+  /** Today's live flow readings (#61), once asked for; they only apply when `date` is `today`. */
+  readonly flows?: FlowReadings;
 };
+
+/** Why a Walloon stretch is closed on a date: the calendar (AGW art. 4), or today's flow (art. 6). */
+export type AccessClosure = AgwClosure | "low-flow" | "high-flow";
 
 /** Why a piece of water has its status. */
 export type AccessReason =
@@ -138,10 +144,12 @@ export type AccessReason =
       readonly unverified?: string;
       /** Walloon stretches: the AGW category. */
       readonly category?: AgwCategory;
-      /** Walloon stretches closed today: because of the season or a fishing opening day. */
-      readonly closedBy?: AgwClosure;
+      /** Walloon stretches closed today: because of the season, a fishing opening day, or the flow. */
+      readonly closedBy?: AccessClosure;
       /** The rule's state also depends on flow (see `AccessRule.flowDependent`). */
       readonly flowDependent?: true;
+      /** Walloon stretches on today's date: the live flow figures behind the status (#61). */
+      readonly flow?: FlowFigures;
     }
   /** The place is outside every region with rules. */
   | { readonly kind: "no-rule"; readonly state: "unknown" };
@@ -193,26 +201,48 @@ export function evaluateRecord(record: AccessRecord, context: AccessContext): Ac
 const MONTH_SEASON = "Category 1.C stretches may be paddled only from 1 October to 15 March.";
 const FISHING_DAYS = "the fishing opening days (3rd Saturday of March, 1st Saturday of June)";
 
-/** A Walloon stretch's status on a date: season, fishing opening days and hours (AGW art. 4). */
+const KAYAK_PAGE = "check today's official status on kayak.spw.wallonie.be";
+
+const m3s = (value: number) => `${value} m³/s`;
+
+/** Why today's flow can't decide, in one sentence. */
+const flowUnknownText: Record<FlowUnknown, string> = {
+  "no-gauge": "Flow unknown: no gauge matches this stretch, so its flow limits can't be checked",
+  failed: "Flow unknown: the live flow service is unavailable",
+  missing: "Flow unknown: the live flow service has no recent readings for this stretch's gauge",
+  stale: "Flow unknown: the 72-hour mean flow isn't from today",
+  "not-measured-yet": "Flow unknown: today's 08:00 flow isn't measured yet",
+};
+
+/**
+ * A Walloon stretch's status on a date: season, fishing opening days and hours
+ * (AGW art. 4), and on today's date the live flow (art. 6, #61).
+ */
 function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext): AccessStatus {
   const { category } = rule;
-  const { date } = context;
+  const { date, today } = context;
   const day = date === undefined ? undefined : agwDay(category, date);
   const hours = day
     ? [`Permitted hours on ${date}: ${day.hours.from}-${day.hours.to}`]
     : agwHoursTable(category).map((p) => `Permitted hours ${p.period}: ${p.from}-${p.to}`);
-  const flow = [
-    rule.minM3s !== null && `minimum ${rule.minM3s} m³/s (72-hour mean)`,
-    `maximum ${rule.maxM3s} m³/s`,
+  const limits = [
+    rule.minM3s !== null && `minimum ${m3s(rule.minM3s)} (72-hour mean)`,
+    `maximum ${m3s(rule.maxM3s)}`,
   ].filter(Boolean);
+  // Flow is only known for today.
+  const verdict: FlowVerdict =
+    date !== undefined && date === today ? flowCheck(rule, context.flows, today) : { kind: "not-checked" };
+  const figures = verdict.kind === "not-checked" ? undefined : verdict.figures;
   const conditions = [
     ...hours,
-    `Flow limits (not checked yet): ${flow.join(", ")}.`,
+    figures
+      ? `Flow limits: ${limits.join(", ")}.`
+      : `Flow limits (checked for today only, with live flows): ${limits.join(", ")}.`,
     "Get in and out only at the designated aires.",
   ];
 
   let state: AccessState = "open";
-  let closedBy: AgwClosure | undefined;
+  let closedBy: AccessClosure | undefined;
   let ruleText: string;
   if (day?.closure === "season") {
     state = "closed-today";
@@ -222,6 +252,17 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     state = "closed-today";
     closedBy = "fishing-day";
     ruleText = `Closed today: fishing opening day. Category ${category} stretches are closed on ${FISHING_DAYS}.`;
+  } else if (verdict.kind === "low") {
+    state = "closed-today";
+    closedBy = "low-flow";
+    ruleText = `Closed today: low flow. The 72-hour mean flow (${m3s(verdict.figures.mean72h!.m3s)}) is below the minimum of ${m3s(rule.minM3s!)}.`;
+  } else if (verdict.kind === "high") {
+    state = "closed-today";
+    closedBy = "high-flow";
+    ruleText = `Closed today: high flow. The flow at 08:00 (${m3s(verdict.figures.at8!.m3s)}) is above the maximum of ${m3s(rule.maxM3s)}: based on measured flow; the official status may differ.`;
+  } else if (verdict.kind === "unknown") {
+    state = "unknown";
+    ruleText = `${flowUnknownText[verdict.why]}; ${KAYAK_PAGE}.`;
   } else if (category === "1.A") {
     ruleText = "Category 1.A (navigable): open all year, within the permitted hours.";
   } else if (category === "1.B") {
@@ -245,6 +286,9 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     ...(record.unverified && { unverified: record.unverified }),
     category,
     ...(closedBy && { closedBy }),
+    // Every stretch has flow limits: on a later date the flow decides on the day.
+    flowDependent: true,
+    ...(figures && { flow: figures }),
   };
   return { state, reasons: [reason] };
 }

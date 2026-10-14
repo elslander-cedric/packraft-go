@@ -10,6 +10,7 @@ import {
   type AccessStatus,
 } from "./access";
 import { addDays, type CalendarDate } from "./calendarDate";
+import type { FlowReadings } from "./flow";
 import { dayRanges } from "./summarise";
 import type { LatLng, Trip } from "./trip";
 
@@ -100,6 +101,8 @@ export type DayAccess = AccessSummary & {
 export type TripAccessOptions = {
   /** Today's date, YYYY-MM-DD: later dates are in the future. */
   readonly today: CalendarDate;
+  /** Today's live flow readings (#61), once known: legs dated today use them. */
+  readonly flows?: FlowReadings;
 };
 
 /** The line a leg covers: its routed geometry, or a straight line when routing failed. */
@@ -133,7 +136,7 @@ function legAccess(when: When, status: AccessStatus, today: CalendarDate): LegAc
 }
 
 /** Access status and warnings for every paddle leg, day and the whole trip. */
-export function tripAccess(trip: Trip, rules: AccessRules, { today }: TripAccessOptions): TripAccess {
+export function tripAccess(trip: Trip, rules: AccessRules, { today, flows }: TripAccessOptions): TripAccess {
   const legs: (LegAccess | undefined)[] = trip.legs.map(() => undefined);
   const days = dayRanges(trip).map(([first, last], day): DayAccess => {
     const date = trip.startDate === undefined ? undefined : addDays(trip.startDate, day);
@@ -142,7 +145,7 @@ export function tripAccess(trip: Trip, rules: AccessRules, { today }: TripAccess
       if (trip.legs[leg].mode !== "paddle") continue;
       const line = legLine(trip, leg);
       if (!line) continue;
-      const status = accessAlong(line, rules, date === undefined ? { today } : { date, today });
+      const status = accessAlong(line, rules, { ...(date !== undefined && { date }), today, ...(flows && { flows }) });
       dayLegs.push((legs[leg] = legAccess({ leg, day, ...(date !== undefined && { date }) }, status, today)));
     }
     return { day, ...(date !== undefined && { date }), ...summary(dayLegs) };
