@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AccessRules } from "@/core/access";
+import type { AccessRules, LockMarker } from "@/core/access";
 import type { CalendarDate } from "@/core/calendarDate";
 
 /** Today's local date, YYYY-MM-DD (the planner's own calendar day, not UTC's). */
@@ -27,4 +27,20 @@ export function useAccessRules(wanted: boolean): AccessRules | null {
     };
   }, [wanted, rules]);
   return rules;
+}
+
+/** The built-in lock markers of Flanders and Brussels (#57), loaded the first time they are wanted. */
+export function useBuiltInLocks(wanted: boolean): readonly LockMarker[] | null {
+  const [locks, setLocks] = useState<readonly LockMarker[] | null>(null);
+  useEffect(() => {
+    if (!wanted || locks) return;
+    let cancelled = false;
+    void import("@/access/builtInRules").then(({ builtInLocks }) => {
+      if (!cancelled) setLocks(builtInLocks.locks);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wanted, locks]);
+  return locks;
 }
