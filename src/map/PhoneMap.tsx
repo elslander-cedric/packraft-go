@@ -25,9 +25,8 @@ function MapView({ trip, position }: PhoneMapProps) {
   const map = useMap();
   useEffect(() => {
     if (trip.points.length > 0) map.fitBounds(latLngBounds(trip.points.map((p) => [p.lat, p.lng])), { padding: [24, 24] });
-    // Only on opening: later the map is the user's to move.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map]);
+    // On opening and when another trip is opened; otherwise the map is the user's to move.
+  }, [map, trip]);
   const centred = useRef(false);
   useEffect(() => {
     if (!position) {
