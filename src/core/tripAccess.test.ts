@@ -211,6 +211,7 @@ describe("per-day and trip summaries", () => {
     expect(tripAccess(hikeOnly, flanders, { today: "2026-10-14" }).trip).toEqual({
       warnings: [],
       notes: [],
+      lockWarnings: [],
       legsWithoutRules: 0,
     });
   });

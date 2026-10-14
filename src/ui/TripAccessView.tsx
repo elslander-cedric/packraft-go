@@ -1,5 +1,6 @@
 import type { AccessState } from "@/core/access";
 import type { AireWarning } from "@/core/aire";
+import type { LockWarning } from "@/core/locks";
 import type { AccessNote, AccessSummary, AccessWarning, DayAccess, LegAccess } from "@/core/tripAccess";
 import { accessColours } from "@/map/accessColours";
 import { FlowFiguresView } from "./FlowFiguresView";
@@ -59,7 +60,26 @@ function LegsWithoutRules({ count }: { count: number }) {
   return <p className="access-note access-note-count">{strings.tripAccess.legsWithoutRules(count)}</p>;
 }
 
-type Placed = (warning: AccessWarning) => string | undefined;
+/** Lock warnings (#60): "lock at X: portage required", with the region's rule source. Never blocks. */
+export function LockWarnings({ warnings, place }: { warnings: readonly LockWarning[]; place?: Placed2 }) {
+  if (warnings.length === 0) return null;
+  return (
+    <div className="access-warnings lock-warnings">
+      {warnings.map(({ lock, ...when }) => (
+        <p key={`${when.leg}-${lock.id}`} className="access-warning access-warning-lock">
+          {place && <span className="access-warning-place">{`${place(when)}: `}</span>}
+          <strong>{strings.tripAccess.lockWarning(lock.name)}</strong>{" "}
+          <a href={lock.source.url} target="_blank" rel="noreferrer">
+            {lock.source.title}
+          </a>
+        </p>
+      ))}
+    </div>
+  );
+}
+type Placed2 = (when: { leg: number; day: number }) => string | undefined;
+
+type Placed =(warning: AccessWarning) => string | undefined;
 
 function WarningList({ warnings, place }: { warnings: readonly AccessWarning[]; place?: Placed }) {
   if (warnings.length === 0) return null;
@@ -100,6 +120,7 @@ export function LegAccessView({ access }: { access: LegAccess }) {
       )}
       {access.checkFlowOnTheDay && <p className="leg-access-flow">{strings.tripAccess.checkFlowOnTheDay}</p>}
       <WarningList warnings={access.warnings} />
+      <LockWarnings warnings={access.lockWarnings} />
       {access.notes.map((note, i) => (
         <Note key={i} note={note} />
       ))}
@@ -135,6 +156,7 @@ export function DayAccessView({ access }: { access: DayAccess }) {
         {strings.tripAccess.dayStatus(strings.accessState[access.state])}
       </span>
       <WarningList warnings={access.warnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
+      <LockWarnings warnings={access.lockWarnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
       <LegsWithoutRules count={access.legsWithoutRules} />
     </div>
   );
@@ -161,8 +183,8 @@ export function AireWarnings({ warnings, showPlace }: { warnings: readonly AireW
 /** The trip's access summary: every warning, and that none of them blocks anything. */
 export function TripAccessSummary({ access, aire = [] }: { access: AccessSummary; aire?: readonly AireWarning[] }) {
   if (access.state === undefined && aire.length === 0) return null;
-  const { warnings } = access;
-  const count = warnings.length + aire.length;
+  const { warnings, lockWarnings } = access;
+  const count = warnings.length + lockWarnings.length + aire.length;
   return (
     <section className="trip-access" aria-label={strings.tripAccess.summaryLabel}>
       <h2>{strings.tripAccess.summaryLabel}</h2>
@@ -171,6 +193,7 @@ export function TripAccessSummary({ access, aire = [] }: { access: AccessSummary
         {count === 0 ? strings.tripAccess.summaryNone : strings.tripAccess.summaryCount(count)}
       </p>
       <WarningList warnings={warnings} place={(w) => strings.tripAccess.warningPlace(w.day + 1, w.leg + 1)} />
+      <LockWarnings warnings={lockWarnings} place={(w) => strings.tripAccess.warningPlace(w.day + 1, w.leg + 1)} />
       <AireWarnings warnings={aire} showPlace />
       <LegsWithoutRules count={access.legsWithoutRules} />
       <p className="trip-access-note">{strings.tripAccess.neverBlocks}</p>

@@ -8,9 +8,11 @@ import {
   type AccessRules,
   type AccessState,
   type AccessStatus,
+  type LockMarker,
 } from "./access";
 import { addDays, type CalendarDate } from "./calendarDate";
 import type { FlowReadings } from "./flow";
+import { locksOnLine, type LockWarning } from "./locks";
 import { dayRanges } from "./summarise";
 import type { LatLng, Trip } from "./trip";
 
@@ -28,6 +30,8 @@ export type LegAccess = {
   readonly warnings: readonly AccessWarning[];
   /** Water on this leg with no known rules. A gentle note, never a warning (#78). */
   readonly notes: readonly AccessNote[];
+  /** Locks this leg passes: portage required (#60). Real warnings, kept apart from the water's own. */
+  readonly lockWarnings: readonly LockWarning[];
 };
 
 /**
@@ -86,6 +90,8 @@ export type AccessSummary = {
   readonly warnings: readonly AccessWarning[];
   /** The notes of these legs, in leg order. */
   readonly notes: readonly AccessNote[];
+  /** Lock warnings of these legs, in leg order (#60). Counted as warnings in summaries. */
+  readonly lockWarnings: readonly LockWarning[];
   /** How many of these legs have water without known rules. */
   readonly legsWithoutRules: number;
 };
@@ -103,6 +109,8 @@ export type TripAccessOptions = {
   readonly today: CalendarDate;
   /** Today's live flow readings (#61), once known: legs dated today use them. */
   readonly flows?: FlowReadings;
+  /** Lock markers (#57): a paddle leg passing one gets a lock warning (#60). */
+  readonly locks?: readonly LockMarker[];
 };
 
 /** The line a leg covers: its routed geometry, or a straight line when routing failed. */
@@ -120,7 +128,12 @@ type When = Pick<LegAccess, "leg" | "day" | "date">;
  * water can only be "rules OK; check flow on the day", unless the leg is
  * forbidden or closed anyway.
  */
-function legAccess(when: When, status: AccessStatus, today: CalendarDate): LegAccess {
+function legAccess(
+  when: When,
+  status: AccessStatus,
+  today: CalendarDate,
+  lockWarnings: readonly LockWarning[],
+): LegAccess {
   const warnings = status.reasons.flatMap((reason): AccessWarning[] => {
     const kind = warningKind[reason.state];
     return kind ? [{ kind, ...when, reason }] : [];
@@ -132,11 +145,11 @@ function legAccess(when: When, status: AccessStatus, today: CalendarDate): LegAc
     ? status.reasons.filter((reason) => reason.kind === "rule" && reason.flowDependent && reason.state === "open")
     : [];
   for (const reason of flowReasons) warnings.push({ kind: "check-flow", ...when, reason });
-  return { ...when, status, checkFlowOnTheDay: flowReasons.length > 0, warnings, notes };
+  return { ...when, status, checkFlowOnTheDay: flowReasons.length > 0, warnings, notes, lockWarnings };
 }
 
 /** Access status and warnings for every paddle leg, day and the whole trip. */
-export function tripAccess(trip: Trip, rules: AccessRules, { today, flows }: TripAccessOptions): TripAccess {
+export function tripAccess(trip: Trip, rules: AccessRules, { today, flows, locks = [] }: TripAccessOptions): TripAccess {
   const legs: (LegAccess | undefined)[] = trip.legs.map(() => undefined);
   const days = dayRanges(trip).map(([first, last], day): DayAccess => {
     const date = trip.startDate === undefined ? undefined : addDays(trip.startDate, day);
@@ -146,7 +159,9 @@ export function tripAccess(trip: Trip, rules: AccessRules, { today, flows }: Tri
       const line = legLine(trip, leg);
       if (!line) continue;
       const status = accessAlong(line, rules, { ...(date !== undefined && { date }), today, ...(flows && { flows }) });
-      dayLegs.push((legs[leg] = legAccess({ leg, day, ...(date !== undefined && { date }) }, status, today)));
+      const when = { leg, day, ...(date !== undefined && { date }) };
+      const lockWarnings = locksOnLine(line, locks).map((lock): LockWarning => ({ lock, ...when }));
+      dayLegs.push((legs[leg] = legAccess(when, status, today, lockWarnings)));
     }
     return { day, ...(date !== undefined && { date }), ...summary(dayLegs) };
   });
@@ -162,7 +177,8 @@ export function tripAccess(trip: Trip, rules: AccessRules, { today, flows }: Tri
 function summary(legs: readonly LegAccess[]): AccessSummary {
   const warnings = legs.flatMap((leg) => leg.warnings);
   const notes = legs.flatMap((leg) => leg.notes);
+  const lockWarnings = legs.flatMap((leg) => leg.lockWarnings);
   const legsWithoutRules = legs.filter((leg) => leg.notes.length > 0).length;
-  if (legs.length === 0) return { warnings, notes, legsWithoutRules };
-  return { state: combineAccess(legs.map((leg) => leg.status)).state, warnings, notes, legsWithoutRules };
+  if (legs.length === 0) return { warnings, notes, lockWarnings, legsWithoutRules };
+  return { state: combineAccess(legs.map((leg) => leg.status)).state, warnings, notes, lockWarnings, legsWithoutRules };
 }
