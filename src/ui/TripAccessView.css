@@ -38,6 +38,7 @@
 }
 
 .leg-access-flow,
+.access-note,
 .trip-access-note {
   color: var(--color-muted);
 }
@@ -58,4 +59,9 @@
 }
 .access-warning-aire strong {
   color: #b35f00;
+}
+
+/* Unknown access: a quiet note, visibly lighter than the coloured warnings (#78). */
+.access-note {
+  font-style: italic;
 }
