@@ -1,3 +1,4 @@
+import type { AccessState } from "@/core/access";
 // All user-facing text lives here (ADR 0013), so other languages can be added later.
 
 export const strings = {
@@ -219,6 +220,8 @@ export const strings = {
     forbidden: "Forbidden",
     unknown: "Unknown",
   },
+  // Transient status while today's live Walloon flow loads (#85); not one of the legend's states.
+  accessChecking: "Checking flow…",
   accessLegendNote:
     "In Flanders, water that isn't marked is open by default. In Wallonia, only the listed stretches may be paddled; other water is treated as not allowed, but isn't painted red. " +
     "In Brussels, only the canal is known to be open; other water is unknown.",
@@ -314,3 +317,7 @@ export const strings = {
     '(<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>) | ' +
     'Routing: <a href="https://brouter.de/">BRouter</a>',
 } as const;
+
+/** The label of any access status, including the transient "checking" (#85). */
+export const accessStateLabel = (state: AccessState): string =>
+  state === "checking" ? strings.accessChecking : strings.accessState[state];

@@ -28,8 +28,8 @@ export default function ClientTripMap(props: Omit<TripMapProps, "access">) {
   // Live Walloon flows (#61), only while the layer shows today.
   const flows = useWalloonFlows(rules, accessOn && date === today);
   const features = useMemo(
-    () => (rules ? accessFeatures(rules, { date, today, ...(flows && { flows }) }) : []),
-    [rules, date, today, flows],
+    () => (rules ? accessFeatures(rules, { date, today, ...(flows && { flows }), flowsPending: accessOn && date === today && !flows }) : []),
+    [rules, date, today, flows, accessOn],
   );
   const tripDays = useMemo<AccessTripDay[]>(
     () =>

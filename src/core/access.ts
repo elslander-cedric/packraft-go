@@ -17,8 +17,9 @@ import type { LatLng } from "./trip";
 
 export type { Geometry, Position } from "./geo";
 
-/** The four access states, from least to most restrictive is open, unknown, closed today, forbidden. */
-export type AccessState = "open" | "closed-today" | "forbidden" | "unknown";
+/** The access states, from least to most restrictive: open, unknown, closed today, forbidden.
+ * `checking` is transient (#85): today's live flow is still loading, so nothing is claimed yet. */
+export type AccessState = "open" | "closed-today" | "forbidden" | "unknown" | "checking";
 
 /** Where a rule comes from: a legal text, a regulation or an official page. */
 export type AccessSource = { readonly title: string; readonly url: string };
@@ -124,6 +125,8 @@ export type AccessContext = {
   readonly today?: string;
   /** Today's live flow readings (#61), once asked for; they only apply when `date` is `today`. */
   readonly flows?: FlowReadings;
+  /** True while today's live flows are being fetched: flow-dependent stretches are "checking", not open (#85). */
+  readonly flowsPending?: boolean;
 };
 
 /** Why a Walloon stretch is closed on a date: the calendar (AGW art. 4), or today's flow (art. 6). */
@@ -160,7 +163,7 @@ const DEFAULT_MATCH_WITHIN_M = 30;
 /** Leg samples are at most this far apart, so short exceptions aren't skipped. */
 const SAMPLE_STEP_M = 25;
 
-const restrictiveness: Record<AccessState, number> = { open: 0, unknown: 1, "closed-today": 2, forbidden: 3 };
+const restrictiveness: Record<AccessState, number> = { open: 0, checking: 0.5, unknown: 1, "closed-today": 2, forbidden: 3 };
 
 const boundsCache = new WeakMap<AccessRecord, Bounds>();
 function cachedBounds(record: AccessRecord): Bounds {
@@ -202,6 +205,8 @@ const MONTH_SEASON = "Category 1.C stretches may be paddled only from 1 October 
 const FISHING_DAYS = "the fishing opening days (3rd Saturday of March, 1st Saturday of June)";
 
 const KAYAK_PAGE = "check today's official status on kayak.spw.wallonie.be";
+
+const CHECKING_FLOW = "Checking flow…";
 
 const m3s = (value: number) => `${value} m³/s`;
 
@@ -260,6 +265,9 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     state = "closed-today";
     closedBy = "high-flow";
     ruleText = `Closed today: high flow. The flow at 08:00 (${m3s(verdict.figures.at8!.m3s)}) is above the maximum of ${m3s(rule.maxM3s)}: based on measured flow; the official status may differ.`;
+  } else if (verdict.kind === "not-checked" && context.flowsPending && date !== undefined && date === today) {
+    state = "checking";
+    ruleText = CHECKING_FLOW;
   } else if (verdict.kind === "unknown") {
     state = "unknown";
     ruleText = `${flowUnknownText[verdict.why]}; ${KAYAK_PAGE}.`;

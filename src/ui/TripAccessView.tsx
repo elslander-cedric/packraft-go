@@ -5,7 +5,7 @@ import type { AccessNote, AccessSummary, AccessWarning, DayAccess, LegAccess } f
 import { accessColours } from "@/map/accessColours";
 import { FlowFiguresView } from "./FlowFiguresView";
 import { formatDayDate } from "./format";
-import { strings } from "./strings";
+import { accessStateLabel, strings } from "./strings";
 import "./TripAccessView.css";
 
 // Access status and warnings on leg rows, day rows and the trip summary (#58).
@@ -95,7 +95,7 @@ function WarningList({ warnings, place }: { warnings: readonly AccessWarning[]; 
 /** A paddle leg's access: status for its date (or in general), warnings and any extra rules as text. */
 export function LegAccessView({ access }: { access: LegAccess }) {
   const { status, date } = access;
-  const state = strings.accessState[status.state];
+  const state = accessStateLabel(status.state);
   const extraRules = status.reasons.flatMap((reason) =>
     reason.kind === "rule" && (reason.conditions?.length || reason.link) ? [reason] : [],
   );
@@ -148,13 +148,17 @@ export function LegAccessView({ access }: { access: LegAccess }) {
 
 /** A day's access: the most restrictive status of its paddle legs and their warnings. */
 export function DayAccessView({ access }: { access: DayAccess }) {
-  if (access.state === undefined) return null;
+  const { state } = access;
+  if (state === undefined && access.warnings.length === 0 && access.lockWarnings.length === 0 && access.legsWithoutRules === 0)
+    return null;
   return (
     <div className="day-access">
-      <span className={`day-access-status access-status-${access.state}`}>
-        <Swatch state={access.state} />
-        {strings.tripAccess.dayStatus(strings.accessState[access.state])}
-      </span>
+      {state !== undefined && (
+        <span className={`day-access-status access-status-${state}`}>
+          <Swatch state={state} />
+          {strings.tripAccess.dayStatus(accessStateLabel(state))}
+        </span>
+      )}
       <WarningList warnings={access.warnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
       <LockWarnings warnings={access.lockWarnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
       <LegsWithoutRules count={access.legsWithoutRules} />
@@ -192,6 +196,7 @@ export function TripAccessSummary({ access, aire = [] }: { access: AccessSummary
         <Swatch state={access.state ?? "unknown"} />
         {count === 0 ? strings.tripAccess.summaryNone : strings.tripAccess.summaryCount(count)}
       </p>
+      {access.state === "checking" && <p className="access-status access-status-checking">{strings.accessChecking}</p>}
       <WarningList warnings={warnings} place={(w) => strings.tripAccess.warningPlace(w.day + 1, w.leg + 1)} />
       <LockWarnings warnings={lockWarnings} place={(w) => strings.tripAccess.warningPlace(w.day + 1, w.leg + 1)} />
       <AireWarnings warnings={aire} showPlace />

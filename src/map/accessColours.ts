@@ -6,4 +6,5 @@ export const accessColours: Record<AccessState, string> = {
   "closed-today": "#e07b00",
   forbidden: "#d0021b",
   unknown: "#7a7a7a",
+  checking: "#5b7a99", // Neutral and transient: the live flow is loading (#85).
 };

@@ -43,6 +43,22 @@ export function kiwisFixtures(list: string, values: string): (url: URL) => BRout
 }
 
 /**
+ * Holds every KiWIS answer back until `release()` is called, then gives the
+ * wrapped answer. Lets a test observe the page while the flows are loading (#85).
+ */
+export function delayedKiwis(answer: (url: URL) => BRouterReply | Promise<BRouterReply>) {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  return {
+    kiwis: async (url: URL) => {
+      await gate;
+      return answer(url);
+    },
+    release,
+  };
+}
+
+/**
  * Serves OpenTopoMap tiles from a fixture, answers BRouter and KiWIS from recorded
  * responses, and blocks every other external request, so e2e tests never
  * touch live services (ADR 0019).
