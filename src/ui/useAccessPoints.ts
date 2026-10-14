@@ -82,12 +82,18 @@ export function useAccessPoints() {
       setPlacing((current) => !current);
       setImportMessage(null);
     },
-    /** Adds a point at `at`, ends placing and selects the new point. */
-    placeAt: (at: LatLng) => {
+    /** Adds a point at `at`, ends placing and selects the new point. Returns its id. */
+    placeAt: (at: LatLng): string => {
       const id = newId();
       setPoints((current) => addAccessPoint(current, { id, at, now: now() }));
       setPlacing(false);
       setSelectedId(id);
+      return id;
+    },
+    /** Makes the next map tap place a new point (without toggling it off). */
+    startPlacing: () => {
+      setPlacing(true);
+      setImportMessage(null);
     },
     select: (id: string | null) => {
       setSelectedId(id);
