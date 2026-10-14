@@ -201,7 +201,7 @@ export function summarise(trip: Trip, settings: Settings = defaultSettings): Tri
  * First and last leg index of each day. A camp at point i ends a day after
  * leg i - 1; camps at the start or end point split nothing.
  */
-function dayRanges(trip: Trip): [number, number][] {
+export function dayRanges(trip: Trip): [number, number][] {
   if (trip.legs.length === 0) return [];
   const ranges: [number, number][] = [];
   let first = 0;

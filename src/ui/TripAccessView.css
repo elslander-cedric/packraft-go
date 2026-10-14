@@ -1,0 +1,58 @@
+/* Access status and warnings on leg rows, day rows and the trip summary (#58). */
+.leg-access,
+.day-access {
+  min-width: 0;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+/* On a day row (a wrapping flex row), the access block takes a line of its own. */
+.day-access {
+  flex-basis: 100%;
+}
+
+.leg-access p,
+.day-access p,
+.trip-access p {
+  margin: var(--space-1) 0 0;
+}
+
+.leg-access-status,
+.day-access-status,
+.trip-access .access-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.leg-access-condition {
+  padding-left: var(--space-3);
+}
+
+.access-warning-forbidden strong {
+  color: var(--color-danger);
+}
+
+.access-warning-closed strong {
+  color: #b35f00;
+}
+
+.leg-access-flow,
+.trip-access-note {
+  color: var(--color-muted);
+}
+
+.trip-access {
+  flex: 0 1 auto;
+  min-height: 6rem;
+  max-height: 30%;
+  padding: 0 1rem 0.5rem;
+  border-top: 1px solid var(--color-border);
+  overflow-y: auto;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.trip-access h2 {
+  font-size: 1rem;
+}

@@ -1,9 +1,11 @@
 import type { TripSummary } from "@/core/summarise";
+import type { TripAccess } from "@/core/tripAccess";
 import type { Leg, LegMode } from "@/core/trip";
 import { Button } from "./components/Button";
 import { ToggleGroup, type ToggleOption } from "./components/ToggleGroup";
 import { formatDistance, formatElevation, formatTimeEstimate } from "./format";
 import { strings } from "./strings";
+import { LegAccessView } from "./TripAccessView";
 
 const modes: readonly ToggleOption<LegMode>[] = [
   { value: "hike", label: strings.legModeHike, className: "leg-mode leg-mode-hike" },
@@ -14,6 +16,8 @@ export type LegsPanelProps = {
   summary: TripSummary;
   /** The trip's legs, for their routing state. */
   legs: readonly Leg[];
+  /** Access status and warnings per paddle leg (#58); null until the access rules are loaded. */
+  access?: TripAccess | null;
   onRetry: (legIndex: number) => void;
   /** The planner switched a leg to another mode. */
   onSetMode: (legIndex: number, mode: LegMode) => void;
@@ -35,7 +39,7 @@ function ModeSwitch({ legIndex, mode, onSetMode }: ModeSwitchProps) {
 }
 
 /** Lists each leg's figures and the trip totals. Renders a summary; no domain logic. */
-export default function LegsPanel({ summary, legs, onRetry, onSetMode }: LegsPanelProps) {
+export default function LegsPanel({ summary, legs, access, onRetry, onSetMode }: LegsPanelProps) {
   return (
     <aside className="legs-panel" aria-label={strings.legsPanelLabel}>
       <h2>{strings.legsPanelLabel}</h2>
@@ -69,6 +73,7 @@ export default function LegsPanel({ summary, legs, onRetry, onSetMode }: LegsPan
                     {`${strings.legTimeEstimate} ${formatTimeEstimate(leg.timeH, leg.timeStatus)}`}
                   </span>
                 </div>
+                {access?.legs[i] && <LegAccessView access={access.legs[i]} />}
                 {(!route || route.status === "pending") && (
                   <span role="status" className="leg-routing">
                     {strings.legRouting}
