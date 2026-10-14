@@ -1,33 +1,17 @@
 # TODO
 
-Improvements for packraft-go, beyond v1. GitHub issues are the source of truth for work in progress. This file lists everything worth doing, so ideas don't get lost in chat.
+Improvements for packraft-go, beyond v2. GitHub issues are the source of truth for work in progress. This file lists everything worth doing, so ideas don't get lost in chat.
 
 - **Filed** items link to their issue. Close the issue, then remove the line here.
 - **Unfiled** items become issues when they're picked (spec → tickets).
 
-## v1.1: polish (filed)
+## Candidates (not filed)
 
-- [ ] Use Base UI for interface components: in-app confirm dialogs, hike/paddle toggle group, number fields, toolbar with tooltips. ADR 0020. [#31](https://github.com/elslander-cedric/packraft-go/issues/31)
-- [ ] Give leg rows in the sidebar more room. Blocked by #31. [#27](https://github.com/elslander-cedric/packraft-go/issues/27)
-- [ ] Make the hard-coded-text check accurate: it flags generics and arrow functions as text. [#26](https://github.com/elslander-cedric/packraft-go/issues/26)
-- [ ] Warn instead of discarding an autosave from a newer version (matters now that the app is live). [#28](https://github.com/elslander-cedric/packraft-go/issues/28)
-- [ ] Manual script to check the live BRouter server still matches our recorded fixtures. [#29](https://github.com/elslander-cedric/packraft-go/issues/29)
+v2 (spec #51) shipped river access rules, the Walloon aires warning, access points on desktop and phone, the PWA and phone layout, and live Walloon flows.
 
-## v2: candidates (not filed)
-
-### Deferred to v2 by an ADR
+### Deferred by an ADR
 - [ ] **River information**: difficulty grade, water levels, hazards. Data is patchy for Belgian rivers, so research sources first. ADR 0007
 - [ ] **Weirs and portages**: detect weirs on paddle legs automatically instead of drawing portages by hand. ADR 0016
-- [ ] **River access rules**: when and where paddling is allowed in Flanders and Wallonia (seasons, hours, flow thresholds, closed stretches, locks). Needed before sharing the app widely. ADR 0010. Research: [access rules](docs/research/access-rules.md), [data sources](docs/research/data-sources.md)
-- [ ] **Designated put-ins (aires) in Wallonia**: snap or warn when a mode change isn't at an aire. Research: [paddle routes](docs/research/paddle-routes.md)
-- [ ] **Mark access points on mobile**: on the river bank, open packraft-go on a phone and mark an *access point* (put-in, take-out or both) at your GPS position, with a type (official aire, slipway, jetty, informal bank), notes, and whether you checked it on site. The planner then shows these points and can snap put-ins and take-outs to them. This fills the data gap: there's no open dataset of access points in Belgium (see [data-sources.md](docs/research/data-sources.md)).
-  Decisions needed before building (this touches several ADRs):
-  - **Mobile use:** v1 is desktop-first and planning happens at home (ADR 0001, ADR 0005). This adds a phone layout and in-the-field use, at least for this one flow.
-  - **GPS:** uses the browser's location permission. It needs HTTPS (Vercel provides it) and must handle low-accuracy fixes in valleys.
-  - **Offline:** river valleys often have no signal. Can points be marked offline and synced later?
-  - **Storage:** private to you (browser storage + file export, fits ADR 0011) or shared with others (needs a backend and accounts; conflicts with ADR 0002, ADR 0011 and possibly ADR 0012).
-  - **Licence of your own points:** if they're shared, under which licence? Contribute them to OpenStreetMap (`canoe=put_in` / `canoe=egress`)? Only points checked on the ground, never copied from restricted datasets like the Walloon aires.
-  - **Legal status:** a marked point isn't proof that you may get in there. In Wallonia only designated aires are legal (AGW art. 5), so non-aire points need a clear warning.
 - [ ] **Official paddle routes as suggestions/overlays**: only if the licence allows. Research: [paddle routes](docs/research/paddle-routes.md)
 
 ### Left out of v1, could come later
@@ -39,7 +23,8 @@ Improvements for packraft-go, beyond v1. GitHub issues are the source of truth f
 - [ ] **GPX import**: bring in tracks from other apps. Spec #2, Out of scope
 - [ ] **More editing**: redo, notes on points/legs, alternative routes per trip. ADR 0017
 - [ ] **Several trips in the browser**: a trip list instead of one current trip (today, files are the way to keep more than one). Spec #2, Out of scope
-- [ ] **Phone layout / use in the field**: offline maps, GPS position. ADR 0001, ADR 0005. The access-point feature above would be the first mobile flow.
+- [ ] **Offline maps in the field**: the phone layout, GPS position and marking access points shipped in v2 (ADR 0023); map tiles are still online only. ADR 0001, ADR 0005
+- [ ] **Lock data for Wallonia**: locks come from #57 and cover Flanders and Brussels only, so a Walloon leg never gets a lock warning. Cedric decided against a coverage note for now (2026-10-14).
 - [ ] **Accounts and sync between devices**: needs a backend and costs money. ADR 0002, ADR 0011, ADR 0012
 - [ ] **Other regions** beyond Belgium: mostly config (initial map view). ADR 0004
 - [ ] **Dutch and French UI**: strings are already in one module. ADR 0013
@@ -62,11 +47,24 @@ Low priority. File one if it starts to bother you.
 - [ ] GPX: "Day 1" appears in section file names when the only camp is on the start or end point (no second day exists). (from #41)
 - [ ] GPX: where a routed leg meets an unrouted leg inside one section, the dropped join point can cause a small jump. (from #41)
 
+## Small notes from v2 (not filed)
+
+Low priority. File one if it starts to bother you.
+
+- [ ] Monthly reminder to run `npm run check:brouter` and `npm run check:kiwis` (manual, polite live checks).
+- [ ] `e2e/acceptance-10.spec.ts:103` and `e2e/acceptance-9.spec.ts:109` snapshot `panel.innerText()`; like #80 and #84 they could race with access text that renders late.
+- [ ] Occasional load flakes: `acceptance-44`, and the `acceptance-5` portage test.
+- [ ] Unused `fam` lint warning in `e2e/tester-70.spec.ts`.
+- [ ] `TripAccessSummary` ignores lock warnings when deciding to hide itself (harmless today: a leg with a lock always has a state).
+- [ ] Live flows: a failed KiWIS request is cached for 15 minutes (a reload clears it). (from #61)
+- [ ] Lock detection: 100 m from the leg, same-name chambers within 400 m count once; check against real trips. A failed (straight) leg can cross or miss a lock. (from #60)
+
 ## Process
-- [ ] Before v2: plan a real trip with v1 and note what's missing.
+- [ ] Plan a real trip with v2 and note what's missing.
 - [x] Research access rules, routes and data sources for Flanders and Wallonia: see [docs/research/](docs/research/).
 - [x] Check the Walloon hydrometry API: it works from the browser; publishing needs SPW permission. See [hydrometry.md](docs/research/hydrometry.md).
 - [ ] Email the SPW for written permission to show flows and a derived status, and ask which gauge is used for Wanlin (Cedric sends).
 - [x] Extract AGW Annex 1 ([walloon-stretches.md](docs/research/walloon-stretches.md)) and check the Flemish rules and ports ([flanders.md](docs/research/flanders.md)).
-- [ ] Place the ~45 Walloon stretch start and end points on the map (manual curation, 2–4 h) before stretches can be drawn.
+- [x] Place the Walloon stretch start and end points on the map (#54, reviewed 2026-10-13).
+- [ ] Close spec #51 (all sub-issues are done).
 - [ ] Still open: Boudewijnkanaal status; whether any Flemish river managers have imposed bans.
