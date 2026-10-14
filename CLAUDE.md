@@ -49,3 +49,25 @@ CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on eve
 - Significant decisions get an ADR in `docs/adr/NNNN-title.md`.
 - Work is tracked as GitHub issues; labels: `ready-for-agent`, `tested`, `needs-fix`.
 - Never push to `main` directly; open a PR.
+
+## Agent lessons
+Project-specific rules for the builder and tester agents (learned in past PRs).
+- **Ports:** each agent gets its own port. Set `E2E_PORT` for `npm run e2e` (e.g. 3101, 3102, …) and pass `-- --port <n>` to `npm run dev`, so parallel worktrees don't test each other's builds.
+- **Dates:** no time-zone drift: a date picked in Europe/Brussels must not move a day.
+- **No live services in tests (ADR 0019):** use `serveOffline(page)` and recorded fixtures, and prove it, e.g. by blocking `fetch` or the network and re-running.
+- **New runtime dependency:** update the allowlist in `src/testing/dependencyBoundary.ts` deliberately.
+- **Edge cases that bit us:** trip names with `/ : & <` or control characters (GPX/XML must stay well-formed, inner names must match file names; #24, #45); longitudes rounding to 180 (GPX needs < 180; #24); unlisted Walloon water must read "not allowed", not "unknown" (#75).
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues for this repo, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
