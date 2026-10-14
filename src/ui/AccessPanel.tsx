@@ -1,6 +1,7 @@
 import type { AccessFeature, AccessReason, AccessState } from "@/core/access";
 import { accessColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
+import { FlowFiguresView } from "./FlowFiguresView";
 import { Switch } from "./components/Switch";
 import { strings } from "./strings";
 import "./AccessPanel.css";
@@ -93,6 +94,7 @@ function Reason({ reason }: { reason: AccessReason }) {
     <li>
       {reason.category && <p className="access-category">{strings.accessCategory(reason.category)}</p>}
       <p>{reason.ruleText}</p>
+      {reason.flow && <FlowFiguresView figures={reason.flow} />}
       {reason.conditions && reason.conditions.length > 0 && (
         <>
           <h4>{strings.accessConditionsHeading}</h4>

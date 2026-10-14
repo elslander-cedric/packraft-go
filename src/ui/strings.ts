@@ -257,6 +257,25 @@ export const strings = {
     summaryNone: "No access warnings.",
     neverBlocks: "Warnings are information only: you can still plan, save and export.",
   },
+  // Live Walloon flows on a stretch for today (#61, ADR 0024).
+  flow: {
+    heading: "Live flow today",
+    gauge: (name: string) => `Gauge: ${name}`,
+    gaugeAssumed: (name: string) => `Gauge: ${name} (assumed gauge: its match to the official one isn't confirmed)`,
+    at8: (flow: string) => `Flow at 08:00: ${flow}`,
+    at8Missing: "Flow at 08:00: not measured yet",
+    mean72h: (flow: string, when: string) => `72-hour mean: ${flow} (${when})`,
+    mean72hMissing: "72-hour mean: no reading",
+    minimum: (flow: string) => `Minimum (72-hour mean): ${flow}`,
+    maximum: (flow: string) => `Maximum: ${flow}`,
+    lastMeasured: (when: string) => `Last measured: ${when}`,
+    noReadings: "No recent readings.",
+    // e.g. "Wed 14 Oct 2026, 08:00"
+    readingTime: (date: string, time: string) => `${date}, ${time}`,
+    m3s: (value: string) => `${value} m³/s`,
+    // The SPW's legal notice asks for this credit, in French, with a link.
+    credit: "Sources des données : Service public de Wallonie",
+  },
   // Shown in the map's attribution control while the access layer is on. Contains HTML links.
   accessAttribution:
     'Access data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +

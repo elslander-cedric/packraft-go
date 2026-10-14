@@ -33,6 +33,7 @@ import { TripAccessSummary } from "./TripAccessView";
 import TripToolbar from "./TripToolbar";
 import { useAccessPoints } from "./useAccessPoints";
 import { localToday, useAccessRules } from "./useAccessRules";
+import { useWalloonFlows } from "./useWalloonFlows";
 import { useSettings } from "./useSettings";
 
 /** The questions asked before a trip with points is replaced. */
@@ -167,7 +168,13 @@ export default function TripPlanner({ router }: { router?: Router }) {
   // Access status and warnings on paddle legs (#58): the rules load once the trip has a paddle leg.
   const rules = useAccessRules(trip.legs.some((leg) => leg.mode === "paddle"));
   const today = localToday();
-  const waterAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today }) : null), [trip, rules, today]);
+  const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today }) : null), [trip, rules, today]);
+  // Paddle legs dated today use the live Walloon flows (#61), asked for only when there are some.
+  const flows = useWalloonFlows(rules, rulesAccess?.legs.some((leg) => leg?.date === today) ?? false);
+  const waterAccess = useMemo(
+    () => (rules && flows ? tripAccess(trip, rules, { today, flows }) : rulesAccess),
+    [trip, rules, today, flows, rulesAccess],
+  );
   const confirmation = confirmations[question];
 
   return (

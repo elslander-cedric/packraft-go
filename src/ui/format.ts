@@ -31,6 +31,20 @@ export function formatDayDate(date: string): string {
   );
 }
 
+/** A river's flow for display, in m³/s with at most two decimals (#61). */
+export function formatFlow(m3s: number): string {
+  return strings.flow.m3s(String(Math.round(m3s * 100) / 100));
+}
+
+/**
+ * When a flow reading was taken (#61). The service's timestamp is Belgian
+ * local time with its offset; its date and time are read from the text, so the
+ * planner's own time zone never shifts them.
+ */
+export function formatReadingTime(at: string): string {
+  return strings.flow.readingTime(formatDayDate(at.slice(0, 10)), at.slice(11, 16));
+}
+
 /**
  * A time estimate for display (ADR 0009, amended): "…" while it waits for
  * routing, and marked when it counts distance only.
