@@ -25,11 +25,21 @@
   --z-overlay: 2000;
 }
 
+/* One self-hosted font, so text measures the same on every machine and layout
+   tests don't depend on the OS fonts. Inter, SIL OFL 1.1 (public/fonts/Inter-OFL.txt). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
+}
+
 html,
 body {
   margin: 0;
   height: 100%;
-  font-family: system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   color: var(--color-text);
 }
 

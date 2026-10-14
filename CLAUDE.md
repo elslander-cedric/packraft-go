@@ -27,6 +27,8 @@ Node 22 (see `.nvmrc`), npm.
   3. Re-run step 1 to write the shipped dataset.
   End-point recipes (which dam, bridge, confluence or border ends each stretch) are in `src/dataprep/walloonStretches/recipes.ts`; logic in `src/dataprep/walloonStretches/` is pure and tested on saved OSM extracts in its `fixtures/` folder (make new ones with `scripts/walloon-stretches/save-fixture.mts`).
 
+**Layout tests must be font-independent (#70).** The app ships one self-hosted font (Inter, OFL, `public/fonts/`, declared in `globals.css`) so text measures the same on macOS and the Linux CI runner. In layout e2e tests wait for `document.fonts.ready` before measuring, assert the real rule (a figure on one line, Retry fully visible), and never rely on an OS font or a tuned line-count threshold. Don't change the font stack without re-running the layout tests on CI.
+
 CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on every pull request.
 
 ## Layout
@@ -40,7 +42,7 @@ CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on eve
 - `src/ui/components/`: thin wrappers around Base UI (ADR 0020): `ConfirmDialog` (Alert Dialog), `ToggleGroup`, `NumberField`, `Toolbar`/`ToolbarButton` (with Tooltip) and `Button`, each with its own stylesheet. Screens import these, never `@base-ui/react`; `boundary.test.ts` enforces this. Wrappers take their text as props from the screens. Design tokens (colours, spacing) are CSS variables at the top of `src/app/globals.css`. In e2e tests, answer confirmations with `e2e/support/confirmDialog.ts`.
 - `src/access/` (+ `src/core/access.ts`): the access layer (ADRs 0022, 0024). Built-in rule data with a source and research date per record, prepared offline with `npm run prepare:access-data` (never queried at runtime), and the pure access-status evaluation in the core. See `src/access/README.md`.
 - `src/pwa/` and `public/sw.js`: PWA registration and a hand-written service worker (ADR 0023). It caches the same-origin app shell only, never map tiles, BRouter or KiWIS.
-- `src/ui/phone/` (+ `src/map/PhoneMap.tsx`): the phone layout (≤ 640 px): read-only map and trips, show my position. No planning controls.
+- `src/ui/phone/` (+ `src/map/PhoneMap.tsx`): the phone layout (width ≤ 640 px, or height ≤ 640 px on a touch device, so a sideways phone keeps it): read-only map and trips, show my position, open a trip file. No planning controls.
 - `src/ui/strings.ts`: all user-facing text (ADR 0013).
 
 ## Conventions
