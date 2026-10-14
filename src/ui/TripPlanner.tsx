@@ -190,9 +190,10 @@ export default function TripPlanner({ router }: { router?: Router }) {
   const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today }) : null), [trip, rules, today]);
   // Paddle legs dated today use the live Walloon flows (#61), asked for only when there are some.
   const flows = useWalloonFlows(rules, rulesAccess?.legs.some((leg) => leg?.date === today) ?? false);
+  const flowsPending = flows === undefined && (rulesAccess?.legs.some((leg) => leg?.date === today) ?? false);
   const waterAccess = useMemo(
-    () => (rules && flows ? tripAccess(trip, rules, { today, flows }) : rulesAccess),
-    [trip, rules, today, flows, rulesAccess],
+    () => (rules && (flows || flowsPending) ? tripAccess(trip, rules, { today, ...(flows && { flows }), flowsPending }) : rulesAccess),
+    [trip, rules, today, flows, flowsPending, rulesAccess],
   );
   const aire = useMemo(() => (rules ? aireWarnings(trip, rules, access.points) : []), [trip, rules, access.points]);
   const confirmation = confirmations[question];

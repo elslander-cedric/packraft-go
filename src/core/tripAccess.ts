@@ -63,6 +63,7 @@ const warningKind: Record<AccessState, AccessWarning["kind"] | undefined> = {
   "closed-today": "closed",
   forbidden: "forbidden",
   unknown: undefined, // A note, not a warning.
+  checking: undefined, // Nothing is claimed while the flow loads (#85).
 };
 
 export type TripAccess = {
@@ -103,6 +104,8 @@ export type TripAccessOptions = {
   readonly today: CalendarDate;
   /** Today's live flow readings (#61), once known: legs dated today use them. */
   readonly flows?: FlowReadings;
+  /** True while today's flows are loading: legs dated today on flow-dependent water are "checking" (#85). */
+  readonly flowsPending?: boolean;
 };
 
 /** The line a leg covers: its routed geometry, or a straight line when routing failed. */
@@ -136,7 +139,7 @@ function legAccess(when: When, status: AccessStatus, today: CalendarDate): LegAc
 }
 
 /** Access status and warnings for every paddle leg, day and the whole trip. */
-export function tripAccess(trip: Trip, rules: AccessRules, { today, flows }: TripAccessOptions): TripAccess {
+export function tripAccess(trip: Trip, rules: AccessRules, { today, flows, flowsPending }: TripAccessOptions): TripAccess {
   const legs: (LegAccess | undefined)[] = trip.legs.map(() => undefined);
   const days = dayRanges(trip).map(([first, last], day): DayAccess => {
     const date = trip.startDate === undefined ? undefined : addDays(trip.startDate, day);
@@ -145,7 +148,7 @@ export function tripAccess(trip: Trip, rules: AccessRules, { today, flows }: Tri
       if (trip.legs[leg].mode !== "paddle") continue;
       const line = legLine(trip, leg);
       if (!line) continue;
-      const status = accessAlong(line, rules, { ...(date !== undefined && { date }), today, ...(flows && { flows }) });
+      const status = accessAlong(line, rules, { ...(date !== undefined && { date }), today, ...(flows && { flows }), ...(flowsPending && { flowsPending }) });
       dayLegs.push((legs[leg] = legAccess({ leg, day, ...(date !== undefined && { date }) }, status, today)));
     }
     return { day, ...(date !== undefined && { date }), ...summary(dayLegs) };
@@ -163,6 +166,8 @@ function summary(legs: readonly LegAccess[]): AccessSummary {
   const warnings = legs.flatMap((leg) => leg.warnings);
   const notes = legs.flatMap((leg) => leg.notes);
   const legsWithoutRules = legs.filter((leg) => leg.notes.length > 0).length;
-  if (legs.length === 0) return { warnings, notes, legsWithoutRules };
-  return { state: combineAccess(legs.map((leg) => leg.status)).state, warnings, notes, legsWithoutRules };
+  // A leg still checking its flow isn't counted as open, closed or warned yet (#85).
+  const settled = legs.filter((leg) => leg.status.state !== "checking");
+  if (settled.length === 0) return { warnings, notes, legsWithoutRules };
+  return { state: combineAccess(settled.map((leg) => leg.status)).state, warnings, notes, legsWithoutRules };
 }

@@ -7,7 +7,7 @@ import type { LegRoute } from "./router";
 import { parseTrip, serialiseTrip } from "./saveFile";
 import { applyEdit, type LatLng, type Leg, type Trip } from "./trip";
 import { tripAccess } from "./tripAccess";
-import { agreementStretch, fakeAccessRules, flandersSquare, forbiddenCanal } from "./testing/fakeAccessRules";
+import { onWalloonAllYear, walloonAllYear, agreementStretch, fakeAccessRules, flandersSquare, forbiddenCanal } from "./testing/fakeAccessRules";
 
 const flanders = fakeAccessRules([flandersSquare, forbiddenCanal, agreementStretch]);
 
@@ -264,5 +264,26 @@ describe("which legs get a status, and for which date", () => {
     const failed: Leg = { mode: "paddle", route: { status: "failed", failure: { kind: "no-route" } } };
     const t = trip([southOfCanal, northOfCanal], [failed]);
     expect(tripAccess(t, flanders, { today: "2026-10-14" }).legs[0]?.status.state).toBe("forbidden");
+  });
+});
+
+describe("flows still loading (#85)", () => {
+  const walloon = fakeAccessRules([walloonAllYear]);
+  const a = { lat: onWalloonAllYear.lat, lng: 5.0 };
+  const b = { lat: onWalloonAllYear.lat, lng: 5.1 };
+  const dated = (startDate: string): Trip =>
+    trip([a, b], [{ mode: "paddle", route: routed(a, b) }], { startDate });
+
+  it("a flow-dependent stretch dated today is checking, not open, and day and trip summaries don't count it", () => {
+    const access = tripAccess(dated("2026-10-14"), walloon, { today: "2026-10-14", flowsPending: true });
+    expect(access.legs[0]!.status.state).toBe("checking");
+    expect(access.legs[0]!.warnings).toEqual([]);
+    expect(access.days[0].state).toBeUndefined();
+    expect(access.trip.state).toBeUndefined();
+  });
+
+  it("another date, or flows that have arrived, are unchanged", () => {
+    expect(tripAccess(dated("2026-10-20"), walloon, { today: "2026-10-14", flowsPending: true }).legs[0]!.status.state).toBe("open");
+    expect(tripAccess(dated("2026-10-14"), walloon, { today: "2026-10-14" }).legs[0]!.status.state).toBe("open");
   });
 });

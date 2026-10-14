@@ -3,10 +3,10 @@ import { accessColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
 import { FlowFiguresView } from "./FlowFiguresView";
 import { Switch } from "./components/Switch";
-import { strings } from "./strings";
+import { accessStateLabel, strings } from "./strings";
 import "./AccessPanel.css";
 
-const states: readonly AccessState[] = ["open", "closed-today", "forbidden", "unknown"];
+const states: readonly Exclude<AccessState, "checking">[] = ["open", "closed-today", "forbidden", "unknown"];
 
 function Swatch({ state }: { state: AccessState }) {
   return <span className="access-swatch" style={{ background: accessColours[state] }} aria-hidden="true" />;
@@ -179,7 +179,7 @@ export function AccessDetailPanel({
       </header>
       <p className={`access-status access-status-${status.state}`}>
         <Swatch state={status.state} />
-        {strings.accessState[status.state]}
+        {accessStateLabel(status.state)}
       </p>
       <p className="access-legend-note access-status-date">{strings.accessStatusOn(date)}</p>
       <ul className="access-reasons">

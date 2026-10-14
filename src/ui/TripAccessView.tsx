@@ -4,7 +4,7 @@ import type { AccessNote, AccessSummary, AccessWarning, DayAccess, LegAccess } f
 import { accessColours } from "@/map/accessColours";
 import { FlowFiguresView } from "./FlowFiguresView";
 import { formatDayDate } from "./format";
-import { strings } from "./strings";
+import { accessStateLabel, strings } from "./strings";
 import "./TripAccessView.css";
 
 // Access status and warnings on leg rows, day rows and the trip summary (#58).
@@ -75,7 +75,7 @@ function WarningList({ warnings, place }: { warnings: readonly AccessWarning[]; 
 /** A paddle leg's access: status for its date (or in general), warnings and any extra rules as text. */
 export function LegAccessView({ access }: { access: LegAccess }) {
   const { status, date } = access;
-  const state = strings.accessState[status.state];
+  const state = accessStateLabel(status.state);
   const extraRules = status.reasons.flatMap((reason) =>
     reason.kind === "rule" && (reason.conditions?.length || reason.link) ? [reason] : [],
   );
@@ -132,7 +132,7 @@ export function DayAccessView({ access }: { access: DayAccess }) {
     <div className="day-access">
       <span className={`day-access-status access-status-${access.state}`}>
         <Swatch state={access.state} />
-        {strings.tripAccess.dayStatus(strings.accessState[access.state])}
+        {strings.tripAccess.dayStatus(accessStateLabel(access.state))}
       </span>
       <WarningList warnings={access.warnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
       <LegsWithoutRules count={access.legsWithoutRules} />
