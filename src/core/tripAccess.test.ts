@@ -211,6 +211,7 @@ describe("per-day and trip summaries", () => {
     expect(tripAccess(hikeOnly, flanders, { today: "2026-10-14" }).trip).toEqual({
       warnings: [],
       notes: [],
+      lockWarnings: [],
       legsWithoutRules: 0,
     });
   });
@@ -302,6 +303,23 @@ describe("flows still loading (#85)", () => {
       { today: "2026-10-14", flowsPending: true },
     );
     expect(worse.days[0].state).toBe("forbidden");
+  });
+
+  it("a checking day still shows its lock warning, on the leg, the day and the trip (#60)", () => {
+    const lock = {
+      id: "test-lock",
+      name: "Test lock",
+      region: "flanders",
+      position: [5.05, a.lat] as const,
+      source: { title: "Rule", url: "https://example.org/rule" },
+      researched: "2026-10-12",
+    };
+    const access = tripAccess(dated("2026-10-14"), walloon, { today: "2026-10-14", flowsPending: true, locks: [lock] });
+    expect(access.legs[0]!.status.state).toBe("checking");
+    expect(access.legs[0]!.lockWarnings).toHaveLength(1);
+    expect(access.days[0].state).toBe("checking");
+    expect(access.days[0].lockWarnings).toHaveLength(1);
+    expect(access.trip.lockWarnings).toHaveLength(1);
   });
 
   it("another date, or flows that have arrived, are unchanged", () => {
