@@ -6,7 +6,7 @@ import type { CalendarDate } from "./calendarDate";
 
 /**
  * One reading of a gauge's discharge. `at` is the service's timestamp in
- * Belgian local time with its offset, e.g. "2026-10-14T08:00:00.000+02:00";
+ * the gauge's local time (CET/CEST) with its offset, e.g. "2026-10-14T08:00:00.000+02:00";
  * its date and hour are read from the text, so they never move with the
  * planner's own time zone.
  */

@@ -37,7 +37,7 @@ export function formatFlow(m3s: number): string {
 }
 
 /**
- * When a flow reading was taken (#61). The service's timestamp is Belgian
+ * When a flow reading was taken (#61). The service's timestamp is the gauge's
  * local time with its offset; its date and time are read from the text, so the
  * planner's own time zone never shifts them.
  */
