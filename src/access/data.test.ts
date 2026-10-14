@@ -45,7 +45,7 @@ const ruleIds = (status: ReturnType<typeof at>) => status.reasons.map((r) => (r.
 
 describe("built-in access data", () => {
   it("every dataset is format version 1 and credits OpenStreetMap", () => {
-    expect(builtInDatasets.map((d) => d.id)).toEqual(["regions", "flanders", "brussels"]);
+    expect(builtInDatasets.map((d) => d.id)).toEqual(["regions", "flanders", "brussels", "wallonia"]);
     for (const dataset of builtInDatasets) {
       expect(dataset.format).toBe(ACCESS_DATA_FORMAT);
       expect(dataset.version).toBe(1);
@@ -66,7 +66,7 @@ describe("built-in access data", () => {
     for (const record of records) {
       expect(record.name, record.id).not.toBe("");
       expect(["region", "water"], record.id).toContain(record.scope);
-      expect(record.rule.text, record.id).not.toBe("");
+      expect(record.rule.type === "fixed" ? record.rule.text : "agw", record.id).not.toBe("");
     }
     expect(records.flatMap(geometryProblems)).toEqual([]);
   });
@@ -79,7 +79,7 @@ describe("built-in access data", () => {
   });
 
   it("lists the Flemish exceptions as forbidden, each with its reason", () => {
-    const forbidden = records.filter((r) => r.region === "flanders" && r.rule.state === "forbidden").map((r) => r.id);
+    const forbidden = records.filter((r) => r.region === "flanders" && r.rule.type === "fixed" && r.rule.state === "forbidden").map((r) => r.id);
     expect(forbidden).toEqual([
       "flanders-ghent-terneuzen-canal",
       "flanders-lower-sea-scheldt",
@@ -115,15 +115,22 @@ describe("built-in access data", () => {
       "flanders-vmm-zenne",
       "flanders-vmm-stekene-zuidlede",
     ]);
-    for (const record of vmm) {
-      expect(record.rule.state, record.id).toBe("open");
-      expect(record.rule.conditions?.length, record.id).toBeGreaterThan(0);
-      expect(record.rule.link?.url, record.id).toMatch(/^https:\/\//);
+    for (const { id, rule } of vmm) {
+      if (rule.type !== "fixed") throw new Error(id);
+      expect(rule.state, id).toBe("open");
+      expect(rule.conditions?.length, id).toBeGreaterThan(0);
+      expect(rule.link?.url, id).toMatch(/^https:\/\//);
     }
   });
 
   describe("Brussels (#57)", () => {
     const brussels = records.filter((r) => r.region === "brussels" && r.scope === "water");
+    // Every Brussels water has a fixed rule (no season or flow).
+    const fixedRule = (id: string) => {
+      const { rule } = brussels.find((r) => r.id === id)!;
+      if (rule.type !== "fixed") throw new Error(`${id} has a ${rule.type} rule`);
+      return rule;
+    };
 
     it("has the canal, the ponds, the Senne and the small streams", () => {
       expect(brussels.map((r) => r.id)).toEqual(["brussels-canal", "brussels-ponds", "brussels-senne", "brussels-streams"]);
@@ -131,8 +138,8 @@ describe("built-in access data", () => {
 
     it("gives the canal as open, with the priority, VHF and Capitainerie notes", () => {
       const canal = brussels.find((r) => r.id === "brussels-canal")!;
-      expect(canal.rule.state).toBe("open");
-      const notes = (canal.rule.conditions ?? []).join(" ");
+      expect(fixedRule("brussels-canal").state).toBe("open");
+      const notes = (fixedRule("brussels-canal").conditions ?? []).join(" ");
       expect(notes).toMatch(/commercial/i);
       expect(notes).toMatch(/VHF/);
       expect(notes).toContain("+32 2 247 91 21");
@@ -140,7 +147,7 @@ describe("built-in access data", () => {
     });
 
     it("gives the ponds as forbidden without permission, and the Senne and small streams as unknown", () => {
-      const state = (id: string) => brussels.find((r) => r.id === id)!.rule.state;
+      const state = (id: string) => fixedRule(id).state;
       expect(state("brussels-ponds")).toBe("forbidden");
       expect(state("brussels-senne")).toBe("unknown");
       expect(state("brussels-streams")).toBe("unknown");

@@ -10,7 +10,9 @@ import ClientPhoneMap from "@/map/ClientPhoneMap";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { Button } from "../components/Button";
 import { strings } from "../strings";
+import { useAccessPoints } from "../useAccessPoints";
 import { useSettings } from "../useSettings";
+import PhoneAccessPoints from "./PhoneAccessPoints";
 import { positionMessage } from "./position";
 import PhoneTripView from "./PhoneTripView";
 import { usePosition } from "./usePosition";
@@ -27,6 +29,7 @@ export default function PhoneApp() {
   const [{ trip: stored }] = useState(loadStoredTrip);
   const [trip, setTrip] = useState<Trip>(stored);
   const [settings] = useSettings();
+  const access = useAccessPoints();
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
   const explanation = useId();
@@ -58,12 +61,19 @@ export default function PhoneApp() {
       <ClientPhoneMap
         trip={trip}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
+        accessPoints={{
+          points: access.points,
+          selectedId: access.selected?.id ?? null,
+          onSelect: access.select,
+          onMove: (id, to) => access.update(id, { position: to }),
+        }}
+        onPlace={access.placing ? access.placeAt : undefined}
       />
       <div className="phone-panel">
         <div className="phone-position">
           <Button
             className="phone-button"
-            onClick={showPosition}
+            onClick={() => showPosition()}
             aria-describedby={explanation}
             disabled={position.state === "locating"}
           >
@@ -78,6 +88,7 @@ export default function PhoneApp() {
             </p>
           )}
         </div>
+        <PhoneAccessPoints access={access} position={position} showPosition={showPosition} />
         <div className="phone-position">
           <Button ref={openFileButton} className="phone-button" onClick={() => fileInput.current?.click()}>
             {strings.phone.openFileButton}

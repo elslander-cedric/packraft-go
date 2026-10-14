@@ -82,10 +82,8 @@ export const regionSpecs: readonly RegionSpec[] = [
     relationId: 90348,
     rule: {
       type: "fixed",
-      state: "unknown",
-      text:
-        "Only stretches listed in the AGW of 19 March 2009 may be paddled, at set seasons, hours and flows. " +
-        "packraft-go doesn't check Walloon stretches yet.",
+      state: "forbidden",
+      text: "Not on the AGW list of open stretches: water that is not a listed stretch is treated as not allowed.",
       link: { title: "SPW: kayak status today", url: "https://kayak.spw.wallonie.be/" },
     },
     source: sources.agw2009,

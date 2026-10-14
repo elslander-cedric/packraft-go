@@ -106,10 +106,10 @@ export default function AccessPointsPanel({ access }: { access: AccessPointsStat
   );
 }
 
-/** The selected access point's details, editable. */
+/** The selected access point's details, editable (also used on the phone, #63). */
 type AccessPointDetailsProps = { point: AccessPoint; access: AccessPointsState; onDelete: () => void };
 
-function AccessPointDetails({ point, access, onDelete }: AccessPointDetailsProps) {
+export function AccessPointDetails({ point, access, onDelete }: AccessPointDetailsProps) {
   const update = (changes: Parameters<AccessPointsState["update"]>[1]) => access.update(point.id, changes);
   const headingId = `access-point-${point.id}`;
   return (

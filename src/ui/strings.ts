@@ -189,6 +189,24 @@ export const strings = {
     positionUnavailable: "Your position isn't available right now. Try again in the open, away from steep valley sides.",
     positionTimeout: "Finding your position took too long. Try again.",
     positionUnsupported: "This browser can't share your location.",
+    // Marking access points on the phone (#63, ADR 0023).
+    accessPointsLabel: "Your access points",
+    markButton: "Mark access point here",
+    markExplanation:
+      "Marks an access point at your GPS position. It's saved on this phone straight away, with or without signal.",
+    markLocating: "Finding your position to mark the access point…",
+    // `accuracy` is formatted, e.g. "12 m".
+    markedAccuracy: (accuracy: string) => `Marked at your GPS position, accurate to about ${accuracy}.`,
+    markedByTap: "Marked where you tapped on the map.",
+    tapToPlaceButton: "Place by tapping the map",
+    tapToPlaceHint: "Tap the map where you can get onto or off the water. Tap the button again to cancel.",
+    tapToPlaceFallback: "Without your position, you can still place the access point by tapping the map.",
+    savedOnDevice: "Saved on this device.",
+    noAccessPoints: "No access points yet.",
+    editButton: "Edit",
+    deleteListButton: "Delete",
+    // The list entry's heading, e.g. "Put-in, Official aire".
+    listEntry: (use: string, kind: string) => `${use}, ${kind}`,
   },
   // The disclaimer shown above the map (ADR 0024).
   navigationRulesNotice: "Indicative only; you're responsible for checking local rules.",
@@ -202,8 +220,16 @@ export const strings = {
     unknown: "Unknown",
   },
   accessLegendNote:
-    "In Flanders, water that isn't marked is open by default. " +
+    "In Flanders, water that isn't marked is open by default. In Wallonia, only the listed stretches may be paddled; other water is treated as not allowed, but isn't painted red. " +
     "In Brussels, only the canal is known to be open; other water is unknown.",
+  // The access layer's date (#59): the status of dated rules (Walloon seasons, fishing days) is for this day.
+  accessDateLabel: "Date",
+  accessTodayButton: "Today",
+  accessTripDayLabel: "Trip day",
+  accessTripDayChoose: "Choose a trip day",
+  accessTripDayOption: (day: number, date: string) => `Day ${day}: ${date}`,
+  accessStatusOn: (date: string) => `On ${date}`,
+  accessCategory: (category: string) => `Walloon category ${category}`,
   // Locks (#57, GLOSSARY "Lock"): marked on the access layer in Flanders and Brussels.
   lockLegend: "Lock: portage required (shown when zoomed in)",
   lockDetailLabel: "Lock details",

@@ -97,3 +97,42 @@
   border-left-color: var(--color-paddle);
   background: var(--color-paddle-tint);
 }
+
+/* Access points on the phone (#63): big targets for the form and the list. */
+.phone-access-points h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.2rem;
+}
+
+.phone-saved {
+  margin: 0 0 var(--space-2);
+  color: var(--color-muted);
+}
+
+.phone-access-point-form {
+  margin-bottom: var(--space-3);
+}
+
+.phone-access-point-form .toggle,
+.phone-access-point-form .button,
+.phone-access-point-form input,
+.phone-access-point-form textarea {
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+
+.phone-access-point-form .toggle {
+  padding: var(--space-1) var(--space-3);
+}
+
+.phone-access-point-list {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.phone-row-actions {
+  display: flex;
+  flex-basis: 100%;
+  gap: var(--space-2);
+}

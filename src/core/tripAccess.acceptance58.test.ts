@@ -30,10 +30,10 @@ describe("#58 tester: areas with no rule (built-in data)", () => {
       "brussels-senne",
     ]);
   });
-  it("Walloon Meuse at Dinant (no Wallonia rules merged)", () => {
+  it("Walloon Meuse at Dinant (Wallonia rules from #59)", () => {
     const t = tripAccess(paddle({ lat: 50.26, lng: 4.91 }, { lat: 50.265, lng: 4.915 }, "2026-07-10"), builtInAccessRules, today);
-    // Wallonia rules (#75) are not merged yet: unknown, not Forbidden.
-    expect(t.legs[0]!.status.state).toBe("unknown");
+    // Updated: #59 (PR #75) adds the Wallonia rules; unlisted Walloon water is now Forbidden, as the #58 criterion says. (#59)
+    expect(t.legs[0]!.status.state).toBe("forbidden");
   });
   it("Ghent-Terneuzen undated + dated, multi-reason kept", () => {
     const a = { lat: 51.08505, lng: 3.72577 }, b = { lat: 51.09192, lng: 3.72955 };
