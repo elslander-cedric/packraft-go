@@ -27,6 +27,8 @@ Node 22 (see `.nvmrc`), npm.
   3. Re-run step 1 to write the shipped dataset.
   End-point recipes (which dam, bridge, confluence or border ends each stretch) are in `src/dataprep/walloonStretches/recipes.ts`; logic in `src/dataprep/walloonStretches/` is pure and tested on saved OSM extracts in its `fixtures/` folder (make new ones with `scripts/walloon-stretches/save-fixture.mts`).
 
+**Layout tests must be font-independent (#70).** The app ships one self-hosted font (Inter, OFL, `public/fonts/`, declared in `globals.css`) so text measures the same on macOS and the Linux CI runner. In layout e2e tests wait for `document.fonts.ready` before measuring, assert the real rule (a figure on one line, Retry fully visible), and never rely on an OS font or a tuned line-count threshold. Don't change the font stack without re-running the layout tests on CI.
+
 CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on every pull request.
 
 ## Layout

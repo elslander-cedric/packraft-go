@@ -34,6 +34,8 @@ function riverEndingAbove(rise: number): BRouterReply {
 async function openMap(page: Page) {
   await page.goto("/");
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  // Updated: line counts are only meaningful once the self-hosted font has loaded (#70).
+  await page.evaluate(() => document.fonts.ready);
   const box = (await mapRegion(page).boundingBox())!;
   const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   const click = (dx: number, dy = 0) => page.mouse.click(centre.x + dx, centre.y + dy);
