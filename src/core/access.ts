@@ -288,3 +288,10 @@ export function accessFeatures(rules: AccessRules, context: AccessContext): Acce
     .filter((record) => record.scope === "water")
     .map((record) => ({ record, status: evaluateRecord(record, context) }));
 }
+
+/** The regions (e.g. "wallonia") whose area contains the point; empty outside every region with rules. */
+export function regionsAt(point: LatLng, rules: AccessRules): string[] {
+  return rules.records
+    .filter((record) => record.scope === "region" && applies(record, point))
+    .map((record) => record.region);
+}
