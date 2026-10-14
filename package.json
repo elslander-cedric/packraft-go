@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "check:brouter": "tsx scripts/check-brouter.mts",
+    "check:kiwis": "tsx scripts/check-kiwis.mts",
     "data:walloon-stretches": "tsx scripts/walloon-stretches/build.mts",
     "review:walloon-stretches": "tsx scripts/walloon-stretches/review.mts",
     "prepare:access-data": "tsx scripts/prepare-access-data.mts"
