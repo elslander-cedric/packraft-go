@@ -1,6 +1,7 @@
 // Access status: whether water may be paddled (GLOSSARY: Access status; ADRs 0022, 0024).
 // Pure evaluation over rule data that is passed in, like the router: the core
 // never loads data, calls a network or reads a clock.
+import { agwDay, agwHoursTable, type AgwCategory, type AgwClosure } from "./agw";
 import {
   boundsOf,
   insideArea,
@@ -20,11 +21,39 @@ export type AccessState = "open" | "closed-today" | "forbidden" | "unknown";
 /** Where a rule comes from: a legal text, a regulation or an official page. */
 export type AccessSource = { readonly title: string; readonly url: string };
 
+/** The gauge whose flow decides a Walloon stretch (AGW Annex 2). */
+export type AgwGauge = {
+  readonly name: string;
+  /** The KiWIS station number, for the live flow (#61). */
+  readonly stationNo: string;
+  /** True when the match to Annex 2 is a best guess (ADR 0024); #61 shows it as assumed. */
+  readonly assumed: boolean;
+};
+
 /**
- * What a rule says. A `fixed` rule has the same state on every date; region-
- * and flow-dependent rules (Wallonia, #59 and #61) add their own types.
+ * A Walloon stretch under the AGW of 19 March 2009 (ADRs 0022, 0024): its
+ * category decides the season, the fishing opening days and the hours. The
+ * flow limits are information here; the live flow check is #61.
  */
-export type AccessRule = {
+export type AgwRule = {
+  readonly type: "agw";
+  readonly category: AgwCategory;
+  /** Annex 2 minimum flow (72-hour mean), or null when none is set. */
+  readonly minM3s: number | null;
+  readonly maxM3s: number;
+  /** The Annex 2 gauge, or null when no gauge matches (Wanlin). */
+  readonly gauge: AgwGauge | null;
+  readonly link?: AccessSource;
+};
+
+/**
+ * What a rule says. A `fixed` rule has the same state on every date; an
+ * `agw` rule (Wallonia) depends on the date; flow-dependent states (#61)
+ * build on it.
+ */
+export type AccessRule = FixedRule | AgwRule;
+
+export type FixedRule = {
   readonly type: "fixed";
   readonly state: "open" | "forbidden" | "unknown";
   /** Why the water has this state, in one sentence. */
@@ -83,6 +112,10 @@ export type AccessReason =
       readonly source: AccessSource;
       readonly researched: string;
       readonly unverified?: string;
+      /** Walloon stretches: the AGW category. */
+      readonly category?: AgwCategory;
+      /** Walloon stretches closed today: because of the season or a fishing opening day. */
+      readonly closedBy?: AgwClosure;
     }
   /** The place is outside every region with rules. */
   | { readonly kind: "no-rule"; readonly state: "unknown" };
@@ -113,8 +146,8 @@ function applies(record: AccessRecord, point: LatLng): boolean {
 
 /** The status one record gives on the context's date. */
 export function evaluateRecord(record: AccessRecord, context: AccessContext): AccessStatus {
-  void context; // Fixed rules don't depend on the date.
   const { rule } = record;
+  if (rule.type === "agw") return evaluateAgw(record, rule, context);
   const reason: AccessReason = {
     kind: "rule",
     state: rule.state,
@@ -128,6 +161,65 @@ export function evaluateRecord(record: AccessRecord, context: AccessContext): Ac
     ...(record.unverified && { unverified: record.unverified }),
   };
   return { state: rule.state, reasons: [reason] };
+}
+
+const MONTH_SEASON = "Category 1.C stretches may be paddled only from 1 October to 15 March.";
+const FISHING_DAYS = "the fishing opening days (3rd Saturday of March, 1st Saturday of June)";
+
+/** A Walloon stretch's status on a date: season, fishing opening days and hours (AGW art. 4). */
+function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext): AccessStatus {
+  const { category } = rule;
+  const { date } = context;
+  const day = date === undefined ? undefined : agwDay(category, date);
+  const hours = day
+    ? [`Permitted hours on ${date}: ${day.hours.from}-${day.hours.to}`]
+    : agwHoursTable(category).map((p) => `Permitted hours ${p.period}: ${p.from}-${p.to}`);
+  const flow = [
+    rule.minM3s !== null && `minimum ${rule.minM3s} m³/s (72-hour mean)`,
+    `maximum ${rule.maxM3s} m³/s`,
+  ].filter(Boolean);
+  const conditions = [
+    ...hours,
+    `Flow limits (not checked yet): ${flow.join(", ")}.`,
+    "Get in and out only at the designated aires.",
+  ];
+
+  let state: AccessState = "open";
+  let closedBy: AgwClosure | undefined;
+  let ruleText: string;
+  if (day?.closure === "season") {
+    state = "closed-today";
+    closedBy = "season";
+    ruleText = `Closed today: season. ${MONTH_SEASON}`;
+  } else if (day?.closure === "fishing-day") {
+    state = "closed-today";
+    closedBy = "fishing-day";
+    ruleText = `Closed today: fishing opening day. Category ${category} stretches are closed on ${FISHING_DAYS}.`;
+  } else if (category === "1.A") {
+    ruleText = "Category 1.A (navigable): open all year, within the permitted hours.";
+  } else if (category === "1.B") {
+    ruleText = `Category 1.B: open all year, except on ${FISHING_DAYS}.`;
+  } else {
+    ruleText = `Category 1.C: open from 1 October to 15 March only, except on ${FISHING_DAYS}.`;
+    // Without a date the season can't be told.
+    if (!day) state = "unknown";
+  }
+
+  const reason: AccessReason = {
+    kind: "rule",
+    state,
+    recordId: record.id,
+    name: record.name,
+    ruleText,
+    conditions,
+    ...(rule.link && { link: rule.link }),
+    source: record.source,
+    researched: record.researched,
+    ...(record.unverified && { unverified: record.unverified }),
+    category,
+    ...(closedBy && { closedBy }),
+  };
+  return { state, reasons: [reason] };
 }
 
 /**

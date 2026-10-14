@@ -70,7 +70,8 @@ export default function AccessLayer({ features, selectedId, onSelect }: AccessLa
       <LayerGroup attribution={strings.accessAttribution}>
         {features.map((feature) => (
           <AccessShape
-            key={feature.record.id}
+            // Leaflet reads the class name only when a path is created, so a new state makes a new path.
+            key={`${feature.record.id}:${feature.status.state}`}
             feature={feature}
             selected={feature.record.id === selectedId}
             onSelect={() => onSelect(feature.record.id)}

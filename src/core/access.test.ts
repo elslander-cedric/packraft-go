@@ -13,7 +13,15 @@ import {
   nearForbiddenCanal,
   onAgreementStretch,
   onForbiddenCanal,
+  onUnlistedWalloonWater,
+  onWalloonAllYear,
+  onWalloonNavigable,
+  onWalloonWinter,
   outsideAnyRegion,
+  walloniaSquare,
+  walloonAllYear,
+  walloonNavigable,
+  walloonWinter,
 } from "./testing/fakeAccessRules";
 
 const flanders = fakeAccessRules([flandersSquare, forbiddenCanal, forbiddenPort, agreementStretch]);
@@ -135,5 +143,84 @@ describe("access features for the map", () => {
       ["test-port", "forbidden"],
       ["test-agreement", "open"],
     ]);
+  });
+});
+
+describe("access status in Wallonia (AGW stretches, #59)", () => {
+  const wallonia = fakeAccessRules([walloniaSquare, walloonNavigable, walloonAllYear, walloonWinter]);
+  const conditionsOf = (status: AccessStatus) => {
+    const reason = status.reasons[0];
+    return reason.kind === "rule" ? (reason.conditions ?? []) : [];
+  };
+
+  it("a 1.C stretch in July is closed today for the season, with its reason", () => {
+    const status = accessAt(onWalloonWinter, wallonia, { date: "2026-07-15" });
+    expect(status.state).toBe("closed-today");
+    expect(status.reasons).toEqual([
+      expect.objectContaining({
+        kind: "rule",
+        state: "closed-today",
+        recordId: "test-1c",
+        closedBy: "season",
+        category: "1.C",
+        ruleText: expect.stringContaining("1 October to 15 March"),
+      }),
+    ]);
+  });
+
+  it("a 1.C stretch in January is open, with the hours of that date", () => {
+    const status = accessAt(onWalloonWinter, wallonia, { date: "2027-01-12" });
+    expect(status.state).toBe("open");
+    expect(status.reasons[0]).toMatchObject({ kind: "rule", category: "1.C" });
+    expect(conditionsOf(status)).toContain("Permitted hours on 2027-01-12: 10:00-17:00");
+  });
+
+  it("a 1.B stretch is open in July but closed on the 1st Saturday of June (fishing opening day)", () => {
+    expect(accessAt(onWalloonAllYear, wallonia, { date: "2026-07-15" }).state).toBe("open");
+    const status = accessAt(onWalloonAllYear, wallonia, { date: "2026-06-06" });
+    expect(status.state).toBe("closed-today");
+    expect(status.reasons[0]).toMatchObject({ closedBy: "fishing-day" });
+    expect(accessAt(onWalloonAllYear, wallonia, { date: "2026-06-13" }).state).toBe("open");
+  });
+
+  it("a 1.A stretch is open on fishing opening days, with its spring hours", () => {
+    const status = accessAt(onWalloonNavigable, wallonia, { date: "2026-06-06" });
+    expect(status.state).toBe("open");
+    expect(conditionsOf(status)).toContain("Permitted hours on 2026-06-06: 09:30-19:00");
+  });
+
+  it("without a date, 1.A and 1.B are open with every period's hours; 1.C is unknown", () => {
+    expect(accessAt(onWalloonNavigable, wallonia, {}).state).toBe("open");
+    const b = accessAt(onWalloonAllYear, wallonia, {});
+    expect(b.state).toBe("open");
+    expect(conditionsOf(b)).toContain("Permitted hours 1 Oct - 15 Jun: 10:00-17:00");
+    expect(accessAt(onWalloonWinter, wallonia, {}).state).toBe("unknown");
+  });
+
+  it("shows the flow limits and the official link as information, keeping the assumed gauge flag in the data", () => {
+    const status = accessAt(onWalloonWinter, wallonia, { date: "2027-01-12" });
+    expect(conditionsOf(status).join(" ")).toMatch(/minimum 2\.5 m³\/s.*maximum 44 m³\/s/);
+    const reason = status.reasons[0];
+    expect(reason.kind === "rule" && reason.link?.url).toBe("https://kayak.spw.wallonie.be/");
+    expect(walloonWinter.rule).toMatchObject({ gauge: { assumed: true } });
+  });
+
+  it("unlisted Walloon water is unknown (treated as not allowed), not forbidden", () => {
+    const status = accessAt(onUnlistedWalloonWater, wallonia, { date: "2027-01-12" });
+    expect(status.state).toBe("unknown");
+    expect(status.reasons[0]).toMatchObject({ recordId: "wallonia" });
+  });
+
+  it("a leg along a stretch is closed today when the stretch is, and the stretch is painted for the date", () => {
+    const leg = [
+      { lat: 49.9, lng: 4.8 },
+      { lat: 49.9, lng: 5.2 },
+    ];
+    expect(accessAlong(leg, wallonia, { date: "2026-07-15" }).state).toBe("closed-today");
+    expect(accessAlong(leg, wallonia, { date: "2026-12-15" }).state).toBe("open");
+    const stateOf = (date: string) =>
+      accessFeatures(wallonia, { date }).find((f) => f.record.id === "test-1c")!.status.state;
+    expect(stateOf("2026-07-15")).toBe("closed-today");
+    expect(stateOf("2026-12-15")).toBe("open");
   });
 });
