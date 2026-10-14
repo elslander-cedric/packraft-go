@@ -14,7 +14,7 @@ const canal = [
 /** A short hike to the put-in, west of the canal. */
 const start = { lat: 51.085, lng: 3.715 };
 
-function seededTrip(startDate?: string) {
+function seededTrip(startDate?: string, water = canal) {
   const routed = (points: { lat: number; lng: number }[]) => ({
     status: "routed",
     geometry: points.map((p) => ({ ...p, elevation: 5 })),
@@ -24,10 +24,10 @@ function seededTrip(startDate?: string) {
     version: 1,
     trip: {
       name: "Canal trip",
-      points: [start, canal[0], canal[2]],
+      points: [start, water[0], water[water.length - 1]],
       legs: [
-        { mode: "hike", route: routed([start, canal[0]]) },
-        { mode: "paddle", route: routed(canal) },
+        { mode: "hike", route: routed([start, water[0]]) },
+        { mode: "paddle", route: routed(water) },
       ],
       ...(startDate && { startDate }),
     },
@@ -35,12 +35,12 @@ function seededTrip(startDate?: string) {
 }
 
 /** Seeds the trip before the page's first load only, so reloads keep the app's own saves. */
-async function seed(page: Page, startDate?: string) {
+async function seed(page: Page, startDate?: string, water = canal) {
   await page.addInitScript((save) => {
     if (sessionStorage.getItem("seeded")) return;
     sessionStorage.setItem("seeded", "1");
     localStorage.setItem("packraft-go.trip", save);
-  }, JSON.stringify(seededTrip(startDate)));
+  }, JSON.stringify(seededTrip(startDate, water)));
 }
 
 const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
@@ -105,4 +105,19 @@ test("an undated trip shows the rules in general terms", async ({ page }) => {
     strings.tripAccess.legStatusInGeneral(strings.accessState.forbidden),
   );
   await expect(legRow(page, 1)).toContainText("De Vlaamse Waterweg excludes the Ghent–Terneuzen canal");
+});
+
+test("a paddle leg on the Meuse at Dinant (unlisted Walloon water) shows a Forbidden warning with the AGW reason (#59)", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, "2027-07-10", [
+    { lat: 50.26, lng: 4.91 },
+    { lat: 50.265, lng: 4.915 },
+  ]);
+  await page.goto("/");
+  const paddle = legRow(page, 1);
+  await expect(paddle.locator(".leg-access-status")).toHaveText(
+    strings.tripAccess.legStatusOn("Sat 10 Jul 2027", strings.accessState.forbidden),
+  );
+  await expect(paddle.locator(".access-warning").first()).toContainText(strings.tripAccess.warningKind.forbidden);
+  await expect(paddle).toContainText("AGW");
 });
