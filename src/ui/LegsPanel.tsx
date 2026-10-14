@@ -1,3 +1,4 @@
+import type { AireWarning } from "@/core/aire";
 import type { TripSummary } from "@/core/summarise";
 import type { TripAccess } from "@/core/tripAccess";
 import type { Leg, LegMode } from "@/core/trip";
@@ -5,7 +6,7 @@ import { Button } from "./components/Button";
 import { ToggleGroup, type ToggleOption } from "./components/ToggleGroup";
 import { formatDistance, formatElevation, formatTimeEstimate } from "./format";
 import { strings } from "./strings";
-import { LegAccessView } from "./TripAccessView";
+import { AireWarnings, LegAccessView } from "./TripAccessView";
 
 const modes: readonly ToggleOption<LegMode>[] = [
   { value: "hike", label: strings.legModeHike, className: "leg-mode leg-mode-hike" },
@@ -18,6 +19,8 @@ export type LegsPanelProps = {
   legs: readonly Leg[];
   /** Access status and warnings per paddle leg (#58); null until the access rules are loaded. */
   access?: TripAccess | null;
+  /** Walloon aire warnings (#62) for the trip's put-ins and take-outs. */
+  aire?: readonly AireWarning[];
   onRetry: (legIndex: number) => void;
   /** The planner switched a leg to another mode. */
   onSetMode: (legIndex: number, mode: LegMode) => void;
@@ -39,7 +42,7 @@ function ModeSwitch({ legIndex, mode, onSetMode }: ModeSwitchProps) {
 }
 
 /** Lists each leg's figures and the trip totals. Renders a summary; no domain logic. */
-export default function LegsPanel({ summary, legs, access, onRetry, onSetMode }: LegsPanelProps) {
+export default function LegsPanel({ summary, legs, access, aire = [], onRetry, onSetMode }: LegsPanelProps) {
   return (
     <aside className="legs-panel" aria-label={strings.legsPanelLabel}>
       <h2>{strings.legsPanelLabel}</h2>
@@ -74,6 +77,12 @@ export default function LegsPanel({ summary, legs, access, onRetry, onSetMode }:
                   </span>
                 </div>
                 {access?.legs[i] && <LegAccessView access={access.legs[i]} />}
+                {aire.some((warning) => warning.leg === i) && (
+                  // Like the leg's access status, in its own block apart from the figures.
+                  <div className="leg-access">
+                    <AireWarnings warnings={aire.filter((warning) => warning.leg === i)} />
+                  </div>
+                )}
                 {(!route || route.status === "pending") && (
                   <span role="status" className="leg-routing">
                     {strings.legRouting}

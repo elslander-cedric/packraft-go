@@ -257,6 +257,23 @@ export const strings = {
     summaryNone: "No access warnings.",
     neverBlocks: "Warnings are information only: you can still plan, save and export.",
   },
+  // Snapping a new put-in or take-out to one of your access points (#62, ADR 0023).
+  snap: {
+    label: "Snap to an access point",
+    offer: (kind: string, metres: number, use: string, accessKind: string) =>
+      `The new ${kind} is ${metres} m from your access point (${use}, ${accessKind}). Snap it there?`,
+    accept: "Snap to access point",
+    decline: "Keep where it is",
+    kinds: { "put-in": "put-in", "take-out": "take-out" },
+  },
+  // The Walloon aire warning (#62, AGW art. 5): information only, never blocks.
+  aire: {
+    warningKind: "No official aire",
+    text: (kind: string, point: number) =>
+      `Point ${point}, the ${kind}, is in Wallonia but not within 200 m of an access point of yours marked as an ` +
+      "official aire. In Wallonia you may only get on or off the water at an aire (AGW art. 5).",
+    kinds: { "put-in": "put-in", "take-out": "take-out" },
+  },
   // Shown in the map's attribution control while the access layer is on. Contains HTML links.
   accessAttribution:
     'Access data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
