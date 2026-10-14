@@ -219,6 +219,26 @@ export const strings = {
   accessResearched: (date: string) => `Researched ${date}`,
   accessUnverified: (what: string) => `Not confirmed: ${what}`,
   accessDataCredit: "Access geometry © OpenStreetMap contributors (ODbL).",
+  // Access status and warnings on paddle legs, day rows and the trip (#58).
+  tripAccess: {
+    legStatusOn: (date: string, state: string) => `Access on ${date}: ${state}`,
+    legStatusInGeneral: (state: string) => `Access in general (no start date): ${state}`,
+    dayStatus: (state: string) => `Access: ${state}`,
+    checkFlowOnTheDay: "Rules OK; check the flow on the day.",
+    warningKind: {
+      forbidden: "Forbidden",
+      closed: "Closed on this date",
+      unknown: "Unknown",
+      "check-flow": "Check the flow on the day",
+    },
+    noRule: "No access rules are known for part of this leg.",
+    warningPlace: (day: number, leg: number) => `Day ${day}, leg ${leg}`,
+    legPlace: (leg: number) => `Leg ${leg}`,
+    summaryLabel: "Access summary",
+    summaryCount: (n: number) => (n === 1 ? "1 access warning" : `${n} access warnings`),
+    summaryNone: "No access warnings.",
+    neverBlocks: "Warnings are information only: you can still plan, save and export.",
+  },
   // Shown in the map's attribution control while the access layer is on. Contains HTML links.
   accessAttribution:
     'Access data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +

@@ -64,6 +64,9 @@ const textLineCount = (scope: Locator) =>
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       if (!n.textContent!.trim()) continue;
+      // Updated: a paddle leg's access status and warnings sit in their own block below
+      // the figures and are not part of the two-line rule for the figures (#58).
+      if (n.parentElement?.closest(".leg-access")) continue;
       const range = document.createRange();
       range.selectNodeContents(n);
       for (const r of range.getClientRects()) if (r.width > 0) tops.push(r.top);
