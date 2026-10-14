@@ -218,6 +218,10 @@ test.describe("#27 Retry on a failed leg at 1280×800", () => {
     await modeButton(page, 0, strings.legModePaddle).click();
     const row = legRows(page).nth(0);
     await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailedNoRiver);
+    // Updated: the row also gets access status and aire warnings once the rules load
+    // (#58, #81); measure Retry after they are in, not while they push it down.
+    await expect(row.locator(".leg-access-status")).toBeVisible();
+    await expect(row.locator(".aire-warnings")).toBeVisible();
     await expectRetryUsable(page, row, net);
   });
 
