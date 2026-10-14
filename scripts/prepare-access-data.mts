@@ -4,6 +4,7 @@
 //
 //   npm run prepare:access-data            # uses cached answers when present
 //   npm run prepare:access-data -- --fresh # asks Overpass again
+//   npm run prepare:access-data -- --skip-flanders # keeps flanders.json as it is
 //
 // Politeness: one request at a time with a pause between them, identified by
 // the project URL only; answers are cached in .cache/access-osm/ (git-ignored),
@@ -11,8 +12,8 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { buildAccessData } from "../src/access/prepare/build";
-import { serialiseDataset } from "../src/access/prepare/serialise";
+import { buildAccessData, buildLockData } from "../src/access/prepare/build";
+import { serialiseDataset, serialiseLocks } from "../src/access/prepare/serialise";
 import type { OverpassResponse } from "../src/access/prepare/osm";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -27,6 +28,8 @@ const ENDPOINTS = [
 ];
 const PAUSE_MS = 2000;
 const fresh = process.argv.includes("--fresh");
+// Leaves flanders.json as it is: refreshes only the regions, Brussels and the locks.
+const skipFlanders = process.argv.includes("--skip-flanders");
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -59,8 +62,13 @@ async function overpass(query: string): Promise<OverpassResponse> {
 }
 
 const today = new Date().toISOString().slice(0, 10);
-for (const dataset of await buildAccessData(overpass, today)) {
+const datasets = await buildAccessData(overpass, today, { skipFlanders });
+for (const dataset of datasets) {
   const file = path.join(OUT, `${dataset.id}.json`);
   writeFileSync(file, serialiseDataset(dataset));
   console.log(`Wrote ${path.relative(ROOT, file)}: ${dataset.records.length} records`);
 }
+const locks = await buildLockData(overpass, datasets.find((d) => d.id === "regions")!.records, today);
+const locksFile = path.join(OUT, "locks.json");
+writeFileSync(locksFile, serialiseLocks(locks));
+console.log(`Wrote ${path.relative(ROOT, locksFile)}: ${locks.locks.length} locks`);

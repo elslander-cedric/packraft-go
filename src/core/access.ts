@@ -9,6 +9,7 @@ import {
   touches,
   type Bounds,
   type Geometry,
+  type Position,
 } from "./geo";
 import type { LatLng } from "./trip";
 
@@ -61,6 +62,22 @@ export type AccessRecord = {
   readonly researched: string;
   /** What the research could not confirm, if anything ([UNVERIFIED] in docs/research). */
   readonly unverified?: string;
+};
+
+/**
+ * A lock on a waterway (GLOSSARY: Lock). Paddlers portage around locks, so a
+ * lock is shown as a marker, not as a water with a status.
+ */
+export type LockMarker = {
+  readonly id: string;
+  readonly name: string;
+  /** The region whose rules the lock belongs to, e.g. "flanders". */
+  readonly region: string;
+  readonly position: Position;
+  /** Where the portage rule for this region comes from. */
+  readonly source: AccessSource;
+  /** When the rule was last researched, as YYYY-MM-DD. */
+  readonly researched: string;
 };
 
 /** All rule data the core evaluates against. */
