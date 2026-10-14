@@ -1,13 +1,15 @@
 import type { DaySummary } from "@/core/summarise";
+import type { DayAccess } from "@/core/tripAccess";
 import { formatDayDate, formatDistance, formatElevation, formatTimeEstimate } from "./format";
 import { strings } from "./strings";
+import { DayAccessView } from "./TripAccessView";
 
 /**
  * Totals for each day (ADR 0008): the trip is split into days at camps.
  * Renders the core's day summaries; no domain logic. A dated trip's days show
- * their calendar dates (#52).
+ * their calendar dates (#52), and each day its access status and warnings (#58).
  */
-export default function DaysPanel({ days }: { days: readonly DaySummary[] }) {
+export default function DaysPanel({ days, access }: { days: readonly DaySummary[]; access?: readonly DayAccess[] }) {
   if (days.length === 0) return null;
   return (
     <aside className="days-panel" aria-label={strings.daysPanelLabel}>
@@ -33,6 +35,7 @@ export default function DaysPanel({ days }: { days: readonly DaySummary[] }) {
             <span className="day-time">
               {`${strings.dayTimeEstimate} ${formatTimeEstimate(day.timeH, day.timeStatus)}`}
             </span>
+            {access?.[i] && <DayAccessView access={access[i]} />}
           </li>
         ))}
       </ol>
