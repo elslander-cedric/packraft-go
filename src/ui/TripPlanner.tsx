@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Router } from "@/core/router";
 import { createAutoRouter, retryLeg } from "@/core/routing";
 import { defaultSettings, withSetting, type Settings } from "@/core/settings";
 import { summarise } from "@/core/summarise";
+import { tripAccess } from "@/core/tripAccess";
 import {
   applyEdit,
   canUndo,
@@ -28,8 +29,10 @@ import EditToolbar from "./EditToolbar";
 import LegsPanel from "./LegsPanel";
 import SettingsPanel from "./SettingsPanel";
 import { strings } from "./strings";
+import { TripAccessSummary } from "./TripAccessView";
 import TripToolbar from "./TripToolbar";
 import { useAccessPoints } from "./useAccessPoints";
+import { localToday, useAccessRules } from "./useAccessRules";
 import { useSettings } from "./useSettings";
 
 /** The questions asked before a trip with points is replaced. */
@@ -161,6 +164,10 @@ export default function TripPlanner({ router }: { router?: Router }) {
   });
 
   const summary = summarise(trip, settings ?? defaultSettings);
+  // Access status and warnings on paddle legs (#58): the rules load once the trip has a paddle leg.
+  const rules = useAccessRules(trip.legs.some((leg) => leg.mode === "paddle"));
+  const today = localToday();
+  const waterAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today }) : null), [trip, rules, today]);
   const confirmation = confirmations[question];
 
   return (
@@ -209,10 +216,12 @@ export default function TripPlanner({ router }: { router?: Router }) {
         <LegsPanel
           summary={summary}
           legs={trip.legs}
+          access={waterAccess}
           onRetry={retry}
           onSetMode={(index, mode) => edit({ type: "setLegMode", index, mode })}
         />
-        <DaysPanel days={summary.days} />
+        <DaysPanel days={summary.days} access={waterAccess?.days} />
+        {waterAccess && <TripAccessSummary access={waterAccess.trip} />}
         <AccessPointsPanel access={access} />
         {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
       </div>

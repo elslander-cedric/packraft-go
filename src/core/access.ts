@@ -33,6 +33,11 @@ export type AccessRule = {
   readonly conditions?: readonly string[];
   /** Where to read the full conditions. */
   readonly link?: AccessSource;
+  /**
+   * True when the water's state also depends on the river's flow. Flow is only
+   * known for today, so a future date can only say "rules OK; check flow on the day".
+   */
+  readonly flowDependent?: boolean;
 };
 
 /**
@@ -68,6 +73,8 @@ export type AccessRules = { readonly records: readonly AccessRecord[] };
 export type AccessContext = {
   /** The calendar date, YYYY-MM-DD, or absent for "in general". */
   readonly date?: string;
+  /** Today's date, YYYY-MM-DD, when known: flow readings only apply to today, not to later dates. */
+  readonly today?: string;
 };
 
 /** Why a piece of water has its status. */
@@ -83,6 +90,8 @@ export type AccessReason =
       readonly source: AccessSource;
       readonly researched: string;
       readonly unverified?: string;
+      /** The rule's state also depends on flow (see `AccessRule.flowDependent`). */
+      readonly flowDependent?: true;
     }
   /** The place is outside every region with rules. */
   | { readonly kind: "no-rule"; readonly state: "unknown" };
@@ -126,6 +135,7 @@ export function evaluateRecord(record: AccessRecord, context: AccessContext): Ac
     source: record.source,
     researched: record.researched,
     ...(record.unverified && { unverified: record.unverified }),
+    ...(rule.flowDependent && { flowDependent: true as const }),
   };
   return { state: rule.state, reasons: [reason] };
 }
