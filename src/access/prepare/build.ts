@@ -2,7 +2,7 @@
 // `overpass` answers one Overpass QL query; the script passes a polite, cached
 // fetch, tests pass saved extracts.
 import type { AccessRecord, Geometry } from "@/core/access";
-import { ACCESS_DATA_FORMAT, OSM_ATTRIBUTION, type AccessDataset } from "../dataset";
+import { ACCESS_DATA_FORMAT, LOCK_DATA_FORMAT, OSM_ATTRIBUTION, type AccessDataset, type LockDataset } from "../dataset";
 import {
   areasOf,
   clipLine,
@@ -18,7 +18,18 @@ import {
   type OverpassResponse,
   type Polygon,
 } from "./osm";
-import { flandersWaterSpecs, RESEARCHED, regionSpecs, type RegionSpec, type WaterSpec } from "./sources";
+import { lockMarkers, LOCK_QUERY } from "./locks";
+import {
+  brusselsWaterSpecs,
+  flandersWaterSpecs,
+  LOCK_BBOX,
+  LOCK_REGIONS,
+  lockRuleSources,
+  RESEARCHED,
+  regionSpecs,
+  type RegionSpec,
+  type WaterSpec,
+} from "./sources";
 
 export type Overpass = (query: string) => Promise<OverpassResponse>;
 
@@ -100,13 +111,24 @@ const regionAreaOf = (record: AccessRecord): Polygon[] =>
       ? record.geometry.coordinates.map((polygon) => polygon.map((ring) => [...ring]))
       : [];
 
-/** Builds every dataset. `extracted` is today's date, YYYY-MM-DD. */
-export async function buildAccessData(overpass: Overpass, extracted: string): Promise<AccessDataset[]> {
+/**
+ * Builds every dataset. `extracted` is today's date, YYYY-MM-DD. With
+ * `skipFlanders` the Flemish waters are left out (and not requested), to
+ * refresh the other datasets without touching flanders.json.
+ */
+export async function buildAccessData(
+  overpass: Overpass,
+  extracted: string,
+  options: { skipFlanders?: boolean } = {},
+): Promise<AccessDataset[]> {
   const regions: AccessRecord[] = [];
   for (const spec of regionSpecs) regions.push(await regionRecord(spec, overpass));
   const flandersArea = regionAreaOf(regions.find((r) => r.id === "flanders")!);
   const flanders: AccessRecord[] = [];
-  for (const spec of flandersWaterSpecs) flanders.push(await waterRecord(spec, flandersArea, overpass));
+  for (const spec of options.skipFlanders ? [] : flandersWaterSpecs) flanders.push(await waterRecord(spec, flandersArea, overpass));
+  const brusselsArea = regionAreaOf(regions.find((r) => r.id === "brussels")!);
+  const brussels: AccessRecord[] = [];
+  for (const spec of brusselsWaterSpecs) brussels.push(await waterRecord(spec, brusselsArea, overpass));
   const dataset = (id: string, title: string, records: AccessRecord[]): AccessDataset => ({
     format: ACCESS_DATA_FORMAT,
     version: 1,
@@ -118,6 +140,31 @@ export async function buildAccessData(overpass: Overpass, extracted: string): Pr
   });
   return [
     dataset("regions", "Regions and their default rules", regions),
-    dataset("flanders", "Flemish exceptions and VMM agreement stretches", flanders),
+    ...(options.skipFlanders ? [] : [dataset("flanders", "Flemish exceptions and VMM agreement stretches", flanders)]),
+    dataset("brussels", "Brussels canal, ponds, Senne and small streams", brussels),
   ];
+}
+
+/** The lock markers of Flanders and Brussels, from the region records built above. */
+export async function buildLockData(
+  overpass: Overpass,
+  regionRecords: readonly AccessRecord[],
+  extracted: string,
+): Promise<LockDataset> {
+  const regions = LOCK_REGIONS.map((id) => ({ id, area: regionAreaOf(regionRecords.find((r) => r.id === id)!) }));
+  const answer = await overpass(geometryQuery(LOCK_QUERY(LOCK_BBOX)));
+  const locks = lockMarkers(answer, regions).map((lock) => ({
+    ...lock,
+    source: lockRuleSources[lock.region],
+    researched: RESEARCHED,
+  }));
+  return {
+    format: LOCK_DATA_FORMAT,
+    version: 1,
+    id: "locks",
+    title: "Locks in Flanders and Brussels (portage required)",
+    attribution: OSM_ATTRIBUTION,
+    extracted,
+    locks,
+  };
 }

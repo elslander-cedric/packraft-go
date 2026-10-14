@@ -1,0 +1,18 @@
+/* Offers to snap a new put-in or take-out to an access point (#62). */
+.snap-offers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.snap-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.snap-offer p {
+  flex-basis: 100%;
+  margin: 0;
+}

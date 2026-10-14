@@ -220,7 +220,8 @@ export const strings = {
     unknown: "Unknown",
   },
   accessLegendNote:
-    "In Flanders, water that isn't marked is open by default. In Wallonia, only the listed stretches may be paddled; other water is treated as not allowed, but isn't painted red.",
+    "In Flanders, water that isn't marked is open by default. In Wallonia, only the listed stretches may be paddled; other water is treated as not allowed, but isn't painted red. " +
+    "In Brussels, only the canal is known to be open; other water is unknown.",
   // The access layer's date (#59): the status of dated rules (Walloon seasons, fishing days) is for this day.
   accessDateLabel: "Date",
   accessTodayButton: "Today",
@@ -229,6 +230,11 @@ export const strings = {
   accessTripDayOption: (day: number, date: string) => `Day ${day}: ${date}`,
   accessStatusOn: (date: string) => `On ${date}`,
   accessCategory: (category: string) => `Walloon category ${category}`,
+  // Locks (#57, GLOSSARY "Lock"): marked on the access layer in Flanders and Brussels.
+  lockLegend: "Lock: portage required (shown when zoomed in)",
+  lockDetailLabel: "Lock details",
+  lockPortageRequired: "Portage required",
+  lockPortageText: "Don't go through the lock on the water: get out before it and carry your packraft around it.",
   accessDetailLabel: "Access details",
   accessDetailClose: "Close",
   accessNoRule: "No access rules are known for this place.",
@@ -275,6 +281,23 @@ export const strings = {
     m3s: (value: string) => `${value} m³/s`,
     // The SPW's legal notice asks for this credit, in French, with a link.
     credit: "Sources des données : Service public de Wallonie",
+  },
+  // Snapping a new put-in or take-out to one of your access points (#62, ADR 0023).
+  snap: {
+    label: "Snap to an access point",
+    offer: (kind: string, metres: number, use: string, accessKind: string) =>
+      `The new ${kind} is ${metres} m from your access point (${use}, ${accessKind}). Snap it there?`,
+    accept: "Snap to access point",
+    decline: "Keep where it is",
+    kinds: { "put-in": "put-in", "take-out": "take-out" },
+  },
+  // The Walloon aire warning (#62, AGW art. 5): information only, never blocks.
+  aire: {
+    warningKind: "No official aire",
+    text: (kind: string, point: number) =>
+      `Point ${point}, the ${kind}, is in Wallonia but not within 200 m of an access point of yours marked as an ` +
+      "official aire. In Wallonia you may only get on or off the water at an aire (AGW art. 5).",
+    kinds: { "put-in": "put-in", "take-out": "take-out" },
   },
   // Shown in the map's attribution control while the access layer is on. Contains HTML links.
   accessAttribution:

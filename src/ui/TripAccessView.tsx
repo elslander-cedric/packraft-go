@@ -1,4 +1,5 @@
 import type { AccessState } from "@/core/access";
+import type { AireWarning } from "@/core/aire";
 import type { AccessSummary, AccessWarning, DayAccess, LegAccess } from "@/core/tripAccess";
 import { accessColours } from "@/map/accessColours";
 import { FlowFiguresView } from "./FlowFiguresView";
@@ -112,18 +113,38 @@ export function DayAccessView({ access }: { access: DayAccess }) {
   );
 }
 
+/** Walloon aire warnings (#62): a put-in or take-out in Wallonia without an official aire of yours nearby. */
+export function AireWarnings({ warnings, showPlace }: { warnings: readonly AireWarning[]; showPlace?: boolean }) {
+  if (warnings.length === 0) return null;
+  return (
+    <div className="access-warnings aire-warnings">
+      {warnings.map((warning) => (
+        <p key={`${warning.kind}-${warning.point}`} className="access-warning access-warning-aire">
+          {showPlace && (
+            <span className="access-warning-place">{`${strings.tripAccess.warningPlace(warning.day + 1, warning.leg + 1)}: `}</span>
+          )}
+          <strong>{`${strings.aire.warningKind}: `}</strong>
+          {strings.aire.text(strings.aire.kinds[warning.kind], warning.point + 1)}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 /** The trip's access summary: every warning, and that none of them blocks anything. */
-export function TripAccessSummary({ access }: { access: AccessSummary }) {
-  if (access.state === undefined) return null;
+export function TripAccessSummary({ access, aire = [] }: { access: AccessSummary; aire?: readonly AireWarning[] }) {
+  if (access.state === undefined && aire.length === 0) return null;
   const { warnings } = access;
+  const count = warnings.length + aire.length;
   return (
     <section className="trip-access" aria-label={strings.tripAccess.summaryLabel}>
       <h2>{strings.tripAccess.summaryLabel}</h2>
-      <p className={`access-status access-status-${access.state}`}>
-        <Swatch state={access.state} />
-        {warnings.length === 0 ? strings.tripAccess.summaryNone : strings.tripAccess.summaryCount(warnings.length)}
+      <p className={`access-status access-status-${access.state ?? "unknown"}`}>
+        <Swatch state={access.state ?? "unknown"} />
+        {count === 0 ? strings.tripAccess.summaryNone : strings.tripAccess.summaryCount(count)}
       </p>
       <WarningList warnings={warnings} place={(w) => strings.tripAccess.warningPlace(w.day + 1, w.leg + 1)} />
+      <AireWarnings warnings={aire} showPlace />
       <p className="trip-access-note">{strings.tripAccess.neverBlocks}</p>
     </section>
   );

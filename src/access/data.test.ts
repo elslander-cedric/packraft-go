@@ -3,7 +3,7 @@
 // put the known waters where they are.
 import { describe, expect, it } from "vitest";
 import { accessAt, type AccessRecord, type Geometry } from "@/core/access";
-import { builtInAccessRules, builtInDatasets } from "./builtInRules";
+import { builtInAccessRules, builtInDatasets, builtInLocks } from "./builtInRules";
 import { ACCESS_DATA_FORMAT } from "./dataset";
 
 const records = builtInDatasets.flatMap((dataset) => dataset.records);
@@ -45,7 +45,7 @@ const ruleIds = (status: ReturnType<typeof at>) => status.reasons.map((r) => (r.
 
 describe("built-in access data", () => {
   it("every dataset is format version 1 and credits OpenStreetMap", () => {
-    expect(builtInDatasets.map((d) => d.id)).toEqual(["regions", "flanders", "wallonia"]);
+    expect(builtInDatasets.map((d) => d.id)).toEqual(["regions", "flanders", "brussels", "wallonia"]);
     for (const dataset of builtInDatasets) {
       expect(dataset.format).toBe(ACCESS_DATA_FORMAT);
       expect(dataset.version).toBe(1);
@@ -121,5 +121,74 @@ describe("built-in access data", () => {
       expect(rule.conditions?.length, id).toBeGreaterThan(0);
       expect(rule.link?.url, id).toMatch(/^https:\/\//);
     }
+  });
+
+  describe("Brussels (#57)", () => {
+    const brussels = records.filter((r) => r.region === "brussels" && r.scope === "water");
+    // Every Brussels water has a fixed rule (no season or flow).
+    const fixedRule = (id: string) => {
+      const { rule } = brussels.find((r) => r.id === id)!;
+      if (rule.type !== "fixed") throw new Error(`${id} has a ${rule.type} rule`);
+      return rule;
+    };
+
+    it("has the canal, the ponds, the Senne and the small streams", () => {
+      expect(brussels.map((r) => r.id)).toEqual(["brussels-canal", "brussels-ponds", "brussels-senne", "brussels-streams"]);
+    });
+
+    it("gives the canal as open, with the priority, VHF and Capitainerie notes", () => {
+      const canal = brussels.find((r) => r.id === "brussels-canal")!;
+      expect(fixedRule("brussels-canal").state).toBe("open");
+      const notes = (fixedRule("brussels-canal").conditions ?? []).join(" ");
+      expect(notes).toMatch(/commercial/i);
+      expect(notes).toMatch(/VHF/);
+      expect(notes).toContain("+32 2 247 91 21");
+      expect(canal.unverified).toBeTruthy();
+    });
+
+    it("gives the ponds as forbidden without permission, and the Senne and small streams as unknown", () => {
+      const state = (id: string) => fixedRule(id).state;
+      expect(state("brussels-ponds")).toBe("forbidden");
+      expect(state("brussels-senne")).toBe("unknown");
+      expect(state("brussels-streams")).toBe("unknown");
+    });
+
+    it("finds the canal open and a pond in Ixelles forbidden", () => {
+      const canal = at(50.8636, 4.3499); // the canal near Sainctelette
+      expect(canal.state).toBe("open");
+      expect(ruleIds(canal)).toContain("brussels-canal");
+      const pond = at(50.8264, 4.3715); // Étangs d'Ixelles
+      expect(pond.state).toBe("forbidden");
+      expect(ruleIds(pond)).toContain("brussels-ponds");
+    });
+
+    it("leaves other Brussels places to the region's unknown default", () => {
+      expect(at(50.8465, 4.3524).state).toBe("unknown"); // Grand-Place
+    });
+  });
+
+  describe("lock markers (#57)", () => {
+    it("have a source and a research date, a unique id and a position in their region", () => {
+      const missing = builtInLocks.locks.filter(
+        (l) => !l.source?.title || !/^https:\/\//.test(l.source?.url ?? "") || !DATE.test(l.researched ?? ""),
+      );
+      expect(missing.map((l) => l.id)).toEqual([]);
+      expect(new Set(builtInLocks.locks.map((l) => l.id)).size).toBe(builtInLocks.locks.length);
+      // Against the region records alone: on a canal, the canal's own rule would hide the region.
+      const regionsOnly = { records: records.filter((r) => r.scope === "region") };
+      for (const lock of builtInLocks.locks) {
+        const [lng, lat] = lock.position;
+        const status = accessAt({ lat, lng }, regionsOnly, { date: "2026-10-12" });
+        expect(ruleIds(status), lock.id).toContain(lock.region);
+      }
+      expect(builtInLocks.attribution).toMatch(/OpenStreetMap.*ODbL/);
+    });
+
+    it("include the Anderlecht and Molenbeek locks in Brussels, and many in Flanders", () => {
+      const brusselsLocks = builtInLocks.locks.filter((l) => l.region === "brussels").map((l) => l.name);
+      expect(brusselsLocks.some((n) => /Anderlecht/.test(n))).toBe(true);
+      expect(brusselsLocks.some((n) => /Molenbeek/.test(n))).toBe(true);
+      expect(builtInLocks.locks.filter((l) => l.region === "flanders").length).toBeGreaterThan(30);
+    });
   });
 });

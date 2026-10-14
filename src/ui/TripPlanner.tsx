@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { aireWarnings } from "@/core/aire";
 import type { Router } from "@/core/router";
 import { createAutoRouter, retryLeg } from "@/core/routing";
 import { defaultSettings, withSetting, type Settings } from "@/core/settings";
+import { snapOffers, snapToAccessPoint, type SnapOffer } from "@/core/snap";
 import { summarise } from "@/core/summarise";
 import { tripAccess } from "@/core/tripAccess";
 import {
@@ -16,6 +18,7 @@ import {
   setStartDate,
   type Edit,
   type LatLng,
+  type LegMode,
   type Trip,
 } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
@@ -28,6 +31,7 @@ import DaysPanel from "./DaysPanel";
 import EditToolbar from "./EditToolbar";
 import LegsPanel from "./LegsPanel";
 import SettingsPanel from "./SettingsPanel";
+import SnapOffers from "./SnapOffers";
 import { strings } from "./strings";
 import { TripAccessSummary } from "./TripAccessView";
 import TripToolbar from "./TripToolbar";
@@ -85,10 +89,24 @@ export default function TripPlanner({ router }: { router?: Router }) {
   };
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null);
 
+  // Offers to snap a new put-in or take-out to one of your access points (#62). Any other edit drops them.
+  const [offers, setOffers] = useState<readonly SnapOffer[]>([]);
   const edit = (change: Edit) => {
     setTrip((current) => applyEdit(current, change));
     setSelectedPoint(null);
     setFileError(null);
+    setOffers([]);
+  };
+  const setLegMode = (index: number, mode: LegMode) => {
+    const after = applyEdit(trip, { type: "setLegMode", index, mode });
+    edit({ type: "setLegMode", index, mode });
+    setOffers(snapOffers(trip, after, access.points));
+  };
+  const dismissOffer = (offer: SnapOffer) => setOffers((current) => current.filter((o) => o !== offer));
+  const acceptOffer = (offer: SnapOffer) => {
+    setTrip((current) => snapToAccessPoint(current, offer));
+    setSelectedPoint(null);
+    dismissOffer(offer);
   };
   const rename = (name: string) => {
     setTrip((current) => renameTrip(current, name));
@@ -108,6 +126,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
     setTrip(next);
     setSelectedPoint(null);
     setFileError(null);
+    setOffers([]);
     setKeepStoredSave(false);
   };
   /** Replaces the current trip, asking first when that would lose points (it cannot be undone). */
@@ -175,6 +194,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
     () => (rules && flows ? tripAccess(trip, rules, { today, flows }) : rulesAccess),
     [trip, rules, today, flows, rulesAccess],
   );
+  const aire = useMemo(() => (rules ? aireWarnings(trip, rules, access.points) : []), [trip, rules, access.points]);
   const confirmation = confirmations[question];
 
   return (
@@ -220,15 +240,17 @@ export default function TripPlanner({ router }: { router?: Router }) {
           onDeletePoint={deleteSelectedPoint}
           onToggleCamp={toggleSelectedCamp}
         />
+        <SnapOffers offers={offers} onAccept={acceptOffer} onDecline={dismissOffer} />
         <LegsPanel
           summary={summary}
           legs={trip.legs}
           access={waterAccess}
+          aire={aire}
           onRetry={retry}
-          onSetMode={(index, mode) => edit({ type: "setLegMode", index, mode })}
+          onSetMode={setLegMode}
         />
-        <DaysPanel days={summary.days} access={waterAccess?.days} />
-        {waterAccess && <TripAccessSummary access={waterAccess.trip} />}
+        <DaysPanel days={summary.days} access={waterAccess?.days} aire={aire} />
+        {waterAccess && <TripAccessSummary access={waterAccess.trip} aire={aire} />}
         <AccessPointsPanel access={access} />
         {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
       </div>
