@@ -189,6 +189,24 @@ export const strings = {
     positionUnavailable: "Your position isn't available right now. Try again in the open, away from steep valley sides.",
     positionTimeout: "Finding your position took too long. Try again.",
     positionUnsupported: "This browser can't share your location.",
+    // Marking access points on the phone (#63, ADR 0023).
+    accessPointsLabel: "Your access points",
+    markButton: "Mark access point here",
+    markExplanation:
+      "Marks an access point at your GPS position. It's saved on this phone straight away, with or without signal.",
+    markLocating: "Finding your position to mark the access point…",
+    // `accuracy` is formatted, e.g. "12 m".
+    markedAccuracy: (accuracy: string) => `Marked at your GPS position, accurate to about ${accuracy}.`,
+    markedByTap: "Marked where you tapped on the map.",
+    tapToPlaceButton: "Place by tapping the map",
+    tapToPlaceHint: "Tap the map where you can get onto or off the water. Tap the button again to cancel.",
+    tapToPlaceFallback: "Without your position, you can still place the access point by tapping the map.",
+    savedOnDevice: "Saved on this device.",
+    noAccessPoints: "No access points yet.",
+    editButton: "Edit",
+    deleteListButton: "Delete",
+    // The list entry's heading, e.g. "Put-in, Official aire".
+    listEntry: (use: string, kind: string) => `${use}, ${kind}`,
   },
   // The disclaimer shown above the map (ADR 0024).
   navigationRulesNotice: "Indicative only; you're responsible for checking local rules.",

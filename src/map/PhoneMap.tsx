@@ -2,16 +2,21 @@
 
 import { latLngBounds } from "leaflet";
 import { useEffect, useRef } from "react";
-import { Circle, CircleMarker, MapContainer, Polyline, TileLayer, useMap } from "react-leaflet";
+import { Circle, CircleMarker, MapContainer, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { putInsAndTakeOuts, type LatLng, type Trip } from "@/core/trip";
 import { baseLayer, initialMapView } from "./mapConfig";
 import { legStyle, modeChangeStyle } from "./TripMap";
+import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 
 export type PhoneMapProps = {
   /** The trip, drawn read-only: taps never change it. */
   trip: Trip;
   /** Your position and the browser's accuracy radius in metres, once shown. */
   position: { at: LatLng; accuracyM: number } | null;
+  /** Your access points: tap one to select it, drag it to correct it (#63). */
+  accessPoints?: AccessPointLayerProps;
+  /** When set, the next tap on the map places an access point there (#63). */
+  onPlace?: (at: LatLng) => void;
 };
 
 /** Zoom used to show your position: close enough to see the river bank. */
@@ -40,12 +45,18 @@ function MapView({ trip, position }: PhoneMapProps) {
   return null;
 }
 
+/** Turns a tap on the map into a placed access point while placing. */
+function TapToPlace({ onPlace }: { onPlace: (at: LatLng) => void }) {
+  useMapEvents({ click: (event) => onPlace({ lat: event.latlng.lat, lng: event.latlng.lng }) });
+  return null;
+}
+
 /**
  * The phone's map (#56, ADR 0023): the trip drawn read-only, and your position
  * with its accuracy circle. Planning stays on the desktop map (TripMap).
  * Imports Leaflet, which needs `window`: only load this through ClientPhoneMap.
  */
-export default function PhoneMap({ trip, position }: PhoneMapProps) {
+export default function PhoneMap({ trip, position, accessPoints, onPlace }: PhoneMapProps) {
   return (
     <MapContainer
       center={[...initialMapView.center]}
@@ -78,6 +89,8 @@ export default function PhoneMap({ trip, position }: PhoneMapProps) {
           pathOptions={{ ...modeChangeStyle[kind], weight: 3, fill: false }}
         />
       ))}
+      {onPlace && <TapToPlace onPlace={onPlace} />}
+      {accessPoints && <AccessPointLayer {...accessPoints} />}
       {position && (
         <>
           <Circle
