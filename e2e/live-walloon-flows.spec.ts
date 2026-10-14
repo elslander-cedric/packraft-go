@@ -194,3 +194,43 @@ test("a failing flow service still ends in unknown after checking (#85)", async 
     strings.tripAccess.legStatusOn("Wed 14 Oct 2026", strings.accessState.unknown),
   );
 });
+
+test("a day with one held flow-dependent leg and one open leg never reads open while held (#85)", async ({ page }) => {
+  await page.clock.setFixedTime(RECORDED_AT);
+  const held = delayedKiwis(RECORDED);
+  await serveOffline(page, { kiwis: held.kiwis });
+  // Leg 1: the Semois (flow-dependent). Leg 2: open Flemish water near Ghent.
+  const ghent = [
+    { lat: 51.05, lng: 3.72 },
+    { lat: 51.052, lng: 3.725 },
+  ];
+  const line = (pts: { lat: number; lng: number }[]) => ({
+    status: "routed",
+    geometry: pts.map((p) => ({ ...p, elevation: 10 })),
+  });
+  const save = {
+    format: "packraft-go-trip",
+    version: 1,
+    trip: {
+      name: "Mixed day",
+      points: [semois[0], semois[semois.length - 1], ghent[1]],
+      legs: [
+        { mode: "paddle", route: line(semois) },
+        { mode: "paddle", route: line(ghent) },
+      ],
+      startDate: "2026-10-14",
+    },
+  };
+  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.goto("/");
+
+  const day = page.getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem").first();
+  const dayStatus = day.locator(".day-access-status");
+  // The open leg settles at once; the day must still read checking while the flow is held.
+  await expect(page.locator(".leg-row").nth(1).locator(".leg-access-status")).toContainText(strings.accessState.open);
+  await expect(dayStatus).toHaveText(strings.tripAccess.dayStatus(strings.accessChecking));
+  await expect(page.getByRole("region", { name: strings.tripAccess.summaryLabel })).toContainText(strings.accessChecking);
+
+  held.release();
+  await expect(dayStatus).toHaveText(strings.tripAccess.dayStatus(strings.accessState["closed-today"]));
+});

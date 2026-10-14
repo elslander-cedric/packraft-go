@@ -278,8 +278,30 @@ describe("flows still loading (#85)", () => {
     const access = tripAccess(dated("2026-10-14"), walloon, { today: "2026-10-14", flowsPending: true });
     expect(access.legs[0]!.status.state).toBe("checking");
     expect(access.legs[0]!.warnings).toEqual([]);
-    expect(access.days[0].state).toBeUndefined();
-    expect(access.trip.state).toBeUndefined();
+    expect(access.days[0].state).toBe("checking");
+    expect(access.trip.state).toBe("checking");
+  });
+
+  it("a day with a checking leg and an open leg is checking, not open; a worse state still wins", () => {
+    const open: LatLng = { lat: 51.1, lng: 4.0 };
+    const open2: LatLng = { lat: 51.2, lng: 4.1 };
+    const rules = fakeAccessRules([walloonAllYear, flandersSquare, forbiddenCanal]);
+    const checkingLeg: Leg = { mode: "paddle", route: routed(a, b) };
+    const mixed = tripAccess(
+      trip([a, b, open2], [checkingLeg, { mode: "paddle", route: routed(open, open2) }], { startDate: "2026-10-14" }),
+      rules,
+      { today: "2026-10-14", flowsPending: true },
+    );
+    expect(mixed.days[0].state).toBe("checking");
+    expect(mixed.trip.state).toBe("checking");
+    const worse = tripAccess(
+      trip([a, b, northOfCanal], [checkingLeg, { mode: "paddle", route: routed(southOfCanal, northOfCanal) }], {
+        startDate: "2026-10-14",
+      }),
+      rules,
+      { today: "2026-10-14", flowsPending: true },
+    );
+    expect(worse.days[0].state).toBe("forbidden");
   });
 
   it("another date, or flows that have arrived, are unchanged", () => {

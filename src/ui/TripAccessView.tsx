@@ -127,13 +127,16 @@ export function LegAccessView({ access }: { access: LegAccess }) {
 
 /** A day's access: the most restrictive status of its paddle legs and their warnings. */
 export function DayAccessView({ access }: { access: DayAccess }) {
-  if (access.state === undefined) return null;
+  const { state } = access;
+  if (state === undefined && access.warnings.length === 0 && access.legsWithoutRules === 0) return null;
   return (
     <div className="day-access">
-      <span className={`day-access-status access-status-${access.state}`}>
-        <Swatch state={access.state} />
-        {strings.tripAccess.dayStatus(accessStateLabel(access.state))}
-      </span>
+      {state !== undefined && (
+        <span className={`day-access-status access-status-${state}`}>
+          <Swatch state={state} />
+          {strings.tripAccess.dayStatus(accessStateLabel(state))}
+        </span>
+      )}
       <WarningList warnings={access.warnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
       <LegsWithoutRules count={access.legsWithoutRules} />
     </div>
@@ -170,6 +173,7 @@ export function TripAccessSummary({ access, aire = [] }: { access: AccessSummary
         <Swatch state={access.state ?? "unknown"} />
         {count === 0 ? strings.tripAccess.summaryNone : strings.tripAccess.summaryCount(count)}
       </p>
+      {access.state === "checking" && <p className="access-status access-status-checking">{strings.accessChecking}</p>}
       <WarningList warnings={warnings} place={(w) => strings.tripAccess.warningPlace(w.day + 1, w.leg + 1)} />
       <AireWarnings warnings={aire} showPlace />
       <LegsWithoutRules count={access.legsWithoutRules} />

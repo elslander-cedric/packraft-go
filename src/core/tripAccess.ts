@@ -166,8 +166,7 @@ function summary(legs: readonly LegAccess[]): AccessSummary {
   const warnings = legs.flatMap((leg) => leg.warnings);
   const notes = legs.flatMap((leg) => leg.notes);
   const legsWithoutRules = legs.filter((leg) => leg.notes.length > 0).length;
-  // A leg still checking its flow isn't counted as open, closed or warned yet (#85).
-  const settled = legs.filter((leg) => leg.status.state !== "checking");
-  if (settled.length === 0) return { warnings, notes, legsWithoutRules };
-  return { state: combineAccess(settled.map((leg) => leg.status)).state, warnings, notes, legsWithoutRules };
+  if (legs.length === 0) return { warnings, notes, legsWithoutRules };
+  // A leg still checking its flow keeps the summary from reading open (#85); a worse state wins as usual.
+  return { state: combineAccess(legs.map((leg) => leg.status)).state, warnings, notes, legsWithoutRules };
 }
