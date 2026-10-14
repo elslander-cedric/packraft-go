@@ -14,3 +14,9 @@ export const baseLayer = {
   maxZoom: 17,
   attribution: strings.mapAttribution,
 } as const;
+
+/**
+ * Lock markers (#57) show from this zoom on. Further out a marker covers a few
+ * kilometres of the waters around it, so a click on a river would open a lock.
+ */
+export const lockMarkersMinZoom = 11;

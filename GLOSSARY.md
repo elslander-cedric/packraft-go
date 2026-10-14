@@ -11,6 +11,7 @@ Shared language for packraft-go. One term per entry: what it means *in this proj
 - **Day**: The part of a trip between the start (or a camp) and the next camp (or the end). A one-day trip has a single day and no camps.
 - **Camp**: An overnight stop marked on the route. Camps split a trip into days.
 - **Portage**: Carrying the packraft around an obstacle on the water (e.g. a weir). Modelled as a short hike leg between two paddle legs.
+- **Lock**: A chamber that lifts boats between two water levels on a navigable waterway. Paddlers don't pass locks on the water: they portage (Flanders bans it outright; in Brussels no rule lets small craft in). Locks in Flanders and Brussels are marked on the access layer from OpenStreetMap.
 - **Drop**: The elevation lost from a paddle leg's put-in to its take-out. Shown instead of climb/descent on paddle legs.
 - **Navigable waterway**: A canal or river officially open to shipping (in Flanders managed by De Vlaamse Waterweg). Access rules differ from those for non-navigable rivers. See `docs/research/access-rules.md`.
 - **Stretch**: A legally defined section of river where paddling is regulated as one unit (e.g. Walloon AGW Annex 1 stretches), with its own season, hours and flow thresholds.

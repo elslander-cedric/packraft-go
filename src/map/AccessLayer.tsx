@@ -1,16 +1,19 @@
 "use client";
 
 import type { LatLngExpression, Polygon as LeafletPolygon, Polyline as LeafletPolyline } from "leaflet";
-import { useEffect, useRef } from "react";
-import { LayerGroup, Pane, Polygon, Polyline } from "react-leaflet";
-import type { AccessFeature, AccessState, Geometry, Position } from "@/core/access";
+import { useEffect, useRef, useState } from "react";
+import { CircleMarker, LayerGroup, Pane, Polygon, Polyline, useMap, useMapEvents } from "react-leaflet";
+import type { AccessFeature, AccessState, Geometry, LockMarker, Position } from "@/core/access";
 import { strings } from "@/ui/strings";
 import { accessColours } from "./accessColours";
+import { lockMarkersMinZoom } from "./mapConfig";
 
 export type AccessLayerProps = {
   features: readonly AccessFeature[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Lock markers (#57), drawn above the waters. */
+  locks?: readonly LockMarker[];
 };
 
 const toLatLng = ([lng, lat]: Position): LatLngExpression => [lat, lng];
@@ -63,8 +66,33 @@ function AccessShape({ feature, selected, onSelect }: { feature: AccessFeature; 
   );
 }
 
-/** The access layer: specific waters coloured by access status, below the trip. */
-export default function AccessLayer({ features, selectedId, onSelect }: AccessLayerProps) {
+function LockShape({ lock, selected, onSelect }: { lock: LockMarker; selected: boolean; onSelect: () => void }) {
+  return (
+    <CircleMarker
+      center={toLatLng(lock.position)}
+      radius={selected ? 8 : 6}
+      pathOptions={{ color: "#1a1a1a", weight: selected ? 4 : 3, fillColor: "#ffffff", fillOpacity: 1 }}
+      // Classes let tests and styles find a lock by id.
+      className={`access-lock access-lock-${lock.id}`}
+      bubblingMouseEvents={false}
+      eventHandlers={{ click: onSelect }}
+    />
+  );
+}
+
+/** The lock markers, once the map is zoomed in far enough for them not to cover the waters. */
+function LockMarkers({ locks, selectedId, onSelect }: Required<Pick<AccessLayerProps, "locks" | "selectedId" | "onSelect">>) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(() => map.getZoom());
+  useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
+  if (zoom < lockMarkersMinZoom) return null;
+  return locks.map((lock) => (
+    <LockShape key={lock.id} lock={lock} selected={lock.id === selectedId} onSelect={() => onSelect(lock.id)} />
+  ));
+}
+
+/** The access layer: specific waters coloured by access status, and lock markers, below the trip. */
+export default function AccessLayer({ features, selectedId, onSelect, locks = [] }: AccessLayerProps) {
   return (
     <Pane name="access" pane="overlayPane" style={{ zIndex: 350 }}>
       <LayerGroup attribution={strings.accessAttribution}>
@@ -77,6 +105,7 @@ export default function AccessLayer({ features, selectedId, onSelect }: AccessLa
             onSelect={() => onSelect(feature.record.id)}
           />
         ))}
+        <LockMarkers locks={locks} selectedId={selectedId} onSelect={onSelect} />
       </LayerGroup>
     </Pane>
   );

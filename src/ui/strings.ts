@@ -220,7 +220,8 @@ export const strings = {
     unknown: "Unknown",
   },
   accessLegendNote:
-    "In Flanders, water that isn't marked is open by default. In Wallonia, only the listed stretches may be paddled; other water is treated as not allowed, but isn't painted red.",
+    "In Flanders, water that isn't marked is open by default. In Wallonia, only the listed stretches may be paddled; other water is treated as not allowed, but isn't painted red. " +
+    "In Brussels, only the canal is known to be open; other water is unknown.",
   // The access layer's date (#59): the status of dated rules (Walloon seasons, fishing days) is for this day.
   accessDateLabel: "Date",
   accessTodayButton: "Today",
@@ -229,6 +230,11 @@ export const strings = {
   accessTripDayOption: (day: number, date: string) => `Day ${day}: ${date}`,
   accessStatusOn: (date: string) => `On ${date}`,
   accessCategory: (category: string) => `Walloon category ${category}`,
+  // Locks (#57, GLOSSARY "Lock"): marked on the access layer in Flanders and Brussels.
+  lockLegend: "Lock: portage required (shown when zoomed in)",
+  lockDetailLabel: "Lock details",
+  lockPortageRequired: "Portage required",
+  lockPortageText: "Don't go through the lock on the water: get out before it and carry your packraft around it.",
   accessDetailLabel: "Access details",
   accessDetailClose: "Close",
   accessNoRule: "No access rules are known for this place.",

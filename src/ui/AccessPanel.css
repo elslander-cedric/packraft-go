@@ -105,6 +105,26 @@
   filter: drop-shadow(0 0 2px #000);
 }
 
+/* Lock marker swatch (#57): a dark ring, like the marker on the map. */
+.access-lock-swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-right: var(--space-2);
+  border: 3px solid #1a1a1a;
+  border-radius: 50%;
+  background: #ffffff;
+  vertical-align: middle;
+}
+
+.access-legend-lock {
+  margin: var(--space-2) 0 0;
+}
+
+.access-status-lock {
+  font-weight: 600;
+}
+
 .access-date {
   display: flex;
   flex-wrap: wrap;

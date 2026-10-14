@@ -17,8 +17,20 @@ const sources = {
     url: "https://environnement.wallonie.be/home/loisirs/circulation-sur-les-cours-deau/les-textes-legislatifs.html",
   },
   brusselsCanal: {
-    title: "Brussels police regulation for the canal and port (4 March 2010)",
-    url: "https://www.port.brussels/",
+    title: "Brussels police regulation for the canal and port (AGRBC of 4 March 2010, art. 127-128)",
+    url: "https://etaamb.openjustice.be/fr/arrete-du-gouvernement-de-la-region-de-bruxellescapit_n2010031142.html",
+  },
+  brusselsPonds: {
+    title: "Bruxelles Environnement on boats on Brussels ponds (bx1, 7 May 2020)",
+    url: "https://bx1.be/communes/bruxelles-ville/un-kayakiste-qui-demandait-la-regularisation-de-sans-papier-arrete-au-bois-de-la-cambre/",
+  },
+  brusselsSenne: {
+    title: "bx1: a kayak descent of the underground Senne (organised action)",
+    url: "https://bx1.be/categories/news/une-descente-en-kayak-pas-comme-les-autres-sur-la-senne-souterraine/",
+  },
+  brusselsStreams: {
+    title: "Bruxelles Environnement: management and protection of non-navigable watercourses and ponds (ordinance of 16 May 2019)",
+    url: "https://environnement.brussels/citoyen/reglementation-et-inspection/obligations-et-autorisations/la-gestion-et-la-protection-des-cours-deau-non-navigables-et-des-etangs-bruxellois",
   },
   bruges: {
     title: "City of Bruges: kayaking, canoeing, rowing and SUP",
@@ -83,9 +95,12 @@ export const regionSpecs: readonly RegionSpec[] = [
     rule: {
       type: "fixed",
       state: "unknown",
-      text: "The canal is open with caveats, ponds need permission. packraft-go doesn't check Brussels waters yet.",
+      text:
+        "Only the canal is known to be open (with caveats), and ponds need permission. " +
+        "For other Brussels water no rule was found either way.",
     },
-    source: sources.brusselsCanal,
+    source: sources.brusselsStreams,
+    unverified: "Brussels law gives no default right to paddle non-navigable water, but no ban was found either.",
   },
 ];
 
@@ -308,3 +323,98 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     toleranceM: 10,
   },
 ];
+
+/** Brussels waters (#57; docs/research/brussels.md, researched 2026-10-12). Geometry is kept inside the region. */
+const BRUSSELS_BBOX = "50.76,4.24,50.93,4.50";
+const isSenne = (tags: Record<string, string>) => /senne|zenne/i.test(tags.name ?? "");
+const isCulvert = (tags: Record<string, string>) => ["culvert", "building_passage", "covered"].includes(tags.tunnel ?? "");
+
+export const brusselsWaterSpecs: readonly WaterSpec[] = [
+  {
+    id: "brussels-canal",
+    name: "Canal, Brussels",
+    region: "brussels",
+    rule: {
+      type: "fixed",
+      state: "open",
+      text: "Paddling is allowed in the port domain, but commercial shipping has priority.",
+      conditions: [
+        "Commercial traffic has priority: keep to the edge and give way to barges.",
+        "Read literally, the regulation requires a VHF radio and reporting to the Capitainerie (+32 2 247 91 21). " +
+          "Whether this is enforced for paddlers is not confirmed: a courtesy call before a transit is advised.",
+        "Portage around the Anderlecht and Molenbeek locks.",
+        "Swimming in the canal is forbidden.",
+      ],
+      link: sources.brusselsCanal,
+    },
+    source: sources.brusselsCanal,
+    query: `way["waterway"="canal"](${BRUSSELS_BBOX});`,
+    shape: "lines",
+    include: (tags) => /charleroi|zeekanaal|brussel-schelde|canal maritime/i.test(tags.name ?? "") && !isCulvert(tags),
+    matchWithinM: 80,
+    unverified:
+      "Packrafts and SUPs aren't named in the regulation (read as small craft); " +
+      "notices to skippers can reserve zones; the port domain's edge is taken to be the whole canal in the region; " +
+      "the side basins are not drawn.",
+    toleranceM: 5,
+  },
+  {
+    id: "brussels-ponds",
+    name: "Ponds, Brussels",
+    region: "brussels",
+    rule: {
+      type: "fixed",
+      state: "forbidden",
+      text: "Boats are not allowed on Brussels ponds without permission.",
+    },
+    source: sources.brusselsPonds,
+    query: `nwr["natural"="water"]["water"~"^(pond|lake|moat|reservoir)$"](${BRUSSELS_BBOX});`,
+    shape: "areas",
+    include: (tags) => tags.natural === "water" && /^(pond|lake|moat|reservoir)$/.test(tags.water ?? ""),
+    unverified:
+      "The quote concerns the regional ponds; the City-managed ponds (such as the Bois de la Cambre) " +
+      "follow the City's own regulation, which wasn't found.",
+    toleranceM: 5,
+  },
+  {
+    id: "brussels-senne",
+    name: "Senne (Zenne), Brussels",
+    region: "brussels",
+    rule: {
+      type: "fixed",
+      state: "unknown",
+      text: "The Senne runs mostly underground through Brussels; no rule for paddling it was found.",
+    },
+    source: sources.brusselsSenne,
+    query: `way["waterway"="river"]["name"~"Senne|Zenne"](${BRUSSELS_BBOX});`,
+    shape: "lines",
+    include: isSenne,
+    unverified: "No legal text was found. The only known descents were organised actions from a Vivaqua site.",
+    toleranceM: 5,
+  },
+  {
+    id: "brussels-streams",
+    name: "Small streams, Brussels",
+    region: "brussels",
+    rule: {
+      type: "fixed",
+      state: "unknown",
+      text: "No rule for paddling Brussels' small streams was found; they are tiny and partly culverted.",
+    },
+    source: sources.brusselsStreams,
+    query: `way["waterway"~"^(river|stream)$"](${BRUSSELS_BBOX});`,
+    shape: "lines",
+    include: (tags) => !isSenne(tags) && !isCulvert(tags),
+    unverified: "Brussels law gives no default right to paddle non-navigable water; none was found either way.",
+    toleranceM: 5,
+  },
+];
+
+/** Where the portage-at-locks rule of each region comes from. */
+export const lockRuleSources: Record<string, AccessSource> = {
+  flanders: sources.visurisKano,
+  brussels: sources.brusselsCanal,
+};
+export const LOCK_REGIONS = ["brussels", "flanders"] as const;
+/** Covers Flanders and Brussels; the region areas cut it down. */
+export const LOCK_BBOX = "50.67,2.50,51.52,5.95";

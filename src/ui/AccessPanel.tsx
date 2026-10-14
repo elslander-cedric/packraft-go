@@ -1,4 +1,4 @@
-import type { AccessFeature, AccessReason, AccessState } from "@/core/access";
+import type { AccessFeature, AccessReason, AccessState, LockMarker } from "@/core/access";
 import { accessColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
 import { Switch } from "./components/Switch";
@@ -79,6 +79,10 @@ export function AccessLayerControls({
               </li>
             ))}
           </ul>
+          <p className="access-legend-lock">
+            <span className="access-lock-swatch" aria-hidden="true" />
+            {strings.lockLegend}
+          </p>
           <p className="access-legend-note">{strings.accessLegendNote}</p>
           <p className="access-legend-note">{strings.accessDataCredit}</p>
         </section>
@@ -120,6 +124,34 @@ function Reason({ reason }: { reason: AccessReason }) {
       </p>
       {reason.unverified && <p className="access-unverified">{strings.accessUnverified(reason.unverified)}</p>}
     </li>
+  );
+}
+
+/** A lock: portage required, with where the rule comes from and when it was researched (#57). */
+export function LockDetailPanel({ lock, onClose }: { lock: LockMarker; onClose: () => void }) {
+  return (
+    <section className="access-detail" aria-label={strings.lockDetailLabel}>
+      <header>
+        <h3>{lock.name}</h3>
+        <Button className="access-detail-close" onClick={onClose}>
+          {strings.accessDetailClose}
+        </Button>
+      </header>
+      <p className="access-status access-status-lock">
+        <span className="access-lock-swatch" aria-hidden="true" />
+        {strings.lockPortageRequired}
+      </p>
+      <p>{strings.lockPortageText}</p>
+      <p className="access-source">
+        {strings.accessSourceLabel}{" "}
+        <a href={lock.source.url} target="_blank" rel="noreferrer">
+          {lock.source.title}
+        </a>
+        {" · "}
+        {strings.accessResearched(lock.researched)}
+      </p>
+      <p className="access-legend-note">{strings.accessDataCredit}</p>
+    </section>
   );
 }
 

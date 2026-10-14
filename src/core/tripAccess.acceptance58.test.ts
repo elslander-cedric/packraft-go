@@ -22,7 +22,13 @@ describe("#58 tester: areas with no rule (built-in data)", () => {
   it("Brussels (Zenne)", () => {
     const t = tripAccess(paddle({ lat: 50.85, lng: 4.34 }, { lat: 50.86, lng: 4.35 }, "2026-10-20"), builtInAccessRules, today);
     expect(t.legs[0]!.status.state).toBe("unknown");
-    expect(t.legs[0]!.warnings.map((w) => w.kind)).toEqual(["unknown"]);
+    // Updated: Brussels now has water records (#57); this leg crosses the Senne, which is
+    // unknown too, so it gets the region's and the Senne's unknown warnings (#57).
+    expect(t.legs[0]!.warnings.map((w) => w.kind)).toEqual(["unknown", "unknown"]);
+    expect(t.legs[0]!.warnings.map((w) => (w.reason.kind === "rule" ? w.reason.recordId : w.reason.kind))).toEqual([
+      "brussels",
+      "brussels-senne",
+    ]);
   });
   it("Walloon Meuse at Dinant (Wallonia rules from #59)", () => {
     const t = tripAccess(paddle({ lat: 50.26, lng: 4.91 }, { lat: 50.265, lng: 4.915 }, "2026-07-10"), builtInAccessRules, today);

@@ -47,7 +47,9 @@ test("the access layer colours Flemish exceptions and shows why on click", async
   await expect(water(page, "flanders-ghent-terneuzen-canal")).toHaveAttribute("stroke", "#d0021b");
   await expect(water(page, "flanders-port-antwerp")).toHaveAttribute("fill", "#d0021b");
   await expect(water(page, "flanders-vmm-kleine-nete")).toHaveAttribute("stroke", "#1f9d55");
-  await expect(map.locator("path.access-forbidden")).toHaveCount(7);
+  // Updated: the Brussels ponds are forbidden too since #57 (7 Flemish waters + 1) (#57).
+  await expect(map.locator("path.access-forbidden")).toHaveCount(8);
+  await expect(map.locator('path.access-forbidden[class*="access-record-flanders-"]')).toHaveCount(7);
 
   // The OpenStreetMap credit for the access data joins the map credits.
   await expect(page.locator(".leaflet-control-attribution")).toContainText("Access data");
