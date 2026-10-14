@@ -1,6 +1,6 @@
 import type { AccessState } from "@/core/access";
 import type { AireWarning } from "@/core/aire";
-import type { AccessSummary, AccessWarning, DayAccess, LegAccess } from "@/core/tripAccess";
+import type { AccessNote, AccessSummary, AccessWarning, DayAccess, LegAccess } from "@/core/tripAccess";
 import { accessColours } from "@/map/accessColours";
 import { FlowFiguresView } from "./FlowFiguresView";
 import { formatDayDate } from "./format";
@@ -22,6 +22,23 @@ function Warning({ warning, place }: { warning: AccessWarning; place?: string })
     <p className={`access-warning access-warning-${warning.kind}`}>
       {place && <span className="access-warning-place">{`${place}: `}</span>}
       <strong>{`${strings.tripAccess.warningKind[warning.kind]}: `}</strong>
+      {reason.kind === "no-rule" ? null : (
+        <>
+          {`${reason.name}. ${reason.ruleText} `}
+          <a href={reason.source.url} target="_blank" rel="noreferrer">
+            {reason.source.title}
+          </a>
+        </>
+      )}
+    </p>
+  );
+}
+
+/** Water with no known rules: a quiet, neutral note (not a warning), with the region's rule text when it has one. */
+function Note({ note }: { note: AccessNote }) {
+  const { reason } = note;
+  return (
+    <p className="access-note">
       {reason.kind === "no-rule" ? (
         strings.tripAccess.noRule
       ) : (
@@ -34,6 +51,12 @@ function Warning({ warning, place }: { warning: AccessWarning; place?: string })
       )}
     </p>
   );
+}
+
+/** The neutral line in day and trip summaries: how many legs have no known rules. Absent when none. */
+function LegsWithoutRules({ count }: { count: number }) {
+  if (count === 0) return null;
+  return <p className="access-note access-note-count">{strings.tripAccess.legsWithoutRules(count)}</p>;
 }
 
 type Placed = (warning: AccessWarning) => string | undefined;
@@ -77,6 +100,9 @@ export function LegAccessView({ access }: { access: LegAccess }) {
       )}
       {access.checkFlowOnTheDay && <p className="leg-access-flow">{strings.tripAccess.checkFlowOnTheDay}</p>}
       <WarningList warnings={access.warnings} />
+      {access.notes.map((note, i) => (
+        <Note key={i} note={note} />
+      ))}
       {status.reasons.map((reason) =>
         reason.kind === "rule" && reason.flow ? <FlowFiguresView key={`flow:${reason.recordId}`} figures={reason.flow} /> : null,
       )}
@@ -109,6 +135,7 @@ export function DayAccessView({ access }: { access: DayAccess }) {
         {strings.tripAccess.dayStatus(strings.accessState[access.state])}
       </span>
       <WarningList warnings={access.warnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
+      <LegsWithoutRules count={access.legsWithoutRules} />
     </div>
   );
 }
@@ -145,6 +172,7 @@ export function TripAccessSummary({ access, aire = [] }: { access: AccessSummary
       </p>
       <WarningList warnings={warnings} place={(w) => strings.tripAccess.warningPlace(w.day + 1, w.leg + 1)} />
       <AireWarnings warnings={aire} showPlace />
+      <LegsWithoutRules count={access.legsWithoutRules} />
       <p className="trip-access-note">{strings.tripAccess.neverBlocks}</p>
     </section>
   );

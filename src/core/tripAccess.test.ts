@@ -83,9 +83,28 @@ describe("warnings per paddle leg", () => {
     ]);
   });
 
-  it("water without any rule gives an unknown warning", () => {
+  it("water without any rule gives a note, not a warning (#78)", () => {
     const leg = tripAccess(paddle({ lat: 51.4, lng: 4.0 }, { lat: 51.6, lng: 4.0 }), flanders, today).legs[0]!;
-    expect(leg.warnings.map((w) => [w.kind, w.reason.kind])).toEqual([["unknown", "no-rule"]]);
+    expect(leg.status.state).toBe("unknown");
+    expect(leg.warnings).toEqual([]);
+    expect(leg.notes.map((n) => n.reason.kind)).toEqual(["no-rule"]);
+  });
+
+  it("summaries don't count unknown as a warning and report the legs without rules separately (#78)", () => {
+    const far: LatLng = { lat: 51.4, lng: 4.0 };
+    const farther: LatLng = { lat: 51.6, lng: 4.0 };
+    const t = trip(
+      [southOfCanal, northOfCanal, far, farther],
+      [
+        { mode: "paddle", route: routed(southOfCanal, northOfCanal) },
+        { mode: "paddle", route: routed(northOfCanal, far) },
+        { mode: "paddle", route: routed(far, farther) },
+      ],
+    );
+    const { trip: summary } = tripAccess(t, flanders, today);
+    expect(summary.warnings.map((w) => w.kind)).toEqual(["forbidden"]);
+    expect(summary.legsWithoutRules).toBeGreaterThanOrEqual(1);
+    expect(summary.notes.length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -189,7 +208,11 @@ describe("per-day and trip summaries", () => {
 
   it("a trip without checked paddle legs has no status and no warnings", () => {
     const hikeOnly = trip([openA, openB], [{ mode: "hike", route: routed(openA, openB) }]);
-    expect(tripAccess(hikeOnly, flanders, { today: "2026-10-14" }).trip).toEqual({ warnings: [] });
+    expect(tripAccess(hikeOnly, flanders, { today: "2026-10-14" }).trip).toEqual({
+      warnings: [],
+      notes: [],
+      legsWithoutRules: 0,
+    });
   });
 });
 

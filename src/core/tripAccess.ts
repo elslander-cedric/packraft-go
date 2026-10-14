@@ -26,6 +26,8 @@ export type LegAccess = {
   readonly checkFlowOnTheDay: boolean;
   /** Why this leg may not be paddleable, most serious first. Information only: warnings never block. */
   readonly warnings: readonly AccessWarning[];
+  /** Water on this leg with no known rules. A gentle note, never a warning (#78). */
+  readonly notes: readonly AccessNote[];
 };
 
 /**
@@ -33,11 +35,23 @@ export type LegAccess = {
  * reason (and its source) behind it:
  * - `forbidden`: an explicit ban.
  * - `closed`: legal water, closed on that date (season, fishing day, hours, flow).
- * - `unknown`: no rule or no data.
  * - `check-flow`: rules OK on a future date, but flow decides on the day.
  */
 export type AccessWarning = {
-  readonly kind: "forbidden" | "closed" | "unknown" | "check-flow";
+  readonly kind: "forbidden" | "closed" | "check-flow";
+  readonly leg: number;
+  readonly day: number;
+  readonly date?: CalendarDate;
+  readonly reason: AccessReason;
+};
+
+/**
+ * Water on a paddle leg with no rule or no data (GLOSSARY: unknown means no
+ * data, not "not allowed"). Presented as a quiet note and not counted as a
+ * warning (#78). The reason is either "no-rule" or a region record that is
+ * itself unknown, with its rule text.
+ */
+export type AccessNote = {
   readonly leg: number;
   readonly day: number;
   readonly date?: CalendarDate;
@@ -48,7 +62,7 @@ const warningKind: Record<AccessState, AccessWarning["kind"] | undefined> = {
   open: undefined,
   "closed-today": "closed",
   forbidden: "forbidden",
-  unknown: "unknown",
+  unknown: undefined, // A note, not a warning.
 };
 
 export type TripAccess = {
@@ -66,7 +80,15 @@ export type TripAccess = {
  * The access of several paddle legs together: the most restrictive state
  * (absent when none of them is checked yet) and all their warnings, in leg order.
  */
-export type AccessSummary = { readonly state?: AccessState; readonly warnings: readonly AccessWarning[] };
+export type AccessSummary = {
+  readonly state?: AccessState;
+  /** Real warnings only: forbidden, closed, check flow. Unknown access is not one (#78). */
+  readonly warnings: readonly AccessWarning[];
+  /** The notes of these legs, in leg order. */
+  readonly notes: readonly AccessNote[];
+  /** How many of these legs have water without known rules. */
+  readonly legsWithoutRules: number;
+};
 
 export type DayAccess = AccessSummary & {
   /** Index of the day, counted from 0. */
@@ -103,13 +125,14 @@ function legAccess(when: When, status: AccessStatus, today: CalendarDate): LegAc
     const kind = warningKind[reason.state];
     return kind ? [{ kind, ...when, reason }] : [];
   });
+  const notes = status.reasons.flatMap((reason): AccessNote[] => (reason.state === "unknown" ? [{ ...when, reason }] : []));
   const future = when.date !== undefined && when.date > today;
   const blocked = status.state === "forbidden" || status.state === "closed-today";
   const flowReasons = future && !blocked
     ? status.reasons.filter((reason) => reason.kind === "rule" && reason.flowDependent && reason.state === "open")
     : [];
   for (const reason of flowReasons) warnings.push({ kind: "check-flow", ...when, reason });
-  return { ...when, status, checkFlowOnTheDay: flowReasons.length > 0, warnings };
+  return { ...when, status, checkFlowOnTheDay: flowReasons.length > 0, warnings, notes };
 }
 
 /** Access status and warnings for every paddle leg, day and the whole trip. */
@@ -138,6 +161,8 @@ export function tripAccess(trip: Trip, rules: AccessRules, { today, flows }: Tri
 /** The most restrictive state of these legs (absent without any) and all their warnings. */
 function summary(legs: readonly LegAccess[]): AccessSummary {
   const warnings = legs.flatMap((leg) => leg.warnings);
-  if (legs.length === 0) return { warnings };
-  return { state: combineAccess(legs.map((leg) => leg.status)).state, warnings };
+  const notes = legs.flatMap((leg) => leg.notes);
+  const legsWithoutRules = legs.filter((leg) => leg.notes.length > 0).length;
+  if (legs.length === 0) return { warnings, notes, legsWithoutRules };
+  return { state: combineAccess(legs.map((leg) => leg.status)).state, warnings, notes, legsWithoutRules };
 }

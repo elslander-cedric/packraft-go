@@ -252,10 +252,11 @@ export const strings = {
     warningKind: {
       forbidden: "Forbidden",
       closed: "Closed on this date",
-      unknown: "Unknown",
       "check-flow": "Check the flow on the day",
     },
-    noRule: "No access rules are known for part of this leg.",
+    // Unknown access is a gentle note, never a warning (#78).
+    noRule: "No access rules known here.",
+    legsWithoutRules: (n: number) => (n === 1 ? "1 leg without known rules" : `${n} legs without known rules`),
     warningPlace: (day: number, leg: number) => `Day ${day}, leg ${leg}`,
     legPlace: (leg: number) => `Leg ${leg}`,
     summaryLabel: "Access summary",
