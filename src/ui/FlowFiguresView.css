@@ -1,0 +1,21 @@
+/* A Walloon stretch's live flow for today (#61), in the detail panel and on leg rows. */
+.flow-figures {
+  margin: var(--space-1) 0 0;
+}
+
+.flow-figures p {
+  margin: var(--space-1) 0 0;
+}
+
+.flow-heading {
+  font-weight: 600;
+}
+
+.flow-lines p {
+  padding-left: var(--space-2);
+}
+
+.flow-credit {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}

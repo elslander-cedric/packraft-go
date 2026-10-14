@@ -2,6 +2,7 @@ import type { AccessState } from "@/core/access";
 import type { AireWarning } from "@/core/aire";
 import type { AccessSummary, AccessWarning, DayAccess, LegAccess } from "@/core/tripAccess";
 import { accessColours } from "@/map/accessColours";
+import { FlowFiguresView } from "./FlowFiguresView";
 import { formatDayDate } from "./format";
 import { strings } from "./strings";
 import "./TripAccessView.css";
@@ -76,6 +77,9 @@ export function LegAccessView({ access }: { access: LegAccess }) {
       )}
       {access.checkFlowOnTheDay && <p className="leg-access-flow">{strings.tripAccess.checkFlowOnTheDay}</p>}
       <WarningList warnings={access.warnings} />
+      {status.reasons.map((reason) =>
+        reason.kind === "rule" && reason.flow ? <FlowFiguresView key={`flow:${reason.recordId}`} figures={reason.flow} /> : null,
+      )}
       {extraRules.map((reason) => (
         <div key={reason.recordId} className="leg-access-extra">
           {reason.conditions?.length ? <span>{`${strings.accessConditionsHeading} (${reason.name}):`}</span> : null}

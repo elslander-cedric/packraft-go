@@ -19,20 +19,43 @@ export type OfflineOptions = {
    * tests that don't care about routing see legs left as straight lines.
    */
   brouter?: (url: URL) => BRouterReply | Promise<BRouterReply>;
+  /**
+   * Answers the SPW's KiWIS hydrometry service (live Walloon flows, #61).
+   * Defaults to "service unavailable" (503): flow-dependent stretches show
+   * unknown for today. Replay `src/hydrometry/fixtures` with `kiwisFixtures`.
+   */
+  kiwis?: (url: URL) => BRouterReply | Promise<BRouterReply>;
 };
 
+const HYDROMETRY_FIXTURES = path.join(__dirname, "../../src/hydrometry/fixtures");
+
+/** Reads a recorded KiWIS response from `src/hydrometry/fixtures`. */
+export const kiwisFixture = (name: string) => readFileSync(path.join(HYDROMETRY_FIXTURES, name), "utf8");
+
+/** Replays a recorded series list and values: the two requests the app makes. */
+export function kiwisFixtures(list: string, values: string): (url: URL) => BRouterReply {
+  return (url) => {
+    const request = url.searchParams.get("request");
+    if (request === "getTimeseriesList") return { status: 200, body: kiwisFixture(list) };
+    if (request === "getTimeseriesValues") return { status: 200, body: kiwisFixture(values) };
+    return { status: 400, body: "" };
+  };
+}
+
 /**
- * Serves OpenTopoMap tiles from a fixture, answers BRouter from recorded
+ * Serves OpenTopoMap tiles from a fixture, answers BRouter and KiWIS from recorded
  * responses, and blocks every other external request, so e2e tests never
  * touch live services (ADR 0019).
- * Returns the tiles and BRouter routes the page asked for, and any other
+ * Returns the tiles, BRouter routes and KiWIS requests the page asked for, and any other
  * external requests it tried.
  */
 export async function serveOffline(page: Page, options: OfflineOptions = {}) {
   const tiles: TileRequest[] = [];
   const brouter: URL[] = [];
+  const kiwis: URL[] = [];
   const blocked: string[] = [];
   const answerBRouter = options.brouter ?? (() => ({ status: 503, body: "" }));
+  const answerKiwis = options.kiwis ?? (() => ({ status: 503, body: "" }));
 
   await page.route(
     (url) => !["localhost", "127.0.0.1"].includes(url.hostname),
@@ -53,6 +76,15 @@ export async function serveOffline(page: Page, options: OfflineOptions = {}) {
           contentType: reply.status === 200 ? "application/vnd.geo+json" : "text/plain",
           body: reply.body,
         });
+      } else if (url.hostname === "hydrometrie.wallonie.be" && url.pathname === "/services/KiWIS/KiWIS") {
+        kiwis.push(url);
+        const reply = await answerKiwis(url);
+        await route.fulfill({
+          status: reply.status,
+          headers: { "Access-Control-Allow-Origin": "*" },
+          contentType: reply.status === 200 ? "application/json;charset=UTF-8" : "text/plain",
+          body: reply.body,
+        });
       } else {
         blocked.push(url.href);
         await route.abort();
@@ -60,5 +92,5 @@ export async function serveOffline(page: Page, options: OfflineOptions = {}) {
     },
   );
 
-  return { tiles, brouter, blocked };
+  return { tiles, brouter, kiwis, blocked };
 }

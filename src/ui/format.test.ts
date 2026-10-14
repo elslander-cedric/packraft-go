@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { formatDayDate, formatDistance, formatDuration, formatElevation, formatTimeEstimate } from "./format";
+import {
+  formatDayDate,
+  formatDistance,
+  formatDuration,
+  formatElevation,
+  formatFlow,
+  formatReadingTime,
+  formatTimeEstimate,
+} from "./format";
 import { strings } from "./strings";
 
 // Day dates (#52): a day's calendar date, written out so it reads at a glance.
@@ -60,5 +68,20 @@ describe("formatDuration", () => {
   it("carries 60 rounded minutes into the hour", () => {
     expect(formatDuration(2.9999)).toBe("3 h 00 min");
     expect(formatDuration(0.9999)).toBe("1 h 00 min");
+  });
+});
+
+describe("formatFlow (#61)", () => {
+  it("shows a flow in m³/s with at most two decimals", () => {
+    expect(formatFlow(5.038)).toBe("5.04 m³/s");
+    expect(formatFlow(44)).toBe("44 m³/s");
+    expect(formatFlow(0.5)).toBe("0.5 m³/s");
+  });
+});
+
+describe("formatReadingTime (#61)", () => {
+  it("shows a reading's Belgian local date and time as the service gave it, never shifted", () => {
+    expect(formatReadingTime("2026-10-14T08:00:00.000+02:00")).toBe("Wed 14 Oct 2026, 08:00");
+    expect(formatReadingTime("2026-12-31T23:00:00.000+01:00")).toBe("Thu 31 Dec 2026, 23:00");
   });
 });
