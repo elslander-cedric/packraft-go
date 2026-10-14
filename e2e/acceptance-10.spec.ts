@@ -211,6 +211,8 @@ for (const [label, text, message] of INVALID) {
     const { net } = await drawMixedTrip(page, "Keep me");
     await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").trip?.legs?.length).toBe(3);
     const storedBefore = await storedText(page);
+    // Updated: access status loads after the legs (#58); compare the panel once it is in.
+    await expect(panel(page).locator(".leg-access-status").first()).toBeVisible();
     const panelBefore = await panel(page).innerText();
     const calls = net.brouter.length;
 
