@@ -181,12 +181,12 @@ test("round 2, rule 2: a paddle leg ending 1.5 m higher shows Drop 0 m and no up
   await modeButton(page, 0, strings.legModePaddle).click();
   const row = rows(page).nth(0);
   await expect(row).toContainText(`${strings.dropLabel} 0 m`);
-  // Updated: Walloon stretch names in the access text can contain "upstream"
-  // ("50 m upstream of the Gendron–Celles road bridge"), so check for the hint itself (#59).
-  await expect(row).not.toContainText("(upstream?)");
-  // Updated: the row now also shows access rule text, which may contain hyphens
-  // ("packraft-go"); the rule is still that no figure is negative (#58).
-  await expect(row).not.toContainText(/-\s*\d/);
+  // Updated: the row also shows access rule text, which can contain "upstream" and
+  // date ranges like "1 Oct - 15 Jun" (#58, #59). Both rules are about the figures, so
+  // check the figures only.
+  const figures = row.locator(".leg-figures");
+  await expect(figures).not.toContainText("upstream");
+  await expect(figures).not.toContainText(/-\s*\d/);
 });
 
 test("round 2, rule 2: a paddle leg ending 5 m higher shows the rise with the upstream hint and no drop", async ({
