@@ -115,8 +115,8 @@ export const walloniaSquare: FixedRecord = {
   region: "wallonia",
   rule: {
     type: "fixed",
-    state: "unknown",
-    text: "Only listed stretches may be paddled; other water is treated as not allowed.",
+    state: "forbidden",
+    text: "Not on the AGW list of open stretches: treated as not allowed.",
   },
   geometry: {
     type: "Polygon",

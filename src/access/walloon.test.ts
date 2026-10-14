@@ -65,11 +65,25 @@ describe("the Walloon stretches in the built-in rules", () => {
     expect(stateOn(a.id, "2026-06-06").state).toBe("open");
   });
 
-  it("Walloon water on no listed stretch is unknown and treated as not allowed, not forbidden", () => {
+  // Updated: round 2 (#59): unlisted Walloon water is forbidden (ADR 0022), not unknown. Regions are never painted.
+  it("Walloon water on no listed stretch is forbidden: not on the AGW list", () => {
     // The Meuse at Namur is navigable but not in Annex 1 of the AGW.
     const status = accessAt({ lat: 50.4655, lng: 4.8665 }, builtInAccessRules, { date: "2026-12-15" });
-    expect(status.state).toBe("unknown");
-    expect(status.reasons[0]).toMatchObject({ recordId: "wallonia" });
-    expect(status.reasons[0].kind === "rule" && status.reasons[0].ruleText).toMatch(/not allowed/);
+    expect(status.state).toBe("forbidden");
+    expect(status.reasons[0]).toMatchObject({ recordId: "wallonia", state: "forbidden" });
+    expect(status.reasons[0].kind === "rule" && status.reasons[0].ruleText).toMatch(/Not on the AGW list of open stretches/);
+  });
+
+  it("a point on an unlisted Walloon river (the Meuse at Dinant) is forbidden with that reason", () => {
+    const status = accessAt({ lat: 50.2615, lng: 4.9127 }, builtInAccessRules, { date: "2026-07-15" });
+    expect(status.state).toBe("forbidden");
+    expect(status.reasons).toEqual([
+      expect.objectContaining({ recordId: "wallonia", ruleText: expect.stringContaining("Not on the AGW list of open stretches") }),
+    ]);
+  });
+
+  it("regions are never painted, so unlisted water stays unpainted", () => {
+    const ids = accessFeatures(builtInAccessRules, { date: "2026-07-15" }).map((f) => f.record.id);
+    expect(ids).not.toContain("wallonia");
   });
 });

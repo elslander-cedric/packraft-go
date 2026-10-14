@@ -205,9 +205,10 @@ describe("access status in Wallonia (AGW stretches, #59)", () => {
     expect(walloonWinter.rule).toMatchObject({ gauge: { assumed: true } });
   });
 
-  it("unlisted Walloon water is unknown (treated as not allowed), not forbidden", () => {
+  // Updated: round 2 (#59): unlisted Walloon water is forbidden (ADR 0022), not unknown.
+  it("unlisted Walloon water is forbidden: not on the AGW list", () => {
     const status = accessAt(onUnlistedWalloonWater, wallonia, { date: "2027-01-12" });
-    expect(status.state).toBe("unknown");
+    expect(status.state).toBe("forbidden");
     expect(status.reasons[0]).toMatchObject({ recordId: "wallonia" });
   });
 
