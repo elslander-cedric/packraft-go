@@ -47,7 +47,7 @@ CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on eve
 ## Conventions
 - Domain terms are defined in `GLOSSARY.md`; use them consistently in code and docs.
 - Significant decisions get an ADR in `docs/adr/NNNN-title.md`.
-- Work is tracked as GitHub issues; labels: `ready-for-agent`, `tested`, `needs-fix`.
+- Work is tracked as GitHub issues with triage labels (see Agent skills below); PRs get `tested` / `needs-fix` from the tester.
 - Never push to `main` directly; open a PR.
 
 ## Agent lessons
