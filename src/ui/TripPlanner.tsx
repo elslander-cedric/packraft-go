@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { aireWarnings } from "@/core/aire";
 import type { Router } from "@/core/router";
-import { createAutoRouter, retryLeg } from "@/core/routing";
+import { applyRoutingAction, createAutoRouter, retryLeg } from "@/core/routing";
 import { defaultSettings, withSetting, type Settings } from "@/core/settings";
 import { snapOffers, snapToAccessPoint, type SnapOffer } from "@/core/snap";
 import { summarise } from "@/core/summarise";
@@ -64,7 +64,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
   const [keepStoredSave, setKeepStoredSave] = useState(stored.unknownVersion);
   // Shown after a file could not be opened, until the planner does something else.
   const [fileError, setFileError] = useState<string | null>(null);
-  const [autoRouter] = useState(() => createAutoRouter(router ?? createBRouterRouter(), setTrip));
+  const [autoRouter] = useState(() => createAutoRouter(router ?? createBRouterRouter(), (action) => setTrip((current) => applyRoutingAction(current, action))));
 
   // Every change is saved. Restored legs keep their routed results, so syncing routes nothing new.
   useEffect(() => {

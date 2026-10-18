@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import type { RouteResult, Router } from "./router";
 import { createAutoRouter, retryLeg } from "./routing";
+import { routingInto } from "./testing/routingDispatch";
 import { summarise } from "./summarise";
 import { applyEdit, emptyTrip, type Edit, type LatLng, type LegMode, type Trip } from "./trip";
 
@@ -42,7 +43,7 @@ function planner(router: Router) {
   const update = (change: (trip: Trip) => Trip) => {
     state.trip = change(state.trip);
   };
-  const auto = createAutoRouter(router, update);
+  const auto = createAutoRouter(router, routingInto(update));
   const edit = (e: Edit) => {
     update((t) => applyEdit(t, e));
     return auto.sync(state.trip);

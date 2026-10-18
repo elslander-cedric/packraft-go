@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import type { LegRoute, RouteResult } from "./router";
 import { createAutoRouter } from "./routing";
+import { routingInto } from "./testing/routingDispatch";
 import { createFakeRouter } from "./testing/fakeRouter";
 import { applyEdit, canUndo, emptyTrip, putInsAndTakeOuts, type Edit, type LatLng, type Trip } from "./trip";
 
@@ -90,7 +91,7 @@ describe("routing after a mode switch", () => {
   it("routes a leg switched to paddle with the paddle mode (river), and only that leg", async () => {
     const router = createFakeRouter({ hike: TRAIL, paddle: RIVER });
     const { state, update } = plannerState(through(A, B, C));
-    const autoRouter = createAutoRouter(router, update);
+    const autoRouter = createAutoRouter(router, routingInto(update));
     await autoRouter.sync(state.trip);
 
     update((trip) => applyEdit(trip, setLegMode(0, "paddle")));
@@ -104,7 +105,7 @@ describe("routing after a mode switch", () => {
   it("undoing a mode switch brings the hike route back without a new request", async () => {
     const router = createFakeRouter({ hike: TRAIL, paddle: RIVER });
     const { state, update } = plannerState(through(A, B));
-    const autoRouter = createAutoRouter(router, update);
+    const autoRouter = createAutoRouter(router, routingInto(update));
     await autoRouter.sync(state.trip);
     update((trip) => applyEdit(trip, setLegMode(0, "paddle")));
     await autoRouter.sync(state.trip);

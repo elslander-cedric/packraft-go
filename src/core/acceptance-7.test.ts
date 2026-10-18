@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { createBRouterRouter } from "../routing/brouter";
 import type { RouteResult, Router } from "./router";
 import { createAutoRouter } from "./routing";
+import { routingInto } from "./testing/routingDispatch";
 import { defaultSettings, restoreSettings, serialiseSettings, withSetting, type Settings } from "./settings";
 import { summarise } from "./summarise";
 import { applyEdit, emptyTrip, type Edit, type LatLng, type LegMode, type Trip } from "./trip";
@@ -28,9 +29,12 @@ const lineRouter = (climbM: number | undefined): Router => ({
 /** Draws a trip through the points like the UI does, routing each leg through `router`. */
 async function drawTrip(router: Router, points: LatLng[], modes: LegMode[] = []): Promise<Trip> {
   const state = { trip: emptyTrip() as Trip };
-  const auto = createAutoRouter(router, (change) => {
-    state.trip = change(state.trip);
-  });
+  const auto = createAutoRouter(
+    router,
+    routingInto((change) => {
+      state.trip = change(state.trip);
+    }),
+  );
   const edit = async (e: Edit) => {
     state.trip = applyEdit(state.trip, e);
     await auto.sync(state.trip);
