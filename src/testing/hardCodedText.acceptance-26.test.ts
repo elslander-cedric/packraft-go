@@ -52,9 +52,9 @@ describe("#26 AC2: still fails on real hard-coded user-facing text in JSX", () =
 describe("#26 AC4: code rearranged to dodge the old check is restored", () => {
   const read = (file: string) => readFileSync(path.join(UI, file), "utf8");
 
-  it("TripPlanner uses natural generics for state and refs", () => {
+  // Updated: the pending trip moved into the planner session, so TripPlanner no longer has a useState<Trip | null> (#96)
+  it("TripPlanner uses natural generics for refs", () => {
     const code = read("TripPlanner.tsx");
-    expect(code).toContain("useState<Trip | null>(null)");
     expect(code).toContain("useRef<HTMLButtonElement>(null)");
     expect(code).not.toMatch(/null as [A-Z]/);
   });

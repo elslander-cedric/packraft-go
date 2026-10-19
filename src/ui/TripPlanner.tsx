@@ -1,26 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { aireWarnings } from "@/core/aire";
 import type { Router } from "@/core/router";
-import { applyRoutingAction, createAutoRouter, retryLeg } from "@/core/routing";
+import { firstSession, plannerSession } from "@/core/plannerSession";
+import { createAutoRouter } from "@/core/routing";
 import { defaultSettings, withSetting, type Settings } from "@/core/settings";
-import { snapOffers, snapToAccessPoint, type SnapOffer } from "@/core/snap";
 import { summarise } from "@/core/summarise";
 import { tripAccess } from "@/core/tripAccess";
-import {
-  applyEdit,
-  canUndo,
-  emptyTrip,
-  isCamp,
-  newTripNeedsConfirmation,
-  renameTrip,
-  setStartDate,
-  type Edit,
-  type LatLng,
-  type LegMode,
-  type Trip,
-} from "@/core/trip";
+import { canUndo, isCamp, type LatLng } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import { downloadGpxZip, downloadTripFile, readTripFile } from "@/persistence/tripFile";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
@@ -42,7 +30,6 @@ import { useSettings } from "./useSettings";
 
 /** The questions asked before a trip with points is replaced. */
 const confirmations = { newTrip: strings.newTripConfirm, openFile: strings.openFileConfirm } as const;
-type Confirmation = keyof typeof confirmations;
 
 /** True when a key press is meant for a text field, not for the planner. */
 const typingInField = (event: KeyboardEvent) =>
@@ -50,21 +37,21 @@ const typingInField = (event: KeyboardEvent) =>
   (event.target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName));
 
 /**
- * Holds the current trip and wires the map, toolbar and panel to the trip
- * planner core: they send edits, the core returns the new trip and its figures.
- * The selected point is UI state only; it is cleared by every edit.
+ * Runs the planner on the planner session (ADR 0025): one pure function
+ * `(session, action) -> session` in the core, run here with a reducer. It holds
+ * the trip, the selected point, the snap offers, the file error, whether the
+ * stored save is kept and the replace question, and it is the only writer of the
+ * trip. This component sends it actions from the map, toolbars, panels, dialog
+ * and keys, and keeps the side effects: autosave (skipped while the stored save
+ * is kept), route requests, reading and downloading files, and the key bindings
+ * with the "typing in a field" check.
  * Legs without a route are routed through `router` whenever the trip changes.
  */
 export default function TripPlanner({ router }: { router?: Router }) {
   // Starts from the stored trip, so this component is only rendered in the browser (see ClientTripPlanner).
-  const [stored] = useState(loadStoredTrip);
-  const [trip, setTrip] = useState(stored.trip);
-  // A stored save from a newer or unknown version is kept, not overwritten, until
-  // the planner starts a new trip or opens a file (#28).
-  const [keepStoredSave, setKeepStoredSave] = useState(stored.unknownVersion);
-  // Shown after a file could not be opened, until the planner does something else.
-  const [fileError, setFileError] = useState<string | null>(null);
-  const [autoRouter] = useState(() => createAutoRouter(router ?? createBRouterRouter(), (action) => setTrip((current) => applyRoutingAction(current, action))));
+  const [session, dispatch] = useReducer(plannerSession, undefined, () => firstSession(loadStoredTrip()));
+  const { trip, selectedPoint, offers, fileError, keepStoredSave, question, pendingTrip } = session;
+  const [autoRouter] = useState(() => createAutoRouter(router ?? createBRouterRouter(), dispatch));
 
   // Every change is saved. Restored legs keep their routed results, so syncing routes nothing new.
   useEffect(() => {
@@ -84,86 +71,23 @@ export default function TripPlanner({ router }: { router?: Router }) {
   // Your access points (#55): their own collection, apart from the trip.
   const access = useAccessPoints();
 
-  const retry = (legIndex: number) => {
-    setTrip((current) => retryLeg(current, legIndex));
-  };
-  const [selectedPoint, setSelectedPoint] = useState<number | null>(null);
-
-  // Offers to snap a new put-in or take-out to one of your access points (#62). Any other edit drops them.
-  const [offers, setOffers] = useState<readonly SnapOffer[]>([]);
-  const edit = (change: Edit) => {
-    setTrip((current) => applyEdit(current, change));
-    setSelectedPoint(null);
-    setFileError(null);
-    setOffers([]);
-  };
-  const setLegMode = (index: number, mode: LegMode) => {
-    const after = applyEdit(trip, { type: "setLegMode", index, mode });
-    edit({ type: "setLegMode", index, mode });
-    setOffers(snapOffers(trip, after, access.points));
-  };
-  const dismissOffer = (offer: SnapOffer) => setOffers((current) => current.filter((o) => o !== offer));
-  const acceptOffer = (offer: SnapOffer) => {
-    setTrip((current) => snapToAccessPoint(current, offer));
-    setSelectedPoint(null);
-    dismissOffer(offer);
-  };
-  const rename = (name: string) => {
-    setTrip((current) => renameTrip(current, name));
-    setFileError(null);
-  };
-  const changeStartDate = (date: string | undefined) => {
-    setTrip((current) => setStartDate(current, date));
-    setFileError(null);
-  };
-  // A trip waiting to replace the current one until the planner answers the confirmation.
-  const [pendingTrip, setPendingTrip] = useState<Trip | null>(null);
-  // The last question asked; kept after it is answered, so the closing dialog keeps its text and focus target.
-  const [question, setQuestion] = useState<Confirmation>("newTrip");
   const newTripButton = useRef<HTMLButtonElement>(null);
   const openFileButton = useRef<HTMLButtonElement>(null);
-  const applyReplace = (next: Trip) => {
-    setTrip(next);
-    setSelectedPoint(null);
-    setFileError(null);
-    setOffers([]);
-    setKeepStoredSave(false);
-  };
-  /** Replaces the current trip, asking first when that would lose points (it cannot be undone). */
-  const replaceTrip = (next: Trip, asking: Confirmation) => {
-    if (newTripNeedsConfirmation(trip)) {
-      setQuestion(asking);
-      setPendingTrip(next);
-    } else applyReplace(next);
-  };
-  const confirmReplace = () => {
-    if (pendingTrip) applyReplace(pendingTrip);
-    setPendingTrip(null);
-  };
-  const newTrip = () => replaceTrip(emptyTrip(), "newTrip");
   const saveFile = () => {
-    setFileError(null);
+    dispatch({ type: "fileDownloaded" });
     downloadTripFile(trip, strings.tripNamePlaceholder);
   };
   const exportGpx = () => {
-    setFileError(null);
+    dispatch({ type: "fileDownloaded" });
     downloadGpxZip(trip, { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName });
   };
   const openFile = async (file: File) => {
     const opened = await readTripFile(file);
-    if (opened.ok) replaceTrip(opened.trip, "openFile");
-    else setFileError(opened.reason === "unknown-version" ? strings.openFileUnknownVersion : strings.openFileInvalid);
+    if (opened.ok) dispatch({ type: "fileOpened", trip: opened.trip });
+    else dispatch({ type: "fileRejected", reason: opened.reason === "unknown-version" ? "unknown-version" : "invalid" });
   };
-  /** Marks or unmarks the selected point as a camp. The point stays selected: no point moves. */
-  const toggleSelectedCamp = () => {
-    if (selectedPoint === null) return;
-    setTrip((current) => applyEdit(current, { type: "toggleCamp", index: selectedPoint }));
-    setFileError(null);
-  };
-  const undo = () => edit({ type: "undo" });
-  const deleteSelectedPoint = () => {
-    if (selectedPoint !== null) edit({ type: "deletePoint", index: selectedPoint });
-  };
+  const undo = () => dispatch({ type: "undo" });
+  const deleteSelectedPoint = () => dispatch({ type: "deleteSelectedPoint" });
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -176,7 +100,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
         event.preventDefault();
         deleteSelectedPoint();
       } else if (event.key === "Escape") {
-        setSelectedPoint(null);
+        dispatch({ type: "deselect" });
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -209,9 +133,9 @@ export default function TripPlanner({ router }: { router?: Router }) {
         trip={trip}
         selectedPoint={selectedPoint}
         // While an access point is being placed, the click places it instead of a trip point.
-        onMapClick={(at: LatLng) => (access.placing ? access.placeAt(at) : edit({ type: "addPoint", at }))}
-        onPointClick={(index) => setSelectedPoint((current) => (current === index ? null : index))}
-        onPointDrag={(index, to) => edit({ type: "movePoint", index, to })}
+        onMapClick={(at: LatLng) => (access.placing ? access.placeAt(at) : dispatch({ type: "addPoint", at }))}
+        onPointClick={(index) => dispatch({ type: "pointClicked", index })}
+        onPointDrag={(index, to) => dispatch({ type: "movePoint", index, to })}
         accessPoints={{
           points: access.points,
           selectedId: access.selected?.id ?? null,
@@ -227,11 +151,11 @@ export default function TripPlanner({ router }: { router?: Router }) {
         )}
         <TripToolbar
           name={trip.name}
-          fileError={fileError}
-          onRename={rename}
+          fileError={fileError === null ? null : fileError === "unknown-version" ? strings.openFileUnknownVersion : strings.openFileInvalid}
+          onRename={(name) => dispatch({ type: "rename", name })}
           startDate={trip.startDate}
-          onSetStartDate={changeStartDate}
-          onNewTrip={newTrip}
+          onSetStartDate={(date) => dispatch({ type: "setStartDate", date })}
+          onNewTrip={() => dispatch({ type: "newTrip" })}
           onSaveFile={saveFile}
           onExportGpx={trip.legs.length > 0 ? exportGpx : null}
           onOpenFile={(file) => void openFile(file)}
@@ -244,16 +168,16 @@ export default function TripPlanner({ router }: { router?: Router }) {
           selectedPointIsCamp={selectedPoint === null ? null : isCamp(trip, selectedPoint)}
           onUndo={undo}
           onDeletePoint={deleteSelectedPoint}
-          onToggleCamp={toggleSelectedCamp}
+          onToggleCamp={() => dispatch({ type: "toggleCampOnSelectedPoint" })}
         />
-        <SnapOffers offers={offers} onAccept={acceptOffer} onDecline={dismissOffer} />
+        <SnapOffers offers={offers} onAccept={(offer) => dispatch({ type: "acceptOffer", offer })} onDecline={(offer) => dispatch({ type: "declineOffer", offer })} />
         <LegsPanel
           summary={summary}
           legs={trip.legs}
           access={waterAccess}
           aire={aire}
-          onRetry={retry}
-          onSetMode={setLegMode}
+          onRetry={(index) => dispatch({ type: "retryLeg", index })}
+          onSetMode={(index, mode) => dispatch({ type: "setLegMode", index, mode, accessPoints: access.points })}
         />
         <DaysPanel days={summary.days} access={waterAccess?.days} aire={aire} />
         {waterAccess && <TripAccessSummary access={waterAccess.trip} aire={aire} />}
@@ -266,8 +190,8 @@ export default function TripPlanner({ router }: { router?: Router }) {
         message={confirmation.message}
         confirmLabel={confirmation.confirm}
         cancelLabel={strings.confirmCancel}
-        onConfirm={confirmReplace}
-        onCancel={() => setPendingTrip(null)}
+        onConfirm={() => dispatch({ type: "confirmReplace" })}
+        onCancel={() => dispatch({ type: "cancelReplace" })}
         returnFocusTo={question === "openFile" ? openFileButton : newTripButton}
       />
     </div>
