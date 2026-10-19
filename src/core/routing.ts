@@ -1,20 +1,33 @@
-// Routing orchestration: decides which legs to route and stores the router's
-// answers on them. The router is injected, so tests pass a fake (spec #2).
+// Routing orchestration: decides which legs to route and reports what happened.
+// The router is injected, so tests pass a fake (spec #2).
+//
+// Contract (ADR 0025): the auto router never writes the trip. It reports plain-data
+// routing actions to a dispatch: "route requested" (the legs waiting for this
+// request are marked pending) and "route arrived" (the answer is stored on the
+// legs still waiting for it). `markPending`, `storeRoute` and `applyRoutingAction`
+// are the pure functions that apply them to a trip; whoever owns the trip applies
+// them, so the router holds no trip.
 import type { LegRoute, RouteResult, Router } from "./router";
 import type { LatLng, Leg, LegMode, Trip } from "./trip";
 
-/** Applies a change to the planner's current trip (e.g. React's setState). */
-export type TripUpdate = (change: (trip: Trip) => Trip) => void;
+export type RouteRequest = { readonly mode: LegMode; readonly points: readonly [LatLng, LatLng] };
+
+/** What the auto router reports, as plain data. */
+export type RoutingAction =
+  | { readonly type: "routeRequested"; readonly request: RouteRequest }
+  | { readonly type: "routeArrived"; readonly request: RouteRequest; readonly route: LegRoute };
+
+export type RoutingDispatch = (action: RoutingAction) => void;
 
 export type AutoRouter = {
   /**
    * Routes every leg of the trip that has no routed result yet. Resolves when
-   * the routes it started have been stored.
+   * the routes it started have been reported.
    */
   sync(trip: Trip): Promise<void>;
 };
 
-type Request = { readonly mode: LegMode; readonly points: readonly [LatLng, LatLng] };
+type Request = RouteRequest;
 
 const requestOf = (trip: Trip, i: number): Request => ({
   mode: trip.legs[i].mode,
@@ -50,18 +63,27 @@ const keyOf = ({ mode, points: [from, to] }: Request) => `${mode}:${from.lat},${
 const awaitsRoute = (leg: Leg) => !leg.route || leg.route.status === "pending";
 
 /**
- * Stores a route on every leg of the current trip that `request` is for and
- * that is still waiting for one. Legs that changed meanwhile are left alone.
+ * Stores a route on every leg of the trip that `request` is for and that is
+ * still waiting for one. Legs that changed meanwhile are left alone; a leg that
+ * undo brought back is still waiting, so it gets the route.
  */
-const store = (request: Request, route: LegRoute) => (current: Trip) =>
-  setRoutes(
-    current,
+export function storeRoute(trip: Trip, request: Request, route: LegRoute): Trip {
+  return setRoutes(
+    trip,
     route,
     // A leg already pending stays as it is, so marking legs pending twice does not change the trip.
-    (leg, i) => awaitsRoute(leg) && leg.route?.status !== route.status && isFor(current, i, request),
+    (leg, i) => awaitsRoute(leg) && leg.route?.status !== route.status && isFor(trip, i, request),
   );
+}
 
-export function createAutoRouter(router: Router, update: TripUpdate): AutoRouter {
+/** Marks every leg of the trip that `request` is for and that waits for a route as pending. */
+export const markPending = (trip: Trip, request: Request): Trip => storeRoute(trip, request, { status: "pending" });
+
+/** Applies one routing action to a trip. */
+export const applyRoutingAction = (trip: Trip, action: RoutingAction): Trip =>
+  action.type === "routeRequested" ? markPending(trip, action.request) : storeRoute(trip, action.request, action.route);
+
+export function createAutoRouter(router: Router, dispatch: RoutingDispatch): AutoRouter {
   const inFlight = new Map<string, Promise<void>>();
   // Routes already received, by request. A leg that comes back unchanged (by
   // undo, or in a trip older than the stored answer) gets its route from here
@@ -80,7 +102,7 @@ export function createAutoRouter(router: Router, update: TripUpdate): AutoRouter
       inFlight.delete(key);
       const route = routeOf(result);
       if (route.status === "routed") received.set(key, route);
-      update(store(request, route));
+      dispatch({ type: "routeArrived", request, route });
     })();
     inFlight.set(key, running);
     return running;
@@ -97,9 +119,9 @@ export function createAutoRouter(router: Router, update: TripUpdate): AutoRouter
         const key = keyOf(request);
         const known = received.get(key);
         if (known) {
-          update(store(request, known));
+          dispatch({ type: "routeArrived", request, route: known });
         } else {
-          update(store(request, { status: "pending" }));
+          dispatch({ type: "routeRequested", request });
           waiting.push(inFlight.get(key) ?? start(request));
         }
       }

@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import type { Router, RouteResult } from "./router";
 import { createAutoRouter } from "./routing";
+import { routingInto } from "./testing/routingDispatch";
 import { parseTrip, restoreTrip, serialiseTrip } from "./saveFile";
 import { summarise } from "./summarise";
 import { applyEdit, canUndo, emptyTrip, renameTrip, type LatLng, type Trip } from "./trip";
@@ -44,7 +45,7 @@ function countingRouter() {
 async function syncOnce(trip: Trip) {
   const { router, calls } = countingRouter();
   let current = trip;
-  const auto = createAutoRouter(router, (change) => (current = change(current)));
+  const auto = createAutoRouter(router, routingInto((change) => (current = change(current))));
   await auto.sync(current);
   return { trip: current, calls };
 }

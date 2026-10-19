@@ -12,6 +12,7 @@ import { strings } from "../ui/strings";
 import { gpxZipFileName, tripToGpxFiles, type GpxNames } from "./gpx";
 import type { RouteResult, RoutedPoint } from "./router";
 import { createAutoRouter } from "./routing";
+import { routingInto } from "./testing/routingDispatch";
 import { createFakeRouter } from "./testing/fakeRouter";
 import { applyEdit, emptyTrip, renameTrip, type Edit, type LatLng, type Trip } from "./trip";
 
@@ -38,7 +39,7 @@ const routedBetween = (a: LatLng, b: LatLng, base: number): RouteResult => ({
 /** Routes every leg of `trip` once with a fake router answering each mode. */
 async function routeAll(trip: Trip, results: Parameters<typeof createFakeRouter>[0]) {
   let current = trip;
-  const auto = createAutoRouter(createFakeRouter(results), (change) => (current = change(current)));
+  const auto = createAutoRouter(createFakeRouter(results), routingInto((change) => (current = change(current))));
   await auto.sync(current);
   return current;
 }

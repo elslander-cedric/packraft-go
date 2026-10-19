@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import type { LegRoute } from "./router";
 import { createAutoRouter } from "./routing";
+import { routingInto } from "./testing/routingDispatch";
 import { parseTrip, restoreTrip, serialiseTrip } from "./saveFile";
 import { summarise } from "./summarise";
 import { createFakeRouter } from "./testing/fakeRouter";
@@ -86,7 +87,7 @@ describe("AC1/AC4: toggling a camp", () => {
     const state = { trip: edits(fiveLegTrip(), camp(2), camp(4), camp(2)) };
     await createAutoRouter(
       router,
-      (change) => (state.trip = change(state.trip)),
+      routingInto((change) => (state.trip = change(state.trip))),
     ).sync(state.trip);
     expect(router.calls).toEqual([]);
   });

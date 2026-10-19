@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import type { RouteResult, Router } from "./router";
 import { createAutoRouter, retryLeg } from "./routing";
+import { routingInto } from "./testing/routingDispatch";
 import { summarise } from "./summarise";
 import { applyEdit, emptyTrip, type LatLng, type LegMode, type Trip } from "./trip";
 
@@ -58,7 +59,7 @@ describe("#4 AC2: legs without a routed result are routed automatically; routed 
   it("routes each unrouted hike leg once, with its own endpoints, and stores the geometry", async () => {
     const { router, calls } = manualRouter();
     const { state, update } = planner(through(P1, P2, P3));
-    const auto = createAutoRouter(router, update);
+    const auto = createAutoRouter(router, routingInto(update));
 
     const done = auto.sync(state.trip);
     expect(calls.map((c) => [c.mode, c.points])).toEqual([
@@ -76,7 +77,7 @@ describe("#4 AC2: legs without a routed result are routed automatically; routed 
   it("syncing the same trip repeatedly (as React effects may) asks only once per leg", async () => {
     const { router, calls } = manualRouter();
     const { state, update } = planner(through(P1, P2));
-    const auto = createAutoRouter(router, update);
+    const auto = createAutoRouter(router, routingInto(update));
     const initial = state.trip;
 
     void auto.sync(initial);
@@ -93,7 +94,7 @@ describe("#4 AC2: legs without a routed result are routed automatically; routed 
   it("growing the trip routes only the new leg", async () => {
     const { router, calls } = manualRouter();
     const { state, update } = planner(through(P1, P2));
-    const auto = createAutoRouter(router, update);
+    const auto = createAutoRouter(router, routingInto(update));
     void auto.sync(state.trip);
     calls[0].answer(track(P1, P2));
     await flush();
@@ -125,14 +126,14 @@ describe("#4 AC2: legs without a routed result are routed automatically; routed 
       })),
     };
     const { update } = planner(routed);
-    await createAutoRouter(router, update).sync(routed);
+    await createAutoRouter(router, routingInto(update)).sync(routed);
     expect(calls).toHaveLength(0);
   });
 
   it("an answer for a leg that changed while the request was out is not applied to it", async () => {
     const { router, calls } = manualRouter();
     const { state, update } = planner(through(P1, P2));
-    const auto = createAutoRouter(router, update);
+    const auto = createAutoRouter(router, routingInto(update));
     void auto.sync(state.trip);
     // The leg's end moves (as a future move-point edit would): its route is dropped.
     update((t) => ({ ...t, points: [P1, P3], legs: [{ mode: "hike" }] }));
@@ -150,7 +151,7 @@ describe("#4 AC3: pending while routing", () => {
   it("marks a leg pending as soon as its request is sent, until the answer arrives", async () => {
     const { router, calls } = manualRouter();
     const { state, update } = planner(through(P1, P2));
-    void createAutoRouter(router, update).sync(state.trip);
+    void createAutoRouter(router, routingInto(update)).sync(state.trip);
     expect(state.trip.legs[0].route).toEqual({ status: "pending" });
     calls[0].answer(track(P1, P2));
     await flush();
@@ -162,7 +163,7 @@ describe("#4 AC4: failure keeps the leg and can be retried", () => {
   it("stores a typed failure, keeps the leg and its points, and retry routes it again", async () => {
     const { router, calls } = manualRouter();
     const { state, update } = planner(through(P1, P2, P3));
-    const auto = createAutoRouter(router, update);
+    const auto = createAutoRouter(router, routingInto(update));
     void auto.sync(state.trip);
     calls[0].answer(track(P1, P2));
     calls[1].answer({ ok: false, failure: { kind: "unavailable" } });
@@ -199,7 +200,7 @@ describe("#4 AC4: failure keeps the leg and can be retried", () => {
   it("a router that throws becomes an 'unavailable' failure, not a stuck pending leg", async () => {
     const throwing: Router = { route: async () => { throw new Error("boom"); } };
     const { state, update } = planner(through(P1, P2));
-    await createAutoRouter(throwing, update).sync(state.trip);
+    await createAutoRouter(throwing, routingInto(update)).sync(state.trip);
     expect(state.trip.legs[0].route).toEqual({ status: "failed", failure: { kind: "unavailable" } });
   });
 });
