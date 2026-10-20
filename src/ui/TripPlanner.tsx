@@ -70,6 +70,10 @@ export default function TripPlanner({ router }: { router?: Router }) {
 
   // Your access points (#55): their own collection, apart from the trip.
   const access = useAccessPoints();
+  // Snap offers follow your access points (#97): tell the session whenever they change.
+  useEffect(() => {
+    dispatch({ type: "accessPointsChanged", accessPoints: access.points });
+  }, [access.points]);
 
   const newTripButton = useRef<HTMLButtonElement>(null);
   const openFileButton = useRef<HTMLButtonElement>(null);

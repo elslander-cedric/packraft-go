@@ -8,7 +8,8 @@
 //   accept offer and any replace of the trip; kept by everything else.
 // - snap offers: set leg mode replaces them with the offers worked out from the
 //   trip it produced; add, move, delete, undo and replace drop them; accept and
-//   decline remove that one offer.
+//   decline remove that one offer; access points changed drops the offers to a
+//   deleted access point and makes the offers to a moved one follow it.
 // - file error: set by file rejected; cleared by every other action except a
 //   route being requested or arriving.
 // - stored save kept (#28): cleared when the trip is replaced.
@@ -19,6 +20,7 @@
 import type { AccessPoints } from "./accessPoints";
 import type { CalendarDate } from "./calendarDate";
 import { applyRoutingAction, retryLeg, type RoutingAction } from "./routing";
+import { distanceM } from "./geo";
 import { snapOffers, snapToAccessPoint, type SnapOffer } from "./snap";
 import {
   applyEdit,
@@ -56,6 +58,7 @@ export type PlannerAction =
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   | { readonly type: "deleteSelectedPoint" }
   | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode; readonly accessPoints: AccessPoints }
+  | { readonly type: "accessPointsChanged"; readonly accessPoints: AccessPoints }
   | { readonly type: "toggleCampOnSelectedPoint" }
   | { readonly type: "undo" }
   | { readonly type: "rename"; readonly name: string }
@@ -111,6 +114,16 @@ const edited = (session: PlannerSession, trip: Trip, offers: readonly SnapOffer[
   fileError: null,
 });
 
+/** Offers after your access points changed: deleted ones drop, moved ones follow. */
+const followAccessPoints = (trip: Trip, offers: readonly SnapOffer[], accessPoints: AccessPoints): SnapOffer[] =>
+  offers.flatMap((offer) => {
+    const accessPoint = accessPoints.find((a) => a.id === offer.accessPoint.id);
+    const at = trip.points[offer.change.point];
+    if (!accessPoint || !at) return [];
+    if (accessPoint === offer.accessPoint) return [offer];
+    return [{ ...offer, accessPoint, distanceM: distanceM(at, accessPoint.position) }];
+  });
+
 const routing = (session: PlannerSession, action: RoutingAction): PlannerSession => {
   const trip = applyRoutingAction(session.trip, action);
   return trip === session.trip ? session : { ...session, trip };
@@ -136,6 +149,8 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
       const after = applyEdit(trip, { type: "setLegMode", index: action.index, mode: action.mode });
       return edited(session, after, snapOffers(trip, after, action.accessPoints));
     }
+    case "accessPointsChanged":
+      return { ...session, offers: followAccessPoints(trip, session.offers, action.accessPoints), fileError: null };
     case "toggleCampOnSelectedPoint":
       return session.selectedPoint === null
         ? session
