@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import type { LegRoute, RouteResult } from "./router";
 import { createAutoRouter } from "./routing";
-import { routingInto } from "./testing/routingDispatch";
+import { heldSession } from "./testing/heldSession";
 import { createFakeRouter } from "./testing/fakeRouter";
 import { applyEdit, canUndo, emptyTrip, putInsAndTakeOuts, type Edit, type LatLng, type Trip } from "./trip";
 
@@ -80,21 +80,14 @@ describe("routing after a mode switch", () => {
   const TRAIL: RouteResult = { ok: true, geometry: [{ ...A, elevation: 100 }, { ...B, elevation: 140 }] };
   const RIVER: RouteResult = { ok: true, geometry: [{ ...A, elevation: 99 }, { ...B, elevation: 92 }] };
 
-  function plannerState(initial: Trip) {
-    const state = { trip: initial };
-    const update = (change: (trip: Trip) => Trip) => {
-      state.trip = change(state.trip);
-    };
-    return { state, update };
-  }
 
   it("routes a leg switched to paddle with the paddle mode (river), and only that leg", async () => {
     const router = createFakeRouter({ hike: TRAIL, paddle: RIVER });
-    const { state, update } = plannerState(through(A, B, C));
-    const autoRouter = createAutoRouter(router, routingInto(update));
+    const state = heldSession(through(A, B, C));
+    const autoRouter = createAutoRouter(router, state.dispatch);
     await autoRouter.sync(state.trip);
 
-    update((trip) => applyEdit(trip, setLegMode(0, "paddle")));
+    state.dispatch({ type: "setLegMode", index: 0, mode: "paddle", accessPoints: [] });
     await autoRouter.sync(state.trip);
 
     expect(router.calls.map((call) => call.mode)).toEqual(["hike", "hike", "paddle"]);
@@ -104,13 +97,13 @@ describe("routing after a mode switch", () => {
 
   it("undoing a mode switch brings the hike route back without a new request", async () => {
     const router = createFakeRouter({ hike: TRAIL, paddle: RIVER });
-    const { state, update } = plannerState(through(A, B));
-    const autoRouter = createAutoRouter(router, routingInto(update));
+    const state = heldSession(through(A, B));
+    const autoRouter = createAutoRouter(router, state.dispatch);
     await autoRouter.sync(state.trip);
-    update((trip) => applyEdit(trip, setLegMode(0, "paddle")));
+    state.dispatch({ type: "setLegMode", index: 0, mode: "paddle", accessPoints: [] });
     await autoRouter.sync(state.trip);
 
-    update((trip) => applyEdit(trip, { type: "undo" }));
+    state.dispatch({ type: "undo" });
     await autoRouter.sync(state.trip);
 
     expect(router.calls.map((call) => call.mode)).toEqual(["hike", "paddle"]);
