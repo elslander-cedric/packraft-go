@@ -49,6 +49,7 @@ const actions: [name: string, make: Make][] = [
   ["move point", { type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 } }],
   ["delete selected point", { type: "deleteSelectedPoint" }],
   ["set leg mode", { type: "setLegMode", index: 1, mode: "paddle", accessPoints: [] }],
+  ["access points changed", { type: "accessPointsChanged", accessPoints: access }],
   ["toggle camp", { type: "toggleCampOnSelectedPoint" }],
   ["undo", { type: "undo" }],
   ["rename", { type: "rename", name: "Ourthe" }],
@@ -93,6 +94,7 @@ table(
     "move point": cleared(null),
     "delete selected point": cleared(null),
     "set leg mode": cleared(null),
+    "access points changed": kept(1),
     "toggle camp": kept(1),
     undo: cleared(null),
     rename: kept(1),
@@ -117,6 +119,7 @@ table(
     "move point": cleared([]),
     "delete selected point": cleared([]),
     undo: cleared([]),
+    "access points changed": kept(1),
     "toggle camp": kept(1),
     rename: kept(1),
     "set start date": kept(1),
@@ -139,6 +142,7 @@ table(
     "move point": cleared(null),
     "delete selected point": cleared(null),
     "set leg mode": cleared(null),
+    "access points changed": cleared(null),
     "toggle camp": cleared(null),
     undo: cleared(null),
     rename: cleared(null),
@@ -225,6 +229,48 @@ describe("snap offers from set leg mode", () => {
   it("replace the earlier offers", () => {
     const after = plannerSession(busy(), { type: "setLegMode", index: 1, mode: "paddle", accessPoints: [] });
     expect(after.offers).toEqual([]);
+  });
+});
+
+describe("snap offers from access points changed", () => {
+  it("drops the offer to a deleted access point and keeps the others", () => {
+    const both = [...slipway("near", nearA), ...slipway("c", { lat: 50.3632, lng: 5.4563 })]; // "c" is near B
+    const withOffers = plannerSession(firstSession({ trip: through(A, B, C) }), {
+      type: "setLegMode",
+      index: 0,
+      mode: "paddle",
+      accessPoints: both,
+    });
+    expect(withOffers.offers.map((o) => o.accessPoint.id).sort()).toEqual(["c", "near"]);
+    const after = plannerSession(withOffers, { type: "accessPointsChanged", accessPoints: both.slice(1) });
+    expect(after.offers.map((o) => o.accessPoint.id)).toEqual(["c"]);
+  });
+
+  it("makes the offer to a moved access point follow it; accepting moves the point there", () => {
+    const offered = plannerSession(firstSession({ trip: through(A, B) }), {
+      type: "setLegMode",
+      index: 0,
+      mode: "paddle",
+      accessPoints: access,
+    });
+    const to: LatLng = { lat: 50.3537, lng: 5.4563 }; // about 111 m from A
+    const moved = plannerSession(offered, {
+      type: "accessPointsChanged",
+      accessPoints: updateAccessPoint(access, "near", { position: to }, T),
+    });
+    expect(moved.offers).toHaveLength(1);
+    expect(moved.offers[0].accessPoint.position).toEqual(to);
+    expect(moved.offers[0].distanceM).toBeGreaterThan(100);
+    expect(moved.offers[0].distanceM).toBeLessThan(120);
+    expect(plannerSession(moved, { type: "acceptOffer", offer: moved.offers[0] }).trip.points[0]).toEqual(to);
+  });
+
+  it("keeps the trip and the selected point", () => {
+    const before = busy();
+    const after = plannerSession(before, { type: "accessPointsChanged", accessPoints: [] });
+    expect(after.offers).toEqual([]);
+    expect(after.trip).toBe(before.trip);
+    expect(after.selectedPoint).toBe(1);
   });
 });
 
