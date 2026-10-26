@@ -22,7 +22,7 @@ const text = strings.phone;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const hitAreas = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point-hit");
+const hitAreas = (page: Page) => mapRegion(page).locator("path.point-hit");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const camps = (page: Page) => mapRegion(page).locator(".camp-marker");
 const markers = (page: Page) => mapRegion(page).locator(".access-point-marker");
@@ -219,6 +219,31 @@ test("with a point selected, the access-point button makes it an access point", 
   await expect(deleteButton(page)).toHaveCount(0);
   await expect(markButton(page)).toBeVisible();
   expect((await stored(page)).accessPoints).toHaveLength(1);
+});
+
+test("a route point under an access point can still be selected and dragged", async ({ page }) => {
+  await serveOffline(page, routed);
+  await openPhone(page);
+  await twoPoints(page);
+  const at = await centreOf(points(page).nth(0));
+  await tapAt(page, at);
+  await pointToAccessButton(page).click();
+  await expect(markers(page)).toHaveCount(1);
+
+  // A tap there selects the route point, not the access point on top of it.
+  await tapAt(page, at);
+  await expect(points(page).nth(0)).toHaveClass(/point-selected/);
+  await expect(deleteButton(page)).toBeVisible();
+
+  // A drag there moves the route point; the access point stays where it was.
+  const offsetBefore = await mapOffset(page);
+  const to = { x: at.x + 30, y: at.y + 90 };
+  await (await touch(page)).drag(at, to);
+  await expect.poll(async () => (await centreOf(points(page).nth(0))).y).toBeGreaterThan(at.y + 70);
+  const marker = await centreOf(markers(page).first());
+  expect(Math.abs(marker.x - at.x)).toBeLessThan(3);
+  expect(Math.abs(marker.y - at.y)).toBeLessThan(3);
+  expect(await mapOffset(page)).toEqual(offsetBefore);
 });
 
 const slipway: AccessPoint = {

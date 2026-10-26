@@ -251,11 +251,15 @@ function TripLayers({
           <Marker key={`camp-${point}`} position={points[point]} icon={campIcon} interactive={false} keyboard={false} />
         ))}
       </Pane>
-      {/* Points and their hit areas get their own pane above the legs, so a leg never covers a point. */}
+      {/* Points get their own pane above the legs, so a leg never covers a point. */}
       <Pane name="trip-points" pane="overlayPane" style={{ zIndex: 401 }}>
         {points.map((point, i) => (
           <PointDot key={`point-${i}`} at={point} selected={i === selectedPoint} />
         ))}
+      </Pane>
+      {/* Their hit areas sit above the access-point markers (Leaflet's marker pane is 600), so a
+          route point that is also an access point can still be selected and dragged (#120). */}
+      <Pane name="trip-point-hits" style={{ zIndex: 620 }}>
         {points.map((point, i) => (
           <PointHitArea key={`hit-${i}`} at={point} handlers={handlers(i)} />
         ))}
