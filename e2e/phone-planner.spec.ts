@@ -110,8 +110,8 @@ test("the peek shows the trip name, the totals and the five tabs; a tab press at
   for (const name of names) await expect(tab(page, name)).toBeVisible();
   await expect(sheet(page).locator(".phone-totals")).toBeVisible();
 
-  const peek = await sheetHeight(page);
-  expect(peek).toBeLessThan(200);
+  // The sheet slides in when the planner opens.
+  await expect.poll(() => sheetHeight(page)).toBeLessThan(200);
   await tab(page, strings.phone.tabs.days).click();
   await expect(tab(page, strings.phone.tabs.days)).toHaveAttribute("aria-selected", "true");
   await expect.poll(() => sheetHeight(page)).toBeGreaterThan(page.viewportSize()!.height * 0.45);

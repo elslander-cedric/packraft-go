@@ -8,6 +8,12 @@ import { baseLayer, initialMapView } from "./mapConfig";
 import { legStyle, modeChangeStyle } from "./TripMap";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 
+/**
+ * A place to show: zoomed in, centred in the part of the map the sheet leaves
+ * free (it covers `coveredBelow` of the map's height).
+ */
+export type MapFocus = { at: LatLng; coveredBelow: number };
+
 export type PhoneMapProps = {
   trip: Trip;
   /** A tap on the map (not a double tap, not the end of a pinch). */
@@ -16,6 +22,8 @@ export type PhoneMapProps = {
   position: { at: LatLng; accuracyM: number } | null;
   /** Your access points: tap one to select it, drag it to correct it (#63). */
   accessPoints?: AccessPointLayerProps;
+  /** A place to show (a new object shows it again). */
+  focus?: MapFocus | null;
 };
 
 /** Zoom used to show your position: close enough to see the river bank. */
@@ -49,6 +57,17 @@ function MapView({ trip, position }: Pick<PhoneMapProps, "trip" | "position">) {
     centred.current = true;
     map.setView(position.at, Math.max(map.getZoom(), POSITION_ZOOM));
   }, [map, position]);
+  return null;
+}
+
+/** Zooms in on `focus` and centres it above the sheet, whenever a new one is given. */
+function Focus({ focus }: { focus: MapFocus }) {
+  const map = useMap();
+  useEffect(() => {
+    const zoom = Math.max(map.getZoom(), POSITION_ZOOM);
+    const shift = (map.getSize().y * focus.coveredBelow) / 2;
+    map.setView(map.unproject(map.project(focus.at, zoom).add([0, shift]), zoom), zoom);
+  }, [map, focus]);
   return null;
 }
 
@@ -90,7 +109,7 @@ function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
  * double tap would add a point. Imports Leaflet, which needs `window`: only load
  * this through ClientPhoneMap.
  */
-export default function PhoneMap({ trip, onMapTap, position, accessPoints }: PhoneMapProps) {
+export default function PhoneMap({ trip, onMapTap, position, accessPoints, focus }: PhoneMapProps) {
   return (
     <MapContainer
       center={[...initialMapView.center]}
@@ -107,6 +126,7 @@ export default function PhoneMap({ trip, onMapTap, position, accessPoints }: Pho
         attribution={baseLayer.attribution}
       />
       <MapView trip={trip} position={position} />
+      {focus && <Focus focus={focus} />}
       <Taps onTap={onMapTap} />
       {trip.legs.map((leg, i) => (
         <Polyline

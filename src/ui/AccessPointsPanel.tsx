@@ -107,15 +107,21 @@ export default function AccessPointsPanel({ access }: { access: AccessPointsStat
 }
 
 /** The selected access point's details, editable (also used on the phone, #63). */
-type AccessPointDetailsProps = { point: AccessPoint; access: AccessPointsState; onDelete: () => void };
+type AccessPointDetailsProps = {
+  point: AccessPoint;
+  access: AccessPointsState;
+  onDelete: () => void;
+  /** Says how to move the point; the phone has no how-to text (ADR 0026). */
+  withMoveHint?: boolean;
+};
 
-export function AccessPointDetails({ point, access, onDelete }: AccessPointDetailsProps) {
+export function AccessPointDetails({ point, access, onDelete, withMoveHint = true }: AccessPointDetailsProps) {
   const update = (changes: Parameters<AccessPointsState["update"]>[1]) => access.update(point.id, changes);
   const headingId = `access-point-${point.id}`;
   return (
     <section className="access-point-details" aria-labelledby={headingId}>
       <h3 id={headingId}>{text.detailsLabel}</h3>
-      <p className="access-point-hint">{text.moveHint}</p>
+      {withMoveHint && <p className="access-point-hint">{text.moveHint}</p>}
       <div className="access-point-field">
         <span>{text.useLabel}</span>
         <ToggleGroup label={text.useLabel} value={point.use} options={useOptions} onChange={(use) => update({ use })} />

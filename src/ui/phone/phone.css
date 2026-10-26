@@ -42,6 +42,12 @@
   transition: bottom 250ms;
 }
 
+.phone-buttons-left {
+  right: auto;
+  left: var(--space-3);
+  align-items: flex-start;
+}
+
 .phone-fab {
   min-width: 2.75rem;
   min-height: 2.75rem;
@@ -168,12 +174,20 @@
   background: var(--color-paddle-tint);
 }
 
-/* Access points on the phone (#63): big targets for the form and the list. */
-.phone-access-points h2 {
-  margin: 0 0 var(--space-2);
-  font-size: 1.2rem;
+/* A short state line with its action, e.g. "Placing an access point · Cancel". */
+.phone-state-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
+.phone-state-action {
+  min-height: 2.75rem;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.95rem;
+}
+
+/* Access points on the phone (#63, #119): big targets for the form and the list. */
 .phone-saved {
   margin: 0 0 var(--space-2);
   color: var(--color-muted);
@@ -201,8 +215,15 @@
   list-style: none;
 }
 
-.phone-row-actions {
-  display: flex;
-  flex-basis: 100%;
-  gap: var(--space-2);
+/* A whole row is the button: it opens that point. */
+.button.phone-access-point-row {
+  width: 100%;
+  border-width: 0 0 1px 4px;
+  border-color: transparent transparent var(--color-border);
+  border-radius: 0;
+  text-align: left;
+}
+
+.button.phone-access-point-row[aria-current] {
+  border-left-color: var(--color-focus);
 }

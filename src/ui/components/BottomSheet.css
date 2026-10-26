@@ -54,3 +54,13 @@
   touch-action: pan-y;
   padding: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
 }
+
+/* At a lower stop part of the sheet is slid below the screen: end the body at the
+   screen's edge, so all of it can be scrolled to. Matches the snap points in BottomSheet.tsx. */
+.bottom-sheet[data-stop="half"] .bottom-sheet-body {
+  margin-bottom: 40dvh;
+}
+
+.bottom-sheet[data-stop="peek"] .bottom-sheet-body {
+  margin-bottom: calc(90dvh - 8rem);
+}
