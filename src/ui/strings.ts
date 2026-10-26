@@ -176,6 +176,11 @@ export const strings = {
     sheetLabel: "Trip",
     tabsLabel: "Trip sections",
     tabs: { legs: "Legs", days: "Days", trip: "Trip", accessPoints: "Access points", settings: "Settings" },
+    // The side panel that replaces the sheet when the phone is held sideways (#126).
+    collapsePanelButton: "Collapse the trip panel",
+    expandPanelButton: "Open the trip panel",
+    collapsePanelGlyph: "›",
+    expandPanelGlyph: "‹",
     legAccessLabel: "Access",
     // The floating hike / paddle toggle for the leg the next map tap adds (#121).
     nextLegModeLabel: "Next leg's mode",

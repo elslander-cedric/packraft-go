@@ -23,10 +23,11 @@ import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
 
 /**
  * A place to show in the part of the map the sheet leaves free (it covers
- * `coveredBelow` of the map's height): a spot, zoomed in and centred, or an
+ * `coveredBelow` of the map's height), or the side panel (it covers
+ * `coveredRight` of the map's width, #126): a spot, zoomed in and centred, or an
  * area (such as a leg, #121, or a day's route, #123), fitted whole.
  */
-export type MapFocus = ({ at: LatLng } | { area: readonly LatLng[] }) & { coveredBelow: number };
+export type MapFocus = ({ at: LatLng } | { area: readonly LatLng[] }) & { coveredBelow: number; coveredRight?: number };
 
 export type PhoneMapProps = {
   trip: Trip;
@@ -115,15 +116,17 @@ function Focus({ focus }: { focus: MapFocus }) {
       if ("area" in focus) {
         if (focus.area.length === 0) return;
         const below = map.getSize().y * focus.coveredBelow;
+        const right = map.getSize().x * (focus.coveredRight ?? 0);
         map.fitBounds(latLngBounds(focus.area.map((p) => [p.lat, p.lng])), {
           paddingTopLeft: [FOCUS_PADDING, FOCUS_PADDING],
-          paddingBottomRight: [FOCUS_PADDING, below + FOCUS_PADDING],
+          paddingBottomRight: [right + FOCUS_PADDING, below + FOCUS_PADDING],
         });
         return;
       }
       const zoom = Math.max(map.getZoom(), POSITION_ZOOM);
-      const shift = (map.getSize().y * focus.coveredBelow) / 2;
-      map.setView(map.unproject(map.project(focus.at, zoom).add([0, shift]), zoom), zoom);
+      const shiftX = (map.getSize().x * (focus.coveredRight ?? 0)) / 2;
+      const shiftY = (map.getSize().y * focus.coveredBelow) / 2;
+      map.setView(map.unproject(map.project(focus.at, zoom).add([shiftX, shiftY]), zoom), zoom);
     };
     if (!zooming.current) {
       show();

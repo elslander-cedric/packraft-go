@@ -18,6 +18,46 @@
   --sheet-height: 90dvh;
 }
 
+/* Held sideways (#126): no sheet below; the side panel covers the right, so the right-hand
+   buttons sit beside it, in the same corners. */
+.phone-sideways {
+  --sheet-height: 0px;
+  --panel-cover: var(--side-panel-strip-width);
+}
+
+.phone-panel-open {
+  --panel-cover: var(--side-panel-width);
+}
+
+.phone-sideways .phone-buttons:not(.phone-buttons-left) {
+  right: calc(var(--panel-cover) + var(--space-3));
+  transition:
+    right 250ms,
+    bottom 250ms;
+}
+
+/* The collapsed panel is a strip with the totals only, one under the other. */
+.phone .side-panel:not([data-open]) .phone-peek-summary {
+  padding: 0;
+}
+
+.phone .side-panel:not([data-open]) .phone-trip-name {
+  display: none;
+}
+
+.phone .side-panel:not([data-open]) .phone-totals {
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  text-align: center;
+  white-space: normal;
+}
+
+.phone .side-panel[data-open] .phone-peek-summary {
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-1) var(--space-1);
+}
+
 .phone-map {
   position: absolute;
   inset: 0;
@@ -300,12 +340,14 @@
   position: absolute;
   bottom: calc(var(--sheet-height) + var(--space-3));
   left: calc(var(--space-3) + 2.75rem + var(--space-2));
-  right: calc(var(--space-3) * 2 + var(--phone-next-mode-width));
+  right: calc(var(--panel-cover, 0px) + var(--space-3) * 2 + var(--phone-next-mode-width));
   z-index: 500;
   display: flex;
   justify-content: flex-end;
   pointer-events: none;
-  transition: bottom 250ms;
+  transition:
+    bottom 250ms,
+    right 250ms;
 }
 
 .phone-snap-offers .snap-offers {
