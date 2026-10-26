@@ -1,4 +1,4 @@
-// Acceptance tests for #29 (manual live BRouter check), written by the tester from the
+// Acceptance tests for #29 (manual live BRouter check) written from the
 // ticket's acceptance criteria. Everything runs offline: the global fetch is replaced
 // by one that fails the test if anything tries to reach the network (ADR 0019).
 import { createHash } from "node:crypto";

@@ -1,6 +1,6 @@
 // Acceptance tests for #26 (ADR 0013): the hard-coded text check ignores code
-// and still catches real user-facing text in JSX. Written by the tester from
-// the ticket, independent of the builder's unit tests.
+// and still catches real user-facing text in JSX. Written from
+// the ticket, independent of the unit tests.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";

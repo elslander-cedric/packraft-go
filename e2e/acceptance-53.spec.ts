@@ -1,4 +1,4 @@
-// Tester acceptance for #53: click behaviour with the layer on, no runtime OSM.
+// Acceptance tests for #53: click behaviour with the layer on, no runtime OSM.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";

@@ -1,4 +1,4 @@
-// Tester acceptance tests for #59 (Walloon access), written from the ticket and the AGW research.
+// Acceptance tests for #59 (Walloon access), written from the ticket and the AGW research.
 // Dates and weekdays are computed by hand, not by the code under test.
 import { describe, expect, it } from "vitest";
 import { accessAt, accessAlong, type AccessRecord } from "@/core/access";

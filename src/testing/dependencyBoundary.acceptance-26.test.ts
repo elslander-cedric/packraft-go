@@ -1,6 +1,6 @@
 // Acceptance tests for the #26 scope addition (from #31, ADR 0020): the
 // dependency boundary uses an allowlist, and native confirm is caught via
-// window, globalThis and self. Written by the tester from the ticket.
+// window, globalThis and self. Written from the ticket.
 import { describe, expect, it } from "vitest";
 import { findNativeConfirm, packagesImportedBy } from "./dependencyBoundary";
 

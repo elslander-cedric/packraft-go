@@ -1,4 +1,4 @@
-// Tester's acceptance tests for #28 at the core seam.
+// Acceptance tests for #28 at the core seam.
 import { describe, expect, it } from "vitest";
 import { restoreStoredTrip, restoreTrip, serialiseTrip } from "./saveFile";
 import { emptyTrip, type Trip } from "./trip";

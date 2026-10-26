@@ -1,4 +1,4 @@
-// Tester's acceptance tests for #31 (ADR 0020): Base UI is pinned to an exact
+// Acceptance tests for #31 (ADR 0020): Base UI is pinned to an exact
 // version and no other UI library is added. Written from the ticket, before
 // reading the diff. Checks the manifest, so a library added but not (yet)
 // imported is also caught.

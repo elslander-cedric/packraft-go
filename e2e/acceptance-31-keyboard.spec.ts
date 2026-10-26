@@ -1,4 +1,4 @@
-// Tester's acceptance tests for #31 (ADR 0020), written from the ticket before
+// Acceptance tests for #31 (ADR 0020), written from the ticket before
 // reading the diff. Keyboard alone: after drawing on the map (out of scope),
 // every control is reached with Tab and used with arrows, Enter/Space and
 // Escape; no element.focus() or mouse on the controls themselves.
@@ -53,7 +53,7 @@ async function drawLeg(page: Page) {
   await expect(rows(page)).toHaveCount(1);
 }
 
-test.describe("#31 tester: confirmations by keyboard alone", () => {
+test.describe("#31: confirmations by keyboard alone", () => {
   test("New trip: Tab + Enter opens the dialog, focus is trapped inside, Escape cancels, confirm clears; focus returns to New trip each time", async ({
     page,
   }) => {
@@ -176,7 +176,7 @@ test.describe("#31 tester: confirmations by keyboard alone", () => {
   });
 });
 
-test.describe("#31 tester: controls by keyboard alone", () => {
+test.describe("#31: controls by keyboard alone", () => {
   test("hike/paddle: Tab reaches the leg's switch, arrows + Space switch to paddle, pressing it again keeps it, Ctrl+Z switches back", async ({
     page,
   }) => {

@@ -1,5 +1,5 @@
-// Acceptance tests for #6 (edit the route: drag, delete, undo), written by the
-// tester from the issue's acceptance criteria. They observe only what a user
+// Acceptance tests for #6 (edit the route: drag, delete, undo), written from
+// the issue's acceptance criteria. They observe only what a user
 // sees: SVG shapes on the map, the legs panel, toolbar buttons, network traffic.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";

@@ -1,4 +1,4 @@
-// Acceptance tests for #118 (tester): screen-rule cases from the removed
+// Acceptance tests for #118: screen-rule cases from the removed
 // phone.spec.ts / acceptance-71.spec.ts, and sheet stops by drag distance.
 import { devices, expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";

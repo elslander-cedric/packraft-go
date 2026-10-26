@@ -1,4 +1,4 @@
-// Acceptance tests for #12 (app skeleton), written by the tester from the
+// Acceptance tests for #12 (app skeleton) written from the
 // issue's acceptance criteria. They observe only what a user would see:
 // rendered tile images, visible text and network traffic.
 import { expect, test, type Page } from "@playwright/test";

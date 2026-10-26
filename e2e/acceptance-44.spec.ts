@@ -1,4 +1,4 @@
-// Tester's acceptance tests for #44. The fix is test-only: it claims a key
+// Acceptance tests for #44. The fix is test-only: it claims a key
 // pressed in the one frame before Base UI moves focus into the confirmation is
 // harmless for a real user. These tests pin that claim: whatever lands in the
 // gap, focus ends inside the dialog and the trip is never lost.
@@ -21,7 +21,7 @@ async function drawLeg(page: Page) {
   await expect(pointMarkers(page)).toHaveCount(2);
 }
 
-test.describe("#44 tester: keys pressed the instant a confirmation opens", () => {
+test.describe("#44: keys pressed the instant a confirmation opens", () => {
   test("Tab straight after opening: focus still ends inside the dialog, trip kept", async ({ page }) => {
     await serveOffline(page);
     await drawLeg(page);

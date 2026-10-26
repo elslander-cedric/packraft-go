@@ -1,4 +1,4 @@
-// Tester acceptance tests for #33: version 2 is the only save-format version.
+// Acceptance tests for #33: version 2 is the only save-format version.
 // Written from the issue before reading the diff: version 1 is treated exactly
 // like any other unsupported version, whatever the file holds.
 // Updated: format reset (#52). Version 1 (camps + optional start date) is now

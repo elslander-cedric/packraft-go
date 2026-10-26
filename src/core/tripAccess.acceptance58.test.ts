@@ -1,4 +1,4 @@
-// Tester acceptance checks for #58, using the real built-in rule data.
+// Acceptance checks for #58, using the real built-in rule data.
 import { describe, expect, it } from "vitest";
 import { builtInAccessRules } from "../access/builtInRules";
 import { tripAccess } from "./tripAccess";
@@ -13,7 +13,7 @@ const paddle = (a: LatLng, b: LatLng, startDate?: string): Trip => ({
 });
 const today = { today: "2026-10-14" };
 
-describe("#58 tester: areas with no rule (built-in data)", () => {
+describe("#58: areas with no rule (built-in data)", () => {
   it("Netherlands (Amsterdam canal)", () => {
     const t = tripAccess(paddle({ lat: 52.37, lng: 4.89 }, { lat: 52.372, lng: 4.9 }, "2026-10-20"), builtInAccessRules, today);
     expect(t.legs[0]!.status.state).toBe("unknown");

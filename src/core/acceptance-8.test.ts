@@ -1,4 +1,4 @@
-// Acceptance tests for #8 (camps and per-day totals), written by the tester from
+// Acceptance tests for #8 (camps and per-day totals) written from
 // the issue, spec #2 (stories 20-24, 30) and ADRs 0008 / 0009 before reading the
 // diff. Seam 1: the trip planner core, with a fake router (never the network).
 import { describe, expect, it } from "vitest";

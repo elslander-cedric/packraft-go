@@ -1,4 +1,4 @@
-// Tester checks for #70: no external font requests; font served locally; phone + dialog smoke.
+// Checks for #70: no external font requests; font served locally; phone + dialog smoke.
 import { expect, test } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";

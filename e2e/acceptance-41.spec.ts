@@ -1,4 +1,4 @@
-// Acceptance tests for #41 (ADR 0021), written by the tester: Export GPX downloads
+// Acceptance tests for #41 (ADR 0021): Export GPX downloads
 // one ZIP holding one GPX file per section. BRouter is answered from recorded
 // responses; the ZIP is unzipped in the test.
 import { expect, test, type Page } from "@playwright/test";

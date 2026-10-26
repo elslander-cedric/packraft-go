@@ -1,6 +1,6 @@
-// Acceptance tests for #27 (leg rows get more room), written by the tester
+// Acceptance tests for #27 (leg rows get more room) written
 // from the ticket's criteria, at a 1280×800 desktop window (ADR 0005).
-// Checks are made on the rendered text, not on the builder's class names,
+// Checks are made on the rendered text, not on class names,
 // so they hold for any layout that meets the criteria.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";

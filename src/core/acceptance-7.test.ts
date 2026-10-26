@@ -1,4 +1,4 @@
-// Acceptance tests for #7 (time estimates and settings), written by the tester
+// Acceptance tests for #7 (time estimates and settings) written
 // from the ticket, spec #2 and ADR 0009 before reading the diff.
 // Seam 1: the core. Routed legs come from an injected router; the recorded
 // BRouter case goes through the adapter with a fake fetch. Never calls live

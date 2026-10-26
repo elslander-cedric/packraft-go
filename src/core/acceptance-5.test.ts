@@ -1,4 +1,4 @@
-// Acceptance tests for #5 (paddle legs snap to rivers), written by the tester
+// Acceptance tests for #5 (paddle legs snap to rivers) written
 // from the ticket, spec #2 and ADRs 0014, 0016, 0018 before reading the diff.
 // Seam 1: the core, with an injected router. Never calls live BRouter (ADR 0019).
 import { readFileSync } from "node:fs";
@@ -343,7 +343,7 @@ describe("AC4: put-ins and take-outs at mode changes", () => {
   });
 });
 
-// Round 2 acceptance tests, written by the tester from the three rules Cedric
+// Round 2 acceptance tests written from the three rules Cedric
 // approved (trip ends on the water; 2 m rise rule, ADR 0018; river no-route message).
 describe("Round 2, rule 1: a trip that starts or ends on the water is marked at its ends", () => {
   const withModes = (...m: LegMode[]): Trip => ({

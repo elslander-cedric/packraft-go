@@ -1,4 +1,4 @@
-// Acceptance tests for #5 (paddle legs snap to rivers), written by the tester.
+// Acceptance tests for #5 (paddle legs snap to rivers).
 // BRouter is answered from recorded fixtures; a river-profile failure is
 // hand-made (BRouter's 400 routing-error reply), since no river no-route was
 // recorded. No live service is called (ADR 0019).
@@ -162,7 +162,7 @@ test("a portage (paddle, hike, paddle) shows a take-out then a put-in", async ({
   expect(Math.abs((await cx(takeOut.nth(1))) - (centreX + 150))).toBeLessThan(3);
 });
 
-// Round 2 acceptance tests, written by the tester from the three rules Cedric approved.
+// Round 2 acceptance tests written from the three rules Cedric approved.
 
 /** The Lesse fixture with its last point's elevation moved so the leg ends `rise` metres above its start. */
 function riverEndingAbove(rise: number): BRouterReply {
