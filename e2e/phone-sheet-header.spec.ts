@@ -150,7 +150,11 @@ test("the selected tab looks different from the others", async ({ page }) => {
   await expect.poll(() => style(text.tabs.days)).toEqual(legs);
 });
 
-test("every tab's content starts below the tab row with some space", async ({ page }) => {
+test("the leg and day lists sit right under the tab row; every other tab's content starts with some space", async ({
+  page,
+}) => {
+  // The lists run edge to edge, like the tab row itself.
+  const flush: string[] = [text.tabs.legs, text.tabs.days];
   await serveOffline(page);
   await open(page, hikeAndPaddle("Dinant weekend"));
   for (const name of Object.values(text.tabs)) {
@@ -162,7 +166,8 @@ test("every tab's content starts below the tab row with some space", async ({ pa
       const first = el.querySelector('[role="tabpanel"]:not([hidden]) > *')!.getBoundingClientRect();
       return first.top - tabs.bottom;
     });
-    expect(gap, name).toBeGreaterThanOrEqual(12);
+    if (flush.includes(name)) expect(Math.round(gap), name).toBe(0);
+    else expect(gap, name).toBeGreaterThanOrEqual(12);
   }
 });
 

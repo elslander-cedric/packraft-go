@@ -115,6 +115,40 @@ test("a two-day trip shows two day cards with their figures; tapping a card zoom
   await expect.poll(() => inView(page, points(page).nth(1))).toBe(true);
 });
 
+test("the Days tab has no heading or rule of its own; the cards run edge to edge right under the tab row", async ({
+  page,
+}) => {
+  await serveOffline(page);
+  await openWithTrip(page);
+  await tab(page, text.tabs.days).click();
+  await expect(dayCards(page)).toHaveCount(2);
+
+  // The tab already names the panel.
+  await expect(panel(page).getByRole("heading", { name: strings.daysPanelLabel })).toHaveCount(0);
+  const days = sheet(page).getByRole("complementary", { name: strings.daysPanelLabel });
+  await expect(days).toHaveCSS("border-top-width", "0px");
+
+  // Polled: the sheet may still be settling at its stop.
+  await expect
+    .poll(async () => {
+      const sheetBox = (await sheet(page).boundingBox())!;
+      const tabsBox = (await sheet(page).getByRole("tablist").boundingBox())!;
+      const cardBox = (await dayCards(page).nth(0).boundingBox())!;
+      return [
+        Math.round(cardBox.x - sheetBox.x),
+        Math.round(sheetBox.x + sheetBox.width - (cardBox.x + cardBox.width)),
+        Math.round(cardBox.y - (tabsBox.y + tabsBox.height)),
+      ];
+    })
+    .toEqual([0, 0, 0]);
+
+  // Like the leg rows: the cards touch, with a rule between them.
+  const first = (await dayCards(page).nth(0).boundingBox())!;
+  const second = (await dayCards(page).nth(1).boundingBox())!;
+  expect(Math.round(second.y - (first.y + first.height))).toBe(0);
+  await expect(dayCards(page).nth(0)).toHaveCSS("border-bottom-width", "1px");
+});
+
 test("the Trip tab renames the trip and sets, changes and clears its start date; all autosaved, no date drift", async ({
   page,
 }) => {
