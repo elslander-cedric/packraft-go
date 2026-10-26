@@ -117,7 +117,8 @@ test("New trip asks first when there are points, then starts with today in Bruss
 
   await choose(page, text.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
-  await expect(tripHeading(page, strings.tripNamePlaceholder)).toBeVisible();
+  // A new, unnamed trip shows no name in the sheet.
+  await expect(sheet(page).getByRole("heading")).toHaveCount(0);
   await expect(mapRegion(page).locator("path.point")).toHaveCount(0);
   await expect.poll(async () => (await storedTrip(page)).startDate).toBe("2026-10-26");
   expect((await storedTrip(page)).points).toEqual([]);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import type { Router } from "@/core/router";
 import type { DaySummary } from "@/core/summarise";
 import { canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
@@ -12,7 +12,6 @@ import { SidePanel, sidePanelCover } from "../components/SidePanel";
 import { Tab, TabList, TabPanel, Tabs } from "../components/Tabs";
 import { ToggleGroup } from "../components/ToggleGroup";
 import DaysPanel from "../DaysPanel";
-import { formatDistance, formatTimeEstimate } from "../format";
 import SettingsPanel from "../SettingsPanel";
 import { strings } from "../strings";
 import { useAccessLayer } from "../useAccessLayer";
@@ -24,6 +23,7 @@ import SnapOffers from "../SnapOffers";
 import PhoneLegsList, { legModeOptions } from "./PhoneLegsList";
 import PhoneMenu from "./PhoneMenu";
 import PhoneTripTab from "./PhoneTripTab";
+import PhoneTripTotals from "./PhoneTripTotals";
 import { positionMessage } from "./position";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
 import { useSideways } from "./usePhoneLayout";
@@ -89,6 +89,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const [tab, setTab] = useState<PhoneTab>("legs");
   // The sheet's last stop; kept while sideways, so turning back to portrait restores it (#126).
   const [stop, setStop] = useState<SheetStop>("peek");
+  // The peek's height, so the bottom buttons sit just above it.
+  const [peekPx, setPeekPx] = useState<number | null>(null);
   // Held sideways, the side panel replaces the sheet: open when the sheet was above its peek.
   const sideways = useSideways();
   const [panelOpen, setPanelOpen] = useState(false);
@@ -202,19 +204,11 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   };
 
   // What the sheet holds, and the side panel instead when sideways (#126): the same content.
+  const tripName = trip.name.trim();
   const peekSummary = (
     <div className="phone-peek-summary">
-      <h2 className="phone-trip-name">{trip.name || strings.tripNamePlaceholder}</h2>
-      <p className="phone-totals">
-        <span>
-          <span className="visually-hidden">{`${strings.tripTotalDistance} `}</span>
-          {formatDistance(summary.trip.distanceKm)}
-        </span>
-        <span>
-          <span className="visually-hidden">{`${strings.tripTotalTimeEstimate} `}</span>
-          {formatTimeEstimate(summary.trip.timeH, summary.trip.timeStatus)}
-        </span>
-      </p>
+      {tripName && <h2 className="phone-trip-name">{tripName}</h2>}
+      <PhoneTripTotals trip={summary.trip} />
     </div>
   );
   const tabList = (
@@ -278,6 +272,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           ? `phone phone-sideways ${panelOpen ? "phone-panel-open" : "phone-panel-collapsed"}`
           : `phone phone-stop-${stop}`
       }
+      style={peekPx === null ? undefined : ({ "--sheet-peek": `${peekPx}px` } as CSSProperties)}
     >
       <ClientPhoneMap
         trip={trip}
@@ -418,6 +413,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             label={strings.phone.sheetLabel}
             stop={stop}
             onStopChange={setStop}
+            onPeekHeightChange={setPeekPx}
             peek={
               <>
                 {peekSummary}

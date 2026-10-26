@@ -14,13 +14,15 @@ const tripThrough = (...points: LatLng[]) =>
 // One degree of arc on a sphere with the Earth's mean radius (6371 km) is 111.19 km.
 const ONE_DEGREE_KM = 111.19;
 
+const noTotals = { distanceKm: 0, hikeDistanceKm: 0, paddleDistanceKm: 0, climbM: 0, descentM: 0, timeH: 0 };
+
 describe("summarise", () => {
   // Updated in round 2: the trip's time now carries a status.
   it("an empty trip has no legs, zero distance and no time", () => {
     expect(summarise(emptyTrip())).toEqual({
       legs: [],
       days: [], // Updated for #8: summaries now include days.
-      trip: { distanceKm: 0, timeH: 0, timeStatus: "estimated" },
+      trip: { ...noTotals, timeStatus: "estimated" },
     });
   });
 
@@ -29,7 +31,7 @@ describe("summarise", () => {
     expect(summarise(tripThrough({ lat: 50, lng: 4 }))).toEqual({
       legs: [],
       days: [], // Updated for #8: summaries now include days.
-      trip: { distanceKm: 0, timeH: 0, timeStatus: "estimated" },
+      trip: { ...noTotals, timeStatus: "estimated" },
     });
   });
 
@@ -41,6 +43,26 @@ describe("summarise", () => {
     expect(summary.legs[0].distanceKm).toBeCloseTo(ONE_DEGREE_KM, 1);
     expect(summary.legs[1].distanceKm).toBeCloseTo(ONE_DEGREE_KM, 1);
     expect(summary.trip.distanceKm).toBeCloseTo(2 * ONE_DEGREE_KM, 1);
+  });
+
+  it("splits the trip's distance by mode and sums climb and descent over its hike legs", () => {
+    const geometry: RoutedPoint[] = [
+      { lat: 0, lng: 0, elevation: 100 },
+      { lat: 0, lng: 0.01, elevation: 160 },
+      { lat: 0, lng: 0.02, elevation: 130 },
+    ];
+    const trip: Trip = {
+      ...tripThrough({ lat: 0, lng: 0 }, { lat: 0, lng: 0.02 }, { lat: 0, lng: 1.02 }),
+      legs: [{ mode: "hike", route: { status: "routed", geometry } }, { mode: "paddle" }],
+    };
+    const { legs, trip: total } = summarise(trip);
+    expect(total.hikeDistanceKm).toBeCloseTo(legs[0].distanceKm, 6);
+    expect(total.paddleDistanceKm).toBeCloseTo(ONE_DEGREE_KM, 1);
+    expect(total.hikeDistanceKm + total.paddleDistanceKm).toBeCloseTo(total.distanceKm, 6);
+    expect(total.climbM).toBe(legs[0].climbM);
+    expect(total.descentM).toBe(legs[0].descentM);
+    expect(total.climbM).toBeGreaterThan(0);
+    expect(total.descentM).toBeGreaterThan(0);
   });
 
   it("measures along the great circle, so east-west legs shrink away from the equator", () => {
