@@ -1,22 +1,107 @@
 /* Phone layout (#56, ADR 0023): the map on top, the position control and the
    trip below. Touch-friendly: large tap targets, readable text. */
+/* The phone planner (ADR 0026): the map fills the screen, the sheet and the
+   floating buttons sit over it. Touch-friendly: 44 px targets, readable text. */
 .phone {
-  display: flex;
+  position: relative;
   flex: 1;
-  flex-direction: column;
   min-height: 0;
+  /* How far the bottom buttons sit above the sheet; the sheet's stops set it. */
+  --sheet-height: 8rem;
+}
+
+.phone-stop-half {
+  --sheet-height: 50dvh;
+}
+
+.phone-stop-full {
+  --sheet-height: 90dvh;
 }
 
 .phone-map {
-  flex: none;
-  height: 55vh;
+  position: absolute;
+  inset: 0;
 }
 
-.phone-panel {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-3);
-  border-top: 1px solid var(--color-border);
+.phone-buttons {
+  position: absolute;
+  right: var(--space-3);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.phone-buttons-top {
+  top: var(--space-3);
+}
+
+.phone-buttons-bottom {
+  bottom: calc(var(--sheet-height) + var(--space-3));
+  transition: bottom 250ms;
+}
+
+.phone-fab {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  font-size: 1.4rem;
+}
+
+.phone-message {
+  max-width: 16rem;
+  margin: 0;
+  padding: var(--space-2);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  font-size: 0.85rem;
+}
+
+.phone-message-alert {
+  color: var(--color-danger);
+}
+
+.phone-peek-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) var(--space-1);
+}
+
+.phone-trip-name {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 1.05rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-totals {
+  display: flex;
+  flex: none;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.phone-empty {
+  color: var(--color-muted);
+}
+
+/* At least 44 px tall: easy to hit with a wet thumb. */
+.phone-button {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  font-size: 1rem;
 }
 
 .phone-position {
@@ -30,15 +115,7 @@
   margin: 0;
 }
 
-/* At least 44 px tall: easy to hit with a wet thumb. */
-.phone-button {
-  min-height: 2.75rem;
-  padding: var(--space-2) var(--space-3);
-  font-size: 1rem;
-}
-
-.phone-position-explanation,
-.phone-trip-note {
+.phone-position-explanation {
   color: var(--color-muted);
   font-size: 0.85rem;
 }
@@ -47,28 +124,8 @@
   color: var(--color-danger);
 }
 
-.phone-trip h2 {
-  margin: 0 0 var(--space-1);
-  font-size: 1.2rem;
-}
-
-.phone-trip h3 {
-  margin: var(--space-3) 0 var(--space-2);
-  font-size: 1rem;
-}
-
-.phone-trip p {
-  margin: 0 0 var(--space-2);
-}
-
-.phone-trip-totals {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-}
-
-.phone-days,
-.phone-legs {
+.phone-legs,
+.phone-days {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -77,16 +134,29 @@
 .phone-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-1) var(--space-3);
+  min-height: 2.75rem;
   padding: var(--space-2) 0 var(--space-2) var(--space-2);
   border-bottom: 1px solid var(--color-border);
   border-left: 4px solid transparent;
   font-size: 0.95rem;
 }
 
+.phone-row-heading,
+.phone-row-name {
+  font-weight: 600;
+}
+
 .phone-row-heading {
   flex-basis: 100%;
-  font-weight: 600;
+}
+
+.phone-row-failed {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .phone-row-hike {

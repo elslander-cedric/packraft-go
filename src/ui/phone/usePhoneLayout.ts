@@ -2,8 +2,8 @@ import { useSyncExternalStore } from "react";
 
 /**
  * Screens this narrow, and touch screens this short (a phone held sideways),
- * get the phone layout (#56, ADR 0023): the map, your
- * position and your trip, read-only. Wider screens get the desktop planner.
+ * get the phone planner (ADR 0026): the full planner with a phone layout.
+ * Wider screens, iPads included, get the desktop planner.
  */
 export const PHONE_QUERY = "(max-width: 640px), (max-height: 640px) and (pointer: coarse)";
 

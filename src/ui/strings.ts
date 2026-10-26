@@ -170,17 +170,17 @@ export const strings = {
   legRouteFailedNoRiver:
     "No river route found between these points. Shown as a straight line; move a point onto the river or retry.",
   retryRouting: "Retry",
-  // Phone layout (#56, ADR 0023): the map, your position on request, and your trip read-only.
-  // Planning stays on a computer.
+  // The phone layout of the planner (ADR 0026), with your position and access points on it (ADR 0023).
   phone: {
-    tripLabel: "Your trip",
-    tripEmpty: "No trip on this phone yet. Plan your trip on a computer; it shows here once it's saved in this browser.",
-    readOnlyNote: "Read-only on a phone. Plan and edit trips on a computer.",
-    openFileButton: "Open trip file",
-    openFileExplanation: "Choose a trip file saved on a computer. It's stored on this phone and works offline.",
+    // The phone planner's sheet and tabs (#118, ADR 0026).
+    sheetLabel: "Trip",
+    tabsLabel: "Trip sections",
+    tabs: { legs: "Legs", days: "Days", trip: "Trip", accessPoints: "Access points", settings: "Settings" },
+    legAccessLabel: "Access",
+    // The glyphs inside the position and undo buttons; their names are `showPositionButton` and `undoButton`.
+    showPositionGlyph: "◎",
+    undoGlyph: "↶",
     showPositionButton: "Show my position",
-    positionExplanation:
-      "Your browser will ask to share your location. It's only used to show where you are on this map and never leaves your phone.",
     positionLocating: "Finding your position…",
     // `accuracy` is formatted, e.g. "12 m".
     positionAccuracy: (accuracy: string) => `Your position, accurate to about ${accuracy}.`,
