@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Router } from "@/core/router";
-import { canUndo, type LatLng } from "@/core/trip";
+import { canUndo, isCamp, type LatLng } from "@/core/trip";
 import ClientPhoneMap from "@/map/ClientPhoneMap";
 import type { MapFocus } from "@/map/PhoneMap";
 import { BottomSheet, type SheetStop } from "../components/BottomSheet";
@@ -27,8 +27,8 @@ const tabs = Object.keys(strings.phone.tabs) as PhoneTab[];
  * returns and sends it actions; it adds no planning rules.
  */
 export default function PhonePlanner({ router }: { router?: Router }) {
-  const { session, dispatch, summary, access, waterAccess, undo } = usePlanner(router);
-  const { trip } = session;
+  const { session, dispatch, summary, access, waterAccess, undo, deleteSelectedPoint } = usePlanner(router);
+  const { trip, selectedPoint } = session;
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
   const [tab, setTab] = useState<PhoneTab>("legs");
@@ -45,8 +45,19 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     setPointsChanged(true);
   }
 
-  // While an access point is being placed, the tap places it instead of adding a trip point.
-  const onMapTap = (at: LatLng) => (access.placing ? access.placeAt(at) : dispatch({ type: "addPoint", at }));
+  // While an access point is being placed, the tap places it; while a point is selected, it only
+  // clears the selection (#120); otherwise it adds a trip point.
+  const onMapTap = (at: LatLng) => {
+    if (access.placing) access.placeAt(at);
+    else if (selectedPoint !== null) dispatch({ type: "deselect" });
+    else dispatch({ type: "addPoint", at });
+  };
+  // With a route point selected, the access-point button saves that point as an access point (#120).
+  const markSelectedPoint = () => {
+    if (selectedPoint === null) return;
+    access.placeAt(trip.points[selectedPoint]);
+    dispatch({ type: "deselect" });
+  };
 
   // A marker tap opens the point's details in the sheet, raised to half from the peek.
   const onSelectAccessPoint = (id: string) => {
@@ -68,6 +79,9 @@ export default function PhonePlanner({ router }: { router?: Router }) {
       <ClientPhoneMap
         trip={trip}
         onMapTap={onMapTap}
+        selectedPoint={selectedPoint}
+        onPointTap={(index) => dispatch({ type: "pointClicked", index })}
+        onPointDrop={(index, to) => dispatch({ type: "movePoint", index, to })}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
           points: access.points,
@@ -109,14 +123,33 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         )}
         <Button
           className="phone-fab"
-          aria-label={strings.phone.markAccessPointButton}
-          onClick={marking.mark}
-          disabled={marking.locating}
+          aria-label={
+            selectedPoint === null
+              ? strings.phone.markAccessPointButton
+              : strings.phone.selectedPointToAccessPointButton
+          }
+          onClick={selectedPoint === null ? marking.mark : markSelectedPoint}
+          disabled={selectedPoint === null && marking.locating}
         >
           {strings.phone.markAccessPointGlyph}
         </Button>
       </div>
       <div className="phone-buttons phone-buttons-bottom">
+        {selectedPoint !== null && (
+          <>
+            <Button className="phone-fab" aria-label={strings.deletePointButton} onClick={deleteSelectedPoint}>
+              {strings.phone.deletePointGlyph}
+            </Button>
+            <Button
+              className="phone-fab"
+              aria-label={strings.campButton}
+              aria-pressed={isCamp(trip, selectedPoint)}
+              onClick={() => dispatch({ type: "toggleCampOnSelectedPoint" })}
+            >
+              {strings.phone.campGlyph}
+            </Button>
+          </>
+        )}
         <Button className="phone-fab" aria-label={strings.undoButton} onClick={undo} disabled={!canUndo(trip)}>
           {strings.phone.undoGlyph}
         </Button>

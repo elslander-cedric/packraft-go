@@ -6,6 +6,7 @@ import type { Trip } from "../src/core/trip";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline } from "./support/offline";
+import { touch } from "./support/touch";
 
 // A phone (the browser itself can't be chosen per file).
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
@@ -165,6 +166,34 @@ test("the sheet settles at peek, half or 90% by drag distance, never closes, and
   await expect(sheet(page)).toBeVisible();
   await expect(tab(page, strings.phone.tabs.legs)).toBeVisible();
 
+});
+
+// #120 (from #118): the same stops with a finger, through the touch helper.
+test("a finger drag on the sheet settles at peek, half or 90% and never closes it", async ({ page }) => {
+  await serveOffline(page, routed);
+  await openPhone(page);
+  const screen = page.viewportSize()!.height;
+  const fingers = await touch(page);
+  /** Drags the sheet by its handle area with one finger. */
+  const fingerDrag = async (dy: number) => {
+    const box = (await sheet(page).boundingBox())!;
+    const from = { x: box.x + box.width / 2, y: box.y + 8 };
+    await fingers.drag(from, { x: from.x, y: from.y + dy });
+  };
+
+  const peek = 128; // 8rem, once the sheet has slid in
+  await expect.poll(async () => Math.abs((await sheetHeight(page)) - peek)).toBeLessThan(4);
+  await fingerDrag(-(screen * 0.3));
+  await expect.poll(() => sheetHeight(page)).toBeGreaterThan(screen * 0.45);
+  expect(await sheetHeight(page)).toBeLessThan(screen * 0.55);
+
+  await fingerDrag(-(screen * 0.5));
+  await expect.poll(() => sheetHeight(page)).toBeGreaterThan(screen * 0.85);
+
+  await fingerDrag(screen);
+  await expect.poll(() => sheetHeight(page)).toBeLessThan(peek + 4);
+  await expect(sheet(page)).toBeVisible();
+  await expect(tab(page, strings.phone.tabs.legs)).toBeVisible();
 });
 
 test("a double tap neither zooms nor adds two points", async ({ page }) => {

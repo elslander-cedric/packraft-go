@@ -23,7 +23,15 @@ export type Pixel = { x: number; y: number };
 
 export type TouchPoint = Pixel & { id: number };
 
+/** A finger held down: move it, then lift it. */
+export type Press = {
+  moveTo(at: Pixel): Promise<void>;
+  release(): Promise<void>;
+};
+
 export type Touch = {
+  /** Presses a finger on `at` and keeps it down, to check what shows mid-gesture (#120). */
+  press(at: Pixel): Promise<Press>;
   /** Presses a finger on `from`, drags it to `to` in `steps` moves, and lifts it. */
   drag(from: Pixel, to: Pixel, options?: { steps?: number }): Promise<void>;
   /** Presses a finger on `at`, holds it still for `ms` milliseconds, and lifts it. */
@@ -46,6 +54,13 @@ export async function touch(page: Page): Promise<Touch> {
   const lerp = (a: Pixel, b: Pixel, t: number): Pixel => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
 
   return {
+    async press(at) {
+      await send("touchStart", [{ ...at, id: 1 }]);
+      return {
+        moveTo: async (to) => void (await send("touchMove", [{ ...to, id: 1 }])),
+        release: async () => void (await send("touchEnd", [])),
+      };
+    },
     async drag(from, to, { steps = 10 } = {}) {
       await send("touchStart", [{ ...from, id: 1 }]);
       for (let i = 1; i <= steps; i++) await send("touchMove", [{ ...lerp(from, to, i / steps), id: 1 }]);
