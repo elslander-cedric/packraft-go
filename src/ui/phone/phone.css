@@ -8,6 +8,9 @@
   min-height: 0;
   /* How far the bottom buttons sit above the sheet; the sheet's stops set it. */
   --sheet-height: 8rem;
+  /* What floats over the map (buttons, chip, snap offers): above Leaflet's map pane (400),
+     below its controls (1000), the sheet and the side panel. */
+  --phone-z-floating: 500;
 }
 
 .phone-stop-half {
@@ -66,7 +69,7 @@
 .phone-buttons {
   position: absolute;
   right: var(--space-3);
-  z-index: 500;
+  z-index: var(--phone-z-floating);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -323,7 +326,8 @@
 
 .phone-next-mode .toggle {
   min-height: 2.75rem;
-  font-size: 0.95rem;
+  padding: 0;
+  font-size: 1.4rem;
 }
 
 .phone-next-mode .toggle + .toggle {
@@ -332,7 +336,7 @@
 }
 
 .phone {
-  --phone-next-mode-width: 4.5rem;
+  --phone-next-mode-width: 2.75rem;
 }
 
 /* A snap offer floats above the sheet, left of the bottom-right buttons; the sheet keeps its height. */
@@ -341,7 +345,7 @@
   bottom: calc(var(--sheet-height) + var(--space-3));
   left: calc(var(--space-3) + 2.75rem + var(--space-2));
   right: calc(var(--panel-cover, 0px) + var(--space-3) * 2 + var(--phone-next-mode-width));
-  z-index: 500;
+  z-index: var(--phone-z-floating);
   display: flex;
   justify-content: flex-end;
   pointer-events: none;
@@ -454,7 +458,7 @@
   position: absolute;
   top: var(--space-3);
   left: 50%;
-  z-index: 500;
+  z-index: var(--phone-z-floating);
   transform: translateX(-50%);
 }
 

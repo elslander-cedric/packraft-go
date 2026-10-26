@@ -2,7 +2,14 @@ import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup as BaseToggleGroup } from "@base-ui/react/toggle-group";
 import "./ToggleGroup.css";
 
-export type ToggleOption<T extends string> = { value: T; label: string; className?: string };
+export type ToggleOption<T extends string> = {
+  value: T;
+  /** The option's name: its text, or only its accessible name when it has a glyph. */
+  label: string;
+  /** Shown instead of the label, for an icon-only toggle. */
+  glyph?: string;
+  className?: string;
+};
 
 export type ToggleGroupProps<T extends string> = {
   /** Accessible name of the group. */
@@ -36,8 +43,9 @@ export function ToggleGroup<T extends string>({ label, value, options, onChange,
           key={option.value}
           value={option.value}
           className={option.className ? `toggle ${option.className}` : "toggle"}
+          aria-label={option.glyph === undefined ? undefined : option.label}
         >
-          {option.label}
+          {option.glyph ?? option.label}
         </Toggle>
       ))}
     </BaseToggleGroup>

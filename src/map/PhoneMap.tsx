@@ -15,11 +15,11 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type Trip } from "@/core/trip";
-import { baseLayer, initialMapView } from "./mapConfig";
+import { baseLayer, initialMapView, paneZIndex } from "./mapConfig";
 import { campIcon, legStyle, modeChangeStyle } from "./TripMap";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
-import { HOLD_MS, LEG_HIT_WIDTH_PX, useLegHold } from "./legHold";
+import { HOLD_MS, useHold } from "./hold";
 import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
 
 /**
@@ -247,6 +247,9 @@ function PhoneLeg({
   );
 }
 
+/** A leg's transparent hit line, in screen pixels across (#122). */
+const LEG_HIT_WIDTH_PX = 28;
+
 // A leg's hit line is invisible; Leaflet still hits its stroke.
 const legHitStyle = { color: "#000", opacity: 0, weight: LEG_HIT_WIDTH_PX, fill: false };
 
@@ -256,7 +259,7 @@ const legHitStyle = { color: "#000", opacity: 0, weight: LEG_HIT_WIDTH_PX, fill:
  */
 function LegHitLine({ positions, onHold }: { positions: LatLng[]; onHold: (at: LatLng) => void }) {
   const line = useRef<LeafletPolyline>(null);
-  useLegHold(line, onHold);
+  useHold(line, onHold);
   return <Polyline ref={line} positions={positions} className="leg-hit" pathOptions={legHitStyle} />;
 }
 
@@ -318,7 +321,7 @@ function TripLayers({
       ))}
       {/* Leg hit lines sit above the drawn trip but under the access-point markers and the
           points' hit areas, so a point or an access point on a leg is still grabbed first. */}
-      <Pane name="trip-leg-hits" style={{ zIndex: 450 }}>
+      <Pane name="trip-leg-hits" style={{ zIndex: paneZIndex.tripLegHits }}>
         {legs.map(({ positions }, i) => (
           <LegHitLine key={`leg-hit-${i}`} positions={positions} onHold={(at) => onLegHold(i, at)} />
         ))}
@@ -333,20 +336,20 @@ function TripLayers({
           pathOptions={{ ...modeChangeStyle[kind], weight: 3, fill: false }}
         />
       ))}
-      <Pane name="trip-camps" pane="overlayPane" style={{ zIndex: 402 }}>
+      <Pane name="trip-camps" pane="overlayPane" style={{ zIndex: paneZIndex.tripCamps }}>
         {(trip.camps ?? []).map((point) => (
           <Marker key={`camp-${point}`} position={points[point]} icon={campIcon} interactive={false} keyboard={false} />
         ))}
       </Pane>
       {/* Points get their own pane above the legs, so a leg never covers a point. */}
-      <Pane name="trip-points" pane="overlayPane" style={{ zIndex: 401 }}>
+      <Pane name="trip-points" pane="overlayPane" style={{ zIndex: paneZIndex.tripPoints }}>
         {points.map((point, i) => (
           <PointDot key={`point-${i}`} at={point} selected={i === selectedPoint} />
         ))}
       </Pane>
       {/* Their hit areas sit above the access-point markers (Leaflet's marker pane is 600), so a
           route point that is also an access point can still be selected and dragged (#120). */}
-      <Pane name="trip-point-hits" style={{ zIndex: 620 }}>
+      <Pane name="trip-point-hits" style={{ zIndex: paneZIndex.tripPointHits }}>
         {points.map((point, i) => (
           <PointHitArea key={`hit-${i}`} at={point} handlers={handlers(i)} />
         ))}

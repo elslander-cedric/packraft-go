@@ -60,28 +60,22 @@ export function usePlanner(router?: Router) {
     dispatch({ type: "accessPointsChanged", accessPoints: access.points });
   }, [access.points]);
 
-  const saveFile = () => {
-    dispatch({ type: "fileDownloaded" });
-    downloadTripFile(trip, strings.tripNamePlaceholder);
-  };
-  const exportGpx = () => {
-    dispatch({ type: "fileDownloaded" });
-    downloadGpxZip(trip, { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName });
-  };
-  // The phone asks for the name first (#124): rename the trip, then save or export it under that name.
-  const named = (name: string) => {
+  // With a `name` (the phone asks for it first, #124), the trip is renamed, then saved or exported
+  // under that name.
+  const toDownload = (name?: string) => {
+    if (name === undefined) return trip;
     dispatch({ type: "rename", name });
     return renameTrip(trip, name);
   };
-  const saveFileAs = (name: string) => {
-    const renamed = named(name);
+  const saveFile = (name?: string) => {
+    const saved = toDownload(name);
     dispatch({ type: "fileDownloaded" });
-    downloadTripFile(renamed, strings.tripNamePlaceholder);
+    downloadTripFile(saved, strings.tripNamePlaceholder);
   };
-  const exportGpxAs = (name: string) => {
-    const renamed = named(name);
+  const exportGpx = (name?: string) => {
+    const exported = toDownload(name);
     dispatch({ type: "fileDownloaded" });
-    downloadGpxZip(renamed, { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName });
+    downloadGpxZip(exported, { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName });
   };
   const openFile = async (file: File) => {
     const opened = await readTripFile(file);
@@ -139,8 +133,6 @@ export function usePlanner(router?: Router) {
     aire,
     saveFile,
     exportGpx,
-    saveFileAs,
-    exportGpxAs,
     openFile,
     undo,
     deleteSelectedPoint,

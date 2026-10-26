@@ -1,10 +1,5 @@
 /* A full-height panel on the right, over the page; the page beside it stays usable (non-modal).
-   Its widths are variables, so the page can keep its own controls clear of it. The open width
-   matches PANEL_SHARE and PANEL_MAX_PX in SidePanel.tsx. */
-:root {
-  --side-panel-width: min(45vw, 380px);
-  --side-panel-strip-width: 5.5rem;
-}
+   Its widths are tokens in globals.css, so the page can keep its own controls clear of it. */
 
 .side-panel {
   box-sizing: border-box;
@@ -12,7 +7,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: 1000;
+  z-index: var(--z-overlay);
   display: flex;
   flex-direction: column;
   width: var(--side-panel-strip-width);
@@ -20,7 +15,7 @@
   background: var(--color-surface);
   color: var(--color-text);
   border-left: 1px solid var(--color-border-strong);
-  box-shadow: -2px 0 8px rgb(0 0 0 / 20%);
+  box-shadow: var(--shadow-popup);
   transition: width 250ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 

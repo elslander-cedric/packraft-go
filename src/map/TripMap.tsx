@@ -12,7 +12,7 @@ import { putInsAndTakeOuts, type LatLng, type LegMode, type ModeChange, type Tri
 import { strings } from "@/ui/strings";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
-import { baseLayer, initialMapView } from "./mapConfig";
+import { baseLayer, initialMapView, paneZIndex } from "./mapConfig";
 
 export type TripMapProps = {
   trip: Trip;
@@ -236,7 +236,7 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
         return <LegLine key={`leg-${i}`} mode={leg.mode} status={status} positions={positions} />;
       })}
       {/* Put-ins and take-outs: rings around the points where the mode changes, above the legs, below the points. */}
-      <Pane name="trip-mode-changes" pane="overlayPane" style={{ zIndex: 400 }}>
+      <Pane name="trip-mode-changes" pane="overlayPane" style={{ zIndex: paneZIndex.tripModeChanges }}>
         {putInsAndTakeOuts(trip).map(({ kind, point }) => (
           <CircleMarker
             key={`${kind}-${point}`}
@@ -253,13 +253,13 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
         ))}
       </Pane>
       {/* Camps: a tent just above the point, not clickable, so the point under it can still be grabbed. */}
-      <Pane name="trip-camps" pane="overlayPane" style={{ zIndex: 402 }}>
+      <Pane name="trip-camps" pane="overlayPane" style={{ zIndex: paneZIndex.tripCamps }}>
         {(trip.camps ?? []).map((point) => (
           <Marker key={`camp-${point}`} position={points[point]} icon={campIcon} interactive={false} keyboard={false} />
         ))}
       </Pane>
       {/* Points get their own pane above the legs, so a leg drawn later never covers a point. */}
-      <Pane name="trip-points" pane="overlayPane" style={{ zIndex: 401 }}>
+      <Pane name="trip-points" pane="overlayPane" style={{ zIndex: paneZIndex.tripPoints }}>
         {points.map((point, i) => (
           <PointMarker
             key={`point-${i}`}

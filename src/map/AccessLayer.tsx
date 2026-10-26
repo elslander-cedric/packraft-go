@@ -6,8 +6,8 @@ import { CircleMarker, LayerGroup, Pane, Polygon, Polyline, useMap, useMapEvents
 import type { AccessFeature, AccessState, Geometry, LockMarker, Position } from "@/core/access";
 import { strings } from "@/ui/strings";
 import { accessColours } from "./accessColours";
-import { listenForLegHold } from "./legHold";
-import { lockMarkersMinZoom } from "./mapConfig";
+import { useHold } from "./hold";
+import { lockMarkersMinZoom, paneZIndex } from "./mapConfig";
 
 export type AccessLayerProps = {
   features: readonly AccessFeature[];
@@ -39,33 +39,15 @@ function shapeOf(geometry: Geometry): { kind: "line" | "area"; positions: LatLng
   }
 }
 
-/** With `on`, holding the shape still for 0.4 s (the timer used to insert a point on a leg) calls `onHold`. */
-function useHold(
-  line: { current: LeafletPolyline | null },
-  area: { current: LeafletPolygon | null },
-  on: boolean,
-  onHold: () => void,
-) {
-  const map = useMap();
-  const latest = useRef(onHold);
-  useEffect(() => {
-    latest.current = onHold;
-  });
-  useEffect(() => {
-    const element = (line.current ?? area.current)?.getElement();
-    if (!on || !element) return;
-    return listenForLegHold(element, map, () => () => latest.current());
-  }, [map, line, area, on]);
-}
-
 type AccessShapeProps = { feature: AccessFeature; selected: boolean; onSelect: () => void; touch: boolean };
 
 function AccessShape({ feature, selected, onSelect, touch }: AccessShapeProps) {
   const line = useRef<LeafletPolyline>(null);
   const area = useRef<LeafletPolygon>(null);
-  useHold(line, area, touch, onSelect);
   const state: AccessState = feature.status.state;
   const { kind, positions } = shapeOf(feature.record.geometry);
+  // On the phone, holding the water opens its details.
+  useHold(kind === "line" ? line : area, onSelect, touch);
   const colour = accessColours[state];
   // Leaflet only reads className when the path is created, so selection toggles the class directly.
   useEffect(() => {
@@ -125,7 +107,7 @@ export default function AccessLayer({ features, selectedId, onSelect, locks = []
   const lockMarkers = <LockMarkers locks={locks} selectedId={selectedId} onSelect={onSelect} />;
   return (
     <>
-      <Pane name="access" pane="overlayPane" style={{ zIndex: 350 }}>
+      <Pane name="access" pane="overlayPane" style={{ zIndex: paneZIndex.access }}>
         <LayerGroup attribution={strings.accessAttribution}>
           {features.map((feature) => (
             <AccessShape
@@ -140,10 +122,10 @@ export default function AccessLayer({ features, selectedId, onSelect, locks = []
           {!touch && lockMarkers}
         </LayerGroup>
       </Pane>
-      {/* On the phone, locks sit above the legs' hit lines (the phone map's pane at 450) and below
-          the access-point markers, so a tap on a lock on a leg still opens the lock. */}
+      {/* On the phone, locks sit above the legs' hit lines and below the access-point markers,
+          so a tap on a lock on a leg still opens the lock. */}
       {touch && (
-        <Pane name="access-locks" style={{ zIndex: 460 }}>
+        <Pane name="access-locks" style={{ zIndex: paneZIndex.accessLocks }}>
           {lockMarkers}
         </Pane>
       )}

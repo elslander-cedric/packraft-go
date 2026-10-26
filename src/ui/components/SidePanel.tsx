@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Button } from "./Button";
 import "./SidePanel.css";
 
-/** The open panel takes this share of the screen's width, up to `PANEL_MAX_PX`. Matches `--side-panel-width` in SidePanel.css. */
+/** The open panel takes this share of the screen's width, up to `PANEL_MAX_PX`. Matches `--side-panel-width` in globals.css. */
 const PANEL_SHARE = 0.45;
 const PANEL_MAX_PX = 380;
 

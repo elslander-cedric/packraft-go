@@ -113,17 +113,17 @@ export function deletePoint(trip: Trip, index: number): Trip {
  * into two unrouted legs with its mode; every other leg keeps its route. Camps
  * stay on their points, so later camps shift by one.
  */
-export function insertPoint(trip: Trip, legIndex: number, near: LatLng): Trip {
-  if (!(legIndex in trip.legs)) return trip;
-  const leg = trip.legs[legIndex];
+export function insertPoint(trip: Trip, index: number, near: LatLng): Trip {
+  if (!(index in trip.legs)) return trip;
+  const leg = trip.legs[index];
   const line =
     leg.route?.status === "routed" && leg.route.geometry.length > 0
       ? leg.route.geometry
-      : [trip.points[legIndex], trip.points[legIndex + 1]];
+      : [trip.points[index], trip.points[index + 1]];
   const at = nearestOnLine(near, line);
-  const points = [...trip.points.slice(0, legIndex + 1), at, ...trip.points.slice(legIndex + 1)];
-  const legs = [...trip.legs.slice(0, legIndex), unrouted(leg), unrouted(leg), ...trip.legs.slice(legIndex + 1)];
+  const points = [...trip.points.slice(0, index + 1), at, ...trip.points.slice(index + 1)];
+  const legs = [...trip.legs.slice(0, index), unrouted(leg), unrouted(leg), ...trip.legs.slice(index + 1)];
   if (!trip.camps) return { ...trip, points, legs };
-  const camps = trip.camps.map((camp) => (camp > legIndex ? camp + 1 : camp));
+  const camps = trip.camps.map((camp) => (camp > index ? camp + 1 : camp));
   return { ...trip, points, legs, camps };
 }

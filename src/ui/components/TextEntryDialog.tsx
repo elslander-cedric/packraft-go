@@ -1,7 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { useState, type RefObject } from "react";
 import { Button } from "./Button";
-import "./ConfirmDialog.css";
 import "./TextEntryDialog.css";
 
 export type TextEntryDialogProps = {
@@ -52,9 +51,9 @@ export function TextEntryDialog({
       }}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop className="confirm-dialog-backdrop" />
-        <Dialog.Popup className="confirm-dialog" finalFocus={returnFocusTo ?? true}>
-          <Dialog.Title className="confirm-dialog-title">{title}</Dialog.Title>
+        <Dialog.Backdrop className="text-entry-dialog-backdrop" />
+        <Dialog.Popup className="text-entry-dialog" finalFocus={returnFocusTo ?? true}>
+          <Dialog.Title className="text-entry-dialog-title">{title}</Dialog.Title>
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -70,7 +69,7 @@ export function TextEntryDialog({
                 onFocus={(event) => event.target.select()}
               />
             </label>
-            <div className="confirm-dialog-actions">
+            <div className="text-entry-dialog-actions">
               <Dialog.Close className="button">{cancelLabel}</Dialog.Close>
               <Button type="submit">{confirmLabel}</Button>
             </div>

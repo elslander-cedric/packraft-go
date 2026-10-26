@@ -1,4 +1,34 @@
-/* The text field of a text-entry dialog; the dialog itself looks like a confirmation. */
+/* A dialog that asks for one line of text; it looks like a confirmation (ConfirmDialog). */
+.text-entry-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  /* Above the Leaflet map's panes and controls. */
+  z-index: var(--z-overlay);
+  background: rgb(0 0 0 / 30%);
+}
+
+.text-entry-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: var(--z-overlay);
+  box-sizing: border-box;
+  width: 24rem;
+  max-width: calc(100vw - 2rem);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-popup);
+  transform: translate(-50%, -50%);
+}
+
+.text-entry-dialog-title {
+  margin: 0 0 var(--space-1);
+  font-size: 1rem;
+}
+
 .text-entry-field {
   display: flex;
   flex-direction: column;
@@ -16,4 +46,10 @@
   box-sizing: border-box;
   padding: 0 var(--space-2);
   font: inherit;
+}
+
+.text-entry-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }

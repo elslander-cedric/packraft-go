@@ -3,7 +3,9 @@
 // floating next leg's mode toggle; snap offers float above the sheet.
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { addAccessPoint, serialiseAccessPoints, updateAccessPoint } from "../src/core/accessPoints";
+import { serialiseTrip } from "../src/core/saveFile";
 import { strings } from "../src/ui/strings";
+import { answerConfirmation } from "./support/confirmDialog";
 import { brouterFixture, kiwisFixtures, serveOffline, type BRouterReply } from "./support/offline";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
@@ -243,6 +245,9 @@ test("the next leg's mode starts at the last leg's mode; switching it makes the 
   await seed(page, { points: [P0, P1], legs: [{ mode: "paddle", geometry: [P0, P1] }] });
   await openPhone(page);
   await expect(nextMode(page, strings.legModePaddle)).toHaveAttribute("aria-pressed", "true");
+  // Icon-only, like the other floating buttons, with the modes as accessible names.
+  await expect(nextMode(page, strings.legModeHike)).toHaveText(text.nextLegModeGlyphs.hike);
+  await expect(nextMode(page, strings.legModePaddle)).toHaveText(text.nextLegModeGlyphs.paddle);
 
   await nextMode(page, strings.legModeHike).click();
   const map = (await mapRegion(page).boundingBox())!;
@@ -256,6 +261,79 @@ test("a new trip's next leg's mode is hike", async ({ page }) => {
   await serveOffline(page);
   await openPhone(page);
   await expect(nextMode(page, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
+});
+
+/** Expects the next leg's mode toggle to show `mode` pressed. */
+const expectNextMode = (page: Page, mode: string) =>
+  expect(nextMode(page, mode)).toHaveAttribute("aria-pressed", "true");
+
+test("a picked next leg's mode doesn't outlive a delete or an undo: it is the last leg's mode again", async ({
+  page,
+}) => {
+  await serveOffline(page, { brouter: byProfile });
+  await seed(page, {
+    points: [P0, P1, P2],
+    legs: [
+      { mode: "paddle", geometry: [P0, P1] },
+      { mode: "paddle", geometry: [P1, P2] },
+    ],
+  });
+  await openPhone(page);
+  const hits = mapRegion(page).locator("path.point-hit");
+  await expect(hits).toHaveCount(3);
+
+  await nextMode(page, strings.legModeHike).click();
+  await expectNextMode(page, strings.legModeHike);
+  const box = (await hits.nth(2).boundingBox())!;
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+  await page.getByRole("button", { name: strings.deletePointButton }).click();
+  await expect(hits).toHaveCount(2);
+  await expectNextMode(page, strings.legModePaddle);
+
+  await nextMode(page, strings.legModeHike).click();
+  await undoButton(page).click();
+  await expect(hits).toHaveCount(3);
+  await expectNextMode(page, strings.legModePaddle);
+});
+
+test("on an empty trip, a picked next leg's mode holds over the first point to the first leg", async ({ page }) => {
+  await serveOffline(page, { brouter: byProfile });
+  await openPhone(page);
+  await nextMode(page, strings.legModePaddle).click();
+  const map = (await mapRegion(page).boundingBox())!;
+  await page.touchscreen.tap(map.x + map.width / 3, map.y + map.height / 4);
+  await expectNextMode(page, strings.legModePaddle);
+  await page.touchscreen.tap(map.x + (map.width * 2) / 3, map.y + map.height / 4);
+  await expect(legLines(page)).toHaveCount(1);
+  await expect(legLines(page).first()).toHaveClass(/leg-paddle/);
+});
+
+test("a picked next leg's mode doesn't outlive New trip or Open…", async ({ page }) => {
+  await serveOffline(page, { brouter: byProfile });
+  await seed(page, { points: [P0, P1], legs: [{ mode: "hike", geometry: [P0, P1] }] });
+  await openPhone(page);
+  const menu = text.menu;
+  const choose = async (name: string) => {
+    await page.getByRole("button", { name: menu.button }).click();
+    await page.getByRole("menuitem", { name, exact: true }).click();
+  };
+
+  // New trip: an empty trip's next leg is a hike leg, with or without points before.
+  await nextMode(page, strings.legModePaddle).click();
+  await choose(menu.newTrip);
+  await answerConfirmation(page, "newTrip", "confirm");
+  await expectNextMode(page, strings.legModeHike);
+  await nextMode(page, strings.legModePaddle).click();
+  await choose(menu.newTrip);
+  await expectNextMode(page, strings.legModeHike);
+
+  // Open…: the opened trip's last leg's mode.
+  await nextMode(page, strings.legModePaddle).click();
+  const opened = serialiseTrip({ name: "Opened", points: [P0, P1], legs: [{ mode: "hike" }] });
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), choose(menu.openFile)]);
+  await chooser.setFiles({ name: "trip.json", mimeType: "application/json", buffer: Buffer.from(opened) });
+  await expect(sheet(page).getByRole("heading", { name: "Opened", exact: true })).toBeVisible();
+  await expectNextMode(page, strings.legModeHike);
 });
 
 /** Number of lines an element's text is laid out on. */

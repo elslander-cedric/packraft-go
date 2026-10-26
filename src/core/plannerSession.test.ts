@@ -48,7 +48,7 @@ const actions: [name: string, make: Make][] = [
   ["add point", { type: "addPoint", at: { lat: 50.4, lng: 5.5 } }],
   ["move point", { type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 } }],
   ["delete selected point", { type: "deleteSelectedPoint" }],
-  ["insert point", { type: "insertPoint", leg: 0, near: { lat: 50.3577, lng: 5.4563 } }],
+  ["insert point", { type: "insertPoint", index: 0, near: { lat: 50.3577, lng: 5.4563 } }],
   ["set leg mode", { type: "setLegMode", index: 1, mode: "paddle", accessPoints: [] }],
   ["access points changed", { type: "accessPointsChanged", accessPoints: access }],
   ["toggle camp", { type: "toggleCampOnSelectedPoint" }],

@@ -23,6 +23,10 @@
   --shadow-popup: 0 0.25rem 1rem rgb(0 0 0 / 20%);
   /* Above Leaflet's panes and controls (z-index up to 1000). */
   --z-overlay: 2000;
+  /* The side panel's open and collapsed widths (SidePanel); the open width matches
+     PANEL_SHARE and PANEL_MAX_PX in SidePanel.tsx. */
+  --side-panel-width: min(45vw, 380px);
+  --side-panel-strip-width: 5.5rem;
 }
 
 /* One self-hosted font, so text measures the same on every machine and layout
