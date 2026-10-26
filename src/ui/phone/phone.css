@@ -202,6 +202,16 @@
   list-style: none;
 }
 
+/* The leg rows run edge to edge, right under the tab row: cancel the body's side padding
+   and the panels' top gap. */
+.phone-legs {
+  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) 0;
+}
+
+.phone-legs .phone-row {
+  padding-right: var(--space-3);
+}
+
 .phone-row {
   display: flex;
   flex-wrap: wrap;
