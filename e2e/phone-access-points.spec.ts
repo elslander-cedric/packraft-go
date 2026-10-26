@@ -1,7 +1,7 @@
 // Your access points in the phone planner (#119, ADR 0026; first #63, ADR 0023): the
 // Access points tab, the floating button bottom left, place mode without a fix, and
 // everything saved on the device at once, with or without signal. Dragging a marker is
-// checked with the selection-and-drag ticket.
+// checked in phone-point-editing.spec.ts (#120).
 import { devices, expect, test, type Page } from "@playwright/test";
 import { serialiseAccessPoints, type AccessPoint } from "../src/core/accessPoints";
 import { ACCESS_POINTS_KEY } from "../src/persistence/accessPointStorage";

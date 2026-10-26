@@ -48,7 +48,7 @@ const modeChangeLabel: Record<ModeChange["kind"], string> = {
 
 // A small tent, drawn below and to the right of its point, clear of the point
 // and of the put-in/take-out labels above it.
-const campIcon = divIcon({
+export const campIcon = divIcon({
   className: "camp-marker",
   html:
     `<svg role="img" aria-label=${JSON.stringify(strings.campMarker)} viewBox="0 0 20 18" width="20" height="18">` +

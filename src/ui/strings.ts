@@ -196,6 +196,12 @@ export const strings = {
     // The floating button bottom left; its glyph is `markAccessPointGlyph`.
     markAccessPointButton: "Mark an access point",
     markAccessPointGlyph: "⚑",
+    // The same button while a route point is selected (#120): it saves that point as an access point.
+    selectedPointToAccessPointButton: "Make the selected point an access point",
+    // The glyphs inside the delete and camp buttons shown while a point is selected (#120);
+    // their names are `deletePointButton` and `campButton`.
+    deletePointGlyph: "✕",
+    campGlyph: "⛺",
     markLocating: "Finding your position to mark the access point…",
     // `accuracy` is formatted, e.g. "12 m".
     markedAccuracy: (accuracy: string) => `Marked at your GPS position, accurate to about ${accuracy}.`,
