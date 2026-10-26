@@ -3,7 +3,6 @@
 import type {
   CircleMarker as LeafletCircleMarker,
   LeafletEventHandlerFnMap,
-  LeafletMouseEvent,
   Polyline as LeafletPolyline,
 } from "leaflet";
 import { divIcon } from "leaflet";
@@ -71,17 +70,31 @@ type PointMarkerProps = {
   at: LatLng;
   selected: boolean;
   eventHandlers: LeafletEventHandlerFnMap;
+  /** A pointer (mouse, finger or pen) was pressed on the point. */
+  onPointerDown: (event: PointerEvent) => void;
   /** Called when the marker leaves the map (its point was deleted or undone). */
   onRemoved: () => void;
 };
 
-function PointMarker({ at, selected, eventHandlers, onRemoved }: PointMarkerProps) {
+function PointMarker({ at, selected, eventHandlers, onPointerDown, onRemoved }: PointMarkerProps) {
   const marker = useRef<LeafletCircleMarker>(null);
   const removed = useRef(onRemoved);
   useEffect(() => {
     removed.current = onRemoved;
   });
   useEffect(() => () => removed.current(), []);
+  // Leaflet has no pointer events for layers, so this listens on the point's own element.
+  // It fires before the touchstart Leaflet uses to pan the map, so a finger on a point can switch panning off first.
+  const pressed = useRef(onPointerDown);
+  useEffect(() => {
+    pressed.current = onPointerDown;
+  });
+  useEffect(() => {
+    const element = marker.current?.getElement();
+    const press = (event: Event) => pressed.current(event as PointerEvent);
+    element?.addEventListener("pointerdown", press);
+    return () => element?.removeEventListener("pointerdown", press);
+  }, []);
   // Leaflet only reads className when the marker is created, so selection toggles the class directly.
   useEffect(() => {
     marker.current?.getElement()?.classList.toggle("point-selected", selected);
@@ -141,9 +154,9 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
   useEffect(() => {
     const container = map.getContainer();
     const press = () => (pressWasDrag.current = false);
-    // Capture phase: runs before Leaflet's own handlers, including a point's mousedown.
-    container.addEventListener("mousedown", press, true);
-    return () => container.removeEventListener("mousedown", press, true);
+    // Capture phase: runs before Leaflet's own handlers, including a point's pointerdown.
+    container.addEventListener("pointerdown", press, true);
+    return () => container.removeEventListener("pointerdown", press, true);
   }, [map]);
   // Leaflet starts panning the map on the same press that would grab a point, so
   // panning is off while the mouse is over a point or a point is being dragged.
@@ -161,32 +174,36 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
     },
   });
 
-  const startDrag = (index: number, down: MouseEvent) => {
+  const startDrag = (index: number, down: PointerEvent) => {
     if (down.button !== 0) return;
     dragging.current = true;
     updateMapPanning();
     let dropAt: LatLng | null = null;
 
-    const move = (event: MouseEvent) => {
+    const move = (event: PointerEvent) => {
       const far = Math.hypot(event.clientX - down.clientX, event.clientY - down.clientY);
       if (!dropAt && far < DRAG_THRESHOLD_PX) return;
       const { lat, lng } = map.mouseEventToLatLng(event);
       dropAt = { lat, lng };
       setPreview({ index, at: dropAt });
     };
-    const up = () => {
-      document.removeEventListener("mousemove", move);
-      document.removeEventListener("mouseup", up);
+    const end = (dropped: boolean) => {
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", cancel);
       dragging.current = false;
       updateMapPanning();
       setPreview(null);
-      if (dropAt) {
+      if (dropped && dropAt) {
         pressWasDrag.current = true;
         onPointDrag(index, dropAt);
       }
     };
-    document.addEventListener("mousemove", move);
-    document.addEventListener("mouseup", up);
+    const up = () => end(true);
+    const cancel = () => end(false);
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", up);
+    document.addEventListener("pointercancel", cancel);
   };
 
   const leavePoint = () => {
@@ -200,7 +217,6 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
       updateMapPanning();
     },
     mouseout: leavePoint,
-    mousedown: (event) => startDrag(index, (event as LeafletMouseEvent).originalEvent),
     click: () => {
       if (!pressWasDrag.current) onPointClick(index);
     },
@@ -250,6 +266,7 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
             at={point}
             selected={i === selectedPoint}
             eventHandlers={pointEvents(i)}
+            onPointerDown={(event) => startDrag(i, event)}
             // A point can disappear under the mouse (deleted, undone): treat that as leaving it.
             onRemoved={leavePoint}
           />
