@@ -216,6 +216,13 @@ export const strings = {
     listEntry: (use: string, kind: string) => `${use}, ${kind}`,
     // The Trip tab's access summary per day (#123).
     dayAccessLabel: "Access per day",
+    // The access layer on the phone (#125): the layers button under ◎ is named `accessLayerToggle`.
+    accessLayerGlyph: "≋",
+    // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a popover.
+    accessChip: (when: string) => `Access · ${when}`,
+    accessChipToday: "today",
+    accessChipGlyph: "▾",
+    accessPopoverLabel: "Access layer",
     // The floating menu top left (#124): the rare actions on the whole trip.
     menu: {
       button: "Menu",

@@ -14,7 +14,10 @@ import DaysPanel from "../DaysPanel";
 import { formatDistance, formatTimeEstimate } from "../format";
 import SettingsPanel from "../SettingsPanel";
 import { strings } from "../strings";
+import { useAccessLayer } from "../useAccessLayer";
 import { usePlanner } from "../usePlanner";
+import PhoneAccessChip from "./PhoneAccessChip";
+import PhoneAccessDetails from "./PhoneAccessDetails";
 import PhoneAccessPoints from "./PhoneAccessPoints";
 import SnapOffers from "../SnapOffers";
 import PhoneLegsList, { legModeOptions } from "./PhoneLegsList";
@@ -63,6 +66,9 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const [tab, setTab] = useState<PhoneTab>("legs");
   const [stop, setStop] = useState<SheetStop>("peek");
   const marking = useMarkAccessPoint(access, position, showPosition);
+  // The access layer (#125): on or off, its date, and the water or lock whose details are open.
+  const layer = useAccessLayer(trip);
+  const detailsOpen = layer.selectedWater !== undefined || layer.selectedLock !== undefined;
   // Where the map last zoomed to, for an access point row (#119).
   const [focus, setFocus] = useState<MapFocus | null>(null);
   // Your access points changed since opening, for "Saved on this device" (the hook saves every change).
@@ -113,6 +119,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
 
   // A marker tap opens the point's details in the sheet, raised to half from the peek.
   const onSelectAccessPoint = (id: string) => {
+    layer.select(null);
     access.select(id);
     setTab("accessPoints");
     if (stop === "peek") setStop("half");
@@ -125,6 +132,18 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     setStop("half");
     setFocus({ at: point.position, coveredBelow: 0.5 });
   };
+  // Holding a water or tapping a lock opens its details in the sheet, raised to half from the peek,
+  // above the open tab (#125).
+  const openAccessDetails = (id: string) => {
+    layer.select(id);
+    if (stop === "peek") setStop("half");
+  };
+  // A tab press goes to that tab, so it closes any water or lock details over it.
+  const pressTab = () => {
+    layer.select(null);
+    if (stop === "peek") setStop("half");
+  };
+
   // A day card tap shows the whole day on the map, above the half-raised sheet (#123).
   const openDay = (index: number) => {
     const day = summary.days[index];
@@ -150,7 +169,13 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           onMove: (id, to) => access.update(id, { position: to }),
         }}
         focus={focus}
+        access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: openAccessDetails }}
       />
+      {layer.on && (
+        <div className="phone-access-chip-slot">
+          <PhoneAccessChip dateSelector={layer.dateSelector} />
+        </div>
+      )}
       <div className="phone-buttons phone-buttons-top phone-buttons-left">
         <PhoneMenu
           trip={trip}
@@ -171,6 +196,14 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           disabled={position.state === "locating"}
         >
           {strings.phone.showPositionGlyph}
+        </Button>
+        <Button
+          className="phone-fab"
+          aria-label={strings.accessLayerToggle}
+          aria-pressed={layer.on}
+          onClick={() => layer.setOn(!layer.on)}
+        >
+          {strings.phone.accessLayerGlyph}
         </Button>
         {message && (
           <p role={message.kind} className={`phone-message phone-message-${message.kind}`}>
@@ -262,7 +295,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
               </div>
               <TabList label={strings.phone.tabsLabel}>
                 {tabs.map((value) => (
-                  <Tab key={value} value={value} onPress={() => stop === "peek" && setStop("half")}>
+                  <Tab key={value} value={value} onPress={pressTab}>
                     {strings.phone.tabs[value]}
                   </Tab>
                 ))}
@@ -270,38 +303,46 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             </>
           }
         >
-          <TabPanel value="legs">
-            <PhoneLegsList
-              summary={summary}
-              legs={trip.legs}
-              access={waterAccess}
-              aire={aire}
-              openLeg={openLeg}
-              onOpen={openLegRow}
-              onRetry={(index) => dispatch({ type: "retryLeg", index })}
-              onSetMode={(index, mode) => dispatch({ type: "setLegMode", index, mode, accessPoints: access.points })}
-            />
-          </TabPanel>
-          <TabPanel value="days">
-            <DaysPanel days={summary.days} access={waterAccess?.days} aire={aire} onSelectDay={openDay} />
-          </TabPanel>
-          <TabPanel value="trip">
-            <PhoneTripTab
-              name={trip.name}
-              startDate={trip.startDate}
-              days={summary.days}
-              access={waterAccess}
-              aire={aire}
-              onRename={(name) => dispatch({ type: "rename", name })}
-              onSetStartDate={(date) => dispatch({ type: "setStartDate", date })}
-            />
-          </TabPanel>
-          <TabPanel value="accessPoints">
-            <PhoneAccessPoints access={access} marking={marking} changed={pointsChanged} onOpen={openAccessPoint} />
-          </TabPanel>
-          <TabPanel value="settings">
-            {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
-          </TabPanel>
+          <PhoneAccessDetails
+            water={layer.selectedWater}
+            lock={layer.selectedLock}
+            date={layer.date}
+            onClose={() => layer.select(null)}
+          />
+          <div className="phone-tab-panels" hidden={detailsOpen}>
+            <TabPanel value="legs">
+              <PhoneLegsList
+                summary={summary}
+                legs={trip.legs}
+                access={waterAccess}
+                aire={aire}
+                openLeg={openLeg}
+                onOpen={openLegRow}
+                onRetry={(index) => dispatch({ type: "retryLeg", index })}
+                onSetMode={(index, mode) => dispatch({ type: "setLegMode", index, mode, accessPoints: access.points })}
+              />
+            </TabPanel>
+            <TabPanel value="days">
+              <DaysPanel days={summary.days} access={waterAccess?.days} aire={aire} onSelectDay={openDay} />
+            </TabPanel>
+            <TabPanel value="trip">
+              <PhoneTripTab
+                name={trip.name}
+                startDate={trip.startDate}
+                days={summary.days}
+                access={waterAccess}
+                aire={aire}
+                onRename={(name) => dispatch({ type: "rename", name })}
+                onSetStartDate={(date) => dispatch({ type: "setStartDate", date })}
+              />
+            </TabPanel>
+            <TabPanel value="accessPoints">
+              <PhoneAccessPoints access={access} marking={marking} changed={pointsChanged} onOpen={openAccessPoint} />
+            </TabPanel>
+            <TabPanel value="settings">
+              {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
+            </TabPanel>
+          </div>
         </BottomSheet>
       </Tabs>
     </div>
