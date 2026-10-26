@@ -378,3 +378,11 @@ path.leg-pending {
   align-items: center;
   justify-content: center;
 }
+
+/* Leaflet drops touch-action from the map while panning is disabled, which we do while a point is
+   dragged. The browser would then take the finger for a page scroll and cancel the pointer (#117).
+   The map handles every touch gesture itself, so it is always none (important: Leaflet's own
+   rules, which switch with its handlers, have the same specificity). */
+.leaflet-container {
+  touch-action: none !important;
+}
