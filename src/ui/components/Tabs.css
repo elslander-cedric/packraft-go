@@ -1,0 +1,40 @@
+.tabs {
+  display: contents;
+}
+
+.tab-list {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  border-bottom: 1px solid var(--color-border);
+  scrollbar-width: none;
+}
+
+.tab {
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-muted);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab[data-selected] {
+  border-bottom-color: var(--color-focus);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.tab-panel {
+  outline: 0;
+}

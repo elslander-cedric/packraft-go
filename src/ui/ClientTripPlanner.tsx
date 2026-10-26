@@ -9,11 +9,11 @@ const loading = () => <div className="planner-loading">{strings.plannerLoading}<
 // The planner starts from the trip in browser storage, which only exists in
 // the browser, so it is never rendered on the server.
 const TripPlanner = dynamic(() => import("./TripPlanner"), { ssr: false, loading });
-// Phones get their own layout (#56, ADR 0023): planning stays on a computer.
-const PhoneApp = dynamic(() => import("./phone/PhoneApp"), { ssr: false, loading });
+// Phones get the same planner with a phone layout (ADR 0026).
+const PhonePlanner = dynamic(() => import("./phone/PhonePlanner"), { ssr: false, loading });
 
 export default function ClientTripPlanner() {
   const phone = usePhoneLayout();
   if (phone === null) return loading();
-  return phone ? <PhoneApp /> : <TripPlanner />;
+  return phone ? <PhonePlanner /> : <TripPlanner />;
 }

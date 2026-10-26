@@ -1,6 +1,6 @@
 "use client";
 
-import { latLngBounds } from "leaflet";
+import { latLngBounds, type Point } from "leaflet";
 import { useEffect, useRef } from "react";
 import { Circle, CircleMarker, MapContainer, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { putInsAndTakeOuts, type LatLng, type Trip } from "@/core/trip";
@@ -9,28 +9,35 @@ import { legStyle, modeChangeStyle } from "./TripMap";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 
 export type PhoneMapProps = {
-  /** The trip, drawn read-only: taps never change it. */
   trip: Trip;
+  /** A tap on the map (not a double tap, not the end of a pinch). */
+  onMapTap: (at: LatLng) => void;
   /** Your position and the browser's accuracy radius in metres, once shown. */
   position: { at: LatLng; accuracyM: number } | null;
   /** Your access points: tap one to select it, drag it to correct it (#63). */
   accessPoints?: AccessPointLayerProps;
-  /** When set, the next tap on the map places an access point there (#63). */
-  onPlace?: (at: LatLng) => void;
 };
 
 /** Zoom used to show your position: close enough to see the river bank. */
 const POSITION_ZOOM = 15;
 
+/** Two taps this close in time and place are one double tap, which does nothing. */
+const DOUBLE_TAP_MS = 400;
+const DOUBLE_TAP_PX = 40;
+
 const positionStyle = { color: "#fff", weight: 3, fillColor: "#1a73e8", fillOpacity: 1 };
 const accuracyStyle = { color: "#1a73e8", weight: 1, fillColor: "#1a73e8", fillOpacity: 0.12 };
+const pointStyle = { color: "#333", weight: 2, fillColor: "#fff", fillOpacity: 1 };
 
-/** Fits the trip on screen once, and centres on your position when it is first shown. */
-function MapView({ trip, position }: PhoneMapProps) {
+/** Fits the trip on screen when the map opens, and centres on your position when it is first shown. */
+function MapView({ trip, position }: Pick<PhoneMapProps, "trip" | "position">) {
   const map = useMap();
+  const fitted = useRef(false);
   useEffect(() => {
-    if (trip.points.length > 0) map.fitBounds(latLngBounds(trip.points.map((p) => [p.lat, p.lng])), { padding: [24, 24] });
-    // On opening and when another trip is opened; otherwise the map is the user's to move.
+    // Once: after that the map is the user's to move, however the trip changes.
+    if (fitted.current || trip.points.length === 0) return;
+    fitted.current = true;
+    map.fitBounds(latLngBounds(trip.points.map((p) => [p.lat, p.lng])), { padding: [24, 24] });
   }, [map, trip]);
   const centred = useRef(false);
   useEffect(() => {
@@ -45,23 +52,53 @@ function MapView({ trip, position }: PhoneMapProps) {
   return null;
 }
 
-/** Turns a tap on the map into a placed access point while placing. */
-function TapToPlace({ onPlace }: { onPlace: (at: LatLng) => void }) {
-  useMapEvents({ click: (event) => onPlace({ lat: event.latlng.lat, lng: event.latlng.lng }) });
+/**
+ * Turns taps into `onMapTap`. A double tap gives one tap (its second tap is
+ * ignored), and the click that can follow a pinch is ignored.
+ */
+function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
+  const map = useMap();
+  const lastTap = useRef<{ at: number; point: Point } | null>(null);
+  const pinched = useRef(false);
+  useEffect(() => {
+    const container = map.getContainer();
+    // Capture phase, before Leaflet's own handlers.
+    const touch = (event: TouchEvent) => {
+      pinched.current = event.touches.length > 1;
+    };
+    container.addEventListener("touchstart", touch, true);
+    return () => container.removeEventListener("touchstart", touch, true);
+  }, [map]);
+  useMapEvents({
+    click: (event) => {
+      const now = event.originalEvent.timeStamp;
+      const previous = lastTap.current;
+      lastTap.current = { at: now, point: event.containerPoint };
+      if (pinched.current) return;
+      if (previous && now - previous.at < DOUBLE_TAP_MS && previous.point.distanceTo(event.containerPoint) < DOUBLE_TAP_PX) {
+        return;
+      }
+      onTap({ lat: event.latlng.lat, lng: event.latlng.lng });
+    },
+  });
   return null;
 }
 
 /**
- * The phone's map (#56, ADR 0023): the trip drawn read-only, and your position
- * with its accuracy circle. Planning stays on the desktop map (TripMap).
- * Imports Leaflet, which needs `window`: only load this through ClientPhoneMap.
+ * The phone's map (ADR 0026): the trip, your access points and your position.
+ * Pinch zoom is on and double-tap zoom is off, because the first tap of a
+ * double tap would add a point. Imports Leaflet, which needs `window`: only load
+ * this through ClientPhoneMap.
  */
-export default function PhoneMap({ trip, position, accessPoints, onPlace }: PhoneMapProps) {
+export default function PhoneMap({ trip, onMapTap, position, accessPoints }: PhoneMapProps) {
   return (
     <MapContainer
       center={[...initialMapView.center]}
       zoom={initialMapView.zoom}
       style={{ height: "100%", width: "100%" }}
+      doubleClickZoom={false}
+      touchZoom
+      zoomControl={false}
     >
       <TileLayer
         url={baseLayer.url}
@@ -70,6 +107,7 @@ export default function PhoneMap({ trip, position, accessPoints, onPlace }: Phon
         attribution={baseLayer.attribution}
       />
       <MapView trip={trip} position={position} />
+      <Taps onTap={onMapTap} />
       {trip.legs.map((leg, i) => (
         <Polyline
           key={`leg-${i}`}
@@ -89,7 +127,16 @@ export default function PhoneMap({ trip, position, accessPoints, onPlace }: Phon
           pathOptions={{ ...modeChangeStyle[kind], weight: 3, fill: false }}
         />
       ))}
-      {onPlace && <TapToPlace onPlace={onPlace} />}
+      {trip.points.map((point, i) => (
+        <CircleMarker
+          key={`point-${i}`}
+          center={point}
+          radius={5}
+          className="point"
+          interactive={false}
+          pathOptions={pointStyle}
+        />
+      ))}
       {accessPoints && <AccessPointLayer {...accessPoints} />}
       {position && (
         <>

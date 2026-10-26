@@ -93,5 +93,5 @@ test("the phone layout also opens offline after one visit", async ({ page, conte
 
   await expect(mapRegion(page)).toBeVisible();
   await expect(page.getByRole("button", { name: strings.phone.showPositionButton })).toBeVisible();
-  await expect(page.getByRole("region", { name: strings.phone.tripLabel })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: strings.phone.sheetLabel })).toBeVisible();
 });

@@ -7,6 +7,8 @@ import { confirmDialog } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
+// #118 replaced the read-only phone screens with the phone planner, which has no access
+// point marking yet: these tests wait for the phone access points ticket (#119) to return it.
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
 const text = strings.accessPoints;
@@ -32,7 +34,7 @@ async function openPhone(page: Page) {
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
 }
 
-test("mark a point at your GPS position, with accuracy, and it is saved on the device at once", async ({
+test.fixme("mark a point at your GPS position, with accuracy, and it is saved on the device at once", async ({
   page,
   context,
 }) => {
@@ -67,7 +69,7 @@ test("mark a point at your GPS position, with accuracy, and it is saved on the d
   expect((await toggle(page, text.kindLabel, text.kinds.jetty).boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
 
-test("mark another point offline; both survive a reload and show on the desktop", async ({ page, context }) => {
+test.fixme("mark another point offline; both survive a reload and show on the desktop", async ({ page, context }) => {
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ ...AT_HOTTON, accuracy: 10 });
   await serveOffline(page);
@@ -94,7 +96,7 @@ test("mark another point offline; both survive a reload and show on the desktop"
   await expect(markers(page)).toHaveCount(2);
 });
 
-test("drag a marked point to correct it", async ({ page, context }) => {
+test.fixme("drag a marked point to correct it", async ({ page, context }) => {
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ ...AT_HOTTON, accuracy: 30 });
   await serveOffline(page);
@@ -113,7 +115,7 @@ test("drag a marked point to correct it", async ({ page, context }) => {
   await expect(markers(page)).toHaveCount(1);
 });
 
-test("edit and delete points from the list", async ({ page, context }) => {
+test.fixme("edit and delete points from the list", async ({ page, context }) => {
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ ...AT_HOTTON, accuracy: 10 });
   await serveOffline(page);
@@ -143,7 +145,7 @@ test("edit and delete points from the list", async ({ page, context }) => {
   expect((await stored(page)).accessPoints).toEqual([]);
 });
 
-test("a denied location permission falls back to placing the point by tapping the map", async ({ page }) => {
+test.fixme("a denied location permission falls back to placing the point by tapping the map", async ({ page }) => {
   await serveOffline(page);
   await openPhone(page);
   // Chromium answers without asking when the permission was never granted; make the denial explicit.
