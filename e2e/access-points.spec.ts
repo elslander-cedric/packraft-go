@@ -56,7 +56,8 @@ test("add an access point on the map, edit it in the detail panel, and the marke
   await expect(markers(page)).toHaveClass(/use-put-in/);
   await expect(markers(page)).toHaveClass(/kind-official-aire/);
   await expect(markers(page).getByRole("img")).toHaveAccessibleName(
-    text.marker(text.uses["put-in"], text.kinds["official-aire"]),
+    // Without a name, the note's first line leads (#136).
+    text.marker("Steps by the bridge", text.useAndKind(text.uses["put-in"], text.kinds["official-aire"])),
   );
 
   // A second point, of another use and kind, gets another marker.

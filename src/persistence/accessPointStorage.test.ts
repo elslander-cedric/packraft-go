@@ -34,6 +34,8 @@ const blockedStorage = {
 const point: AccessPoint = {
   id: "a",
   position: { lat: 50.35, lng: 5.46 },
+  name: "",
+  nameSource: "to-look-up",
   use: "put-in",
   kind: "slipway",
   note: "",

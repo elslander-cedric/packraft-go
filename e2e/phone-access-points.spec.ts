@@ -43,6 +43,8 @@ const stored = (page: Page) =>
 const saved = (id: string, lat: number, lng: number, note: string): AccessPoint => ({
   id,
   position: { lat, lng },
+  name: "",
+  nameSource: "to-look-up",
   use: "put-in",
   kind: "slipway",
   note,
@@ -156,7 +158,7 @@ test("Mark here in the Access points tab marks one at my GPS position, saved at 
   await expect(markers(page)).toHaveCount(1);
   await accessTab(page).click();
   await expect(rows(page)).toHaveCount(1);
-  await expect(rows(page).first()).toContainText(phoneText.listEntry(text.uses["put-in"], text.kinds.slipway));
+  await expect(rows(page).first()).toContainText(text.useAndKind(text.uses["put-in"], text.kinds.slipway));
   await expect(rows(page).first()).toContainText("Slipway by the bridge");
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.reload();

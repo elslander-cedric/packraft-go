@@ -111,17 +111,36 @@ type AccessPointDetailsProps = {
   point: AccessPoint;
   access: AccessPointsState;
   onDelete: () => void;
-  /** Says how to move the point; the phone has no how-to text (ADR 0026). */
-  withMoveHint?: boolean;
+  /** Says how to move the point and name it; the phone has no how-to text (ADR 0026). */
+  withHints?: boolean;
 };
 
-export function AccessPointDetails({ point, access, onDelete, withMoveHint = true }: AccessPointDetailsProps) {
+export function AccessPointDetails({ point, access, onDelete, withHints = true }: AccessPointDetailsProps) {
   const update = (changes: Parameters<AccessPointsState["update"]>[1]) => access.update(point.id, changes);
   const headingId = `access-point-${point.id}`;
   return (
     <section className="access-point-details" aria-labelledby={headingId}>
       <h3 id={headingId}>{text.detailsLabel}</h3>
-      {withMoveHint && <p className="access-point-hint">{text.moveHint}</p>}
+      {withHints && <p className="access-point-hint">{text.moveHint}</p>}
+      <div className="access-point-field">
+        <label htmlFor={`${headingId}-name`}>{text.nameLabel}</label>
+        <input
+          id={`${headingId}-name`}
+          type="text"
+          // Only a name you typed is in the field; the default name shows greyed, so
+          // typing never lands on top of one that arrived meanwhile (ADR 0027).
+          value={point.nameSource === "typed" ? point.name : ""}
+          placeholder={point.nameSource === "typed" ? "" : point.name || text.namePlaceholder}
+          aria-describedby={withHints ? `${headingId}-name-hint` : undefined}
+          // Typing makes it your name; clearing it brings the default name back.
+          onChange={(event) => update({ name: event.target.value })}
+        />
+        {withHints && (
+          <p id={`${headingId}-name-hint`} className="access-point-hint">
+            {text.nameHint}
+          </p>
+        )}
+      </div>
       <div className="access-point-field">
         <span>{text.useLabel}</span>
         <ToggleGroup label={text.useLabel} value={point.use} options={useOptions} onChange={(use) => update({ use })} />

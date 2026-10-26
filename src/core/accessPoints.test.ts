@@ -25,6 +25,8 @@ describe("access point collection edits", () => {
       {
         id: "a",
         position: durbuy,
+        name: "",
+        nameSource: "to-look-up",
         use: "both",
         kind: "informal-bank",
         note: "",
@@ -75,6 +77,8 @@ describe("access point collection edits", () => {
 const marked: AccessPoint = {
   id: "a",
   position: durbuy,
+  name: "",
+  nameSource: "to-look-up",
   use: "put-in",
   kind: "slipway",
   note: "Park at the church",

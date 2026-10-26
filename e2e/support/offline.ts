@@ -25,6 +25,20 @@ export type OfflineOptions = {
    * unknown for today. Replay `src/hydrometry/fixtures` with `kiwisFixtures`.
    */
   kiwis?: (url: URL) => BRouterReply | Promise<BRouterReply>;
+  /**
+   * Answers Nominatim's reverse geocoding (default names of access points,
+   * #136). Defaults to "service unavailable" (503): points stay unnamed.
+   * Replay `src/geocoding/fixtures` with `nominatimFixture`.
+   */
+  nominatim?: (url: URL) => BRouterReply | Promise<BRouterReply>;
+};
+
+const GEOCODING_FIXTURES = path.join(__dirname, "../../src/geocoding/fixtures");
+
+/** Answers every reverse geocode with a recorded Nominatim response from `src/geocoding/fixtures`. */
+export const nominatimFixture = (name: string) => {
+  const body = readFileSync(path.join(GEOCODING_FIXTURES, name), "utf8");
+  return (): BRouterReply => ({ status: 200, body });
 };
 
 const HYDROMETRY_FIXTURES = path.join(__dirname, "../../src/hydrometry/fixtures");
@@ -59,19 +73,21 @@ export function delayedKiwis(answer: (url: URL) => BRouterReply | Promise<BRoute
 }
 
 /**
- * Serves OpenTopoMap tiles from a fixture, answers BRouter and KiWIS from recorded
+ * Serves OpenTopoMap tiles from a fixture, answers BRouter, KiWIS and Nominatim from recorded
  * responses, and blocks every other external request, so e2e tests never
  * touch live services (ADR 0019).
- * Returns the tiles, BRouter routes and KiWIS requests the page asked for, and any other
+ * Returns the tiles, BRouter routes, KiWIS and Nominatim requests the page asked for, and any other
  * external requests it tried.
  */
 export async function serveOffline(page: Page, options: OfflineOptions = {}) {
   const tiles: TileRequest[] = [];
   const brouter: URL[] = [];
   const kiwis: URL[] = [];
+  const nominatim: URL[] = [];
   const blocked: string[] = [];
   const answerBRouter = options.brouter ?? (() => ({ status: 503, body: "" }));
   const answerKiwis = options.kiwis ?? (() => ({ status: 503, body: "" }));
+  const answerNominatim = options.nominatim ?? (() => ({ status: 503, body: "" }));
 
   await page.route(
     (url) => !["localhost", "127.0.0.1"].includes(url.hostname),
@@ -101,6 +117,15 @@ export async function serveOffline(page: Page, options: OfflineOptions = {}) {
           contentType: reply.status === 200 ? "application/json;charset=UTF-8" : "text/plain",
           body: reply.body,
         });
+      } else if (url.hostname === "nominatim.openstreetmap.org" && url.pathname === "/reverse") {
+        nominatim.push(url);
+        const reply = await answerNominatim(url);
+        await route.fulfill({
+          status: reply.status,
+          headers: { "Access-Control-Allow-Origin": "*" },
+          contentType: reply.status === 200 ? "application/json; charset=utf-8" : "text/plain",
+          body: reply.body,
+        });
       } else {
         blocked.push(url.href);
         await route.abort();
@@ -108,5 +133,5 @@ export async function serveOffline(page: Page, options: OfflineOptions = {}) {
     },
   );
 
-  return { tiles, brouter, kiwis, blocked };
+  return { tiles, brouter, kiwis, nominatim, blocked };
 }

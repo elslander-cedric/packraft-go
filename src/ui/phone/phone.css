@@ -293,6 +293,18 @@
   border-left-color: var(--color-focus);
 }
 
+/* Under the heading: the rest of the note, then use and kind, small and muted (#136). */
+.phone-access-point-note {
+  flex-basis: 100%;
+  white-space: pre-line;
+}
+
+.phone-access-point-detail {
+  flex-basis: 100%;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
 /* The Legs tab (#121): a whole row heading is the button that opens it. */
 .button.phone-row-toggle {
   display: flex;

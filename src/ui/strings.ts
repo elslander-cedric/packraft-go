@@ -133,14 +133,23 @@ export const strings = {
     importedNotSaved: (notSaved: string, added: number) =>
       `${notSaved} ${added === 1 ? "1 access point was" : `${added} access points were`} ` +
       "added on this page only and will be lost when you reload.",
-    // The marker's accessible name, e.g. "Access point: Put-in, Official aire".
-    marker: (use: string, kind: string) => `Access point: ${use}, ${kind}`,
+    // The marker's accessible name and tooltip, led by its heading (#136), e.g.
+    // "Access point: Hotton bridge (Put-in, Slipway)" or "Access point: Put-in, Official aire".
+    marker: (heading: string, detail: string | null) =>
+      detail === null ? `Access point: ${heading}` : `Access point: ${heading} (${detail})`,
+    // Its use and kind, e.g. "Put-in, Official aire": a list entry's detail line, or its heading
+    // when it has no name or note (#136).
+    useAndKind: (use: string, kind: string) => `${use}, ${kind}`,
     detailsLabel: "Access point",
     moveHint: "Drag the marker on the map to move it.",
     useLabel: "Use",
     uses: { "put-in": "Put-in", "take-out": "Take-out", both: "Both" },
     kindLabel: "Kind",
     kinds: { "official-aire": "Official aire", slipway: "Slipway", jetty: "Jetty", "informal-bank": "Informal bank" },
+    nameLabel: "Name",
+    // Shown while the default name (ADR 0027) is still to be looked up, or when none was found.
+    namePlaceholder: "e.g. Hotton bridge",
+    nameHint: "Leave empty for a name from the nearest road and place.",
     noteLabel: "Note",
     notePlaceholder: "e.g. steep bank, park at the church",
     checkedOnSiteLabel: "Checked on site",
@@ -230,8 +239,6 @@ export const strings = {
     placingCancel: "Cancel",
     savedOnDevice: "Saved on this device.",
     noAccessPoints: "No access points yet.",
-    // The list entry's heading, e.g. "Put-in, Official aire".
-    listEntry: (use: string, kind: string) => `${use}, ${kind}`,
     // The Trip tab's access summary per day (#123).
     dayAccessLabel: "Access per day",
     // The access layer on the phone (#125): the layers button under ◎ is named `accessLayerToggle`.
@@ -338,8 +345,11 @@ export const strings = {
   // Snapping a new put-in or take-out to one of your access points (#62, ADR 0023).
   snap: {
     label: "Snap to an access point",
-    offer: (kind: string, metres: number, use: string, accessKind: string) =>
-      `The new ${kind} is ${metres} m from your access point (${use}, ${accessKind}). Snap it there?`,
+    // `name` is the access point's name (#136), or null when it has none.
+    offer: (kind: string, metres: number, name: string | null, use: string, accessKind: string) =>
+      name === null
+        ? `The new ${kind} is ${metres} m from your access point (${use}, ${accessKind}). Snap it there?`
+        : `The new ${kind} is ${metres} m from your access point ${name} (${use}, ${accessKind}). Snap it there?`,
     accept: "Snap to access point",
     decline: "Keep where it is",
     kinds: { "put-in": "put-in", "take-out": "take-out" },
