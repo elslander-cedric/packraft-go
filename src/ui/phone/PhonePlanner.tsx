@@ -13,6 +13,7 @@ import { strings } from "../strings";
 import { usePlanner } from "../usePlanner";
 import PhoneAccessPoints from "./PhoneAccessPoints";
 import PhoneLegsList from "./PhoneLegsList";
+import PhoneMenu from "./PhoneMenu";
 import { positionMessage } from "./position";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
 import { usePosition } from "./usePosition";
@@ -27,7 +28,8 @@ const tabs = Object.keys(strings.phone.tabs) as PhoneTab[];
  * returns and sends it actions; it adds no planning rules.
  */
 export default function PhonePlanner({ router }: { router?: Router }) {
-  const { session, dispatch, summary, access, waterAccess, undo, deleteSelectedPoint } = usePlanner(router);
+  const { session, dispatch, summary, access, waterAccess, undo, deleteSelectedPoint, saveFileAs, exportGpxAs, openFile } =
+    usePlanner(router);
   const { trip, selectedPoint } = session;
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
@@ -91,6 +93,18 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         }}
         focus={focus}
       />
+      <div className="phone-buttons phone-buttons-top phone-buttons-left">
+        <PhoneMenu
+          trip={trip}
+          question={session.question}
+          pendingTrip={session.pendingTrip}
+          fileError={session.fileError}
+          dispatch={dispatch}
+          saveFileAs={saveFileAs}
+          exportGpxAs={exportGpxAs}
+          openFile={openFile}
+        />
+      </div>
       <div className="phone-buttons phone-buttons-top">
         <Button
           className="phone-fab"

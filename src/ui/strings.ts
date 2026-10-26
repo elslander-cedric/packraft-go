@@ -212,6 +212,20 @@ export const strings = {
     noAccessPoints: "No access points yet.",
     // The list entry's heading, e.g. "Put-in, Official aire".
     listEntry: (use: string, kind: string) => `${use}, ${kind}`,
+    // The floating menu top left (#124): the rare actions on the whole trip.
+    menu: {
+      button: "Menu",
+      glyph: "☰",
+      newTrip: "New trip",
+      saveFile: "Save…",
+      openFile: "Open…",
+      exportGpx: "Export GPX…",
+      // Save… and Export GPX… ask for the trip name first, prefilled with the current one.
+      saveTitle: "Save trip",
+      saveConfirm: "Save",
+      exportTitle: "Export GPX",
+      exportConfirm: "Export",
+    },
   },
   // The disclaimer shown above the map (ADR 0024).
   navigationRulesNotice: "Indicative only; you're responsible for checking local rules.",

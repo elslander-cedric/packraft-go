@@ -7,6 +7,7 @@ import { firstSession, plannerSession } from "@/core/plannerSession";
 import { createAutoRouter } from "@/core/routing";
 import { defaultSettings, withSetting, type Settings } from "@/core/settings";
 import { summarise } from "@/core/summarise";
+import { renameTrip } from "@/core/trip";
 import { tripAccess } from "@/core/tripAccess";
 import { downloadGpxZip, downloadTripFile, readTripFile } from "@/persistence/tripFile";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
@@ -67,6 +68,21 @@ export function usePlanner(router?: Router) {
     dispatch({ type: "fileDownloaded" });
     downloadGpxZip(trip, { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName });
   };
+  // The phone asks for the name first (#124): rename the trip, then save or export it under that name.
+  const named = (name: string) => {
+    dispatch({ type: "rename", name });
+    return renameTrip(trip, name);
+  };
+  const saveFileAs = (name: string) => {
+    const renamed = named(name);
+    dispatch({ type: "fileDownloaded" });
+    downloadTripFile(renamed, strings.tripNamePlaceholder);
+  };
+  const exportGpxAs = (name: string) => {
+    const renamed = named(name);
+    dispatch({ type: "fileDownloaded" });
+    downloadGpxZip(renamed, { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName });
+  };
   const openFile = async (file: File) => {
     const opened = await readTripFile(file);
     if (opened.ok) dispatch({ type: "fileOpened", trip: opened.trip });
@@ -123,6 +139,8 @@ export function usePlanner(router?: Router) {
     aire,
     saveFile,
     exportGpx,
+    saveFileAs,
+    exportGpxAs,
     openFile,
     undo,
     deleteSelectedPoint,

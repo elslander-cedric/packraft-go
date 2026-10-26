@@ -18,3 +18,20 @@ export function addDays(date: CalendarDate, days: number): CalendarDate {
   const start = Date.parse(`${date}T00:00:00Z`);
   return new Date(start + days * MS_PER_DAY).toISOString().slice(0, 10);
 }
+
+const brussels = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Brussels",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * The calendar date in Europe/Brussels at the instant `now` (#124): the day a
+ * new phone trip starts on, whatever time zone the device is set to, so a date
+ * picked in Brussels never moves a day.
+ */
+export function todayInBrussels(now: Date): CalendarDate {
+  const parts = Object.fromEntries(brussels.formatToParts(now).map((part) => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
