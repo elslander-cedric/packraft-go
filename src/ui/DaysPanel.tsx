@@ -15,17 +15,20 @@ export default function DaysPanel({
   access,
   aire = [],
   onSelectDay,
+  heading = true,
 }: {
   days: readonly DaySummary[];
   access?: readonly DayAccess[];
   aire?: readonly AireWarning[];
   /** A day card was tapped (the phone zooms the map to that day, #123); desktop rows take no taps. */
   onSelectDay?: (day: number) => void;
+  /** False where a tab already names the panel (the phone's Days tab). */
+  heading?: boolean;
 }) {
   if (days.length === 0) return null;
   return (
     <aside className="days-panel" aria-label={strings.daysPanelLabel}>
-      <h2>{strings.daysPanelLabel}</h2>
+      {heading && <h2>{strings.daysPanelLabel}</h2>}
       <ol className="days">
         {days.map((day, i) => (
           <li

@@ -141,13 +141,14 @@
   white-space: nowrap;
 }
 
-/* Wraps when the figures don't fit one line; a figure never breaks inside. */
+/* Small enough for all five figures to fit one line on a phone; wraps on a narrower screen, but a
+   figure never breaks inside. */
 .phone-totals {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -200,6 +201,16 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* The leg rows run edge to edge, right under the tab row: cancel the body's side padding
+   and the panels' top gap. */
+.phone-legs {
+  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) 0;
+}
+
+.phone-legs .phone-row {
+  padding-right: var(--space-3);
 }
 
 .phone-row {
@@ -406,23 +417,23 @@
   font-size: 0.95rem;
 }
 
-/* The Days tab (#123): the desktop's day rows as cards; tapping one zooms the map to that day. */
-.phone .days-panel {
+/* The Days tab (#123): the desktop's day rows as cards; tapping one zooms the map to that day.
+   Scoped to the tab panels, not .phone: the bottom sheet is rendered in a portal outside it.
+   Like the leg rows, the cards run edge to edge right under the tab row, touching, with a rule between. */
+.phone-tab-panels .days-panel {
   max-height: none;
   min-height: 0;
+  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) 0;
   padding: 0;
   border: 0;
   overflow: visible;
 }
 
-.phone .days-panel h2 {
-  margin-top: 0;
-}
-
-.phone .day-row {
+.phone-tab-panels .day-row {
   min-height: 2.75rem;
-  padding: var(--space-2) 0 var(--space-2) var(--space-2);
-  margin-bottom: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
 }
 
@@ -477,12 +488,27 @@
   list-style: none;
 }
 
-.phone .trip-access h2 {
+/* The trip's access summary: the sheet body already pads the sides; space between the rule and
+   the title instead, and no scrolling box of its own. */
+.phone-tab-panels .trip-access {
+  max-height: none;
+  min-height: 0;
+  padding: var(--space-3) 0 0;
+  overflow: visible;
+}
+
+.phone-tab-panels .trip-access h2 {
   margin-top: 0;
 }
 
-/* The Settings tab (#123): the desktop's fields, finger-sized. */
-.phone .settings-panel input {
+/* The Settings tab (#123): the desktop's fields, finger-sized. The tab names the panel, and the
+   sheet body already pads it: no heading, rule or padding of its own, like the Trip tab. */
+.phone-tab-panels .settings-panel {
+  padding: 0;
+  border: 0;
+}
+
+.phone-tab-panels .settings-panel input {
   min-height: 2.75rem;
   font-size: 1rem;
 }

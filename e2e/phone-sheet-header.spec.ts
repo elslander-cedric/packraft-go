@@ -94,6 +94,18 @@ test("a named trip shows its name with the totals below: hike, paddle, climb, de
   expect(below).toBe(true);
 });
 
+test("on a phone, all five totals fit on one line", async ({ page }) => {
+  await serveOffline(page);
+  await open(page, hikeAndPaddle("Dinant weekend"));
+  await expect(points(page)).toHaveCount(3);
+  await settled(page);
+
+  const figures = totals(page).locator(".phone-total");
+  await expect(figures).toHaveCount(5);
+  const tops = await figures.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+});
+
 test("a trip with no paddle legs leaves the paddle figure out; with no name only the totals show", async ({ page }) => {
   await serveOffline(page);
   const save = hikeAndPaddle("   ");
@@ -150,7 +162,11 @@ test("the selected tab looks different from the others", async ({ page }) => {
   await expect.poll(() => style(text.tabs.days)).toEqual(legs);
 });
 
-test("every tab's content starts below the tab row with some space", async ({ page }) => {
+test("the leg and day lists sit right under the tab row; every other tab's content starts with some space", async ({
+  page,
+}) => {
+  // The lists run edge to edge, like the tab row itself.
+  const flush: string[] = [text.tabs.legs, text.tabs.days];
   await serveOffline(page);
   await open(page, hikeAndPaddle("Dinant weekend"));
   for (const name of Object.values(text.tabs)) {
@@ -162,7 +178,8 @@ test("every tab's content starts below the tab row with some space", async ({ pa
       const first = el.querySelector('[role="tabpanel"]:not([hidden]) > *')!.getBoundingClientRect();
       return first.top - tabs.bottom;
     });
-    expect(gap, name).toBeGreaterThanOrEqual(12);
+    if (flush.includes(name)) expect(Math.round(gap), name).toBe(0);
+    else expect(gap, name).toBeGreaterThanOrEqual(12);
   }
 });
 

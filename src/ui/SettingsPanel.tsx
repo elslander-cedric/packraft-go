@@ -8,6 +8,8 @@ export type SettingsPanelProps = {
   settings: Settings;
   /** The planner typed a value; the core decides whether it is usable. */
   onChange: (name: keyof Settings, value: number) => void;
+  /** False where a tab already names the panel (the phone's Settings tab). */
+  heading?: boolean;
 };
 
 type SettingFieldProps = {
@@ -39,10 +41,10 @@ function SettingField({ label, hint, initialValue, step, onChange }: SettingFiel
 }
 
 /** Edits the planner's pace factor and paddling speed. Renders settings; no domain logic. */
-export default function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
+export default function SettingsPanel({ settings, onChange, heading = true }: SettingsPanelProps) {
   return (
     <section className="settings-panel" aria-label={strings.settingsPanelLabel}>
-      <h2>{strings.settingsPanelLabel}</h2>
+      {heading && <h2>{strings.settingsPanelLabel}</h2>}
       <SettingField
         label={strings.paceFactorLabel}
         hint={strings.paceFactorHint}
