@@ -227,3 +227,84 @@
 .button.phone-access-point-row[aria-current] {
   border-left-color: var(--color-focus);
 }
+
+/* The Days tab (#123): the desktop's day rows as cards; tapping one zooms the map to that day. */
+.phone .days-panel {
+  max-height: none;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+}
+
+.phone .days-panel h2 {
+  margin-top: 0;
+}
+
+.phone .day-row {
+  min-height: 2.75rem;
+  padding: var(--space-2) 0 var(--space-2) var(--space-2);
+  margin-bottom: var(--space-2);
+  cursor: pointer;
+}
+
+.day-select {
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The Trip tab (#123): name, start date and the trip's access summary. */
+.phone-trip-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.phone-trip-tab label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.phone-trip-tab input {
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+
+.phone-start-date {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.phone-start-date label {
+  flex: 1;
+}
+
+.phone-disclaimer {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.phone-day-access {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.phone .trip-access h2 {
+  margin-top: 0;
+}
+
+/* The Settings tab (#123): the desktop's fields, finger-sized. */
+.phone .settings-panel input {
+  min-height: 2.75rem;
+  font-size: 1rem;
+}

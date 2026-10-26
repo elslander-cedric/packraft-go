@@ -14,10 +14,13 @@ export default function DaysPanel({
   days,
   access,
   aire = [],
+  onSelectDay,
 }: {
   days: readonly DaySummary[];
   access?: readonly DayAccess[];
   aire?: readonly AireWarning[];
+  /** A day card was tapped (the phone zooms the map to that day, #123); desktop rows take no taps. */
+  onSelectDay?: (day: number) => void;
 }) {
   if (days.length === 0) return null;
   return (
@@ -25,9 +28,20 @@ export default function DaysPanel({
       <h2>{strings.daysPanelLabel}</h2>
       <ol className="days">
         {days.map((day, i) => (
-          <li key={i} className="day-row">
+          <li
+            key={i}
+            className={onSelectDay ? "day-row day-row-selectable" : "day-row"}
+            onClick={onSelectDay && (() => onSelectDay(i))}
+          >
             <span className="day-heading">
-              <span className="day-label">{strings.dayLabel(i + 1)}</span>{" "}
+              {onSelectDay ? (
+                // The card takes the tap; this button is the way to it for keyboards and screen readers.
+                <button type="button" className="day-label day-select">
+                  {strings.dayLabel(i + 1)}
+                </button>
+              ) : (
+                <span className="day-label">{strings.dayLabel(i + 1)}</span>
+              )}{" "}
               {day.date && (
                 <>
                   <time className="day-date" dateTime={day.date}>

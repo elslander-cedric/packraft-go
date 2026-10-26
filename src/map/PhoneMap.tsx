@@ -21,10 +21,11 @@ import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer
 import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
 
 /**
- * A place to show: zoomed in, centred in the part of the map the sheet leaves
- * free (it covers `coveredBelow` of the map's height).
+ * A place to show in the part of the map the sheet leaves free (it covers
+ * `coveredBelow` of the map's height): a spot, zoomed in and centred, or an
+ * area (such as a day's route, #123), fitted.
  */
-export type MapFocus = { at: LatLng; coveredBelow: number };
+export type MapFocus = ({ at: LatLng } | { area: readonly LatLng[] }) & { coveredBelow: number };
 
 export type PhoneMapProps = {
   trip: Trip;
@@ -81,10 +82,19 @@ function MapView({ trip, position }: Pick<PhoneMapProps, "trip" | "position">) {
   return null;
 }
 
-/** Zooms in on `focus` and centres it above the sheet, whenever a new one is given. */
+/** Shows `focus` above the sheet, whenever a new one is given. */
 function Focus({ focus }: { focus: MapFocus }) {
   const map = useMap();
   useEffect(() => {
+    if ("area" in focus) {
+      if (focus.area.length === 0) return;
+      const covered = map.getSize().y * focus.coveredBelow;
+      map.fitBounds(latLngBounds(focus.area.map((p) => [p.lat, p.lng])), {
+        paddingTopLeft: [24, 24],
+        paddingBottomRight: [24, 24 + covered],
+      });
+      return;
+    }
     const zoom = Math.max(map.getZoom(), POSITION_ZOOM);
     const shift = (map.getSize().y * focus.coveredBelow) / 2;
     map.setView(map.unproject(map.project(focus.at, zoom).add([0, shift]), zoom), zoom);

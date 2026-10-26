@@ -212,6 +212,8 @@ export const strings = {
     noAccessPoints: "No access points yet.",
     // The list entry's heading, e.g. "Put-in, Official aire".
     listEntry: (use: string, kind: string) => `${use}, ${kind}`,
+    // The Trip tab's access summary per day (#123).
+    dayAccessLabel: "Access per day",
   },
   // The disclaimer shown above the map (ADR 0024).
   navigationRulesNotice: "Indicative only; you're responsible for checking local rules.",
