@@ -71,7 +71,8 @@ export type PlannerAction =
   | { readonly type: "deselect" }
   | { readonly type: "acceptOffer"; readonly offer: SnapOffer }
   | { readonly type: "declineOffer"; readonly offer: SnapOffer }
-  | { readonly type: "newTrip" }
+  /** A new trip, starting on `startDate` when given (the phone passes today, the desktop none; #124). */
+  | { readonly type: "newTrip"; readonly startDate?: CalendarDate }
   | { readonly type: "fileOpened"; readonly trip: Trip }
   | { readonly type: "fileRejected"; readonly reason: FileError }
   | { readonly type: "confirmReplace" }
@@ -197,7 +198,7 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
         ? { ...session, offers: session.offers.filter((o) => o !== action.offer), fileError: null }
         : session;
     case "newTrip":
-      return replace(session, emptyTrip(), "newTrip");
+      return replace(session, setStartDate(emptyTrip(), action.startDate), "newTrip");
     case "fileOpened":
       return replace(session, action.trip, "openFile");
     case "fileRejected":

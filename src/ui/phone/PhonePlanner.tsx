@@ -18,6 +18,7 @@ import { usePlanner } from "../usePlanner";
 import PhoneAccessPoints from "./PhoneAccessPoints";
 import SnapOffers from "../SnapOffers";
 import PhoneLegsList, { legModeOptions } from "./PhoneLegsList";
+import PhoneMenu from "./PhoneMenu";
 import PhoneTripTab from "./PhoneTripTab";
 import { positionMessage } from "./position";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
@@ -41,8 +42,21 @@ function dayArea(trip: Trip, day: DaySummary): LatLng[] {
  * returns and sends it actions; it adds no planning rules.
  */
 export default function PhonePlanner({ router }: { router?: Router }) {
-  const { session, dispatch, summary, settings, changeSetting, access, waterAccess, aire, undo, deleteSelectedPoint } =
-    usePlanner(router);
+  const {
+    session,
+    dispatch,
+    summary,
+    settings,
+    changeSetting,
+    access,
+    waterAccess,
+    aire,
+    undo,
+    deleteSelectedPoint,
+    saveFileAs,
+    exportGpxAs,
+    openFile,
+  } = usePlanner(router);
   const { trip, selectedPoint, offers } = session;
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
@@ -137,6 +151,18 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         }}
         focus={focus}
       />
+      <div className="phone-buttons phone-buttons-top phone-buttons-left">
+        <PhoneMenu
+          trip={trip}
+          question={session.question}
+          pendingTrip={session.pendingTrip}
+          fileError={session.fileError}
+          dispatch={dispatch}
+          saveFileAs={saveFileAs}
+          exportGpxAs={exportGpxAs}
+          openFile={openFile}
+        />
+      </div>
       <div className="phone-buttons phone-buttons-top">
         <Button
           className="phone-fab"
