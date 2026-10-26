@@ -18,6 +18,7 @@ import { putInsAndTakeOuts, type LatLng, type LegMode, type Trip } from "@/core/
 import { baseLayer, initialMapView } from "./mapConfig";
 import { campIcon, legStyle, modeChangeStyle } from "./TripMap";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
+import { HOLD_MS, LEG_HIT_WIDTH_PX, useLegHold } from "./legHold";
 import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
 
 /**
@@ -39,6 +40,8 @@ export type PhoneMapProps = {
   onPointTap: (index: number) => void;
   /** A point was pressed, dragged and let go at `to` (#120). */
   onPointDrop: (index: number, to: LatLng) => void;
+  /** A finger held still on a leg for 0.4 s, or a right-click on it, at `at` (#122). */
+  onLegHold: (leg: number, at: LatLng) => void;
   /** Your position and the browser's accuracy radius in metres, once shown. */
   position: { at: LatLng; accuracyM: number } | null;
   /** Your access points: tap one to select it, drag it to correct it (#63). */
@@ -108,20 +111,30 @@ function Focus({ focus }: { focus: MapFocus }) {
 
 /**
  * Turns taps into `onMapTap`. A double tap gives one tap (its second tap is
- * ignored), and the click that can follow a pinch is ignored.
+ * ignored), and the click that can follow a pinch is ignored. So is the click
+ * that ends a finger held for 0.4 s or more: holding the map does nothing, and
+ * holding a leg inserts a point instead (#122).
  */
 function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
   const map = useMap();
   const lastTap = useRef<{ at: number; point: Point } | null>(null);
   const pinched = useRef(false);
+  const fingerDownAt = useRef<number | null>(null);
   useEffect(() => {
     const container = map.getContainer();
     // Capture phase, before Leaflet's own handlers.
     const touch = (event: TouchEvent) => {
       pinched.current = event.touches.length > 1;
     };
+    const down = (event: PointerEvent) => {
+      fingerDownAt.current = event.pointerType === "mouse" ? null : event.timeStamp;
+    };
     container.addEventListener("touchstart", touch, true);
-    return () => container.removeEventListener("touchstart", touch, true);
+    container.addEventListener("pointerdown", down, true);
+    return () => {
+      container.removeEventListener("touchstart", touch, true);
+      container.removeEventListener("pointerdown", down, true);
+    };
   }, [map]);
   useMapEvents({
     click: (event) => {
@@ -129,6 +142,9 @@ function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
       const previous = lastTap.current;
       lastTap.current = { at: now, point: event.containerPoint };
       if (pinched.current) return;
+      const downAt = fingerDownAt.current;
+      fingerDownAt.current = null;
+      if (downAt !== null && now - downAt >= HOLD_MS) return;
       if (previous && now - previous.at < DOUBLE_TAP_MS && previous.point.distanceTo(event.containerPoint) < DOUBLE_TAP_PX) {
         return;
       }
@@ -197,6 +213,19 @@ function PhoneLeg({
   );
 }
 
+// A leg's hit line is invisible; Leaflet still hits its stroke.
+const legHitStyle = { color: "#000", opacity: 0, weight: LEG_HIT_WIDTH_PX, fill: false };
+
+/**
+ * A leg's transparent 28 px hit line: hold it 0.4 s (or right-click it) to
+ * insert a point (#122). A tap on it is still a tap on the map.
+ */
+function LegHitLine({ positions, onHold }: { positions: LatLng[]; onHold: (at: LatLng) => void }) {
+  const line = useRef<LeafletPolyline>(null);
+  useLegHold(line, onHold);
+  return <Polyline ref={line} positions={positions} className="leg-hit" pathOptions={legHitStyle} />;
+}
+
 /** A trip point as drawn; its hit area is separate and larger. */
 function PointDot({ at, selected }: { at: LatLng; selected: boolean }) {
   const dot = useRef<LeafletCircleMarker>(null);
@@ -223,7 +252,8 @@ function TripLayers({
   selectedPoint,
   onPointTap,
   onPointDrop,
-}: Pick<PhoneMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop">) {
+  onLegHold,
+}: Pick<PhoneMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold">) {
   const [preview, setPreview] = useState<{ index: number; at: LatLng } | null>(null);
   const points = preview ? trip.points.with(preview.index, preview.at) : trip.points;
   const handlers = (index: number): PressDragHandlers => ({
@@ -235,21 +265,30 @@ function TripLayers({
     },
     onCancel: () => setPreview(null),
   });
+  const legs = trip.legs.map((leg, i) => {
+    const dragged = preview !== null && (preview.index === i || preview.index === i + 1);
+    const routed = leg.route?.status === "routed" && !dragged;
+    const positions = routed ? [...leg.route!.geometry] : [points[i], points[i + 1]];
+    return { leg, dragged, positions };
+  });
   return (
     <>
-      {trip.legs.map((leg, i) => {
-        const dragged = preview !== null && (preview.index === i || preview.index === i + 1);
-        const routed = leg.route?.status === "routed" && !dragged;
-        return (
-          <PhoneLeg
-            key={`leg-${i}`}
-            mode={leg.mode}
-            status={leg.route?.status ?? "pending"}
-            dragged={dragged}
-            positions={routed ? [...leg.route!.geometry] : [points[i], points[i + 1]]}
-          />
-        );
-      })}
+      {legs.map(({ leg, dragged, positions }, i) => (
+        <PhoneLeg
+          key={`leg-${i}`}
+          mode={leg.mode}
+          status={leg.route?.status ?? "pending"}
+          dragged={dragged}
+          positions={positions}
+        />
+      ))}
+      {/* Leg hit lines sit above the drawn trip but under the access-point markers and the
+          points' hit areas, so a point or an access point on a leg is still grabbed first. */}
+      <Pane name="trip-leg-hits" style={{ zIndex: 450 }}>
+        {legs.map(({ positions }, i) => (
+          <LegHitLine key={`leg-hit-${i}`} positions={positions} onHold={(at) => onLegHold(i, at)} />
+        ))}
+      </Pane>
       {putInsAndTakeOuts(trip).map(({ kind, point }) => (
         <CircleMarker
           key={`${kind}-${point}`}
@@ -294,6 +333,7 @@ export default function PhoneMap({
   selectedPoint,
   onPointTap,
   onPointDrop,
+  onLegHold,
   position,
   accessPoints,
   focus,
@@ -316,7 +356,13 @@ export default function PhoneMap({
       <MapView trip={trip} position={position} />
       {focus && <Focus focus={focus} />}
       <Taps onTap={onMapTap} />
-      <TripLayers trip={trip} selectedPoint={selectedPoint} onPointTap={onPointTap} onPointDrop={onPointDrop} />
+      <TripLayers
+        trip={trip}
+        selectedPoint={selectedPoint}
+        onPointTap={onPointTap}
+        onPointDrop={onPointDrop}
+        onLegHold={onLegHold}
+      />
       {accessPoints && <AccessPointLayer {...accessPoints} pressDrag />}
       {position && (
         <>
