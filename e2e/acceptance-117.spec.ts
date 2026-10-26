@@ -31,9 +31,21 @@ test.describe("touch tablet", () => {
     const z0 = await zoom(page);
     await (await touch(page)).pinch({ x: cx, y: cy }, 4);
     await expect.poll(() => zoom(page)).toBeGreaterThan(z0);
+    // Leaflet ignores a new pinch while the zoom animation runs: let it settle.
+    await expect(mapRegion(page).locator(".leaflet-zoom-anim")).toHaveCount(0);
+    await page.waitForTimeout(800);
     const z1 = await zoom(page);
     await (await touch(page)).pinch({ x: cx, y: cy }, 0.25);
-    await expect.poll(() => zoom(page)).toBeLessThan(z1);
+    // Old tiles linger while new ones load: the lowest loaded zoom shows the zoom-out.
+    const lowest = () =>
+      mapRegion(page).evaluate((el) =>
+        Math.min(
+          ...[...el.querySelectorAll<HTMLImageElement>("img.leaflet-tile-loaded")].map((t) =>
+            Number(t.src.match(/\/(\d+)\/\d+\/\d+/)?.[1]),
+          ),
+        ),
+      );
+    await expect.poll(lowest).toBeLessThan(z1);
   });
 
   test("a pinch starting over a point zooms and adds no point", async ({ page }) => {
