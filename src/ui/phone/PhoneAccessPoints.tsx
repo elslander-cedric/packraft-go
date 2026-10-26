@@ -6,65 +6,35 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { AccessPointDetails } from "../AccessPointsPanel";
 import { strings } from "../strings";
 import type { AccessPointsState } from "../useAccessPoints";
-import type { LatLng } from "@/core/trip";
-import type { MyPosition } from "./position";
+import type { MarkAccessPoint } from "./useMarkAccessPoint";
 
 const text = strings.phone;
 const pointText = strings.accessPoints;
 
 type Props = {
   access: AccessPointsState;
-  position: MyPosition;
-  /** Starts finding your position (asks for permission the first time). */
-  showPosition: (onFirst?: (first: MyPosition) => void) => void;
+  marking: MarkAccessPoint;
+  /** Your access points changed since the planner opened (each change is saved at once). */
+  changed: boolean;
+  /** A row was tapped: show that access point on the map and open its details. */
+  onOpen: (id: string) => void;
 };
 
 /**
- * Your access points on the phone (#63, ADR 0023): mark one at your GPS
- * position (or, without it, by tapping the map), edit and delete them. Every
- * change is saved on the device at once by `useAccessPoints`, with or
- * without signal. The marker can be dragged on the map to correct it.
+ * The phone planner's Access points tab (#119, ADR 0026): "Mark here" at the
+ * top, the selected point's details, and your list. Every change is saved on
+ * the device at once by `useAccessPoints`, with or without signal.
  */
-export default function PhoneAccessPoints({ access, position, showPosition }: Props) {
-  const { points, selected, placing } = access;
-  // "Mark here" was pressed and is waiting for a position fix (or a failure).
-  const [pendingMark, setPendingMark] = useState(false);
-  // How accurate the GPS position was when the selected point was marked.
-  const [accuracy, setAccuracy] = useState<{ id: string; m: number } | null>(null);
+export default function PhoneAccessPoints({ access, marking, changed, onOpen }: Props) {
+  const { points, selected } = access;
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const markButton = useRef<HTMLButtonElement>(null);
   const details = useRef<HTMLDivElement>(null);
 
-  // "Saved on this device" once the collection has changed (the hook saves on every change).
-  const [seen, setSeen] = useState(points);
-  const [changed, setChanged] = useState(false);
-  if (points !== seen) {
-    setSeen(points);
-    setChanged(true);
-  }
-
-  // Bring the form into view when a point is selected.
+  // Bring the details into view when a point is selected.
   useEffect(() => {
     if (selected) details.current?.scrollIntoView?.({ block: "nearest" });
   }, [selected]);
-
-  const markAt = (at: LatLng, accuracyM: number) => {
-    const id = access.placeAt(at);
-    setAccuracy({ id, m: accuracyM });
-  };
-  const mark = () => {
-    if (position.state === "shown") {
-      markAt(position.at, position.accuracyM);
-      return;
-    }
-    setPendingMark(true);
-    showPosition((first) => {
-      setPendingMark(false);
-      // Without a position, fall back to tapping the map.
-      if (first.state === "shown") markAt(first.at, first.accuracyM);
-      else access.startPlacing();
-    });
-  };
 
   const savedNote =
     access.savingPaused === null ? (
@@ -78,32 +48,21 @@ export default function PhoneAccessPoints({ access, position, showPosition }: Pr
         {access.savingPaused === "unknown-version" ? pointText.autosaveUnknownVersion : pointText.damagedNotBackedUp}
       </p>
     );
+  const accuracy = selected ? marking.accuracyOf(selected.id) : null;
 
   return (
     <section className="phone-access-points" aria-label={text.accessPointsLabel}>
-      <h2>{text.accessPointsLabel}</h2>
       <div className="phone-position">
-        <Button ref={markButton} className="phone-button" onClick={mark} disabled={pendingMark}>
-          {text.markButton}
+        <Button ref={markButton} className="phone-button" onClick={marking.mark} disabled={marking.locating}>
+          {text.markHereButton}
         </Button>
-        <p className="phone-position-explanation">{text.markExplanation}</p>
-        {pendingMark && <p role="status">{text.markLocating}</p>}
-        <Button className="phone-button" aria-pressed={placing} onClick={access.togglePlacing}>
-          {text.tapToPlaceButton}
-        </Button>
-        {placing && (
-          <p role="status">
-            {position.state === "failed" ? `${text.tapToPlaceFallback} ` : ""}
-            {text.tapToPlaceHint}
-          </p>
-        )}
       </div>
       {savedNote}
       {selected && (
         <div ref={details} className="phone-access-point-form">
-          {accuracy?.id === selected.id && (
+          {accuracy !== null && (
             <p className="phone-position-explanation">
-              {text.markedAccuracy(`${Math.round(accuracy.m)} ${strings.metreUnit}`)}
+              {text.markedAccuracy(`${Math.round(accuracy)} ${strings.metreUnit}`)}
             </p>
           )}
           <AccessPointDetails
@@ -111,27 +70,26 @@ export default function PhoneAccessPoints({ access, position, showPosition }: Pr
             point={selected}
             access={access}
             onDelete={() => setPendingDelete(selected.id)}
+            withMoveHint={false}
           />
         </div>
       )}
       {points.length === 0 ? (
-        <p className="phone-position-explanation">{text.noAccessPoints}</p>
+        <p className="phone-empty">{text.noAccessPoints}</p>
       ) : (
         <ul className="phone-access-point-list" aria-label={text.accessPointsLabel}>
           {points.map((point) => (
-            <li key={point.id} className="phone-row">
-              <span className="phone-row-heading">
-                {text.listEntry(pointText.uses[point.use], pointText.kinds[point.kind])}
-              </span>
-              {point.note && <span>{point.note}</span>}
-              <span className="phone-row-actions">
-                <Button className="phone-button" onClick={() => access.select(point.id)}>
-                  {text.editButton}
-                </Button>
-                <Button className="phone-button button-danger" onClick={() => setPendingDelete(point.id)}>
-                  {text.deleteListButton}
-                </Button>
-              </span>
+            <li key={point.id}>
+              <Button
+                className="phone-row phone-access-point-row"
+                aria-current={point.id === selected?.id || undefined}
+                onClick={() => onOpen(point.id)}
+              >
+                <span className="phone-row-heading">
+                  {text.listEntry(pointText.uses[point.use], pointText.kinds[point.kind])}
+                </span>
+                {point.note && <span>{point.note}</span>}
+              </Button>
             </li>
           ))}
         </ul>
