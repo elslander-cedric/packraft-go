@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import type { Router } from "@/core/router";
-import { canUndo, isCamp, type LatLng } from "@/core/trip";
+import { canUndo, isCamp, type LatLng, type LegMode } from "@/core/trip";
 import ClientPhoneMap from "@/map/ClientPhoneMap";
 import type { MapFocus } from "@/map/PhoneMap";
 import { BottomSheet, type SheetStop } from "../components/BottomSheet";
 import { Button } from "../components/Button";
 import { Tab, TabList, TabPanel, Tabs } from "../components/Tabs";
+import { ToggleGroup } from "../components/ToggleGroup";
 import { formatDistance, formatTimeEstimate } from "../format";
 import { strings } from "../strings";
 import { usePlanner } from "../usePlanner";
 import PhoneAccessPoints from "./PhoneAccessPoints";
-import PhoneLegsList from "./PhoneLegsList";
+import SnapOffers from "../SnapOffers";
+import PhoneLegsList, { legModeOptions } from "./PhoneLegsList";
 import { positionMessage } from "./position";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
 import { usePosition } from "./usePosition";
@@ -27,8 +29,8 @@ const tabs = Object.keys(strings.phone.tabs) as PhoneTab[];
  * returns and sends it actions; it adds no planning rules.
  */
 export default function PhonePlanner({ router }: { router?: Router }) {
-  const { session, dispatch, summary, access, waterAccess, undo, deleteSelectedPoint } = usePlanner(router);
-  const { trip, selectedPoint } = session;
+  const { session, dispatch, summary, access, waterAccess, aire, undo, deleteSelectedPoint } = usePlanner(router);
+  const { trip, selectedPoint, offers } = session;
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
   const [tab, setTab] = useState<PhoneTab>("legs");
@@ -45,12 +47,35 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     setPointsChanged(true);
   }
 
+  // The next leg's mode (#121): the last leg's mode until the planner picks another, which holds
+  // until a leg is added with it.
+  const [pickedMode, setPickedMode] = useState<LegMode | null>(null);
+  const nextMode = pickedMode ?? trip.legs[trip.legs.length - 1]?.mode ?? "hike";
+  // The open leg row (#121); only one at a time, and none once its leg is gone.
+  const [openLegState, setOpenLeg] = useState<number | null>(null);
+  const openLeg = openLegState !== null && openLegState < trip.legs.length ? openLegState : null;
+
   // While an access point is being placed, the tap places it; while a point is selected, it only
-  // clears the selection (#120); otherwise it adds a trip point.
+  // clears the selection (#120); otherwise it adds a trip point with the next leg's mode.
   const onMapTap = (at: LatLng) => {
     if (access.placing) access.placeAt(at);
     else if (selectedPoint !== null) dispatch({ type: "deselect" });
-    else dispatch({ type: "addPoint", at });
+    else {
+      dispatch({ type: "addPoint", at, mode: nextMode });
+      if (trip.points.length > 0) setPickedMode(null);
+    }
+  };
+  // A leg row tap opens it (closing any other) and shows its leg above the half-raised sheet.
+  const openLegRow = (index: number) => {
+    if (index === openLeg) {
+      setOpenLeg(null);
+      return;
+    }
+    setOpenLeg(index);
+    const route = trip.legs[index]?.route;
+    const bounds = route?.status === "routed" ? route.geometry : trip.points.slice(index, index + 2);
+    setStop("half");
+    setFocus({ bounds, coveredBelow: 0.5 });
   };
   // With a route point selected, the access-point button saves that point as an access point (#120).
   const markSelectedPoint = () => {
@@ -150,9 +175,23 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             </Button>
           </>
         )}
+        <ToggleGroup
+          label={strings.phone.nextLegModeLabel}
+          value={nextMode}
+          options={legModeOptions}
+          onChange={setPickedMode}
+          className="phone-next-mode"
+        />
         <Button className="phone-fab" aria-label={strings.undoButton} onClick={undo} disabled={!canUndo(trip)}>
           {strings.phone.undoGlyph}
         </Button>
+      </div>
+      <div className="phone-snap-offers">
+        <SnapOffers
+          offers={offers}
+          onAccept={(offer) => dispatch({ type: "acceptOffer", offer })}
+          onDecline={(offer) => dispatch({ type: "declineOffer", offer })}
+        />
       </div>
       <Tabs value={tab} onChange={setTab}>
         <BottomSheet
@@ -189,7 +228,11 @@ export default function PhonePlanner({ router }: { router?: Router }) {
               summary={summary}
               legs={trip.legs}
               access={waterAccess}
+              aire={aire}
+              openLeg={openLeg}
+              onOpen={openLegRow}
               onRetry={(index) => dispatch({ type: "retryLeg", index })}
+              onSetMode={(index, mode) => dispatch({ type: "setLegMode", index, mode, accessPoints: access.points })}
             />
           </TabPanel>
           <TabPanel value="days" />
