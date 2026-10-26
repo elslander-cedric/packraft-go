@@ -210,6 +210,29 @@ test("a tap on a lock opens its details in the sheet", async ({ page }) => {
   await expect(lockDetails(page)).toHaveCount(0);
 });
 
+// #126: held sideways, the side panel hosts the details as the sheet does.
+test("sideways, a tap on a lock opens the side panel with its details above the tab", async ({ page }) => {
+  await page.setViewportSize({ width: viewport.height, height: viewport.width });
+  await openWith(page, nearLock);
+  const panel = page.getByRole("complementary", { name: phoneText.sheetLabel });
+  await expect(panel.getByRole("button", { name: phoneText.expandPanelButton })).toBeVisible();
+  await layersButton(page).click();
+  await expect(lock(page, ANDERLECHT_LOCK)).toBeVisible();
+  await settled(page, lock(page, ANDERLECHT_LOCK));
+  const at = (await lock(page, ANDERLECHT_LOCK).boundingBox())!;
+  await page.touchscreen.tap(at.x + at.width / 2, at.y + at.height / 2);
+
+  const details = panel.getByRole("region", { name: strings.lockDetailLabel });
+  await expect(details).toBeVisible();
+  await expect(details).toContainText(strings.lockPortageRequired);
+  await expect(panel.getByRole("button", { name: phoneText.collapsePanelButton })).toBeVisible();
+  await expect(panel.getByRole("tabpanel")).toBeHidden();
+
+  await details.getByRole("button", { name: strings.accessDetailClose }).click();
+  await expect(details).toHaveCount(0);
+  await expect(panel.getByRole("tabpanel")).toBeVisible();
+});
+
 test("with the layer on, holding a leg on water still inserts a point, not details", async ({ page }) => {
   await openWith(page, alongLesse);
   await layersButton(page).click();

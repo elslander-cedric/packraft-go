@@ -1,0 +1,74 @@
+/* A full-height panel on the right, over the page; the page beside it stays usable (non-modal).
+   Its widths are variables, so the page can keep its own controls clear of it. The open width
+   matches PANEL_SHARE and PANEL_MAX_PX in SidePanel.tsx. */
+:root {
+  --side-panel-width: min(45vw, 380px);
+  --side-panel-strip-width: 5.5rem;
+}
+
+.side-panel {
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  width: var(--side-panel-strip-width);
+  padding-right: env(safe-area-inset-right, 0px);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-left: 1px solid var(--color-border-strong);
+  box-shadow: -2px 0 8px rgb(0 0 0 / 20%);
+  transition: width 250ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.side-panel[data-open] {
+  width: var(--side-panel-width);
+}
+
+.side-panel-top {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-2) var(--space-2) 0;
+}
+
+/* Collapsed, the strip stacks the toggle above the summary. */
+.side-panel:not([data-open]) .side-panel-top {
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2) var(--space-1);
+}
+
+.side-panel-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.side-panel:not([data-open]) .side-panel-summary {
+  width: 100%;
+}
+
+.button.side-panel-toggle {
+  flex: none;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  font-size: 1.4rem;
+}
+
+.side-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+}
+
+.side-panel-body[hidden] {
+  display: none;
+}

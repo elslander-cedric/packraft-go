@@ -35,9 +35,15 @@ export function BottomSheet({ label, stop, onStopChange, peek, children }: Botto
       disablePointerDismissal
       snapPoints={snapPoints}
       snapPoint={snapPoints[stops.indexOf(stop)]}
-      onSnapPointChange={(point) => {
-        // Dragged below the peek (towards closing): settle at the peek.
-        const index = point === null ? 0 : snapPoints.indexOf(point);
+      onSnapPointChange={(point, details) => {
+        // Dragged below the peek (towards closing): settle at the peek. Cancelling the dismissal
+        // keeps the drawer from restoring the stop the drag started from afterwards.
+        if (point === null) {
+          details.cancel();
+          onStopChange("peek");
+          return;
+        }
+        const index = snapPoints.indexOf(point);
         if (index >= 0) onStopChange(stops[index]);
       }}
       snapToSequentialPoints
