@@ -49,7 +49,7 @@ export type Trip = {
 export type TripState = Omit<Trip, "undoSteps">;
 
 export type Edit =
-  | { readonly type: "addPoint"; readonly at: LatLng }
+  | { readonly type: "addPoint"; readonly at: LatLng; readonly mode?: LegMode }
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   | { readonly type: "deletePoint"; readonly index: number }
   | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode }
@@ -98,7 +98,9 @@ function applyStep(trip: Trip, edit: Exclude<Edit, { type: "undo" }>): Trip {
   if (edit.type === "deletePoint") return deletePoint(trip, edit.index);
   if (edit.type === "setLegMode") return setLegMode(trip, edit.index, edit.mode);
   if (edit.type === "toggleCamp") return toggleCamp(trip, edit.index);
-  const legs: Leg[] = trip.points.length > 0 ? [...trip.legs, { mode: "hike" }] : [];
+  // A new leg takes the explicit mode, else the last leg's mode (the first leg is a hike leg).
+  const mode: LegMode = edit.mode ?? trip.legs[trip.legs.length - 1]?.mode ?? "hike";
+  const legs: Leg[] = trip.points.length > 0 ? [...trip.legs, { mode }] : [];
   return { ...trip, points: [...trip.points, edit.at], legs };
 }
 

@@ -54,7 +54,7 @@ export type PlannerSession = {
 };
 
 export type PlannerAction =
-  | { readonly type: "addPoint"; readonly at: LatLng }
+  | { readonly type: "addPoint"; readonly at: LatLng; readonly mode?: LegMode }
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   | { readonly type: "deleteSelectedPoint" }
   | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode; readonly accessPoints: AccessPoints }

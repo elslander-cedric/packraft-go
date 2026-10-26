@@ -197,3 +197,24 @@ test("a paddle leg with no river between its points says no river route was foun
   await expect(rows(page).nth(0)).toContainText(strings.legRouteFailedNoRiver);
   await expect(rows(page).nth(0)).not.toContainText(strings.legRouteFailed["no-route"]);
 });
+
+test("a point added after a paddle leg makes a paddle leg, routed with the river profile (#116)", async ({ page }) => {
+  const network = await serveOffline(page, { brouter: byProfile });
+  const clickMap = await openMap(page);
+
+  await clickMap(-100, 0);
+  await clickMap(0, 0);
+  await expect(legLines(page)).toHaveCount(1);
+  await modeButton(page, 0, strings.legModePaddle).click();
+  await expect(legLines(page).nth(0)).toHaveClass(/leg-paddle/);
+  await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
+
+  await clickMap(100, 0);
+  await expect(legLines(page)).toHaveCount(2);
+  await expect(modeButton(page, 1, strings.legModePaddle)).toHaveAttribute("aria-pressed", "true");
+  await expect(legLines(page).nth(1)).toHaveClass(/leg-paddle/);
+  await expect(legLines(page).nth(1)).toHaveClass(/leg-routed/);
+
+  const profiles = network.brouter.map((url) => url.searchParams.get("profile"));
+  expect(profiles[profiles.length - 1]).toBe("river");
+});
