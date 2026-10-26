@@ -2,19 +2,23 @@
 
 import { useState } from "react";
 import type { Router } from "@/core/router";
-import { canUndo, isCamp, type LatLng, type LegMode } from "@/core/trip";
+import type { DaySummary } from "@/core/summarise";
+import { canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import ClientPhoneMap from "@/map/ClientPhoneMap";
 import type { MapFocus } from "@/map/PhoneMap";
 import { BottomSheet, type SheetStop } from "../components/BottomSheet";
 import { Button } from "../components/Button";
 import { Tab, TabList, TabPanel, Tabs } from "../components/Tabs";
 import { ToggleGroup } from "../components/ToggleGroup";
+import DaysPanel from "../DaysPanel";
 import { formatDistance, formatTimeEstimate } from "../format";
+import SettingsPanel from "../SettingsPanel";
 import { strings } from "../strings";
 import { usePlanner } from "../usePlanner";
 import PhoneAccessPoints from "./PhoneAccessPoints";
 import SnapOffers from "../SnapOffers";
 import PhoneLegsList, { legModeOptions } from "./PhoneLegsList";
+import PhoneTripTab from "./PhoneTripTab";
 import { positionMessage } from "./position";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
 import { usePosition } from "./usePosition";
@@ -23,13 +27,22 @@ import "./phone.css";
 type PhoneTab = keyof typeof strings.phone.tabs;
 const tabs = Object.keys(strings.phone.tabs) as PhoneTab[];
 
+/** Where a day goes: its points and its legs' routes. */
+function dayArea(trip: Trip, day: DaySummary): LatLng[] {
+  const area: LatLng[] = trip.points.slice(day.firstLeg, day.lastLeg + 2);
+  for (const leg of trip.legs.slice(day.firstLeg, day.lastLeg + 1))
+    if (leg.route?.status === "routed") area.push(...leg.route.geometry);
+  return area;
+}
+
 /**
  * The phone layout of the planner (portrait; ADR 0026): a full-screen map with
  * a bottom sheet over it. Like the desktop layout it draws what `usePlanner`
  * returns and sends it actions; it adds no planning rules.
  */
 export default function PhonePlanner({ router }: { router?: Router }) {
-  const { session, dispatch, summary, access, waterAccess, aire, undo, deleteSelectedPoint } = usePlanner(router);
+  const { session, dispatch, summary, settings, changeSetting, access, waterAccess, aire, undo, deleteSelectedPoint } =
+    usePlanner(router);
   const { trip, selectedPoint, offers } = session;
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
@@ -73,9 +86,9 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     }
     setOpenLeg(index);
     const route = trip.legs[index]?.route;
-    const bounds = route?.status === "routed" ? route.geometry : trip.points.slice(index, index + 2);
+    const area = route?.status === "routed" ? route.geometry : trip.points.slice(index, index + 2);
     setStop("half");
-    setFocus({ bounds, coveredBelow: 0.5 });
+    setFocus({ area, coveredBelow: 0.5 });
   };
   // With a route point selected, the access-point button saves that point as an access point (#120).
   const markSelectedPoint = () => {
@@ -97,6 +110,13 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     access.select(id);
     setStop("half");
     setFocus({ at: point.position, coveredBelow: 0.5 });
+  };
+  // A day card tap shows the whole day on the map, above the half-raised sheet (#123).
+  const openDay = (index: number) => {
+    const day = summary.days[index];
+    if (!day) return;
+    setStop("half");
+    setFocus({ area: dayArea(trip, day), coveredBelow: 0.5 });
   };
 
   return (
@@ -236,12 +256,26 @@ export default function PhonePlanner({ router }: { router?: Router }) {
               onSetMode={(index, mode) => dispatch({ type: "setLegMode", index, mode, accessPoints: access.points })}
             />
           </TabPanel>
-          <TabPanel value="days" />
-          <TabPanel value="trip" />
+          <TabPanel value="days">
+            <DaysPanel days={summary.days} access={waterAccess?.days} aire={aire} onSelectDay={openDay} />
+          </TabPanel>
+          <TabPanel value="trip">
+            <PhoneTripTab
+              name={trip.name}
+              startDate={trip.startDate}
+              days={summary.days}
+              access={waterAccess}
+              aire={aire}
+              onRename={(name) => dispatch({ type: "rename", name })}
+              onSetStartDate={(date) => dispatch({ type: "setStartDate", date })}
+            />
+          </TabPanel>
           <TabPanel value="accessPoints">
             <PhoneAccessPoints access={access} marking={marking} changed={pointsChanged} onOpen={openAccessPoint} />
           </TabPanel>
-          <TabPanel value="settings" />
+          <TabPanel value="settings">
+            {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
+          </TabPanel>
         </BottomSheet>
       </Tabs>
     </div>

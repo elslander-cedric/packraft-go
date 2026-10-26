@@ -23,12 +23,10 @@ import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
 
 /**
  * A place to show in the part of the map the sheet leaves free (it covers
- * `coveredBelow` of the map's height): a spot, zoomed in, or a stretch such as
- * a leg (#121), fitted whole.
+ * `coveredBelow` of the map's height): a spot, zoomed in and centred, or an
+ * area (such as a leg, #121, or a day's route, #123), fitted whole.
  */
-export type MapFocus =
-  | { at: LatLng; coveredBelow: number }
-  | { bounds: readonly LatLng[]; coveredBelow: number };
+export type MapFocus = ({ at: LatLng } | { area: readonly LatLng[] }) & { coveredBelow: number };
 
 export type PhoneMapProps = {
   trip: Trip;
@@ -94,9 +92,10 @@ const FOCUS_PADDING = 24;
 function Focus({ focus }: { focus: MapFocus }) {
   const map = useMap();
   useEffect(() => {
-    if ("bounds" in focus) {
+    if ("area" in focus) {
+      if (focus.area.length === 0) return;
       const below = map.getSize().y * focus.coveredBelow;
-      map.fitBounds(latLngBounds(focus.bounds.map((p) => [p.lat, p.lng])), {
+      map.fitBounds(latLngBounds(focus.area.map((p) => [p.lat, p.lng])), {
         paddingTopLeft: [FOCUS_PADDING, FOCUS_PADDING],
         paddingBottomRight: [FOCUS_PADDING, below + FOCUS_PADDING],
       });
