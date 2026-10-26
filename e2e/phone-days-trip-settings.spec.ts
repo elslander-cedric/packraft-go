@@ -156,9 +156,13 @@ test("the Trip tab's access summary has the disclaimer at its top, per-day statu
   const disclaimer = panel(page).getByText(strings.navigationRulesNotice);
   await expect(disclaimer).toBeVisible();
   await expect(tripSummary(page)).toBeVisible();
-  const above = await disclaimer.boundingBox();
-  const summary = await tripSummary(page).boundingBox();
-  expect(above!.y).toBeLessThan(summary!.y);
+  // Both measured in one go: the sheet may still be rising to half from the tab press.
+  await expect
+    .poll(async () => {
+      const [above, summary] = await Promise.all([disclaimer.boundingBox(), tripSummary(page).boundingBox()]);
+      return above!.y < summary!.y;
+    })
+    .toBe(true);
 
   // Unlisted Walloon water is not allowed (#75): a Forbidden warning, never "unknown".
   await expect(tripSummary(page)).toContainText(strings.tripAccess.warningKind.forbidden);

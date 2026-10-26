@@ -88,6 +88,11 @@ async function isInside(inner: Locator, outer: Locator | { x: number; y: number;
   );
 }
 
+/** Waits for the sheet to finish sliding to its stop, so boxes measured next stay put. */
+async function sheetSettled(page: Page) {
+  await sheet(page).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+}
+
 /** The part of the map the sheet leaves free. */
 async function freeMap(page: Page) {
   const map = (await mapRegion(page).boundingBox())!;
@@ -145,6 +150,7 @@ test("switching an open row to paddle reroutes it with the river profile; the sn
   await openPhone(page);
   await openLegsTab(page);
   await rowButton(page, 1).click();
+  await sheetSettled(page);
   const sheetTop = (await sheet(page).boundingBox())!.y;
 
   await legMode(page, 1, strings.legModePaddle).click();
@@ -266,6 +272,7 @@ test.describe("at a narrow phone width", () => {
     await page.evaluate(() => document.fonts.ready.then(() => true));
     await openLegsTab(page);
     await rowButton(page, 1).click();
+    await sheetSettled(page);
 
     const row = legRows(page).nth(0);
     const figures = row.locator(".phone-row-figure");

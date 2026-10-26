@@ -88,22 +88,51 @@ function MapView({ trip, position }: Pick<PhoneMapProps, "trip" | "position">) {
 /** Margin around a fitted stretch, in pixels. */
 const FOCUS_PADDING = 24;
 
-/** Shows `focus` above the sheet, whenever a new one is given. */
+/**
+ * Shows `focus` above the sheet, whenever a new one is given. Leaflet ignores a new view while
+ * a zoom animation runs, so a focus given during one (a second row or day tapped soon after the
+ * first) waits for it to end.
+ */
 function Focus({ focus }: { focus: MapFocus }) {
   const map = useMap();
+  const zooming = useRef(false);
   useEffect(() => {
-    if ("area" in focus) {
-      if (focus.area.length === 0) return;
-      const below = map.getSize().y * focus.coveredBelow;
-      map.fitBounds(latLngBounds(focus.area.map((p) => [p.lat, p.lng])), {
-        paddingTopLeft: [FOCUS_PADDING, FOCUS_PADDING],
-        paddingBottomRight: [FOCUS_PADDING, below + FOCUS_PADDING],
-      });
+    const start = () => {
+      zooming.current = true;
+    };
+    const end = () => {
+      zooming.current = false;
+    };
+    map.on("zoomanim", start);
+    map.on("zoomend", end);
+    return () => {
+      map.off("zoomanim", start);
+      map.off("zoomend", end);
+    };
+  }, [map]);
+  useEffect(() => {
+    const show = () => {
+      if ("area" in focus) {
+        if (focus.area.length === 0) return;
+        const below = map.getSize().y * focus.coveredBelow;
+        map.fitBounds(latLngBounds(focus.area.map((p) => [p.lat, p.lng])), {
+          paddingTopLeft: [FOCUS_PADDING, FOCUS_PADDING],
+          paddingBottomRight: [FOCUS_PADDING, below + FOCUS_PADDING],
+        });
+        return;
+      }
+      const zoom = Math.max(map.getZoom(), POSITION_ZOOM);
+      const shift = (map.getSize().y * focus.coveredBelow) / 2;
+      map.setView(map.unproject(map.project(focus.at, zoom).add([0, shift]), zoom), zoom);
+    };
+    if (!zooming.current) {
+      show();
       return;
     }
-    const zoom = Math.max(map.getZoom(), POSITION_ZOOM);
-    const shift = (map.getSize().y * focus.coveredBelow) / 2;
-    map.setView(map.unproject(map.project(focus.at, zoom).add([0, shift]), zoom), zoom);
+    map.once("zoomend", show);
+    return () => {
+      map.off("zoomend", show);
+    };
   }, [map, focus]);
   return null;
 }
