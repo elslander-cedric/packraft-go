@@ -214,6 +214,7 @@ test("sideways, the floating buttons stay in their corners over the map, beside 
   const buttons = [
     page.getByRole("button", { name: text.menu.button }),
     page.getByRole("button", { name: text.showPositionButton }),
+    page.getByRole("button", { name: strings.accessLayerToggle, exact: true }),
     page.getByRole("button", { name: text.selectedPointToAccessPointButton }),
     page.getByRole("button", { name: strings.deletePointButton }),
     page.getByRole("button", { name: strings.campButton }),
@@ -249,7 +250,7 @@ test("sideways, the floating buttons stay in their corners over the map, beside 
   }
   // The left-hand buttons are on the left, the others on the right, beside the panel.
   const menu = (await buttons[0].boundingBox())!;
-  const undo = (await buttons[6].boundingBox())!;
+  const undo = (await buttons[buttons.length - 1].boundingBox())!;
   const covered = (await panel(page).boundingBox())!;
   expect(menu.x).toBeLessThan(40);
   expect(covered.x - (undo.x + undo.width)).toBeLessThan(40);

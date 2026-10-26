@@ -448,3 +448,46 @@
   min-height: 2.75rem;
   font-size: 1rem;
 }
+
+/* The access layer's chip (#125): top centre of the map, between the menu and ◎. */
+.phone-access-chip-slot {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  z-index: 500;
+  transform: translateX(-50%);
+}
+
+/* Sideways, the chip is centred on the map beside the panel (#126). */
+.phone-sideways .phone-access-chip-slot {
+  left: calc((100% - var(--panel-cover)) / 2);
+  transition: left 250ms;
+}
+
+.phone-access-chip {
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 1.375rem;
+  background: var(--color-surface);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  white-space: nowrap;
+}
+
+.phone-access-popover .phone-disclaimer {
+  margin-top: 0;
+}
+
+/* A water's or a lock's details in the sheet, above the open tab: part of the sheet, not a floating card. */
+.phone-access-details .access-detail {
+  width: auto;
+  margin: 0 var(--space-3) var(--space-3);
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  font-size: 0.95rem;
+}
+
+.phone-access-details .access-detail .access-detail-close {
+  min-height: 2.75rem;
+}

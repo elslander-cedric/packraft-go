@@ -17,6 +17,7 @@ import {
 import { putInsAndTakeOuts, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import { baseLayer, initialMapView } from "./mapConfig";
 import { campIcon, legStyle, modeChangeStyle } from "./TripMap";
+import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 import { HOLD_MS, LEG_HIT_WIDTH_PX, useLegHold } from "./legHold";
 import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
@@ -47,6 +48,8 @@ export type PhoneMapProps = {
   accessPoints?: AccessPointLayerProps;
   /** A place to show (a new object shows it again). */
   focus?: MapFocus | null;
+  /** The access layer, while it is switched on (#125): hold a water or tap a lock for its details. */
+  access?: Omit<AccessLayerProps, "touch"> | null;
 };
 
 /** Zoom used to show your position: close enough to see the river bank. */
@@ -353,7 +356,7 @@ function TripLayers({
 }
 
 /**
- * The phone's map (ADR 0026): the trip, your access points and your position.
+ * The phone's map (ADR 0026): the trip, the access layer, your access points and your position.
  * Pinch zoom is on and double-tap zoom is off, because the first tap of a
  * double tap would add a point. Imports Leaflet, which needs `window`: only load
  * this through ClientPhoneMap.
@@ -368,6 +371,7 @@ export default function PhoneMap({
   position,
   accessPoints,
   focus,
+  access,
 }: PhoneMapProps) {
   return (
     <MapContainer
@@ -384,6 +388,7 @@ export default function PhoneMap({
         maxZoom={baseLayer.maxZoom}
         attribution={baseLayer.attribution}
       />
+      {access && <AccessLayer {...access} touch />}
       <MapView trip={trip} position={position} />
       {focus && <Focus focus={focus} />}
       <Taps onTap={onMapTap} />

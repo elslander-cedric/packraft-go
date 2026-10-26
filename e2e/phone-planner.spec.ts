@@ -348,7 +348,10 @@ test.describe("which screens get the phone planner", () => {
   test("a sideways phone (touch, 640 px tall or less) keeps the phone layout", async ({ page }) => {
     await serveOffline(page);
     await page.setViewportSize({ width: 863, height: 360 });
-    expect(await isPhonePlanner(page)).toBe(true);
+    await openPhone(page);
+    // Sideways the side panel stands in for the sheet (#126).
+    await expect(page.getByRole("complementary", { name: strings.phone.sheetLabel })).toBeVisible();
+    expect(await isDesktop(page)).toBe(false);
   });
 
   test("an iPad-sized touch screen gets the desktop layout", async ({ page }) => {

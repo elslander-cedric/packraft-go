@@ -26,7 +26,7 @@ export type AccessDateProps = {
 };
 
 /** The date the layer is for: today by default, or any date, or one of the trip's days (#59). */
-function AccessDateSelector({ date, isToday, onDate, onToday, tripDays }: AccessDateProps) {
+export function AccessDateSelector({ date, isToday, onDate, onToday, tripDays }: AccessDateProps) {
   return (
     <div className="access-date">
       <label>
@@ -70,25 +70,30 @@ export function AccessLayerControls({
     <div className="access-controls">
       <Switch label={strings.accessLayerToggle} checked={on} onChange={onToggle} />
       {on && <AccessDateSelector {...dateSelector} />}
-      {on && (
-        <section className="access-legend" aria-label={strings.accessLegendLabel}>
-          <ul>
-            {states.map((state) => (
-              <li key={state} className={`access-legend-${state}`}>
-                <Swatch state={state} />
-                {strings.accessState[state]}
-              </li>
-            ))}
-          </ul>
-          <p className="access-legend-lock">
-            <span className="access-lock-swatch" aria-hidden="true" />
-            {strings.lockLegend}
-          </p>
-          <p className="access-legend-note">{strings.accessLegendNote}</p>
-          <p className="access-legend-note">{strings.accessDataCredit}</p>
-        </section>
-      )}
+      {on && <AccessLegend />}
     </div>
+  );
+}
+
+/** The access layer's legend: the states' colours, the lock marker, the note about the regions and the credit. */
+export function AccessLegend() {
+  return (
+    <section className="access-legend" aria-label={strings.accessLegendLabel}>
+      <ul>
+        {states.map((state) => (
+          <li key={state} className={`access-legend-${state}`}>
+            <Swatch state={state} />
+            {strings.accessState[state]}
+          </li>
+        ))}
+      </ul>
+      <p className="access-legend-lock">
+        <span className="access-lock-swatch" aria-hidden="true" />
+        {strings.lockLegend}
+      </p>
+      <p className="access-legend-note">{strings.accessLegendNote}</p>
+      <p className="access-legend-note">{strings.accessDataCredit}</p>
+    </section>
   );
 }
 
