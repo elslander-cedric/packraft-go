@@ -52,9 +52,9 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
 
   await expect(sheet(page)).toHaveCount(0);
   await expect(panel(page)).toBeVisible();
-  // The panel starts like the sheet's peek: collapsed to the strip with the totals.
+  // The panel starts like the sheet's peek: collapsed to the strip (an empty trip has no totals yet).
   await expect(expand(page)).toBeVisible();
-  await expect(panel(page).locator(".phone-totals")).toBeVisible();
+  await expect(panel(page).locator(".phone-totals")).toHaveCount(0);
   await expect(panelTab(page, text.tabs.legs)).toHaveCount(0);
 
   await expand(page).click();

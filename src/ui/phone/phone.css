@@ -6,8 +6,9 @@
   position: relative;
   flex: 1;
   min-height: 0;
-  /* How far the bottom buttons sit above the sheet; the sheet's stops set it. */
-  --sheet-height: 8rem;
+  /* How far the bottom buttons sit above the sheet; the sheet's stops set it. At the peek
+     it is the peek's measured height (--sheet-peek, set by the planner). */
+  --sheet-height: var(--sheet-peek, 8rem);
   /* What floats over the map (buttons, chip, snap offers): above Leaflet's map pane (400),
      below its controls (1000), the sheet and the side panel. */
   --phone-z-floating: 500;
@@ -50,14 +51,17 @@
 
 .phone .side-panel:not([data-open]) .phone-totals {
   flex-direction: column;
+  flex-wrap: nowrap;
   gap: var(--space-2);
   font-size: 0.85rem;
   text-align: center;
+}
+
+.phone .side-panel:not([data-open]) .phone-total {
   white-space: normal;
 }
 
 .phone .side-panel[data-open] .phone-peek-summary {
-  flex-wrap: wrap;
   padding: var(--space-2) var(--space-1) var(--space-1);
 }
 
@@ -116,12 +120,16 @@
   color: var(--color-danger);
 }
 
+/* The peek's header: the trip name on its own line, the totals under it (or alone, unnamed). */
 .phone-peek-summary {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-1);
   padding: 0 var(--space-3) var(--space-1);
+}
+
+.phone-peek-summary:empty {
+  display: none;
 }
 
 .phone-trip-name {
@@ -133,13 +141,27 @@
   white-space: nowrap;
 }
 
+/* Wraps when the figures don't fit one line; a figure never breaks inside. */
 .phone-totals {
   display: flex;
-  flex: none;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
   margin: 0;
   font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.phone-total {
   white-space: nowrap;
+}
+
+.phone-total-glyph {
+  margin-right: 0.3em;
+}
+
+/* Every tab's content starts a little below the tab row. */
+.phone-tab-panels {
+  padding-top: var(--space-3);
 }
 
 .phone-empty {

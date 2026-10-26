@@ -60,10 +60,12 @@ body {
   border: 0;
 }
 
+/* The visible screen: on a phone 100vh also counts the area behind the browser's
+   toolbar, which pushed the planner's bottom buttons behind the sheet. */
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
 }
 
 .navigation-notice {
@@ -72,6 +74,14 @@ body {
   background: #fff4ce;
   border-bottom: 1px solid #e0c97a;
   font-size: 0.9rem;
+}
+
+/* The phone planner shows the disclaimer in the access popover and the Trip tab
+   instead (ADR 0026). Keep this query in step with PHONE_QUERY in usePhoneLayout.ts. */
+@media (max-width: 640px), (max-height: 640px) and (pointer: coarse) {
+  .navigation-notice {
+    display: none;
+  }
 }
 
 .planner {

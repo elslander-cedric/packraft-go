@@ -63,7 +63,7 @@ test("tapping the map adds points, routes the legs, updates the totals; undo rem
   await openPhone(page);
 
   await expect(sheet(page)).toBeVisible();
-  await expect(sheet(page).getByRole("heading", { name: strings.tripNamePlaceholder })).toBeVisible();
+  await expect(sheet(page).getByRole("heading")).toHaveCount(0);
   await expect(undoButton(page)).toBeDisabled();
 
   await tapMap(page, -100, 0);
@@ -100,7 +100,7 @@ test("tapping the map adds points, routes the legs, updates the totals; undo rem
   expect(network.blocked).toEqual([]);
 });
 
-test("the peek shows the trip name, the totals and the five tabs; a tab press at peek raises the sheet to half", async ({
+test("the peek shows the five tabs (an empty, unnamed trip has no name or totals); a tab press at peek raises the sheet to half", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -109,7 +109,7 @@ test("the peek shows the trip name, the totals and the five tabs; a tab press at
 
   const names = Object.values(strings.phone.tabs);
   for (const name of names) await expect(tab(page, name)).toBeVisible();
-  await expect(sheet(page).locator(".phone-totals")).toBeVisible();
+  await expect(sheet(page).locator(".phone-totals")).toHaveCount(0);
 
   // The sheet slides in when the planner opens.
   await expect.poll(() => sheetHeight(page)).toBeLessThan(200);

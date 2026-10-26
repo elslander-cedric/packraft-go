@@ -24,7 +24,8 @@
   cursor: pointer;
 }
 
-.tab[data-selected] {
+/* Base UI marks the selected tab with data-active. */
+.tab[data-active] {
   border-bottom-color: var(--color-focus);
   color: var(--color-text);
   font-weight: 600;

@@ -69,7 +69,16 @@ export type TripSummary = {
   readonly legs: readonly LegSummary[];
   /** The trip's days: one without camps, none without legs. Always derived, never stored. */
   readonly days: readonly DaySummary[];
-  readonly trip: { readonly distanceKm: number; readonly timeH: number; readonly timeStatus: TimeStatus };
+  /** The whole trip: its distance, split by mode, climb and descent (hike legs only, like a day's) and time. */
+  readonly trip: {
+    readonly distanceKm: number;
+    readonly hikeDistanceKm: number;
+    readonly paddleDistanceKm: number;
+    readonly climbM: number;
+    readonly descentM: number;
+    readonly timeH: number;
+    readonly timeStatus: TimeStatus;
+  };
 };
 
 const EARTH_MEAN_RADIUS_KM = 6371.0088;
@@ -191,6 +200,10 @@ export function summarise(trip: Trip, settings: Settings = defaultSettings): Tri
     }),
     trip: {
       distanceKm: sum((leg) => leg.distanceKm),
+      hikeDistanceKm: sum((leg) => (leg.mode === "hike" ? leg.distanceKm : 0)),
+      paddleDistanceKm: sum((leg) => (leg.mode === "paddle" ? leg.distanceKm : 0)),
+      climbM: sum((leg) => leg.climbM ?? 0),
+      descentM: sum((leg) => leg.descentM ?? 0),
       timeH: sum((leg) => leg.timeH),
       timeStatus: timeStatusOf(trip.legs, legs),
     },

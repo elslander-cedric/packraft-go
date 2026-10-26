@@ -31,7 +31,9 @@
   transform: translateY(100%);
 }
 
+/* Measured for the peek's snap point: flow-root keeps the handle's margin inside it. */
 .bottom-sheet-peek {
+  display: flow-root;
   flex: none;
   min-height: 0;
   user-select: none;
@@ -62,5 +64,5 @@
 }
 
 .bottom-sheet[data-stop="peek"] .bottom-sheet-body {
-  margin-bottom: calc(90dvh - 8rem);
+  margin-bottom: calc(90dvh - var(--bottom-sheet-peek, 8rem));
 }

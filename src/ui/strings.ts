@@ -176,6 +176,17 @@ export const strings = {
     sheetLabel: "Trip",
     tabsLabel: "Trip sections",
     tabs: { legs: "Legs", days: "Days", trip: "Trip", accessPoints: "Access points", settings: "Settings" },
+    // The trip's totals in the sheet's peek: each figure after its icon, named for screen readers.
+    totals: {
+      glyphs: { hike: "🥾", paddle: "🛶", climb: "↗", descent: "↘", time: "⏱" },
+      labels: {
+        hike: "Hike distance",
+        paddle: "Paddle distance",
+        climb: "Climb",
+        descent: "Descent",
+        time: "Estimated total time",
+      },
+    },
     // The side panel that replaces the sheet when the phone is held sideways (#126).
     collapsePanelButton: "Collapse the trip panel",
     expandPanelButton: "Open the trip panel",

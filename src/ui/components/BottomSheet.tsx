@@ -1,12 +1,12 @@
 import { Drawer } from "@base-ui/react/drawer";
-import type { ReactNode } from "react";
+import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
 import "./BottomSheet.css";
 
 /** Where the sheet rests: just the header, half the screen, or nearly all of it. */
 export type SheetStop = "peek" | "half" | "full";
 
-/** Snap points: the peek is a fixed height, the others are fractions of the screen. */
-const snapPoints = ["8rem", 0.5, 0.9];
+/** The peek's least height; it grows when its content needs more, e.g. a wrapped header. */
+const MIN_PEEK_PX = 128;
 const stops: readonly SheetStop[] = ["peek", "half", "full"];
 
 export type BottomSheetProps = {
@@ -18,6 +18,8 @@ export type BottomSheetProps = {
   peek: ReactNode;
   /** Scrolls when it doesn't fit. */
   children: ReactNode;
+  /** Called with the peek's height in pixels whenever it changes, e.g. to keep buttons above it. */
+  onPeekHeightChange?: (px: number) => void;
 };
 
 /**
@@ -25,7 +27,25 @@ export type BottomSheetProps = {
  * closes and doesn't block the page behind it (non-modal), and settles at one of
  * three stops, picked by how far it is dragged.
  */
-export function BottomSheet({ label, stop, onStopChange, peek, children }: BottomSheetProps) {
+export function BottomSheet({ label, stop, onStopChange, peek, children, onPeekHeightChange }: BottomSheetProps) {
+  // Snap points: the peek fits its content (at least MIN_PEEK_PX), the others are fractions of the screen.
+  const [peekPx, setPeekPx] = useState(MIN_PEEK_PX);
+  const measurePeek = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (!element) return;
+      const observer = new ResizeObserver(() => {
+        // From the sheet's top edge, so its border counts too.
+        const sheetTop = element.parentElement!.getBoundingClientRect().top;
+        const px = Math.max(MIN_PEEK_PX, Math.ceil(element.getBoundingClientRect().bottom - sheetTop));
+        setPeekPx(px);
+        onPeekHeightChange?.(px);
+      });
+      observer.observe(element);
+      return () => observer.disconnect();
+    },
+    [onPeekHeightChange],
+  );
+  const snapPoints = [`${peekPx}px`, 0.5, 0.9];
   return (
     <Drawer.Root
       open
@@ -50,8 +70,14 @@ export function BottomSheet({ label, stop, onStopChange, peek, children }: Botto
     >
       <Drawer.Portal>
         <Drawer.Viewport className="bottom-sheet-viewport">
-          <Drawer.Popup className="bottom-sheet" aria-label={label} data-stop={stop} initialFocus={false}>
-            <div className="bottom-sheet-peek">
+          <Drawer.Popup
+            className="bottom-sheet"
+            aria-label={label}
+            data-stop={stop}
+            initialFocus={false}
+            style={{ "--bottom-sheet-peek": `${peekPx}px` } as CSSProperties}
+          >
+            <div className="bottom-sheet-peek" ref={measurePeek}>
               <div className="bottom-sheet-handle" aria-hidden />
               {peek}
             </div>
