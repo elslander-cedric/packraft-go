@@ -61,8 +61,8 @@ export default function TripPlanner({ router }: { router?: Router }) {
           startDate={trip.startDate}
           onSetStartDate={(date) => dispatch({ type: "setStartDate", date })}
           onNewTrip={() => dispatch({ type: "newTrip" })}
-          onSaveFile={saveFile}
-          onExportGpx={trip.legs.length > 0 ? exportGpx : null}
+          onSaveFile={() => saveFile()}
+          onExportGpx={trip.legs.length > 0 ? () => exportGpx() : null}
           onOpenFile={(file) => void openFile(file)}
           newTripButtonRef={newTripButton}
           openFileButtonRef={openFileButton}

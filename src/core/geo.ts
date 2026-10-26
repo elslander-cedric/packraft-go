@@ -45,6 +45,31 @@ function distanceToSegmentM(point: LatLng, a: Position, b: Position): number {
   return Math.hypot(ax + t * dx, ay + t * dy);
 }
 
+/**
+ * The point on a polyline (at least one point) nearest to `point`, on a local
+ * flat approximation around `point`.
+ */
+export function nearestOnLine(point: LatLng, line: readonly LatLng[]): LatLng {
+  let best: LatLng = { lat: line[0].lat, lng: line[0].lng };
+  let bestM = distanceM(point, best);
+  for (let i = 1; i < line.length; i++) {
+    const a = line[i - 1];
+    const b = line[i];
+    const [ax, ay] = toLocal(point, [a.lng, a.lat]);
+    const [bx, by] = toLocal(point, [b.lng, b.lat]);
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lengthSq = dx * dx + dy * dy;
+    const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSq));
+    const m = Math.hypot(ax + t * dx, ay + t * dy);
+    if (m < bestM) {
+      bestM = m;
+      best = { lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) };
+    }
+  }
+  return best;
+}
+
 /** Distance in metres from `point` to a line; Infinity for an empty line. */
 export function distanceToLineM(point: LatLng, line: readonly Position[]): number {
   if (line.length === 1) return distanceM(point, { lat: line[0][1], lng: line[0][0] });

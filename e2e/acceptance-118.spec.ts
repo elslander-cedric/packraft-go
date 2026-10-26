@@ -35,7 +35,8 @@ test("a short wide touch window (1280x600) is the phone planner; a tall touch ta
     await serveOffline(p);
     await p.goto("/");
     if (phone) {
-      await expect(sheet(p)).toBeVisible();
+      // Wider than tall: the side panel stands in for the sheet (#126).
+      await expect(p.getByRole("complementary", { name: strings.phone.sheetLabel })).toBeVisible();
       await expect(newTrip(p)).toHaveCount(0);
     } else {
       await expect(newTrip(p)).toBeVisible();

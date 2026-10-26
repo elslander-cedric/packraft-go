@@ -6,7 +6,8 @@ import { CircleMarker, LayerGroup, Pane, Polygon, Polyline, useMap, useMapEvents
 import type { AccessFeature, AccessState, Geometry, LockMarker, Position } from "@/core/access";
 import { strings } from "@/ui/strings";
 import { accessColours } from "./accessColours";
-import { lockMarkersMinZoom } from "./mapConfig";
+import { useHold } from "./hold";
+import { lockMarkersMinZoom, paneZIndex } from "./mapConfig";
 
 export type AccessLayerProps = {
   features: readonly AccessFeature[];
@@ -14,6 +15,12 @@ export type AccessLayerProps = {
   onSelect: (id: string) => void;
   /** Lock markers (#57), drawn above the waters. */
   locks?: readonly LockMarker[];
+  /**
+   * The phone's gestures (#125, ADR 0026): a tap on water is a tap on the map (it edits the
+   * route), and holding a water 0.4 s (or a right-click on it) opens its details. Locks are
+   * drawn above the legs' hit lines, so a tap on one opens its details.
+   */
+  touch?: boolean;
 };
 
 const toLatLng = ([lng, lat]: Position): LatLngExpression => [lat, lng];
@@ -32,11 +39,15 @@ function shapeOf(geometry: Geometry): { kind: "line" | "area"; positions: LatLng
   }
 }
 
-function AccessShape({ feature, selected, onSelect }: { feature: AccessFeature; selected: boolean; onSelect: () => void }) {
+type AccessShapeProps = { feature: AccessFeature; selected: boolean; onSelect: () => void; touch: boolean };
+
+function AccessShape({ feature, selected, onSelect, touch }: AccessShapeProps) {
   const line = useRef<LeafletPolyline>(null);
   const area = useRef<LeafletPolygon>(null);
   const state: AccessState = feature.status.state;
   const { kind, positions } = shapeOf(feature.record.geometry);
+  // On the phone, holding the water opens its details.
+  useHold(kind === "line" ? line : area, onSelect, touch);
   const colour = accessColours[state];
   // Leaflet only reads className when the path is created, so selection toggles the class directly.
   useEffect(() => {
@@ -46,8 +57,8 @@ function AccessShape({ feature, selected, onSelect }: { feature: AccessFeature; 
     // Classes let tests and styles find a water by id and state.
     className: `access-feature access-${state} access-record-${feature.record.id}`,
     // A click on a water opens its details; it doesn't add a point to the trip.
-    bubblingMouseEvents: false,
-    eventHandlers: { click: onSelect },
+    // On the phone a tap on water is a tap on the map, and a hold opens the details.
+    ...(touch ? {} : { bubblingMouseEvents: false, eventHandlers: { click: onSelect } }),
   };
   return kind === "line" ? (
     <Polyline
@@ -92,21 +103,32 @@ function LockMarkers({ locks, selectedId, onSelect }: Required<Pick<AccessLayerP
 }
 
 /** The access layer: specific waters coloured by access status, and lock markers, below the trip. */
-export default function AccessLayer({ features, selectedId, onSelect, locks = [] }: AccessLayerProps) {
+export default function AccessLayer({ features, selectedId, onSelect, locks = [], touch = false }: AccessLayerProps) {
+  const lockMarkers = <LockMarkers locks={locks} selectedId={selectedId} onSelect={onSelect} />;
   return (
-    <Pane name="access" pane="overlayPane" style={{ zIndex: 350 }}>
-      <LayerGroup attribution={strings.accessAttribution}>
-        {features.map((feature) => (
-          <AccessShape
-            // Leaflet reads the class name only when a path is created, so a new state makes a new path.
-            key={`${feature.record.id}:${feature.status.state}`}
-            feature={feature}
-            selected={feature.record.id === selectedId}
-            onSelect={() => onSelect(feature.record.id)}
-          />
-        ))}
-        <LockMarkers locks={locks} selectedId={selectedId} onSelect={onSelect} />
-      </LayerGroup>
-    </Pane>
+    <>
+      <Pane name="access" pane="overlayPane" style={{ zIndex: paneZIndex.access }}>
+        <LayerGroup attribution={strings.accessAttribution}>
+          {features.map((feature) => (
+            <AccessShape
+              // Leaflet reads the class name only when a path is created, so a new state makes a new path.
+              key={`${feature.record.id}:${feature.status.state}`}
+              feature={feature}
+              selected={feature.record.id === selectedId}
+              onSelect={() => onSelect(feature.record.id)}
+              touch={touch}
+            />
+          ))}
+          {!touch && lockMarkers}
+        </LayerGroup>
+      </Pane>
+      {/* On the phone, locks sit above the legs' hit lines and below the access-point markers,
+          so a tap on a lock on a leg still opens the lock. */}
+      {touch && (
+        <Pane name="access-locks" style={{ zIndex: paneZIndex.accessLocks }}>
+          {lockMarkers}
+        </Pane>
+      )}
+    </>
   );
 }

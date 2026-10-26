@@ -165,7 +165,10 @@ test("the sheet settles at peek, half or 90% by drag distance, never closes, and
   await expect.poll(() => sheetHeight(page)).toBeLessThan(peek + 4);
   await expect(sheet(page)).toBeVisible();
   await expect(tab(page, strings.phone.tabs.legs)).toBeVisible();
-
+  // And it stays there: the drawer doesn't bounce back to 90% once its animations end (#126).
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  await page.waitForTimeout(300);
+  expect(await sheetHeight(page)).toBeLessThan(peek + 4);
 });
 
 // #120 (from #118): the same stops with a finger, through the touch helper.
@@ -345,7 +348,10 @@ test.describe("which screens get the phone planner", () => {
   test("a sideways phone (touch, 640 px tall or less) keeps the phone layout", async ({ page }) => {
     await serveOffline(page);
     await page.setViewportSize({ width: 863, height: 360 });
-    expect(await isPhonePlanner(page)).toBe(true);
+    await openPhone(page);
+    // Sideways the side panel stands in for the sheet (#126).
+    await expect(page.getByRole("complementary", { name: strings.phone.sheetLabel })).toBeVisible();
+    expect(await isDesktop(page)).toBe(false);
   });
 
   test("an iPad-sized touch screen gets the desktop layout", async ({ page }) => {

@@ -176,7 +176,16 @@ export const strings = {
     sheetLabel: "Trip",
     tabsLabel: "Trip sections",
     tabs: { legs: "Legs", days: "Days", trip: "Trip", accessPoints: "Access points", settings: "Settings" },
+    // The side panel that replaces the sheet when the phone is held sideways (#126).
+    collapsePanelButton: "Collapse the trip panel",
+    expandPanelButton: "Open the trip panel",
+    collapsePanelGlyph: "›",
+    expandPanelGlyph: "‹",
     legAccessLabel: "Access",
+    // The floating hike / paddle toggle for the leg the next map tap adds (#121).
+    nextLegModeLabel: "Next leg's mode",
+    // Its icon-only toggles; their names are `legModeHike` and `legModePaddle`.
+    nextLegModeGlyphs: { hike: "🥾", paddle: "🛶" },
     // The glyphs inside the position and undo buttons; their names are `showPositionButton` and `undoButton`.
     showPositionGlyph: "◎",
     undoGlyph: "↶",
@@ -212,6 +221,29 @@ export const strings = {
     noAccessPoints: "No access points yet.",
     // The list entry's heading, e.g. "Put-in, Official aire".
     listEntry: (use: string, kind: string) => `${use}, ${kind}`,
+    // The Trip tab's access summary per day (#123).
+    dayAccessLabel: "Access per day",
+    // The access layer on the phone (#125): the layers button under ◎ is named `accessLayerToggle`.
+    accessLayerGlyph: "≋",
+    // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a popover.
+    accessChip: (when: string) => `Access · ${when}`,
+    accessChipToday: "today",
+    accessChipGlyph: "▾",
+    accessPopoverLabel: "Access layer",
+    // The floating menu top left (#124): the rare actions on the whole trip.
+    menu: {
+      button: "Menu",
+      glyph: "☰",
+      newTrip: "New trip",
+      saveFile: "Save…",
+      openFile: "Open…",
+      exportGpx: "Export GPX…",
+      // Save… and Export GPX… ask for the trip name first, prefilled with the current one.
+      saveTitle: "Save trip",
+      saveConfirm: "Save",
+      exportTitle: "Export GPX",
+      exportConfirm: "Export",
+    },
   },
   // The disclaimer shown above the map (ADR 0024).
   navigationRulesNotice: "Indicative only; you're responsible for checking local rules.",

@@ -1,7 +1,8 @@
-// Edits for the trip planner core: move and delete points, switch a leg's mode,
-// mark or unmark a camp (spec #2, ADR 0017).
+// Edits for the trip planner core: move, insert and delete points, switch a
+// leg's mode, mark or unmark a camp (spec #2, ADR 0017, #122).
 // Legs an edit changes are replaced by fresh, unrouted legs; legs it does not
 // change are carried over as they are, so their routed results are kept.
+import { nearestOnLine } from "./geo";
 import type { LatLng, Leg, LegMode, Trip } from "./trip";
 
 /**
@@ -103,5 +104,26 @@ export function deletePoint(trip: Trip, index: number): Trip {
   }
   if (!trip.camps) return { ...trip, points, legs };
   const camps = trip.camps.filter((camp) => camp !== index).map((camp) => (camp > index ? camp - 1 : camp));
+  return { ...trip, points, legs, camps };
+}
+
+/**
+ * Inserts a point on a leg, nearest to `near`: on the leg's route when it is
+ * routed, else on the straight line between its points (#122). The leg splits
+ * into two unrouted legs with its mode; every other leg keeps its route. Camps
+ * stay on their points, so later camps shift by one.
+ */
+export function insertPoint(trip: Trip, index: number, near: LatLng): Trip {
+  if (!(index in trip.legs)) return trip;
+  const leg = trip.legs[index];
+  const line =
+    leg.route?.status === "routed" && leg.route.geometry.length > 0
+      ? leg.route.geometry
+      : [trip.points[index], trip.points[index + 1]];
+  const at = nearestOnLine(near, line);
+  const points = [...trip.points.slice(0, index + 1), at, ...trip.points.slice(index + 1)];
+  const legs = [...trip.legs.slice(0, index), unrouted(leg), unrouted(leg), ...trip.legs.slice(index + 1)];
+  if (!trip.camps) return { ...trip, points, legs };
+  const camps = trip.camps.map((camp) => (camp > index ? camp + 1 : camp));
   return { ...trip, points, legs, camps };
 }

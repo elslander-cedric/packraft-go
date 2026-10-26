@@ -8,6 +8,9 @@
   min-height: 0;
   /* How far the bottom buttons sit above the sheet; the sheet's stops set it. */
   --sheet-height: 8rem;
+  /* What floats over the map (buttons, chip, snap offers): above Leaflet's map pane (400),
+     below its controls (1000), the sheet and the side panel. */
+  --phone-z-floating: 500;
 }
 
 .phone-stop-half {
@@ -18,6 +21,46 @@
   --sheet-height: 90dvh;
 }
 
+/* Held sideways (#126): no sheet below; the side panel covers the right, so the right-hand
+   buttons sit beside it, in the same corners. */
+.phone-sideways {
+  --sheet-height: 0px;
+  --panel-cover: var(--side-panel-strip-width);
+}
+
+.phone-panel-open {
+  --panel-cover: var(--side-panel-width);
+}
+
+.phone-sideways .phone-buttons:not(.phone-buttons-left) {
+  right: calc(var(--panel-cover) + var(--space-3));
+  transition:
+    right 250ms,
+    bottom 250ms;
+}
+
+/* The collapsed panel is a strip with the totals only, one under the other. */
+.phone .side-panel:not([data-open]) .phone-peek-summary {
+  padding: 0;
+}
+
+.phone .side-panel:not([data-open]) .phone-trip-name {
+  display: none;
+}
+
+.phone .side-panel:not([data-open]) .phone-totals {
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  text-align: center;
+  white-space: normal;
+}
+
+.phone .side-panel[data-open] .phone-peek-summary {
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-1) var(--space-1);
+}
+
 .phone-map {
   position: absolute;
   inset: 0;
@@ -26,7 +69,7 @@
 .phone-buttons {
   position: absolute;
   right: var(--space-3);
-  z-index: 500;
+  z-index: var(--phone-z-floating);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -226,4 +269,229 @@
 
 .button.phone-access-point-row[aria-current] {
   border-left-color: var(--color-focus);
+}
+
+/* The Legs tab (#121): a whole row heading is the button that opens it. */
+.button.phone-row-toggle {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: inherit;
+  text-align: left;
+}
+
+.button.phone-row-toggle:hover:not([data-disabled]) {
+  background: transparent;
+}
+
+.phone-row-figure {
+  white-space: nowrap;
+}
+
+.phone-row-details {
+  display: flex;
+  flex-basis: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-right: var(--space-2);
+}
+
+.phone-row-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+
+.phone-mode-switch .toggle {
+  min-width: 4.5rem;
+  min-height: 2.75rem;
+  font-size: 0.95rem;
+}
+
+/* The next leg's mode, over the map with the other bottom-right buttons: stacked, one width. */
+.phone-next-mode {
+  flex-direction: column;
+  width: var(--phone-next-mode-width);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+}
+
+.phone-next-mode .toggle {
+  min-height: 2.75rem;
+  padding: 0;
+  font-size: 1.4rem;
+}
+
+.phone-next-mode .toggle + .toggle {
+  border-top: none;
+  border-left: 1px solid var(--color-border-strong);
+}
+
+.phone {
+  --phone-next-mode-width: 2.75rem;
+}
+
+/* A snap offer floats above the sheet, left of the bottom-right buttons; the sheet keeps its height. */
+.phone-snap-offers {
+  position: absolute;
+  bottom: calc(var(--sheet-height) + var(--space-3));
+  left: calc(var(--space-3) + 2.75rem + var(--space-2));
+  right: calc(var(--panel-cover, 0px) + var(--space-3) * 2 + var(--phone-next-mode-width));
+  z-index: var(--phone-z-floating);
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  transition:
+    bottom 250ms,
+    right 250ms;
+}
+
+.phone-snap-offers .snap-offers {
+  pointer-events: auto;
+}
+
+.phone-snap-offers .snap-offer {
+  padding: var(--space-2);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  font-size: 0.9rem;
+}
+
+.phone-snap-offers .button {
+  min-height: 2.75rem;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.95rem;
+}
+
+/* The Days tab (#123): the desktop's day rows as cards; tapping one zooms the map to that day. */
+.phone .days-panel {
+  max-height: none;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+}
+
+.phone .days-panel h2 {
+  margin-top: 0;
+}
+
+.phone .day-row {
+  min-height: 2.75rem;
+  padding: var(--space-2) 0 var(--space-2) var(--space-2);
+  margin-bottom: var(--space-2);
+  cursor: pointer;
+}
+
+.day-select {
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The Trip tab (#123): name, start date and the trip's access summary. */
+.phone-trip-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.phone-trip-tab label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.phone-trip-tab input {
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+
+.phone-start-date {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.phone-start-date label {
+  flex: 1;
+}
+
+.phone-disclaimer {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.phone-day-access {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.phone .trip-access h2 {
+  margin-top: 0;
+}
+
+/* The Settings tab (#123): the desktop's fields, finger-sized. */
+.phone .settings-panel input {
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+
+/* The access layer's chip (#125): top centre of the map, between the menu and ◎. */
+.phone-access-chip-slot {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  z-index: var(--phone-z-floating);
+  transform: translateX(-50%);
+}
+
+/* Sideways, the chip is centred on the map beside the panel (#126). */
+.phone-sideways .phone-access-chip-slot {
+  left: calc((100% - var(--panel-cover)) / 2);
+  transition: left 250ms;
+}
+
+.phone-access-chip {
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 1.375rem;
+  background: var(--color-surface);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  white-space: nowrap;
+}
+
+.phone-access-popover .phone-disclaimer {
+  margin-top: 0;
+}
+
+/* A water's or a lock's details in the sheet, above the open tab: part of the sheet, not a floating card. */
+.phone-access-details .access-detail {
+  width: auto;
+  margin: 0 var(--space-3) var(--space-3);
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  font-size: 0.95rem;
+}
+
+.phone-access-details .access-detail .access-detail-close {
+  min-height: 2.75rem;
 }
