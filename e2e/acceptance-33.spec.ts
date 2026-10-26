@@ -1,4 +1,4 @@
-// Tester acceptance tests for #33: version 2 is the only save-format version.
+// Acceptance tests for #33: version 2 is the only save-format version.
 // Version 1 is refused the same way as other unknown versions, in autosave and Open file.
 // Updated: format reset (#52). Version 1 is the only version again; the old version 2 is refused the
 // same way as other unknown versions, so the roles of 1 and 2 are swapped.

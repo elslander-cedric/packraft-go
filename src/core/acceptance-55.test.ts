@@ -1,4 +1,4 @@
-// Acceptance tests for #55 (ADR 0023), written by the tester: merge-import
+// Acceptance tests for #55 (ADR 0023): merge-import
 // de-duplication, invalid-file refusal, borders, special characters.
 import { describe, expect, it } from "vitest";
 import {

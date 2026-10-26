@@ -1,4 +1,4 @@
-// Acceptance tests for #10 (save to file / open from file), written by the tester
+// Acceptance tests for #10 (save to file / open from file) written
 // from the issue, spec #2 (stories 41-44) and ADR 0011, before reading the diff.
 // BRouter is answered from the committed recorded responses (ADR 0019); every
 // request is counted so "no re-routing" can be checked.

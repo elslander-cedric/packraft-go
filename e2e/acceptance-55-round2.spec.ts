@@ -1,4 +1,4 @@
-// Tester's round 2 acceptance tests for #55: a damaged autosave is backed up, never wiped.
+// Round 2 acceptance tests for #55: a damaged autosave is backed up, never wiped.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";

@@ -1,4 +1,4 @@
-// Acceptance tests for #8 (camps and per-day totals), written by the tester from
+// Acceptance tests for #8 (camps and per-day totals) written from
 // the issue, spec #2 (stories 20-24, 30) and ADRs 0008 / 0009 before reading the
 // diff. BRouter and tiles are answered from recorded fixtures (ADR 0019); every
 // BRouter request is counted so "marking a camp routes nothing" can be checked.

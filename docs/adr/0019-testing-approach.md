@@ -12,4 +12,4 @@ Tests must be fast, repeatable and must not hammer a free community server.
 Unit tests with Vitest; a few end-to-end tests with Playwright. Tests use recorded BRouter responses rather than the live server.
 
 ## Consequences
-- Builders work test-first.
+- Code is written test-first.

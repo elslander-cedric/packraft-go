@@ -1,4 +1,4 @@
-// Acceptance tests for #19 (tester): a click right after a drag is never lost,
+// Acceptance tests for #19: a click right after a drag is never lost,
 // and the click the browser sends at the end of a drag never adds or selects a point.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";

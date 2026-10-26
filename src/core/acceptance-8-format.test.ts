@@ -1,4 +1,4 @@
-// Tester acceptance tests for #8, round 2: the save format rule Cedric approved.
+// Acceptance tests for #8, round 2: the save format rule Cedric approved.
 // "The save format is version 2 and is always written as v2 (autosave and file).
 // Loading accepts v1 (no camps) and v2. Any other version is refused with a
 // clear 'newer/unknown version' message and the current trip is left untouched."

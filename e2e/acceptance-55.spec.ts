@@ -1,4 +1,4 @@
-// Tester's acceptance tests for #55: access points are separate from trips,
+// Acceptance tests for #55: access points are separate from trips,
 // refused imports leave points alone, autosave edge cases, special characters.
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";

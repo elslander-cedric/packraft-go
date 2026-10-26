@@ -1,8 +1,8 @@
-// Tester acceptance checks for #57 (Brussels rules and locks).
+// Acceptance checks for #57 (Brussels rules and locks).
 import { describe, expect, it } from "vitest";
 import { builtInDatasets, builtInLocks } from "./builtInRules";
 
-describe("#57 tester", () => {
+describe("#57", () => {
   it("keeps Walloon and Brussels datasets side by side", () => {
     const ids = builtInDatasets.map((d) => d.id);
     expect(ids).toContain("wallonia");

@@ -1,4 +1,4 @@
-// Acceptance tests for #7 (time estimates and settings), written by the tester
+// Acceptance tests for #7 (time estimates and settings) written
 // from the ticket, spec #2 and ADR 0009. BRouter and tiles are answered from
 // recorded fixtures; no live service is called (ADR 0019).
 import { expect, test, type Page } from "@playwright/test";

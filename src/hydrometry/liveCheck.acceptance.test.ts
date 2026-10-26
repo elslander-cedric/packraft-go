@@ -1,4 +1,4 @@
-// Acceptance tests for #64 (tester): DST boundaries, wrong-season offsets, no live network.
+// Acceptance tests for #64: DST boundaries, wrong-season offsets, no live network.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";

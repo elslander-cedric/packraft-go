@@ -1,5 +1,5 @@
 // Acceptance tests for #4 round 2 (integration with #6: drag, delete, undo),
-// written by the tester from #4's routing rule ("edits clear the routed result
+// written from #4's routing rule ("edits clear the routed result
 // of the legs they change, so changed legs get re-routed automatically and
 // unchanged legs never are") and #6's "undo restores the previous state,
 // including prior routed results". Seam 1: the core with an injected router.

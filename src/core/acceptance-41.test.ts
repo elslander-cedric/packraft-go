@@ -1,4 +1,4 @@
-// Acceptance tests for #41 (ADR 0021, GLOSSARY "Section"), written by the tester
+// Acceptance tests for #41 (ADR 0021, GLOSSARY "Section") written
 // from the issue and the ADR. Seam: the trip planner core's pure functions
 // (tripSections, tripToGpxFiles) and the app's day totals from #8 (summarise).
 import { DOMParser } from "@xmldom/xmldom";

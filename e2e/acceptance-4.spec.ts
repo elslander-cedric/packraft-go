@@ -1,4 +1,4 @@
-// Acceptance tests for #4 (hike legs snap to trails), written by the tester
+// Acceptance tests for #4 (hike legs snap to trails) written
 // from the issue's acceptance criteria. BRouter is answered from the committed
 // recorded responses; every request the page makes is watched so the live
 // server is never reached.

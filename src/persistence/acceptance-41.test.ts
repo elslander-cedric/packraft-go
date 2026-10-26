@@ -1,4 +1,4 @@
-// Acceptance tests for #41 (ADR 0021), written by the tester: the export is one
+// Acceptance tests for #41 (ADR 0021): the export is one
 // valid ZIP holding one GPX file per section. Seam: gpxZip's bytes, read both
 // with fflate and by walking the ZIP's central directory by hand.
 import { strFromU8, unzipSync } from "fflate";

@@ -54,7 +54,7 @@ Low priority. File one if it starts to bother you.
 - [ ] Monthly reminder to run `npm run check:brouter` and `npm run check:kiwis` (manual, polite live checks).
 - [ ] `e2e/acceptance-10.spec.ts:103` and `e2e/acceptance-9.spec.ts:109` snapshot `panel.innerText()`; like #80 and #84 they could race with access text that renders late.
 - [ ] Occasional load flakes: `acceptance-44`, and the `acceptance-5` portage test.
-- [ ] Unused `fam` lint warning in `e2e/tester-70.spec.ts`.
+- [ ] Unused `fam` lint warning in `e2e/acceptance-70-fonts.spec.ts`.
 - [ ] `TripAccessSummary` ignores lock warnings when deciding to hide itself (harmless today: a leg with a lock always has a state).
 - [ ] Live flows: a failed KiWIS request is cached for 15 minutes (a reload clears it). (from #61)
 - [ ] Lock detection: 100 m from the leg, same-name chambers within 400 m count once; check against real trips. A failed (straight) leg can cross or miss a lock. (from #60)

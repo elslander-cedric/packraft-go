@@ -1,4 +1,4 @@
-// Tester's acceptance tests for #28: an autosave from a newer or unknown version
+// Acceptance tests for #28: an autosave from a newer or unknown version
 // is kept and the planner warns, instead of silently replacing it with an empty trip.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";

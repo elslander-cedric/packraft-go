@@ -1,4 +1,4 @@
-// Acceptance tests for #4 round 2 (integration with #6), written by the tester:
+// Acceptance tests for #4 round 2 (integration with #6):
 // drag, delete and undo on routed legs re-request only the changed legs, undo
 // brings routes back without asking BRouter again, and no leg stays pending.
 // BRouter is answered from the committed recorded responses.

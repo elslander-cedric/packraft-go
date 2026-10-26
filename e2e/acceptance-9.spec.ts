@@ -1,5 +1,5 @@
-// Acceptance tests for #9 (autosave, restore, name and new trip), written by the
-// tester from the issue, its comments and spec #2. BRouter is answered from the
+// Acceptance tests for #9 (autosave, restore, name and new trip), written from
+// the issue, its comments and spec #2. BRouter is answered from the
 // committed recorded responses; every external request is watched so the live
 // server is never reached (ADR 0019).
 import { expect, test, type Page } from "@playwright/test";

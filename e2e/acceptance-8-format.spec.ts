@@ -1,4 +1,4 @@
-// Tester acceptance tests for #8, round 2: the save format rule Cedric approved.
+// Acceptance tests for #8, round 2: the save format rule Cedric approved.
 // Always write version 2 (autosave and file); read version 1 (no camps) and 2;
 // refuse any other version with a "newer or unknown version" message and leave
 // the current trip untouched. Unreadable autosave falls back to an empty trip.

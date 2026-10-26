@@ -1,5 +1,5 @@
-// Acceptance tests for #9 (autosave, restore, name and new trip), written by the
-// tester from the issue, its comments and spec #2. Seam 1 only: build trips with
+// Acceptance tests for #9 (autosave, restore, name and new trip), written from
+// the issue, its comments and spec #2. Seam 1 only: build trips with
 // the core's public functions, save and restore them, and read trip and figures.
 import { describe, expect, it } from "vitest";
 import type { Router, RouteResult } from "./router";

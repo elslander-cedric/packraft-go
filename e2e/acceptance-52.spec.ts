@@ -1,4 +1,4 @@
-// Tester acceptance tests for #52: trip start date and save format reset
+// Acceptance tests for #52: trip start date and save format reset
 // (ADR 0011 amendment "format reset", ADR 0022). Written from the issue and
 // spec #51 before reading the diff.
 import { readFile } from "node:fs/promises";

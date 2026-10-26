@@ -1,4 +1,4 @@
-// Acceptance tests for #4 (hike legs snap to trails), written by the tester
+// Acceptance tests for #4 (hike legs snap to trails) written
 // from the issue's acceptance criteria. Seam 1: the trip planner core with an
 // injected router (a hand-rolled fake, never the network).
 import { describe, expect, it } from "vitest";

@@ -1,4 +1,4 @@
-// Tester acceptance tests for #61 (live Walloon flows). KiWIS is always
+// Acceptance tests for #61 (live Walloon flows). KiWIS is always
 // intercepted; no test calls the live service.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";

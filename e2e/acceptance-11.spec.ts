@@ -1,4 +1,4 @@
-// Acceptance tests for #11 (export as GPX), written by the tester from the issue,
+// Acceptance tests for #11 (export as GPX) written from the issue,
 // spec #2 (stories 39, 45-47) and ADR 0006. BRouter and tiles are answered from
 // recorded fixtures (ADR 0019); every request is counted so export can be shown
 // to call nothing.

@@ -1,5 +1,5 @@
-// Acceptance tests for #6 (edit the route: drag, delete, undo), written by the
-// tester from the issue's acceptance criteria. They use only the core's public
+// Acceptance tests for #6 (edit the route: drag, delete, undo), written from
+// the issue's acceptance criteria. They use only the core's public
 // interface (Seam 1): build a trip with edits, then read the trip and its figures.
 import { describe, expect, it } from "vitest";
 import { summarise } from "./summarise";

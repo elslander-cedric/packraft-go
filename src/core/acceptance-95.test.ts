@@ -1,4 +1,4 @@
-// Acceptance tests for #95 (auto router reports routing actions), by the tester.
+// Acceptance tests for #95 (auto router reports routing actions).
 import { describe, expect, it } from "vitest";
 import type { RouteResult, Router } from "./router";
 import { applyRoutingAction, createAutoRouter, markPending, storeRoute, type RoutingAction } from "./routing";

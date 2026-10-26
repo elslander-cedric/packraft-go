@@ -1,4 +1,4 @@
-// Acceptance tests for #11 (export as GPX), written by the tester from the
+// Acceptance tests for #11 (export as GPX) written from the
 // issue, spec #2 (stories 39, 45-47) and ADR 0006. Seam 1: build trips with the
 // core's public edits and a fake router, export them, and read the GPX back
 // with a plain XML parser (plus the shared GPX 1.1 structure check).
