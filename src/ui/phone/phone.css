@@ -227,3 +227,101 @@
 .button.phone-access-point-row[aria-current] {
   border-left-color: var(--color-focus);
 }
+
+/* The Legs tab (#121): a whole row heading is the button that opens it. */
+.button.phone-row-toggle {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: inherit;
+  text-align: left;
+}
+
+.button.phone-row-toggle:hover:not([data-disabled]) {
+  background: transparent;
+}
+
+.phone-row-figure {
+  white-space: nowrap;
+}
+
+.phone-row-details {
+  display: flex;
+  flex-basis: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-right: var(--space-2);
+}
+
+.phone-row-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+
+.phone-mode-switch .toggle {
+  min-width: 4.5rem;
+  min-height: 2.75rem;
+  font-size: 0.95rem;
+}
+
+/* The next leg's mode, over the map with the other bottom-right buttons: stacked, one width. */
+.phone-next-mode {
+  flex-direction: column;
+  width: var(--phone-next-mode-width);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+}
+
+.phone-next-mode .toggle {
+  min-height: 2.75rem;
+  font-size: 0.95rem;
+}
+
+.phone-next-mode .toggle + .toggle {
+  border-top: none;
+  border-left: 1px solid var(--color-border-strong);
+}
+
+.phone {
+  --phone-next-mode-width: 4.5rem;
+}
+
+/* A snap offer floats above the sheet, left of the bottom-right buttons; the sheet keeps its height. */
+.phone-snap-offers {
+  position: absolute;
+  bottom: calc(var(--sheet-height) + var(--space-3));
+  left: calc(var(--space-3) + 2.75rem + var(--space-2));
+  right: calc(var(--space-3) * 2 + var(--phone-next-mode-width));
+  z-index: 500;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  transition: bottom 250ms;
+}
+
+.phone-snap-offers .snap-offers {
+  pointer-events: auto;
+}
+
+.phone-snap-offers .snap-offer {
+  padding: var(--space-2);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  font-size: 0.9rem;
+}
+
+.phone-snap-offers .button {
+  min-height: 2.75rem;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.95rem;
+}

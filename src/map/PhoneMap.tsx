@@ -21,10 +21,13 @@ import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer
 import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
 
 /**
- * A place to show: zoomed in, centred in the part of the map the sheet leaves
- * free (it covers `coveredBelow` of the map's height).
+ * A place to show in the part of the map the sheet leaves free (it covers
+ * `coveredBelow` of the map's height): a spot, zoomed in, or a stretch such as
+ * a leg (#121), fitted whole.
  */
-export type MapFocus = { at: LatLng; coveredBelow: number };
+export type MapFocus =
+  | { at: LatLng; coveredBelow: number }
+  | { bounds: readonly LatLng[]; coveredBelow: number };
 
 export type PhoneMapProps = {
   trip: Trip;
@@ -81,10 +84,21 @@ function MapView({ trip, position }: Pick<PhoneMapProps, "trip" | "position">) {
   return null;
 }
 
-/** Zooms in on `focus` and centres it above the sheet, whenever a new one is given. */
+/** Margin around a fitted stretch, in pixels. */
+const FOCUS_PADDING = 24;
+
+/** Shows `focus` above the sheet, whenever a new one is given. */
 function Focus({ focus }: { focus: MapFocus }) {
   const map = useMap();
   useEffect(() => {
+    if ("bounds" in focus) {
+      const below = map.getSize().y * focus.coveredBelow;
+      map.fitBounds(latLngBounds(focus.bounds.map((p) => [p.lat, p.lng])), {
+        paddingTopLeft: [FOCUS_PADDING, FOCUS_PADDING],
+        paddingBottomRight: [FOCUS_PADDING, below + FOCUS_PADDING],
+      });
+      return;
+    }
     const zoom = Math.max(map.getZoom(), POSITION_ZOOM);
     const shift = (map.getSize().y * focus.coveredBelow) / 2;
     map.setView(map.unproject(map.project(focus.at, zoom).add([0, shift]), zoom), zoom);

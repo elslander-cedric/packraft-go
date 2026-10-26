@@ -1,0 +1,284 @@
+// The phone Legs tab (#121, ADR 0026): leg rows open one at a time and zoom the map to their
+// leg, an open row switches its leg's mode, shows flow figures, aire warnings and Retry; the
+// floating next leg's mode toggle; snap offers float above the sheet.
+import { devices, expect, test, type Locator, type Page } from "@playwright/test";
+import { addAccessPoint, serialiseAccessPoints, updateAccessPoint } from "../src/core/accessPoints";
+import { strings } from "../src/ui/strings";
+import { brouterFixture, kiwisFixtures, serveOffline, type BRouterReply } from "./support/offline";
+
+const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
+test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, timezoneId: "Europe/Brussels" });
+
+const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
+const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.geojson") };
+const byProfile = (url: URL) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL);
+
+const text = strings.phone;
+const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
+const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
+const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
+const legRows = (page: Page) => sheet(page).getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem");
+const rowButton = (page: Page, n: number) =>
+  legRows(page)
+    .nth(n - 1)
+    .getByRole("button", { name: strings.legLabel(n), exact: false })
+    .first();
+const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
+const legMode = (page: Page, n: number, mode: string) =>
+  legRows(page)
+    .nth(n - 1)
+    .getByRole("group", { name: strings.legModeLabel(n) })
+    .getByRole("button", { name: mode });
+const nextMode = (page: Page, mode: string) =>
+  page.getByRole("group", { name: text.nextLegModeLabel }).getByRole("button", { name: mode });
+const offer = (page: Page) => page.getByRole("region", { name: strings.snap.label });
+const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
+
+type Point = { lat: number; lng: number };
+type SeedLeg = { mode: "hike" | "paddle"; geometry?: readonly Point[] };
+
+const routed = (geometry: readonly Point[]) => ({
+  status: "routed",
+  geometry: geometry.map((p) => ({ ...p, elevation: 200 })),
+});
+
+/** Seeds the stored trip (and optionally your access points) before the page loads. */
+async function seed(
+  page: Page,
+  trip: { points: readonly Point[]; legs: readonly SeedLeg[]; startDate?: string },
+  accessPoints?: string,
+) {
+  const save = JSON.stringify({
+    format: "packraft-go-trip",
+    version: 1,
+    trip: {
+      name: "Seeded",
+      points: trip.points,
+      legs: trip.legs.map((leg) => ({ mode: leg.mode, ...(leg.geometry && { route: routed(leg.geometry) }) })),
+      ...(trip.startDate && { startDate: trip.startDate }),
+    },
+  });
+  await page.addInitScript(
+    ([tripSave, pointsSave]) => {
+      if (sessionStorage.getItem("seeded")) return;
+      sessionStorage.setItem("seeded", "1");
+      localStorage.setItem("packraft-go.trip", tripSave);
+      if (pointsSave) localStorage.setItem("packraft-go.access-points", pointsSave);
+    },
+    [save, accessPoints ?? ""] as const,
+  );
+}
+
+async function openPhone(page: Page) {
+  await page.goto("/");
+  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+}
+
+async function openLegsTab(page: Page) {
+  await tab(page, text.tabs.legs).click();
+  await expect(legRows(page).first()).toBeVisible();
+}
+
+/** True when `inner` lies wholly inside `outer` (allowing half a pixel for rounding). */
+async function isInside(inner: Locator, outer: Locator | { x: number; y: number; width: number; height: number }) {
+  const a = (await inner.boundingBox())!;
+  const b = "boundingBox" in outer ? (await outer.boundingBox())! : outer;
+  return (
+    a.x >= b.x - 0.5 && a.y >= b.y - 0.5 && a.x + a.width <= b.x + b.width + 0.5 && a.y + a.height <= b.y + b.height + 0.5
+  );
+}
+
+/** The part of the map the sheet leaves free. */
+async function freeMap(page: Page) {
+  const map = (await mapRegion(page).boundingBox())!;
+  const top = (await sheet(page).boundingBox())!.y;
+  return { x: map.x, y: map.y, width: map.width, height: top - map.y };
+}
+
+// A short leg then a long one, both routed, near Durbuy.
+const P0 = { lat: 50.3, lng: 5.45 };
+const P1 = { lat: 50.31, lng: 5.45 };
+const P2 = { lat: 50.45, lng: 5.65 };
+
+test("tapping a row zooms the map to its leg and opens it; opening another closes the first", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "hike", geometry: [P1, P2] }] });
+  await openPhone(page);
+  await openLegsTab(page);
+
+  const first = legLines(page).nth(0);
+  const widthBefore = (await first.boundingBox())!.height;
+  await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "false");
+  await rowButton(page, 1).click();
+  await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "true");
+  await expect(legRows(page).nth(0)).toContainText(strings.climbLabel);
+  // Zoomed in on the short leg, which now shows above the sheet.
+  await expect.poll(async () => (await first.boundingBox())!.height).toBeGreaterThan(widthBefore * 2);
+  await expect.poll(async () => isInside(first, await freeMap(page))).toBe(true);
+
+  await rowButton(page, 2).click();
+  await expect(rowButton(page, 2)).toHaveAttribute("aria-expanded", "true");
+  await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "false");
+  await expect(legRows(page).nth(0)).not.toContainText(strings.climbLabel);
+  await expect.poll(async () => isInside(legLines(page).nth(1), await freeMap(page))).toBe(true);
+});
+
+// Durbuy is in Wallonia. 0.001 degrees of latitude is about 111 m.
+const putIn = { lat: 50.3527, lng: 5.4563 };
+const end = { lat: 50.3627, lng: 5.4563 };
+const nearby = { lat: 50.3537, lng: 5.4563 };
+
+function slipwayNearby() {
+  const now = "2026-10-14T08:00:00.000Z";
+  const added = addAccessPoint([], { id: "ap1", at: nearby, now });
+  return serialiseAccessPoints(updateAccessPoint(added, "ap1", { kind: "slipway", use: "put-in" }, now));
+}
+
+const storedFirstPoint = (page: Page) =>
+  page.evaluate(() => JSON.parse(localStorage.getItem("packraft-go.trip") ?? "null")?.trip?.points?.[0]);
+
+test("switching an open row to paddle reroutes it with the river profile; the snap offer floats and can be accepted", async ({
+  page,
+}) => {
+  const network = await serveOffline(page, { brouter: byProfile });
+  await seed(page, { points: [putIn, end], legs: [{ mode: "hike", geometry: [putIn, end] }] }, slipwayNearby());
+  await openPhone(page);
+  await openLegsTab(page);
+  await rowButton(page, 1).click();
+  const sheetTop = (await sheet(page).boundingBox())!.y;
+
+  await legMode(page, 1, strings.legModePaddle).click();
+  await expect(legMode(page, 1, strings.legModePaddle)).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => network.brouter.map((url) => url.searchParams.get("profile"))).toContain("river");
+  await expect(legLines(page).first()).toHaveClass(/leg-paddle/);
+  await expect(legRows(page).nth(0)).toContainText(strings.dropLabel);
+
+  // The offer floats above the sheet, left of the bottom-right buttons; the sheet keeps its height.
+  await expect(offer(page)).toBeVisible();
+  await expect(sheet(page).getByRole("region", { name: strings.snap.label })).toHaveCount(0);
+  const box = (await offer(page).boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(sheetTop + 0.5);
+  expect(box.x + box.width).toBeLessThanOrEqual((await undoButton(page).boundingBox())!.x + 0.5);
+  expect((await sheet(page).boundingBox())!.y).toBeCloseTo(sheetTop, 0);
+  await expect(offer(page).getByRole("button", { name: strings.snap.accept })).toBeInViewport({ ratio: 1 });
+
+  await offer(page).getByRole("button", { name: strings.snap.accept }).click();
+  await expect(offer(page)).toHaveCount(0);
+  await expect.poll(() => storedFirstPoint(page)).toEqual(nearby);
+  expect(network.blocked).toEqual([]);
+});
+
+test("a floating snap offer can be declined, which changes nothing", async ({ page }) => {
+  await serveOffline(page, { brouter: byProfile });
+  await seed(page, { points: [putIn, end], legs: [{ mode: "hike", geometry: [putIn, end] }] }, slipwayNearby());
+  await openPhone(page);
+  await openLegsTab(page);
+  await rowButton(page, 1).click();
+  await legMode(page, 1, strings.legModePaddle).click();
+  await offer(page).getByRole("button", { name: strings.snap.decline }).click();
+  await expect(offer(page)).toHaveCount(0);
+  await expect.poll(() => storedFirstPoint(page)).toEqual(putIn);
+});
+
+test("an open paddle row shows the aire warning", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, { points: [putIn, end], legs: [{ mode: "paddle", geometry: [putIn, end] }] }, slipwayNearby());
+  await openPhone(page);
+  await openLegsTab(page);
+  await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
+  await rowButton(page, 1).click();
+  await expect(legRows(page).nth(0).locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
+});
+
+/** A paddle leg along the Semois (stretch 1.B.4c), dated today; see live-walloon-flows.spec.ts. */
+const semois = [
+  { lat: 49.74536, lng: 5.25046 },
+  { lat: 49.74547, lng: 5.24971 },
+  { lat: 49.74579, lng: 5.24932 },
+  { lat: 49.74665, lng: 5.24897 },
+];
+
+test("an open paddle row dated today shows the live flow figures", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-14T09:00:00+02:00"));
+  const network = await serveOffline(page, { kiwis: kiwisFixtures("timeseries-list.json", "timeseries-values.json") });
+  await seed(page, {
+    points: [semois[0], semois[semois.length - 1]],
+    legs: [{ mode: "paddle", geometry: semois }],
+    startDate: "2026-10-14",
+  });
+  await openPhone(page);
+  await openLegsTab(page);
+  await rowButton(page, 1).click();
+  const row = legRows(page).nth(0);
+  await expect(row).toContainText("Closed today: low flow");
+  await expect(row).toContainText(strings.flow.gaugeAssumed("Membre"));
+  await expect(row.getByRole("link", { name: strings.flow.credit })).toBeVisible();
+  expect(network.blocked).toEqual([]);
+});
+
+test("a failed leg shows its failure with Retry, and Retry routes it again", async ({ page }) => {
+  let up = false;
+  const network = await serveOffline(page, { brouter: () => (up ? TRAIL : { status: 503, body: "" }) });
+  await seed(page, { points: [P0, P1], legs: [{ mode: "hike" }] });
+  await openPhone(page);
+  await openLegsTab(page);
+  const row = legRows(page).nth(0);
+  await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailed.unavailable);
+
+  up = true;
+  await row.getByRole("button", { name: strings.retryRouting }).click();
+  await expect(legLines(page).first()).toHaveClass(/leg-routed/);
+  await expect(row.getByRole("button", { name: strings.retryRouting })).toHaveCount(0);
+  expect(network.brouter.length).toBe(2);
+});
+
+test("the next leg's mode starts at the last leg's mode; switching it makes the next leg that mode", async ({ page }) => {
+  await serveOffline(page, { brouter: byProfile });
+  await seed(page, { points: [P0, P1], legs: [{ mode: "paddle", geometry: [P0, P1] }] });
+  await openPhone(page);
+  await expect(nextMode(page, strings.legModePaddle)).toHaveAttribute("aria-pressed", "true");
+
+  await nextMode(page, strings.legModeHike).click();
+  const map = (await mapRegion(page).boundingBox())!;
+  await page.touchscreen.tap(map.x + map.width / 2, map.y + map.height / 4);
+  await expect(legLines(page)).toHaveCount(2);
+  await expect(legLines(page).nth(1)).toHaveClass(/leg-hike/);
+  await expect(nextMode(page, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
+});
+
+test("a new trip's next leg's mode is hike", async ({ page }) => {
+  await serveOffline(page);
+  await openPhone(page);
+  await expect(nextMode(page, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
+});
+
+/** Number of lines an element's text is laid out on. */
+const lineCount = (el: Locator) =>
+  el.evaluate((node) => new Set([...node.getClientRects()].map((r) => Math.round(r.top))).size);
+
+test.describe("at a narrow phone width", () => {
+  test.use({ viewport: { width: 320, height: 640 } });
+
+  test("an open row's figures stay on one line and Retry is fully visible (#70)", async ({ page }) => {
+    await serveOffline(page);
+    await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "paddle" }] });
+    await openPhone(page);
+    await page.evaluate(() => document.fonts.ready.then(() => true));
+    await openLegsTab(page);
+    await rowButton(page, 1).click();
+
+    const row = legRows(page).nth(0);
+    const figures = row.locator(".phone-row-figure");
+    expect(await figures.count()).toBeGreaterThanOrEqual(4);
+    for (const figure of await figures.all()) {
+      expect(await lineCount(figure), `"${await figure.textContent()}" wraps`).toBe(1);
+      expect(await isInside(figure, row), `"${await figure.textContent()}" overflows its row`).toBe(true);
+    }
+
+    const failed = legRows(page).nth(1);
+    const retry = failed.getByRole("button", { name: strings.retryRouting });
+    await retry.scrollIntoViewIfNeeded();
+    await expect(retry).toBeInViewport({ ratio: 1 });
+    expect(await isInside(retry, failed)).toBe(true);
+  });
+});

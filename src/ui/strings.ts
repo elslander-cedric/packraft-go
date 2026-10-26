@@ -177,6 +177,8 @@ export const strings = {
     tabsLabel: "Trip sections",
     tabs: { legs: "Legs", days: "Days", trip: "Trip", accessPoints: "Access points", settings: "Settings" },
     legAccessLabel: "Access",
+    // The floating hike / paddle toggle for the leg the next map tap adds (#121).
+    nextLegModeLabel: "Next leg's mode",
     // The glyphs inside the position and undo buttons; their names are `showPositionButton` and `undoButton`.
     showPositionGlyph: "◎",
     undoGlyph: "↶",
