@@ -249,6 +249,8 @@ test("a route point under an access point can still be selected and dragged", as
 const slipway: AccessPoint = {
   id: "ap-1",
   position: { lat: 50.268, lng: 5.446 },
+  name: "",
+  nameSource: "to-look-up",
   use: "put-in",
   kind: "slipway",
   note: "Hotton slipway",

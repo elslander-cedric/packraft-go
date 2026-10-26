@@ -17,9 +17,23 @@ export const accessPointKinds: readonly AccessPointKind[] = ["official-aire", "s
 /** An ISO timestamp, e.g. "2026-10-13T08:00:00.000Z". */
 export type Timestamp = string;
 
+/**
+ * Where an access point's name came from (#136, ADR 0027, GLOSSARY "Default name"):
+ * - `typed`: you typed it; it is never changed automatically.
+ * - `default`: the default name found for the point's position, "" when
+ *   nothing was found there. Cleared and looked up again when the point moves.
+ * - `to-look-up`: a default name still to be looked up (new, moved, cleared,
+ *   or imported without a name). Until then the name is "".
+ */
+export type NameSource = "typed" | "default" | "to-look-up";
+export const nameSources: readonly NameSource[] = ["typed", "default", "to-look-up"];
+
 export type AccessPoint = {
   readonly id: string;
   readonly position: LatLng;
+  /** Its name, e.g. "Hotton bridge" or "Rue du Moulin, Hotton"; "" for none. Not necessarily unique. */
+  readonly name: string;
+  readonly nameSource: NameSource;
   readonly use: AccessPointUse;
   readonly kind: AccessPointKind;
   /** A short free-text note, e.g. "steep bank, park at the church"; "" for none. */
@@ -33,7 +47,10 @@ export type AccessPoint = {
 /** Your access points, in the order they were added. */
 export type AccessPoints = readonly AccessPoint[];
 
-/** A new access point at `at`: usable both ways, an informal bank, no note, not checked. */
+/**
+ * A new access point at `at`: usable both ways, an informal bank, no note, not
+ * checked, and no name until its default name is found.
+ */
 export function addAccessPoint(
   points: AccessPoints,
   { id, at, now }: { id: string; at: LatLng; now: Timestamp },
@@ -41,6 +58,8 @@ export function addAccessPoint(
   const point: AccessPoint = {
     id,
     position: at,
+    name: "",
+    nameSource: "to-look-up",
     use: "both",
     kind: "informal-bank",
     note: "",
@@ -52,11 +71,14 @@ export function addAccessPoint(
 }
 
 /** What an edit can change about an access point. */
-export type AccessPointChanges = Partial<Pick<AccessPoint, "position" | "use" | "kind" | "note" | "checkedOnSite">>;
+export type AccessPointChanges = Partial<Pick<AccessPoint, "position" | "name" | "use" | "kind" | "note" | "checkedOnSite">>;
 
 /**
  * The collection with one point edited and its updated time set to `now`.
  * An unknown id, or an impossible checked date, changes nothing.
+ * A name is yours once you type it; clearing it (or leaving only spaces) asks
+ * for the default name again. Moving a point with a default name clears it and
+ * asks for a new one (ADR 0027).
  */
 export function updateAccessPoint(
   points: AccessPoints,
@@ -68,7 +90,57 @@ export function updateAccessPoint(
   if (index < 0) return points;
   const { checkedOnSite } = changes;
   if (checkedOnSite !== undefined && checkedOnSite !== null && !isCalendarDate(checkedOnSite)) return points;
-  return points.with(index, { ...points[index], ...changes, updatedAt: now });
+  const point = points[index];
+  let { name, nameSource } = point;
+  if (changes.name !== undefined) {
+    const cleared = changes.name.trim() === "";
+    name = cleared ? "" : changes.name;
+    nameSource = cleared ? "to-look-up" : "typed";
+  } else if (changes.position !== undefined && nameSource !== "typed") {
+    name = "";
+    nameSource = "to-look-up";
+  }
+  return points.with(index, { ...point, ...changes, name, nameSource, updatedAt: now });
+}
+
+/**
+ * What a default name lookup gave: the name, "" when nothing was found there,
+ * or `failed` when the service couldn't be reached or answered with an error
+ * (then ask again later).
+ */
+export type DefaultNameLookup = { readonly status: "found"; readonly name: string } | { readonly status: "failed" };
+
+/**
+ * Looks up the default name at a position (ADR 0027): the nearest road and
+ * place. The real implementation (the Nominatim adapter) is injected; tests
+ * pass a fake. Implementations never throw: a failure is a `failed` result.
+ */
+export interface DefaultNameSource {
+  defaultNameAt(at: LatLng): Promise<DefaultNameLookup>;
+}
+
+/** The points whose default name is still to be looked up, in order. */
+export function toLookUp(points: AccessPoints): AccessPoints {
+  return points.filter((point) => point.nameSource === "to-look-up");
+}
+
+/**
+ * The collection with the default name found at `at` given to point `id` ("" when
+ * nothing was found there). Ignored, changing nothing, unless that point is
+ * still waiting for a default name at that position: it may have moved, or
+ * you may have typed a name, while the name was looked up. Not an edit of
+ * yours, so its updated time stays.
+ */
+export function applyDefaultName(
+  points: AccessPoints,
+  id: string,
+  { at, name }: { at: LatLng; name: string },
+): AccessPoints {
+  const index = points.findIndex((point) => point.id === id);
+  if (index < 0) return points;
+  const point = points[index];
+  if (point.nameSource !== "to-look-up" || point.position.lat !== at.lat || point.position.lng !== at.lng) return points;
+  return points.with(index, { ...point, name, nameSource: "default" });
 }
 
 /** The collection without the point `id` (unchanged when there is no such point). */
@@ -82,7 +154,11 @@ export function deleteAccessPoint(points: AccessPoints, id: string): AccessPoint
  */
 export const DUPLICATE_DISTANCE_M = 5;
 
+// Default names come from the position, and change when OpenStreetMap does: only typed names count.
+const typedName = (point: AccessPoint) => (point.nameSource === "typed" ? point.name : "");
+
 const samePoint = (a: AccessPoint, b: AccessPoint) =>
+  typedName(a) === typedName(b) &&
   a.use === b.use &&
   a.kind === b.kind &&
   a.note === b.note &&
@@ -144,7 +220,9 @@ export function serialiseAccessPoints(points: AccessPoints): string {
 
 /**
  * Reads access points back from their text. A file is accepted or refused as a
- * whole; fields the format does not know are ignored.
+ * whole; fields the format does not know are ignored. Names came later in
+ * version 1 (#136): a point without one reads as unnamed, with its default
+ * name to look up, and a name without its source as one you typed.
  */
 export function parseAccessPoints(text: string): AccessPointsParseResult {
   try {
@@ -224,9 +302,14 @@ function readAccessPoint(value: unknown): AccessPoint {
   if (id === "") throw invalid;
   const checkedOnSite = point.checkedOnSite ?? null;
   if (checkedOnSite !== null && !isCalendarDate(checkedOnSite)) throw invalid;
+  const name = text(point.name ?? "");
+  const source = point.nameSource === undefined ? "typed" : oneOf(point.nameSource, nameSources);
+  const unnamed = name.trim() === "" && source !== "default";
   return {
     id,
     position: { lat: number(position.lat, -90, 90), lng: number(position.lng, -180, 180) },
+    name: unnamed ? "" : name,
+    nameSource: unnamed ? "to-look-up" : source,
     use: oneOf(point.use, accessPointUses),
     kind: oneOf(point.kind, accessPointKinds),
     note: text(point.note),

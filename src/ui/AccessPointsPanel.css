@@ -49,7 +49,8 @@
   margin: var(--space-2) 0;
 }
 
-.access-point-field > span {
+.access-point-field > span,
+.access-point-field > label {
   font-size: 0.8rem;
   color: var(--color-muted);
 }
@@ -58,7 +59,8 @@
   flex-wrap: wrap;
 }
 
-.access-point-field textarea {
+.access-point-field textarea,
+.access-point-field input[type="text"] {
   font: inherit;
   resize: vertical;
 }

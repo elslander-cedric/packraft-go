@@ -13,6 +13,8 @@ const T = "2026-10-12T08:00:00.000Z";
 const pt = (id: string, lat: number, lng: number, extra: Partial<AccessPoint> = {}): AccessPoint => ({
   id,
   position: { lat, lng },
+  name: "",
+  nameSource: "to-look-up",
   use: "both",
   kind: "informal-bank",
   note: "",

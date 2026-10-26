@@ -9,6 +9,7 @@ import { useRef } from "react";
 import { Marker } from "react-leaflet";
 import type { AccessPoint, AccessPointKind, AccessPointUse, AccessPoints } from "@/core/accessPoints";
 import type { LatLng } from "@/core/trip";
+import { accessPointText } from "@/ui/accessPointText";
 import { strings } from "@/ui/strings";
 import { HIT_SIZE_PX, usePressDrag } from "./pressDrag";
 import "./AccessPointLayer.css";
@@ -48,16 +49,25 @@ const SIZE = 24;
 // Icons are shared and kept: a new icon replaces the marker's element, which would interrupt a drag.
 const icons = new Map<string, ReturnType<typeof divIcon>>();
 
+// Names and notes are yours: escape them in the marker's HTML.
+const escapeText = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const escapeAttribute = (value: string) => escapeText(value).replace(/"/g, "&quot;");
+
 /** `fingerSized`: drawn in a 44 px hit box, for press-and-drag (#120). */
-function accessPointIcon({ use, kind }: AccessPoint, selected: boolean, fingerSized: boolean) {
-  const key = `${use}|${kind}|${selected}|${fingerSized}`;
+function accessPointIcon(point: AccessPoint, selected: boolean, fingerSized: boolean) {
+  const { use, kind } = point;
+  const { heading, detail } = accessPointText(point);
+  const label = strings.accessPoints.marker(heading, detail);
+  const key = `${use}|${kind}|${selected}|${fingerSized}|${label}`;
   const known = icons.get(key);
   if (known) return known;
-  const label = strings.accessPoints.marker(strings.accessPoints.uses[use], strings.accessPoints.kinds[kind]);
+  // Labels follow names and notes as you type: don't keep every one.
+  if (icons.size > 200) icons.clear();
   const icon = divIcon({
     className: `access-point-marker use-${use} kind-${kind}${selected ? " access-point-selected" : ""}${fingerSized ? " access-point-hit" : ""}`,
     html:
-      `<svg role="img" aria-label=${JSON.stringify(label)} viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}">` +
+      `<svg role="img" aria-label="${escapeAttribute(label)}" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}">` +
+      `<title>${escapeText(label)}</title>` +
       `<g stroke="#fff" stroke-width="2" stroke-linejoin="round">${kindShape[kind](useColour[use])}</g></svg>`,
     iconSize: fingerSized ? [HIT_SIZE_PX, HIT_SIZE_PX] : [SIZE, SIZE],
     iconAnchor: fingerSized ? [HIT_SIZE_PX / 2, HIT_SIZE_PX / 2] : [SIZE / 2, SIZE / 2],

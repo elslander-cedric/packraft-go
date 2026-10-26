@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/Button";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { AccessPointDetails } from "../AccessPointsPanel";
+import { accessPointText } from "../accessPointText";
 import { strings } from "../strings";
 import type { AccessPointsState } from "../useAccessPoints";
 import type { MarkAccessPoint } from "./useMarkAccessPoint";
@@ -70,7 +71,7 @@ export default function PhoneAccessPoints({ access, marking, changed, onOpen }: 
             point={selected}
             access={access}
             onDelete={() => setPendingDelete(selected.id)}
-            withMoveHint={false}
+            withHints={false}
           />
         </div>
       )}
@@ -78,20 +79,22 @@ export default function PhoneAccessPoints({ access, marking, changed, onOpen }: 
         <p className="phone-empty">{text.noAccessPoints}</p>
       ) : (
         <ul className="phone-access-point-list" aria-label={text.accessPointsLabel}>
-          {points.map((point) => (
-            <li key={point.id}>
-              <Button
-                className="phone-row phone-access-point-row"
-                aria-current={point.id === selected?.id || undefined}
-                onClick={() => onOpen(point.id)}
-              >
-                <span className="phone-row-heading">
-                  {text.listEntry(pointText.uses[point.use], pointText.kinds[point.kind])}
-                </span>
-                {point.note && <span>{point.note}</span>}
-              </Button>
-            </li>
-          ))}
+          {points.map((point) => {
+            const { heading, note, detail } = accessPointText(point);
+            return (
+              <li key={point.id}>
+                <Button
+                  className="phone-row phone-access-point-row"
+                  aria-current={point.id === selected?.id || undefined}
+                  onClick={() => onOpen(point.id)}
+                >
+                  <span className="phone-row-heading">{heading}</span>
+                  {note && <span className="phone-access-point-note">{note}</span>}
+                  {detail && <span className="phone-access-point-detail">{detail}</span>}
+                </Button>
+              </li>
+            );
+          })}
         </ul>
       )}
       <ConfirmDialog

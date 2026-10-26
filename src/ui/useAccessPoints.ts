@@ -1,18 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   addAccessPoint,
+  applyDefaultName,
   deleteAccessPoint,
   mergeAccessPoints,
   updateAccessPoint,
   type AccessPointChanges,
   type AccessPoints,
+  type DefaultNameSource,
 } from "@/core/accessPoints";
 import type { LatLng } from "@/core/trip";
 import { downloadAccessPointsFile, readAccessPointsFile } from "@/persistence/accessPointFile";
 import { loadStoredAccessPoints, storeAccessPoints } from "@/persistence/accessPointStorage";
+import { startDefaultNames, type DefaultNames } from "./defaultNames";
 import { strings } from "./strings";
+
+/** One default name source for the whole page, so its one-request-a-second limit holds for all (ADR 0027). */
+let shared: Promise<DefaultNameSource> | null = null;
+function defaultNameSource(): Promise<DefaultNameSource> {
+  shared ??= import("@/geocoding/nominatim").then(({ createNominatimNames }) => createNominatimNames());
+  return shared;
+}
 
 /** A new, unique id for an access point. */
 function newId(): string {
@@ -56,6 +66,36 @@ export function useAccessPoints() {
   useEffect(() => {
     if (!keepStoredSave) storeAccessPoints(points);
   }, [points, keepStoredSave]);
+
+  // Default names (#136, ADR 0027): looked up in the background whenever the
+  // app is online, for every point still waiting for one; never blocks marking.
+  const latest = useRef(points);
+  const defaultNames = useRef<DefaultNames | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const backOnline = () => defaultNames.current?.backOnline();
+    void defaultNameSource().then((source) => {
+      if (cancelled) return;
+      defaultNames.current = startDefaultNames({
+        source,
+        points: () => latest.current,
+        found: (id, at, name) => setPoints((current) => applyDefaultName(current, id, { at, name })),
+        online: () => navigator.onLine,
+      });
+      defaultNames.current.wake();
+    });
+    window.addEventListener("online", backOnline);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", backOnline);
+      defaultNames.current?.stop();
+      defaultNames.current = null;
+    };
+  }, []);
+  useEffect(() => {
+    latest.current = points;
+    defaultNames.current?.wake();
+  }, [points]);
 
   // Escape cancels placing a new point.
   useEffect(() => {

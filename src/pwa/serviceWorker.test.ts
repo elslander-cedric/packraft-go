@@ -56,6 +56,7 @@ describe("service worker", () => {
     expect(answers({ url: "https://hydrometrie.wallonie.be/services/KiWIS/KiWIS?request=getTimeseriesValues" })).toBe(
       false,
     );
+    expect(answers({ url: "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=50.268&lon=5.446" })).toBe(false);
   });
 
   it("never answers anything but GET", () => {
