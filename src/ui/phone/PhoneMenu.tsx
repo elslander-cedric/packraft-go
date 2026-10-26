@@ -29,8 +29,8 @@ export type PhoneMenuProps = {
   pendingTrip: Trip | null;
   fileError: FileError | null;
   dispatch: (action: PlannerAction) => void;
-  saveFileAs: (name: string) => void;
-  exportGpxAs: (name: string) => void;
+  saveFile: (name: string) => void;
+  exportGpx: (name: string) => void;
   openFile: (file: File) => Promise<void>;
 };
 
@@ -46,8 +46,8 @@ export default function PhoneMenu({
   pendingTrip,
   fileError,
   dispatch,
-  saveFileAs,
-  exportGpxAs,
+  saveFile,
+  exportGpx,
   openFile,
 }: PhoneMenuProps) {
   const fileInput = useRef<HTMLInputElement>(null);
@@ -99,8 +99,8 @@ export default function PhoneMenu({
         confirmLabel={dialog.confirm}
         cancelLabel={strings.confirmCancel}
         onConfirm={(name) => {
-          if (naming === "export") exportGpxAs(name);
-          else saveFileAs(name);
+          if (naming === "export") exportGpx(name);
+          else saveFile(name);
           setNamingOpen(false);
         }}
         onCancel={() => setNamingOpen(false)}

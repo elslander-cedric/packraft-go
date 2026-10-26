@@ -210,6 +210,40 @@ test("a tap on a lock opens its details in the sheet", async ({ page }) => {
   await expect(lockDetails(page)).toHaveCount(0);
 });
 
+// Spec story 81: details open at half even from 90%, not only from the peek.
+test("a tap on a lock with the sheet at 90% opens its details with the sheet at half", async ({ page }) => {
+  await openWith(page, nearLock);
+  await layersButton(page).click();
+  await expect(lock(page, ANDERLECHT_LOCK)).toBeVisible();
+  await settled(page, lock(page, ANDERLECHT_LOCK));
+  const fingers = await touch(page);
+  // Pan the lock into the strip of map the sheet leaves at 90%, clear of the floating buttons.
+  // The finger is held still before lifting, so the map doesn't glide on (no inertia).
+  const box0 = (await lock(page, ANDERLECHT_LOCK).boundingBox())!;
+  const start = { x: box0.x + box0.width / 2, y: box0.y + box0.height / 2 };
+  const target = { x: 110, y: 72 };
+  const finger = await fingers.press(start);
+  for (let i = 1; i <= 10; i++)
+    await finger.moveTo({ x: start.x + ((target.x - start.x) * i) / 10, y: start.y + ((target.y - start.y) * i) / 10 });
+  await page.waitForTimeout(300); // holding still is a duration by definition
+  await finger.release();
+  await settled(page, lock(page, ANDERLECHT_LOCK));
+  // Raise the sheet to 90% by its handle area.
+  const box = (await sheet(page).boundingBox())!;
+  const from = { x: box.x + box.width / 2, y: box.y + 8 };
+  await fingers.drag(from, { x: from.x, y: 20 });
+  await expect(sheet(page)).toHaveAttribute("data-stop", "full");
+  // Wait until it has slid up, so the tap lands on the map, not on the moving sheet.
+  const screen = page.viewportSize()!.height;
+  await expect.poll(async () => screen - (await sheet(page).boundingBox())!.y).toBeGreaterThan(screen * 0.85);
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+
+  const at = (await lock(page, ANDERLECHT_LOCK).boundingBox())!;
+  await page.touchscreen.tap(at.x + at.width / 2, at.y + at.height / 2);
+  await expect(lockDetails(page)).toBeVisible();
+  await expect(sheet(page)).toHaveAttribute("data-stop", "half");
+});
+
 // #126: held sideways, the side panel hosts the details as the sheet does.
 test("sideways, a tap on a lock opens the side panel with its details above the tab", async ({ page }) => {
   await page.setViewportSize({ width: viewport.height, height: viewport.width });

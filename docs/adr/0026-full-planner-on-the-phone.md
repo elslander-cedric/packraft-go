@@ -62,4 +62,5 @@ ADR 0023 gave phones a read-only view: the map, your position, your access point
 - **The desktop point drag moves from mouse events to pointer events,** so tablets on the desktop layout can drag points with a finger. Nothing else on desktop changes.
 - **Leaflet 1.9 listens to touch events on phones,** and its path drag is mouse-only. So point dragging is our own pointer-event code, which also stops `touchstart` (research #105).
 - **The phone screens are replaced:** `PhoneApp`, `PhoneTripView` and `PhoneMap` go, and their e2e tests move to the phone planner. Playwright's touchscreen can only tap, so touch-drag tests need another way (#112).
+  - *Note, 2026-10-26:* `PhoneMap` stayed. It grew into the phone planner's map (trip editing, holds, the access layer) instead of being replaced.
 - **New UI wrappers in `src/ui/components/`** (ADR 0020): a bottom sheet (Base UI Drawer) and tabs (Base UI Tabs). No new runtime dependency.

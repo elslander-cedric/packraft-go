@@ -27,7 +27,7 @@ const withRoutes = (trip: Trip, ...routes: LegRoute[]): Trip => ({
 });
 
 const run = (session: PlannerSession, ...actions: PlannerAction[]) => actions.reduce(plannerSession, session);
-const insert = (leg: number, near: LatLng): PlannerAction => ({ type: "insertPoint", leg, near });
+const insert = (index: number, near: LatLng): PlannerAction => ({ type: "insertPoint", index, near });
 
 const expectClose = (actual: LatLng, expected: LatLng) => {
   expect(actual.lat).toBeCloseTo(expected.lat, 6);

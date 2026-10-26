@@ -3,27 +3,24 @@ import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import type { LatLng } from "@/core/trip";
 
-/** How long a finger holds a leg to insert a point (#122, story 46). */
+/** How long a finger holds a map shape (a leg to insert a point, #122; a water for its details, #125). */
 export const HOLD_MS = 400;
-
-/** A leg's transparent hit line, in screen pixels across (#122). */
-export const LEG_HIT_WIDTH_PX = 28;
 
 // A finger that moves more than this (in screen pixels) while held is panning, not holding.
 const HOLD_SLOP_PX = 8;
 
 /**
- * Hold-to-insert on a leg's hit line (#122, ADR 0026). A finger or pen held
- * still for `HOLD_MS` calls `onHold` with where it was pressed, timed by our
- * own timer: Leaflet's `contextmenu` is not reliable for touch (#112). With a
- * mouse, a right-click calls it. The leg's own `contextmenu` never opens the
- * browser's menu, and the one a long touch press can give is ignored (the
- * timer already handled it). Nothing is stopped: a tap on a leg is still a tap
- * on the map, and a finger that moves still pans it. The click that ends a hold
- * is ignored by the map's tap handling (see `PhoneMap`). Returns a function
- * that stops listening.
+ * Hold on a map shape's element (ADR 0026): a finger or pen held still for
+ * `HOLD_MS` calls `onHold` with where it was pressed, timed by our own timer:
+ * Leaflet's `contextmenu` is not reliable for touch (#112). With a mouse, a
+ * right-click calls it. The shape's own `contextmenu` never opens the browser's
+ * menu, and the one a long touch press can give is ignored (the timer already
+ * handled it). Nothing is stopped: a tap on the shape is still a tap on the map,
+ * and a finger that moves still pans it. The click that ends a hold is ignored
+ * by the map's tap handling (see `PhoneMap`). Returns a function that stops
+ * listening.
  */
-export function listenForLegHold(element: Element, map: LeafletMap, onHold: () => (at: LatLng) => void): () => void {
+export function listenForHold(element: Element, map: LeafletMap, onHold: (at: LatLng) => void): () => void {
   let pressed: { id: number; x: number; y: number; timer: ReturnType<typeof setTimeout> } | null = null;
   let lastPointerType = "mouse";
   const at = (event: MouseEvent): LatLng => {
@@ -45,7 +42,7 @@ export function listenForLegHold(element: Element, map: LeafletMap, onHold: () =
       y: event.clientY,
       timer: setTimeout(() => {
         pressed = null;
-        onHold()(where);
+        onHold(where);
       }, HOLD_MS),
     };
   };
@@ -61,7 +58,7 @@ export function listenForLegHold(element: Element, map: LeafletMap, onHold: () =
     event.stopPropagation();
     const mouse = event as PointerEvent;
     const pointerType = mouse.pointerType || lastPointerType;
-    if (pointerType === "mouse") onHold()(at(mouse));
+    if (pointerType === "mouse") onHold(at(mouse));
   };
 
   // Moves, lifts and cancels are watched on the document: Leaflet may capture the pointer to pan.
@@ -79,8 +76,12 @@ export function listenForLegHold(element: Element, map: LeafletMap, onHold: () =
   };
 }
 
-/** Hold-to-insert on a map layer's element, with this render's `onHold`. */
-export function useLegHold(layer: { current: { getElement(): Element | undefined } | null }, onHold: (at: LatLng) => void) {
+/** Hold on a map layer's element (see `listenForHold`), with this render's `onHold`; off unless `on`. */
+export function useHold(
+  layer: { readonly current: { getElement(): Element | undefined } | null },
+  onHold: (at: LatLng) => void,
+  on = true,
+) {
   const map = useMap();
   const latest = useRef(onHold);
   useEffect(() => {
@@ -88,6 +89,7 @@ export function useLegHold(layer: { current: { getElement(): Element | undefined
   });
   useEffect(() => {
     const element = layer.current?.getElement();
-    return element ? listenForLegHold(element, map, () => latest.current) : undefined;
-  }, [map, layer]);
+    if (!on || !element) return;
+    return listenForHold(element, map, (at) => latest.current(at));
+  }, [map, layer, on]);
 }

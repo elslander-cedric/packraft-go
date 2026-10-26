@@ -33,6 +33,26 @@ import "./phone.css";
 type PhoneTab = keyof typeof strings.phone.tabs;
 const tabs = Object.keys(strings.phone.tabs) as PhoneTab[];
 
+/** The floating next leg's mode toggle: icon-only, like the other floating buttons. */
+const nextLegModeOptions = legModeOptions.map((option) => ({
+  ...option,
+  glyph: strings.phone.nextLegModeGlyphs[option.value],
+}));
+
+/**
+ * The next leg's mode the planner picked, and the trip state it was picked for: the trip's
+ * points and undo steps, which every edit, undo, New trip and Open… replace, and routing keeps.
+ */
+type NextModePick = {
+  mode: LegMode;
+  points: Trip["points"];
+  undoSteps: Trip["undoSteps"];
+  /** The first point is being added: the pick carries over to the trip with that point. */
+  carry?: boolean;
+};
+const pickedFor = (trip: Trip) => ({ points: trip.points, undoSteps: trip.undoSteps });
+const pickHolds = (pick: NextModePick, trip: Trip) => pick.points === trip.points && pick.undoSteps === trip.undoSteps;
+
 /** Where a day goes: its points and its legs' routes. */
 function dayArea(trip: Trip, day: DaySummary): LatLng[] {
   const area: LatLng[] = trip.points.slice(day.firstLeg, day.lastLeg + 2);
@@ -59,8 +79,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     aire,
     undo,
     deleteSelectedPoint,
-    saveFileAs,
-    exportGpxAs,
+    saveFile,
+    exportGpx,
     openFile,
   } = usePlanner(router);
   const { trip, selectedPoint, offers } = session;
@@ -102,10 +122,17 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     setPointsChanged(true);
   }
 
-  // The next leg's mode (#121): the last leg's mode until the planner picks another, which holds
-  // until a leg is added with it.
-  const [pickedMode, setPickedMode] = useState<LegMode | null>(null);
-  const nextMode = pickedMode ?? trip.legs[trip.legs.length - 1]?.mode ?? "hike";
+  // The next leg's mode (#121): the last leg's mode (hike for an empty trip), unless the planner
+  // picked another since the trip last changed. Any edit (adding a leg with it, delete, undo…),
+  // New trip and Open… drop the pick; routing doesn't. Only the first point, which adds no leg,
+  // carries it over to the second.
+  const [pick, setPick] = useState<NextModePick | null>(null);
+  let held = pick;
+  if (pick !== null && !pickHolds(pick, trip)) {
+    held = pick.carry && trip.points.length === 1 ? { mode: pick.mode, ...pickedFor(trip) } : null;
+    setPick(held);
+  }
+  const nextMode = held?.mode ?? trip.legs[trip.legs.length - 1]?.mode ?? "hike";
   // The open leg row (#121); only one at a time, and none once its leg is gone.
   const [openLegState, setOpenLeg] = useState<number | null>(null);
   const openLeg = openLegState !== null && openLegState < trip.legs.length ? openLegState : null;
@@ -116,8 +143,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     if (access.placing) access.placeAt(at);
     else if (selectedPoint !== null) dispatch({ type: "deselect" });
     else {
+      if (held !== null && trip.points.length === 0) setPick({ ...held, carry: true });
       dispatch({ type: "addPoint", at, mode: nextMode });
-      if (trip.points.length > 0) setPickedMode(null);
     }
   };
   // A leg row tap opens it (closing any other) and shows its leg above the half-raised sheet.
@@ -154,11 +181,11 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     raise();
     setFocus({ at: point.position, ...covered() });
   };
-  // Holding a water or tapping a lock opens its details in the sheet, raised to half from the peek,
-  // above the open tab (#125); sideways, in the opened panel.
+  // Holding a water or tapping a lock opens its details in the sheet at half, from any stop,
+  // above the open tab (#125, story 81); sideways, in the opened panel.
   const openAccessDetails = (id: string) => {
     layer.select(id);
-    raiseFromPeek();
+    raise();
   };
   // A tab press goes to that tab, so it closes any water or lock details over it.
   const pressTab = () => {
@@ -258,7 +285,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         selectedPoint={selectedPoint}
         onPointTap={(index) => dispatch({ type: "pointClicked", index })}
         onPointDrop={(index, to) => dispatch({ type: "movePoint", index, to })}
-        onLegHold={(leg, near) => dispatch({ type: "insertPoint", leg, near })}
+        onLegHold={(index, near) => dispatch({ type: "insertPoint", index, near })}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
           points: access.points,
@@ -281,8 +308,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           pendingTrip={session.pendingTrip}
           fileError={session.fileError}
           dispatch={dispatch}
-          saveFileAs={saveFileAs}
-          exportGpxAs={exportGpxAs}
+          saveFile={saveFile}
+          exportGpx={exportGpx}
           openFile={openFile}
         />
       </div>
@@ -356,8 +383,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         <ToggleGroup
           label={strings.phone.nextLegModeLabel}
           value={nextMode}
-          options={legModeOptions}
-          onChange={setPickedMode}
+          options={nextLegModeOptions}
+          onChange={(mode) => setPick({ mode, ...pickedFor(trip) })}
           className="phone-next-mode"
         />
         <Button className="phone-fab" aria-label={strings.undoButton} onClick={undo} disabled={!canUndo(trip)}>

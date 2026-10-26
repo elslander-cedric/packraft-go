@@ -59,7 +59,7 @@ export type PlannerAction =
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   | { readonly type: "deleteSelectedPoint" }
   /** Inserts a point on leg `leg` of the route, nearest to `near` (#122). */
-  | { readonly type: "insertPoint"; readonly leg: number; readonly near: LatLng }
+  | { readonly type: "insertPoint"; readonly index: number; readonly near: LatLng }
   | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode; readonly accessPoints: AccessPoints }
   | { readonly type: "accessPointsChanged"; readonly accessPoints: AccessPoints }
   | { readonly type: "toggleCampOnSelectedPoint" }
@@ -146,11 +146,11 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
     case "movePoint":
       return edited(session, applyEdit(trip, action));
     case "insertPoint": {
-      const after = applyEdit(trip, { type: "insertPoint", leg: action.leg, near: action.near });
+      const after = applyEdit(trip, action);
       if (after === trip) return session;
       const selected = session.selectedPoint;
       // The selection follows its point: a point after the insert moves up by one.
-      const follows = selected !== null && selected > action.leg ? selected + 1 : selected;
+      const follows = selected !== null && selected > action.index ? selected + 1 : selected;
       return { ...edited(session, after), selectedPoint: follows };
     }
     case "deleteSelectedPoint":

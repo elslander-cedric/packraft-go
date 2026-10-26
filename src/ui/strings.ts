@@ -184,6 +184,8 @@ export const strings = {
     legAccessLabel: "Access",
     // The floating hike / paddle toggle for the leg the next map tap adds (#121).
     nextLegModeLabel: "Next leg's mode",
+    // Its icon-only toggles; their names are `legModeHike` and `legModePaddle`.
+    nextLegModeGlyphs: { hike: "🥾", paddle: "🛶" },
     // The glyphs inside the position and undo buttons; their names are `showPositionButton` and `undoButton`.
     showPositionGlyph: "◎",
     undoGlyph: "↶",
