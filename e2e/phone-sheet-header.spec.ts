@@ -94,6 +94,18 @@ test("a named trip shows its name with the totals below: hike, paddle, climb, de
   expect(below).toBe(true);
 });
 
+test("on a phone, all five totals fit on one line", async ({ page }) => {
+  await serveOffline(page);
+  await open(page, hikeAndPaddle("Dinant weekend"));
+  await expect(points(page)).toHaveCount(3);
+  await settled(page);
+
+  const figures = totals(page).locator(".phone-total");
+  await expect(figures).toHaveCount(5);
+  const tops = await figures.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+});
+
 test("a trip with no paddle legs leaves the paddle figure out; with no name only the totals show", async ({ page }) => {
   await serveOffline(page);
   const save = hikeAndPaddle("   ");

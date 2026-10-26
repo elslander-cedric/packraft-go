@@ -259,7 +259,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           <PhoneAccessPoints access={access} marking={marking} changed={pointsChanged} onOpen={openAccessPoint} />
         </TabPanel>
         <TabPanel value="settings">
-          {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
+          {settings && <SettingsPanel settings={settings} onChange={changeSetting} heading={false} />}
         </TabPanel>
       </div>
     </>

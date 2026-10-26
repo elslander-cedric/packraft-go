@@ -149,6 +149,36 @@ test("the Days tab has no heading or rule of its own; the cards run edge to edge
   await expect(dayCards(page).nth(0)).toHaveCSS("border-bottom-width", "1px");
 });
 
+test("the Settings tab has no heading, rule or padding of its own; its fields line up with the Trip tab's", async ({
+  page,
+}) => {
+  await serveOffline(page);
+  await openWithTrip(page);
+  const fieldBox = async (tabName: string, field: (page: Page) => Locator) => {
+    await tab(page, tabName).click();
+    // Polled: the sheet may still be settling at its stop.
+    let box = (await field(page).boundingBox())!;
+    await expect
+      .poll(async () => {
+        const previous = box;
+        box = (await field(page).boundingBox())!;
+        return [box.x - previous.x, box.y - previous.y];
+      })
+      .toEqual([0, 0]);
+    return box;
+  };
+  const trip = await fieldBox(text.tabs.trip, tripName);
+  const settings = await fieldBox(text.tabs.settings, paceFactor);
+
+  // The tab already names the panel.
+  await expect(panel(page).getByRole("heading", { name: strings.settingsPanelLabel })).toHaveCount(0);
+  await expect(panel(page).getByRole("region", { name: strings.settingsPanelLabel })).toHaveCSS(
+    "border-top-width",
+    "0px",
+  );
+  expect(Math.round(settings.x)).toBe(Math.round(trip.x));
+});
+
 test("the Trip tab renames the trip and sets, changes and clears its start date; all autosaved, no date drift", async ({
   page,
 }) => {
@@ -208,6 +238,27 @@ test("the Trip tab's access summary has the disclaimer at its top, per-day statu
   const total = (await totals(page).textContent())!;
   expect(total).toContain(strings.kilometreUnit);
   await expect(panel(page)).not.toContainText(strings.tripTotalTimeEstimate);
+});
+
+test("the Trip tab's access summary lines up with the fields, with space between its rule and its title", async ({
+  page,
+}) => {
+  await serveOffline(page);
+  await openWithTrip(page);
+  await tab(page, text.tabs.trip).click();
+  await expect(tripSummary(page)).toBeVisible();
+
+  // Measured in one go: the sheet may still be rising to half from the tab press.
+  const layout = () =>
+    tripSummary(page).evaluate((summary) => {
+      const box = summary.getBoundingClientRect();
+      const title = summary.querySelector("h2")!.getBoundingClientRect();
+      const status = summary.querySelector(".access-status")!.getBoundingClientRect();
+      const field = summary.parentElement!.querySelector("input")!.getBoundingClientRect();
+      return { fieldLeft: field.left, statusLeft: status.left, titleGap: title.top - box.top };
+    });
+  await expect.poll(async () => (await layout()).statusLeft - (await layout()).fieldLeft).toBe(0);
+  expect((await layout()).titleGap).toBeGreaterThanOrEqual(12);
 });
 
 test("pace and paddling speed change the time estimates, survive a reload and are not in the trip", async ({ page }) => {
