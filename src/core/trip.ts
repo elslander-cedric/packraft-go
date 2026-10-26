@@ -2,6 +2,7 @@
 import {
   canUndo,
   deletePoint,
+  insertPoint,
   movePoint,
   setLegMode,
   toggleCamp,
@@ -52,6 +53,8 @@ export type Edit =
   | { readonly type: "addPoint"; readonly at: LatLng; readonly mode?: LegMode }
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   | { readonly type: "deletePoint"; readonly index: number }
+  /** Inserts a point on leg `leg`, nearest to `near` on its route (#122). */
+  | { readonly type: "insertPoint"; readonly leg: number; readonly near: LatLng }
   | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode }
   | { readonly type: "toggleCamp"; readonly index: number }
   | { readonly type: "undo" };
@@ -96,6 +99,7 @@ export function applyEdit(trip: Trip, edit: Edit): Trip {
 function applyStep(trip: Trip, edit: Exclude<Edit, { type: "undo" }>): Trip {
   if (edit.type === "movePoint") return movePoint(trip, edit.index, edit.to);
   if (edit.type === "deletePoint") return deletePoint(trip, edit.index);
+  if (edit.type === "insertPoint") return insertPoint(trip, edit.leg, edit.near);
   if (edit.type === "setLegMode") return setLegMode(trip, edit.index, edit.mode);
   if (edit.type === "toggleCamp") return toggleCamp(trip, edit.index);
   // A new leg takes the explicit mode, else the last leg's mode (the first leg is a hike leg).

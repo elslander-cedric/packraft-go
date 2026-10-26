@@ -5,9 +5,10 @@
 //
 // One rule per piece of state (see ADR 0025):
 // - selected point: cleared by add, move and delete point, set leg mode, undo,
-//   accept offer and any replace of the trip; kept by everything else.
+//   accept offer and any replace of the trip; insert point makes it follow the
+//   selected point when the insert shifts its index; kept by everything else.
 // - snap offers: set leg mode replaces them with the offers worked out from the
-//   trip it produced; add, move, delete, undo and replace drop them; accept and
+//   trip it produced; add, move, insert, delete, undo and replace drop them; accept and
 //   decline remove that one offer; access points changed drops the offers to a
 //   deleted access point and makes the offers to a moved one follow it.
 // - file error: set by file rejected; cleared by every other action except a
@@ -57,6 +58,8 @@ export type PlannerAction =
   | { readonly type: "addPoint"; readonly at: LatLng; readonly mode?: LegMode }
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   | { readonly type: "deleteSelectedPoint" }
+  /** Inserts a point on leg `leg` of the route, nearest to `near` (#122). */
+  | { readonly type: "insertPoint"; readonly leg: number; readonly near: LatLng }
   | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode; readonly accessPoints: AccessPoints }
   | { readonly type: "accessPointsChanged"; readonly accessPoints: AccessPoints }
   | { readonly type: "toggleCampOnSelectedPoint" }
@@ -141,6 +144,14 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
       return edited(session, applyEdit(trip, action));
     case "movePoint":
       return edited(session, applyEdit(trip, action));
+    case "insertPoint": {
+      const after = applyEdit(trip, { type: "insertPoint", leg: action.leg, near: action.near });
+      if (after === trip) return session;
+      const selected = session.selectedPoint;
+      // The selection follows its point: a point after the insert moves up by one.
+      const follows = selected !== null && selected > action.leg ? selected + 1 : selected;
+      return { ...edited(session, after), selectedPoint: follows };
+    }
     case "deleteSelectedPoint":
       return session.selectedPoint === null
         ? session

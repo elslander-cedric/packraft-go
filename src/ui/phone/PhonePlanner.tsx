@@ -82,6 +82,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         selectedPoint={selectedPoint}
         onPointTap={(index) => dispatch({ type: "pointClicked", index })}
         onPointDrop={(index, to) => dispatch({ type: "movePoint", index, to })}
+        onLegHold={(leg, near) => dispatch({ type: "insertPoint", leg, near })}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
           points: access.points,
