@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import ServiceWorkerRegistration from "@/pwa/ServiceWorkerRegistration";
 import { strings } from "@/ui/strings";
-import { THEME_COLOR } from "./manifest";
+import { DARK_THEME_COLOR, THEME_COLOR } from "./manifest";
 
 export const metadata: Metadata = {
   title: strings.appTitle,
@@ -14,7 +14,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: THEME_COLOR,
+  // The manifest can hold one theme colour only; the meta tags follow the system's theme.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLOR },
+    { media: "(prefers-color-scheme: dark)", color: DARK_THEME_COLOR },
+  ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

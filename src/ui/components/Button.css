@@ -29,7 +29,7 @@
 .button-danger {
   border-color: var(--color-danger);
   background: var(--color-danger);
-  color: var(--color-on-accent);
+  color: var(--color-on-danger);
 }
 
 .button-danger:hover:not([data-disabled]) {

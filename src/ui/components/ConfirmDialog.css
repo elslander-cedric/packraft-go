@@ -3,7 +3,7 @@
   inset: 0;
   /* Above the Leaflet map's panes and controls. */
   z-index: var(--z-overlay);
-  background: rgb(0 0 0 / 30%);
+  background: var(--color-backdrop);
 }
 
 .confirm-dialog {
