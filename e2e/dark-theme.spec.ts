@@ -22,7 +22,8 @@ async function drawHikeLeg(page: Page) {
 const style = (page: Page, selector: string, property: string) =>
   page.locator(selector).first().evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
 
-const luminance = (rgb: string) => {
+// Rough brightness of a computed rgb() colour, 0 (black) to 1 (white).
+const brightness = (rgb: string) => {
   const [r, g, b] = rgb.match(/\d+/g)!.map(Number);
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 };
@@ -34,9 +35,9 @@ test.describe("with the system set to dark", () => {
     await serveOffline(page);
     await drawHikeLeg(page);
 
-    expect(luminance(await style(page, "body", "background-color"))).toBeLessThan(0.2);
-    expect(luminance(await style(page, "body", "color"))).toBeGreaterThan(0.8);
-    expect(luminance(await style(page, ".leaflet-control-zoom-in", "background-color"))).toBeLessThan(0.2);
+    expect(brightness(await style(page, "body", "background-color"))).toBeLessThan(0.2);
+    expect(brightness(await style(page, "body", "color"))).toBeGreaterThan(0.8);
+    expect(brightness(await style(page, ".leaflet-control-zoom-in", "background-color"))).toBeLessThan(0.2);
 
     expect(await style(page, ".leaflet-tile-pane", "filter")).toBe("brightness(0.65)");
     expect(await style(page, ".leaflet-overlay-pane", "filter")).toBe("none");

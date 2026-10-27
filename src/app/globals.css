@@ -33,6 +33,8 @@
   /* Buttons floating on the map (phone) and the bottom sheet's edge. */
   --shadow-float: 0 1px 4px rgb(0 0 0 / 30%);
   --shadow-sheet: 0 -2px 8px rgb(0 0 0 / 20%);
+  /* Behind the tiles while they load (Leaflet's own grey in the light theme). */
+  --color-map-background: #ddd;
   /* Above Leaflet's panes and controls (z-index up to 1000). */
   --z-overlay: 2000;
   /* The side panel's open and collapsed widths (SidePanel); the open width matches
@@ -68,6 +70,7 @@
     --shadow-popup: 0 0.25rem 1rem rgb(0 0 0 / 60%);
     --shadow-float: 0 1px 4px rgb(0 0 0 / 70%);
     --shadow-sheet: 0 -2px 8px rgb(0 0 0 / 60%);
+    --color-map-background: #2a2a2a;
   }
 }
 
@@ -451,7 +454,7 @@ path.leg-pending {
    tokens; in the light theme they keep Leaflet's own look. */
 @media (prefers-color-scheme: dark) {
   .leaflet-container {
-    background: #2a2a2a;
+    background: var(--color-map-background);
   }
 
   .leaflet-tile-pane {

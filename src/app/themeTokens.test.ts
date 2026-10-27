@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { DARK_THEME_COLOR } from "./manifest";
 
 // The dark theme (#141) follows the system's prefers-color-scheme: the panel tokens in
 // globals.css get dark values, the overlay tokens keep theirs.
@@ -44,6 +45,7 @@ const pairs: [string, string][] = [
   ["--color-warning", "--color-surface"],
   ["--color-text", "--color-surface-hover"],
   ["--color-muted", "--color-surface-hover"],
+  ["--color-danger", "--color-surface-hover"],
   ["--color-text", "--color-paddle-tint"],
   ["--color-muted", "--color-paddle-tint"],
   ["--color-danger", "--color-paddle-tint"],
@@ -73,6 +75,10 @@ describe("theme tokens (#141)", () => {
       expect(contrast(theme[fg], theme[bg])).toBeGreaterThanOrEqual(4.5);
     });
   }
+
+  it("colours the phone's status bar like the dark surface", () => {
+    expect(DARK_THEME_COLOR).toBe(dark["--color-surface"]);
+  });
 
   it("keeps the overlay colours in both themes, so a leg matches its line on the map", () => {
     for (const token of ["--color-hike", "--color-paddle", "--color-camp", "--color-on-accent"]) {
