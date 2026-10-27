@@ -33,11 +33,11 @@ describe("a new leg takes the mode of the last leg", () => {
 
   it("works through the session, with and without an explicit mode", () => {
     let s = firstSession({ trip: emptyTrip() });
-    s = plannerSession(s, { type: "addPoint", at: A });
-    s = plannerSession(s, { type: "addPoint", at: B });
+    s = plannerSession(s, { type: "addPoint", at: A, accessPoints: [] });
+    s = plannerSession(s, { type: "addPoint", at: B, accessPoints: [] });
     s = plannerSession(s, { type: "setLegMode", index: 0, mode: "paddle", accessPoints: [] });
-    s = plannerSession(s, { type: "addPoint", at: C });
-    s = plannerSession(s, { type: "addPoint", at: D, mode: "hike" });
+    s = plannerSession(s, { type: "addPoint", at: C, accessPoints: [] });
+    s = plannerSession(s, { type: "addPoint", at: D, mode: "hike", accessPoints: [] });
     expect(s.trip.legs.map((l) => l.mode)).toEqual(["paddle", "paddle", "hike"]);
   });
 });

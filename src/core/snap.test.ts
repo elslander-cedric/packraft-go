@@ -57,6 +57,20 @@ describe("snap offers after a mode change", () => {
     expect(snapOffers(before, after, points).map((o) => o.change)).toEqual([{ kind: "put-in", point: 0 }]);
   });
 
+  it("adding a paddle leg after a hike leg offers to snap its put-in", () => {
+    const before = trip(durbuy);
+    const after = applyEdit(before, { type: "addPoint", at: north(durbuy, 0.02), mode: "paddle" });
+    const near = point("b", north(durbuy, 0.011), "slipway");
+    expect(snapOffers(before, after, near).map((o) => o.change)).toEqual([{ kind: "put-in", point: 1 }]);
+  });
+
+  it("an edit that shifts the points offers nothing", () => {
+    const before = trip(durbuy);
+    const paddling = applyEdit(before, { type: "setLegMode", index: 0, mode: "paddle" });
+    const inserted = applyEdit(paddling, { type: "insertPoint", index: 0, near: north(durbuy, 0.005) });
+    expect(snapOffers(before, inserted, point("a", north(durbuy, 0.011), "slipway"))).toEqual([]);
+  });
+
   it("an edit that is not a mode change offers nothing", () => {
     const paddling = trip(durbuy, "paddle");
     const moved = applyEdit(paddling, { type: "movePoint", index: 0, to: north(durbuy, 0.0001) });
