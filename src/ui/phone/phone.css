@@ -482,23 +482,9 @@
   font-size: 0.85rem;
 }
 
-.phone-day-access {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* The trip's access summary: the sheet body already pads the sides; space between the rule and
-   the title instead, and no scrolling box of its own. */
-.phone-tab-panels .trip-access {
-  max-height: none;
-  min-height: 0;
-  padding: var(--space-3) 0 0;
-  overflow: visible;
-}
-
-.phone-tab-panels .trip-access h2 {
-  margin-top: 0;
+/* Under the Days tab's cards, which run edge to edge. */
+.phone-tab-panels .days-panel + .phone-disclaimer {
+  margin-top: var(--space-3);
 }
 
 /* The Settings tab (#123): the desktop's fields, finger-sized. The tab names the panel, and the

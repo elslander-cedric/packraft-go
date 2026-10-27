@@ -243,14 +243,13 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         </TabPanel>
         <TabPanel value="days">
           <DaysPanel days={summary.days} access={waterAccess?.days} aire={aire} onSelectDay={openDay} heading={false} />
+          {/* Each day's access is on its card; the disclaimer follows them (#123). */}
+          {waterAccess && summary.days.length > 0 && <p className="phone-disclaimer">{strings.navigationRulesNotice}</p>}
         </TabPanel>
         <TabPanel value="trip">
           <PhoneTripTab
             name={trip.name}
             startDate={trip.startDate}
-            days={summary.days}
-            access={waterAccess}
-            aire={aire}
             onRename={(name) => dispatch({ type: "rename", name })}
             onSetStartDate={(date) => dispatch({ type: "setStartDate", date })}
           />
