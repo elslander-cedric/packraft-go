@@ -28,11 +28,11 @@ const rowButton = (page: Page, n: number) =>
     .getByRole("button", { name: strings.legLabel(n), exact: false })
     .first();
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const legMode = (page: Page, n: number, mode: string) =>
+const modeSwitch = (page: Page, n: number) =>
   legRows(page)
     .nth(n - 1)
-    .getByRole("group", { name: strings.legModeLabel(n) })
-    .getByRole("button", { name: mode });
+    .getByRole("group", { name: strings.legModeLabel(n) });
+const legMode = (page: Page, n: number, mode: string) => modeSwitch(page, n).getByRole("button", { name: mode });
 const nextMode = (page: Page, mode: string) =>
   page.getByRole("group", { name: text.nextLegModeLabel }).getByRole("button", { name: mode });
 const offer = (page: Page) => page.getByRole("region", { name: strings.snap.label });
@@ -120,7 +120,7 @@ test("tapping a row zooms the map to its leg and opens it; opening another close
   await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "false");
   await rowButton(page, 1).click();
   await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "true");
-  await expect(legRows(page).nth(0)).toContainText(strings.climbLabel);
+  await expect(modeSwitch(page, 1)).toBeVisible();
   // Zoomed in on the short leg, which now shows above the sheet.
   await expect.poll(async () => (await first.boundingBox())!.height).toBeGreaterThan(widthBefore * 2);
   await expect.poll(async () => isInside(first, await freeMap(page))).toBe(true);
@@ -128,8 +128,40 @@ test("tapping a row zooms the map to its leg and opens it; opening another close
   await rowButton(page, 2).click();
   await expect(rowButton(page, 2)).toHaveAttribute("aria-expanded", "true");
   await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "false");
-  await expect(legRows(page).nth(0)).not.toContainText(strings.climbLabel);
+  await expect(modeSwitch(page, 1)).toHaveCount(0);
   await expect.poll(async () => isInside(legLines(page).nth(1), await freeMap(page))).toBe(true);
+});
+
+test("a closed row shows its figures after their icons, without a visible leg number; open, its mode switch is icon-only", async ({
+  page,
+}) => {
+  await serveOffline(page);
+  await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "paddle", geometry: [P1, P2] }] });
+  await openPhone(page);
+  await openLegsTab(page);
+  const labels = text.legFigures;
+
+  const hike = rowButton(page, 1);
+  // The leg's number names the row for screen readers only.
+  await expect(hike.getByText(strings.legLabel(1))).toHaveClass("visually-hidden");
+  for (const icon of [icons.hike, icons.time, icons.climb, icons.descent]) await expect(iconIn(hike, icon)).toBeVisible();
+  await expect(hike).toContainText(`${labels.climb} 0 m`);
+  await expect(hike).toContainText(`${labels.descent} 0 m`);
+  await expect(hike).toContainText(labels.time);
+
+  const paddle = rowButton(page, 2);
+  await expect(iconIn(paddle, icons.paddle)).toBeVisible();
+  await expect(paddle).toContainText(`${labels.drop} 0 m`);
+  await expect(paddle).not.toContainText(labels.climb);
+
+  // Open: the mode switch looks like the map's next leg toggle, icon-only with the modes as names.
+  await hike.click();
+  await expect(legMode(page, 1, strings.legModeHike)).toHaveText("");
+  await expect(iconIn(legMode(page, 1, strings.legModeHike), icons.hike)).toBeVisible();
+  await expect(iconIn(legMode(page, 1, strings.legModePaddle), icons.paddle)).toBeVisible();
+  await expect(legMode(page, 1, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
+  // The time is still there, among the figures.
+  await expect(hike).toContainText(labels.time);
 });
 
 // Durbuy is in Wallonia. 0.001 degrees of latitude is about 111 m.
@@ -211,8 +243,8 @@ test("a paddle row shows its access on a line of its own under the figures, as a
   await expect(status).toHaveText(/^Access: \S/);
   await expect(status.locator(".access-swatch")).toHaveCount(1);
   await sheetSettled(page);
-  const name = (await button.getByText(strings.legLabel(1), { exact: true }).boundingBox())!;
-  expect((await status.boundingBox())!.y).toBeGreaterThanOrEqual(name.y + name.height);
+  const figures = (await button.locator(".phone-row-figures").boundingBox())!;
+  expect((await status.boundingBox())!.y).toBeGreaterThanOrEqual(figures.y + figures.height);
 });
 
 /** A paddle leg along the Semois (stretch 1.B.4c), dated today; see live-walloon-flows.spec.ts. */

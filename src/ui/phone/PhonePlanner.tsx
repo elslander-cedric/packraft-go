@@ -35,12 +35,6 @@ import "./phone.css";
 type PhoneTab = keyof typeof strings.phone.tabs;
 const tabs = Object.keys(strings.phone.tabs) as PhoneTab[];
 
-/** The floating next leg's mode toggle: icon-only, like the other floating buttons. */
-const nextLegModeOptions = legModeOptions.map((option) => ({
-  ...option,
-  icon: <Icon icon={icons[option.value]} />,
-}));
-
 /**
  * The next leg's mode the planner picked, and the trip state it was picked for: the trip's
  * points and undo steps, which every edit, undo, New trip and Open… replace, and routing keeps.
@@ -393,7 +387,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         <ToggleGroup
           label={strings.phone.nextLegModeLabel}
           value={nextMode}
-          options={nextLegModeOptions}
+          options={legModeOptions}
           onChange={(mode) => setPick({ mode, ...pickedFor(trip) })}
           className="phone-next-mode"
         />
