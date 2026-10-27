@@ -98,7 +98,7 @@ export default function PhoneLegsList({
         const warnings = aire.filter((warning) => warning.leg === i);
         const [time, ...elevation] = figures(leg);
         return (
-          <li key={i} className={`phone-row phone-row-${leg.mode}`}>
+          <li key={i} className={`phone-row phone-row-${leg.mode}${open ? " phone-row-open" : ""}`}>
             <div className="phone-row-head">
               <Button className="phone-row-toggle" aria-expanded={open} onClick={() => onOpen(i)}>
                 <span className="visually-hidden">{`${strings.legLabel(i + 1)} `}</span>
