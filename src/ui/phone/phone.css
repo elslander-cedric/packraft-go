@@ -225,8 +225,7 @@
   font-size: 0.95rem;
 }
 
-.phone-row-heading,
-.phone-row-name {
+.phone-row-heading {
   font-weight: 600;
 }
 
@@ -316,15 +315,25 @@
   font-size: 0.8rem;
 }
 
-/* The Legs tab (#121): a whole row heading is the button that opens it. */
-.button.phone-row-toggle {
+/* The Legs tab (#121): a row's head is the button that opens it, with the open row's mode switch on its right. */
+.phone-row-head {
   display: flex;
   flex-basis: 100%;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1) var(--space-3);
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.button.phone-row-toggle {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
   min-height: 2.75rem;
-  padding: 0;
+  padding: var(--space-1) 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -336,13 +345,52 @@
   background: transparent;
 }
 
+/* The mode icon and distance, large, with the time on the right while the row is closed. */
+.phone-row-headline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
 .phone-row-figure {
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.phone-row-figure-icon {
+  margin-right: 0.3em;
+}
+
+.phone-row-distance {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.phone-row-hike .phone-row-distance .phone-row-figure-icon {
+  color: var(--color-hike);
+}
+
+.phone-row-paddle .phone-row-distance .phone-row-figure-icon {
+  color: var(--color-paddle);
+}
+
+.phone-row-time {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+/* Climb and descent (or drop), smaller and muted under the headline. */
+.phone-row-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  color: var(--color-muted);
+  font-size: 0.85rem;
 }
 
 /* A paddle leg's access, on a line of its own under the figures, as on a day row. */
 .phone-row-access {
-  flex-basis: 100%;
+  align-self: flex-start;
   font-size: 0.85rem;
 }
 
@@ -356,36 +404,41 @@
   padding-right: var(--space-2);
 }
 
-.phone-row-figures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-}
-
-.phone-mode-switch .toggle {
-  min-width: 4.5rem;
-  min-height: 2.75rem;
-  font-size: 0.95rem;
-}
-
-/* The next leg's mode, over the map with the other bottom-right buttons: stacked, one width, a rounded segmented control. */
-.phone-next-mode {
-  flex-direction: column;
+/* The next leg's mode over the map and an open row's mode: an icon-only, rounded segmented control. */
+.phone-next-mode,
+.phone-mode-switch {
+  flex: none;
   box-sizing: border-box;
   gap: 2px;
-  width: var(--phone-next-mode-width);
   padding: 2px;
   border-radius: 0.75rem;
   background: var(--color-surface);
 }
 
 .phone-next-mode .toggle,
-.phone-next-mode .toggle + .toggle {
+.phone-next-mode .toggle + .toggle,
+.phone-mode-switch .toggle,
+.phone-mode-switch .toggle + .toggle {
   min-height: calc(2.75rem - 4px);
   padding: 0;
   border: none;
   border-radius: 0.6rem;
   font-size: 1.4rem;
+}
+
+/* Over the map, with the other bottom-right buttons: stacked, one width. */
+.phone-next-mode {
+  flex-direction: column;
+  width: var(--phone-next-mode-width);
+}
+
+/* In the sheet: side by side, edged so it stands out on a paddle row's tint. */
+.phone-mode-switch {
+  border: 1px solid var(--color-border);
+}
+
+.phone-mode-switch .toggle {
+  min-width: 3.25rem;
 }
 
 .phone {

@@ -197,6 +197,17 @@ export const strings = {
         time: "Estimated total time",
       },
     },
+    // A leg row's figures, each after its icon, named for screen readers.
+    legFigures: {
+      hike: "Hike distance",
+      paddle: "Paddle distance",
+      time: "Estimated time",
+      climb: "Climb",
+      descent: "Descent",
+      drop: "Drop",
+      // A paddle leg that ends higher than it starts (ADR 0018).
+      rise: "Rise, upstream?",
+    },
     // The side panel that replaces the sheet when the phone is held sideways (#126).
     collapsePanelButton: "Collapse the trip panel",
     expandPanelButton: "Open the trip panel",

@@ -1,20 +1,56 @@
 import type { AireWarning } from "@/core/aire";
-import type { TripSummary } from "@/core/summarise";
+import type { LegSummary, TripSummary } from "@/core/summarise";
 import type { TripAccess } from "@/core/tripAccess";
 import type { Leg, LegMode } from "@/core/trip";
 import { Button } from "../components/Button";
 import { ToggleGroup, type ToggleOption } from "../components/ToggleGroup";
 import { formatDistance, formatElevation, formatTimeEstimate } from "../format";
+import { Icon } from "../icons/Icon";
+import { icons, type IconDefinition } from "../icons/icons";
 import { strings } from "../strings";
 import { AccessStatusLine, AireWarnings, LegAccessView } from "../TripAccessView";
 
-const modeLabel = { hike: strings.legModeHike, paddle: strings.legModePaddle } as const;
-
-/** Hike / Paddle, styled as the desktop's mode switch. */
+/** Hike / Paddle, icon-only, coloured as the desktop's mode switch: the map's next leg toggle and an open row's switch. */
 export const legModeOptions: readonly ToggleOption<LegMode>[] = [
-  { value: "hike", label: strings.legModeHike, className: "leg-mode leg-mode-hike" },
-  { value: "paddle", label: strings.legModePaddle, className: "leg-mode leg-mode-paddle" },
+  { value: "hike", label: strings.legModeHike, icon: <Icon icon={icons.hike} />, className: "leg-mode leg-mode-hike" },
+  {
+    value: "paddle",
+    label: strings.legModePaddle,
+    icon: <Icon icon={icons.paddle} />,
+    className: "leg-mode leg-mode-paddle",
+  },
 ];
+
+type Figure = { key: string; icon: IconDefinition; label: string; value: string };
+
+/** A leg's time, climb and descent (drop, or rise, on a paddle leg) that are known. */
+function figures(leg: LegSummary): Figure[] {
+  const labels = strings.phone.legFigures;
+  const all: (Figure | false)[] = [
+    { key: "time", icon: icons.time, label: labels.time, value: formatTimeEstimate(leg.timeH, leg.timeStatus) },
+    leg.climbM !== undefined && { key: "climb", icon: icons.climb, label: labels.climb, value: formatElevation(leg.climbM) },
+    leg.descentM !== undefined && {
+      key: "descent",
+      icon: icons.descent,
+      label: labels.descent,
+      value: formatElevation(leg.descentM),
+    },
+    leg.dropM !== undefined && { key: "drop", icon: icons.descent, label: labels.drop, value: formatElevation(leg.dropM) },
+    leg.riseM !== undefined && { key: "rise", icon: icons.climb, label: labels.rise, value: `${formatElevation(leg.riseM)}?` },
+  ];
+  return all.filter((figure): figure is Figure => figure !== false);
+}
+
+/** One figure after its icon; the icon's meaning is read out before the value. */
+function FigureView({ figure, className }: { figure: Figure; className?: string }) {
+  return (
+    <span className={className ? `phone-row-figure ${className}` : "phone-row-figure"}>
+      <Icon icon={figure.icon} className="phone-row-figure-icon" />
+      <span className="visually-hidden">{`${figure.label} `}</span>
+      {figure.value}
+    </span>
+  );
+}
 
 export type PhoneLegsListProps = {
   summary: TripSummary;
@@ -34,10 +70,12 @@ export type PhoneLegsListProps = {
 };
 
 /**
- * The Legs tab (#121): one compact row per leg with its mode, distance, time and
- * access. A tapped row opens with the leg's climb and descent (drop on a paddle
- * leg), its mode switch, access details, flow figures and aire warnings. A leg
- * whose routing failed shows the failure with Retry, open or not.
+ * The Legs tab (#121): one row per leg, its mode icon and distance as a headline with the
+ * time on the right, and under it the climb and descent (drop on a paddle leg), each after
+ * its icon, then the access. The leg's number is only read out. A tapped row opens: its
+ * mode switch takes the time's place, the time joins the figures, and the access details,
+ * flow figures and aire warnings follow. A leg whose routing failed shows the failure with
+ * Retry, open or not.
  */
 export default function PhoneLegsList({
   summary,
@@ -58,15 +96,43 @@ export default function PhoneLegsList({
         const status = legAccess?.status.state;
         const open = i === openLeg;
         const warnings = aire.filter((warning) => warning.leg === i);
+        const [time, ...elevation] = figures(leg);
         return (
           <li key={i} className={`phone-row phone-row-${leg.mode}`}>
-            <Button className="phone-row-toggle" aria-expanded={open} onClick={() => onOpen(i)}>
-              <span className="phone-row-name">{strings.legLabel(i + 1)}</span>
-              <span className="phone-row-mode">{modeLabel[leg.mode]}</span>
-              <span className="phone-row-figure">{formatDistance(leg.distanceKm)}</span>
-              <span className="phone-row-figure">{formatTimeEstimate(leg.timeH, leg.timeStatus)}</span>
-              {status && <AccessStatusLine state={status} className="phone-row-access" />}
-            </Button>
+            <div className="phone-row-head">
+              <Button className="phone-row-toggle" aria-expanded={open} onClick={() => onOpen(i)}>
+                <span className="visually-hidden">{`${strings.legLabel(i + 1)} `}</span>
+                <span className="phone-row-headline">
+                  <FigureView
+                    figure={{
+                      key: "distance",
+                      icon: icons[leg.mode],
+                      label: strings.phone.legFigures[leg.mode],
+                      value: formatDistance(leg.distanceKm),
+                    }}
+                    className="phone-row-distance"
+                  />
+                  {!open && <FigureView figure={time} className="phone-row-time" />}
+                </span>
+                {(open || elevation.length > 0) && (
+                  <span className="phone-row-figures">
+                    {(open ? [time, ...elevation] : elevation).map((figure) => (
+                      <FigureView key={figure.key} figure={figure} />
+                    ))}
+                  </span>
+                )}
+                {status && <AccessStatusLine state={status} className="phone-row-access" />}
+              </Button>
+              {open && (
+                <ToggleGroup
+                  label={strings.legModeLabel(i + 1)}
+                  value={leg.mode}
+                  options={legModeOptions}
+                  onChange={(mode) => onSetMode(i, mode)}
+                  className="phone-mode-switch"
+                />
+              )}
+            </div>
             {(!route || route.status === "pending") && (
               <span role="status" className="phone-row-routing">
                 {strings.legRouting}
@@ -84,29 +150,8 @@ export default function PhoneLegsList({
                 </Button>
               </span>
             )}
-            {open && (
+            {open && (legAccess || warnings.length > 0) && (
               <div className="phone-row-details">
-                <ToggleGroup
-                  label={strings.legModeLabel(i + 1)}
-                  value={leg.mode}
-                  options={legModeOptions}
-                  onChange={(mode) => onSetMode(i, mode)}
-                  className="leg-mode-switch phone-mode-switch"
-                />
-                <div className="phone-row-figures">
-                  {leg.climbM !== undefined && (
-                    <span className="phone-row-figure">{`${strings.climbLabel} ${formatElevation(leg.climbM)}`}</span>
-                  )}
-                  {leg.descentM !== undefined && (
-                    <span className="phone-row-figure">{`${strings.descentLabel} ${formatElevation(leg.descentM)}`}</span>
-                  )}
-                  {leg.dropM !== undefined && (
-                    <span className="phone-row-figure">{`${strings.dropLabel} ${formatElevation(leg.dropM)}`}</span>
-                  )}
-                  {leg.riseM !== undefined && (
-                    <span className="phone-row-figure">{strings.riseFigure(formatElevation(leg.riseM))}</span>
-                  )}
-                </div>
                 {legAccess && <LegAccessView access={legAccess} />}
                 {warnings.length > 0 && (
                   <div className="leg-access">

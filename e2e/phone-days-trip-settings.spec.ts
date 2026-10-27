@@ -144,9 +144,15 @@ test("the Days tab has no heading or rule of its own; the cards run edge to edge
     .toEqual([0, 0, 0]);
 
   // Like the leg rows: the cards touch, with a rule between them.
-  const first = (await dayCards(page).nth(0).boundingBox())!;
-  const second = (await dayCards(page).nth(1).boundingBox())!;
-  expect(Math.round(second.y - (first.y + first.height))).toBe(0);
+  // Both measured in one frame: the sheet may still be sliding to its stop.
+  const gap = await dayCards(page)
+    .nth(0)
+    .evaluate((first) => {
+      const a = first.getBoundingClientRect();
+      const b = first.nextElementSibling!.getBoundingClientRect();
+      return Math.round(b.top - a.bottom);
+    });
+  expect(gap).toBe(0);
   await expect(dayCards(page).nth(0)).toHaveCSS("border-bottom-width", "1px");
 });
 
