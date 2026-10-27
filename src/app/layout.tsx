@@ -13,8 +13,15 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: strings.appTitle },
 };
 
+/** The dark theme's surface (--color-surface in globals.css), for the phone's status bar (#141). */
+const DARK_THEME_COLOR = "#1c1c1e";
+
 export const viewport: Viewport = {
-  themeColor: THEME_COLOR,
+  // The manifest can hold one theme colour only; the meta tags follow the system's theme.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLOR },
+    { media: "(prefers-color-scheme: dark)", color: DARK_THEME_COLOR },
+  ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

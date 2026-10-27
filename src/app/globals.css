@@ -11,22 +11,64 @@
   --color-on-accent: #fff;
   --color-danger: #b00020;
   --color-danger-hover: #8c0019;
+  --color-on-danger: #fff;
+  --color-warning: #b35f00;
+  --color-border-subtle: #eee;
+  --color-notice: #fff4ce;
+  --color-notice-border: #e0c97a;
+  --color-backdrop: rgb(0 0 0 / 30%);
   /* Hike and paddle legs carry the same colour in the list as on the map. */
   --color-hike: #b5491b;
   --color-paddle: #1b6fb5;
   --color-paddle-tint: #eef5fc;
   --color-camp: #2e6b30;
+  /* The lock marker's swatch, drawn like the marker on the map in both themes. */
+  --color-lock-ring: #1a1a1a;
+  --color-lock-fill: #fff;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 1rem;
   --radius: 3px;
   --shadow-popup: 0 0.25rem 1rem rgb(0 0 0 / 20%);
+  /* Buttons floating on the map (phone) and the bottom sheet's edge. */
+  --shadow-float: 0 1px 4px rgb(0 0 0 / 30%);
+  --shadow-sheet: 0 -2px 8px rgb(0 0 0 / 20%);
   /* Above Leaflet's panes and controls (z-index up to 1000). */
   --z-overlay: 2000;
   /* The side panel's open and collapsed widths (SidePanel); the open width matches
      PANEL_SHARE and PANEL_MAX_PX in SidePanel.tsx. */
   --side-panel-width: min(45vw, 380px);
   --side-panel-strip-width: 5.5rem;
+  /* Native inputs (date picker, number fields) and scrollbars follow the theme. */
+  color-scheme: light dark;
+}
+
+/* Dark theme (#141): follows the system setting, nothing stored. Only the panel tokens change;
+   the hike, paddle and camp colours and the map's overlays stay as they are. The map tiles are
+   dimmed rather than inverted (that ruins OpenTopoMap's relief shading) or swapped for a dark
+   base layer (none is free and topographic, ADR 0014). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text: #e6e6e6;
+    --color-muted: #a6a6a6;
+    --color-surface: #1c1c1e;
+    --color-surface-hover: #2c2c2e;
+    --color-border: #444;
+    --color-border-strong: #707070;
+    --color-focus: #6cb0ef;
+    --color-danger: #ff8080;
+    --color-danger-hover: #ffa3a3;
+    --color-on-danger: #1c1c1e;
+    --color-warning: #f0a040;
+    --color-border-subtle: #2e2e30;
+    --color-notice: #3a3015;
+    --color-notice-border: #6b5a20;
+    --color-backdrop: rgb(0 0 0 / 55%);
+    --color-paddle-tint: #16283a;
+    --shadow-popup: 0 0.25rem 1rem rgb(0 0 0 / 60%);
+    --shadow-float: 0 1px 4px rgb(0 0 0 / 70%);
+    --shadow-sheet: 0 -2px 8px rgb(0 0 0 / 60%);
+  }
 }
 
 /* One self-hosted font, so text measures the same on every machine and layout
@@ -45,6 +87,7 @@ body {
   height: 100%;
   font-family: "Inter", system-ui, sans-serif;
   color: var(--color-text);
+  background: var(--color-surface);
 }
 
 /* Read by screen readers, not shown. */
@@ -71,8 +114,8 @@ body {
 .navigation-notice {
   margin: 0;
   padding: 0.5rem 1rem;
-  background: #fff4ce;
-  border-bottom: 1px solid #e0c97a;
+  background: var(--color-notice);
+  border-bottom: 1px solid var(--color-notice-border);
   font-size: 0.9rem;
 }
 
@@ -205,7 +248,7 @@ body {
   flex-direction: column;
   row-gap: var(--space-1);
   padding: var(--space-1) var(--space-2) var(--space-1) 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .leg-row-heading,
@@ -252,11 +295,13 @@ body {
 .toggle.leg-mode-hike[data-pressed] {
   border-color: var(--color-hike);
   background: var(--color-hike);
+  color: var(--color-on-accent);
 }
 
 .toggle.leg-mode-paddle[data-pressed] {
   border-color: var(--color-paddle);
   background: var(--color-paddle);
+  color: var(--color-on-accent);
 }
 
 .leg-routing,
@@ -399,4 +444,70 @@ path.leg-pending {
    rules, which switch with its handlers, have the same specificity). */
 .leaflet-container {
   touch-action: none !important;
+}
+
+/* The map in the dark theme (#141): only the tiles are dimmed, so the route lines, points and
+   access layer keep their colours. Leaflet's controls, popups and tooltips take the panel
+   tokens; in the light theme they keep Leaflet's own look. */
+@media (prefers-color-scheme: dark) {
+  .leaflet-container {
+    background: #2a2a2a;
+  }
+
+  .leaflet-tile-pane {
+    filter: brightness(65%);
+  }
+
+  .leaflet-bar a,
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip,
+  .leaflet-tooltip {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .leaflet-bar a {
+    border-bottom-color: var(--color-border);
+  }
+
+  .leaflet-bar a:hover,
+  .leaflet-bar a:focus {
+    background: var(--color-surface-hover);
+  }
+
+  .leaflet-bar a.leaflet-disabled {
+    background: var(--color-surface-hover);
+    color: var(--color-muted);
+  }
+
+  .leaflet-touch .leaflet-bar,
+  .leaflet-tooltip {
+    border-color: var(--color-border);
+  }
+
+  .leaflet-tooltip-top::before {
+    border-top-color: var(--color-surface);
+  }
+
+  .leaflet-tooltip-bottom::before {
+    border-bottom-color: var(--color-surface);
+  }
+
+  .leaflet-tooltip-left::before {
+    border-left-color: var(--color-surface);
+  }
+
+  .leaflet-tooltip-right::before {
+    border-right-color: var(--color-surface);
+  }
+
+  .leaflet-container .leaflet-control-attribution {
+    background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+    color: var(--color-text);
+  }
+
+  .leaflet-container .leaflet-control-attribution a,
+  .leaflet-container a.leaflet-popup-close-button {
+    color: var(--color-focus);
+  }
 }

@@ -26,5 +26,6 @@
 .toggle[data-pressed] {
   border-color: var(--color-text);
   background: var(--color-text);
-  color: var(--color-on-accent);
+  /* The surface colour reads on the text colour in both themes. */
+  color: var(--color-surface);
 }

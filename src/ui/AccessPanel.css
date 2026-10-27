@@ -111,9 +111,9 @@
   width: 0.8rem;
   height: 0.8rem;
   margin-right: var(--space-2);
-  border: 3px solid #1a1a1a;
+  border: 3px solid var(--color-lock-ring);
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--color-lock-fill);
   vertical-align: middle;
 }
 

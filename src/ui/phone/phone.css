@@ -102,7 +102,7 @@
   border-radius: 50%;
   border: 1px solid var(--color-border-strong);
   background: var(--color-surface);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  box-shadow: var(--shadow-float);
   font-size: 1.4rem;
 }
 
@@ -112,7 +112,7 @@
   padding: var(--space-2);
   border-radius: 0.5rem;
   background: var(--color-surface);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  box-shadow: var(--shadow-float);
   font-size: 0.85rem;
 }
 
@@ -373,7 +373,7 @@
 .phone-next-mode {
   flex-direction: column;
   width: var(--phone-next-mode-width);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  box-shadow: var(--shadow-float);
 }
 
 .phone-next-mode .toggle {
@@ -414,7 +414,7 @@
   padding: var(--space-2);
   border-radius: 0.5rem;
   background: var(--color-surface);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  box-shadow: var(--shadow-float);
   font-size: 0.9rem;
 }
 
@@ -532,7 +532,7 @@
   border: 1px solid var(--color-border-strong);
   border-radius: 1.375rem;
   background: var(--color-surface);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  box-shadow: var(--shadow-float);
   white-space: nowrap;
 }
 

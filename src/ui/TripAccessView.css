@@ -40,7 +40,7 @@
 }
 
 .access-warning-closed strong {
-  color: #b35f00;
+  color: var(--color-warning);
 }
 
 .leg-access-flow,
@@ -65,7 +65,7 @@
 }
 .access-warning-aire strong,
 .access-warning-lock strong {
-  color: #b35f00;
+  color: var(--color-warning);
 }
 
 /* Unknown access: a quiet note, visibly lighter than the coloured warnings (#78). */
