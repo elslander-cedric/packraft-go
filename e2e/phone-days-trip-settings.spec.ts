@@ -233,7 +233,17 @@ test("the Trip tab has no access summary or totals: each day's access is on its 
   await tab(page, text.tabs.days).click();
   // Unlisted Walloon water is not allowed (#75): a Forbidden status, never "unknown".
   await expect(dayCards(page).nth(1)).toContainText(strings.tripAccess.dayStatus(strings.accessState.forbidden));
-  await expect(dayCards(page).nth(1)).toContainText(strings.tripAccess.warningKind.forbidden);
+  // The warnings show only on the selected card; tapping it again unselects it.
+  const warning = dayCards(page).nth(1).locator(".access-warning-forbidden");
+  const select = dayCards(page).nth(1).getByRole("button", { name: strings.dayLabel(2) });
+  await expect(warning).toHaveCount(0);
+  await expect(select).toHaveAttribute("aria-expanded", "false");
+  await dayCards(page).nth(1).tap();
+  await expect(warning).toContainText(strings.tripAccess.warningKind.forbidden);
+  await expect(select).toHaveAttribute("aria-expanded", "true");
+  await dayCards(page).nth(1).tap();
+  await expect(warning).toHaveCount(0);
+  await expect(dayCards(page).nth(1)).toContainText(strings.tripAccess.dayStatus(strings.accessState.forbidden));
   await expect(panel(page)).not.toContainText(strings.accessState.unknown);
   const disclaimer = panel(page).getByText(strings.navigationRulesNotice);
   await expect(disclaimer).toBeVisible();

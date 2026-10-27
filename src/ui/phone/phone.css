@@ -444,6 +444,11 @@
   cursor: pointer;
 }
 
+/* The selected card, which shows its access warnings. */
+.phone-tab-panels .day-row-selected {
+  background: var(--color-surface-hover);
+}
+
 .day-select {
   min-height: 2.75rem;
   padding: 0;

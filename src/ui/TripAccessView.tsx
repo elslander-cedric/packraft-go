@@ -165,17 +165,22 @@ export function AccessStatusLine({ state, className }: { state: AccessState; cla
   );
 }
 
-/** A day's access: the most restrictive status of its paddle legs and their warnings. */
-export function DayAccessView({ access }: { access: DayAccess }) {
+/** A day's access: the most restrictive status of its paddle legs and, with `details`, their warnings. */
+export function DayAccessView({ access, details = true }: { access: DayAccess; details?: boolean }) {
   const { state } = access;
+  if (!details && state === undefined) return null;
   if (state === undefined && access.warnings.length === 0 && access.lockWarnings.length === 0 && access.legsWithoutRules === 0)
     return null;
   return (
     <div className="day-access">
       {state !== undefined && <AccessStatusLine state={state} />}
-      <WarningList warnings={access.warnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
-      <LockWarnings warnings={access.lockWarnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
-      <LegsWithoutRules count={access.legsWithoutRules} />
+      {details && (
+        <>
+          <WarningList warnings={access.warnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
+          <LockWarnings warnings={access.lockWarnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
+          <LegsWithoutRules count={access.legsWithoutRules} />
+        </>
+      )}
     </div>
   );
 }
