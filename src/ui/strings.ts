@@ -201,7 +201,6 @@ export const strings = {
     expandPanelButton: "Open the trip panel",
     collapsePanelGlyph: "›",
     expandPanelGlyph: "‹",
-    legAccessLabel: "Access",
     // The floating hike / paddle toggle for the leg the next map tap adds (#121).
     nextLegModeLabel: "Next leg's mode",
     // Its icon-only toggles; their names are `legModeHike` and `legModePaddle`.

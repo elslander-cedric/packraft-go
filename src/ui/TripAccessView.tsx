@@ -16,11 +16,19 @@ function Swatch({ state }: { state: AccessState }) {
   return <span className="access-swatch" style={{ background: accessColours[state] }} aria-hidden="true" />;
 }
 
+// Warnings get the swatch of the status they come closest to: red for a ban, orange for the rest.
+const warningSwatch: Record<AccessWarning["kind"], AccessState> = {
+  forbidden: "forbidden",
+  closed: "closed-today",
+  "check-flow": "closed-today",
+};
+
 /** One warning: its kind, the water and rule behind it, and the rule's source. */
 function Warning({ warning, place }: { warning: AccessWarning; place?: string }) {
   const { reason } = warning;
   return (
     <p className={`access-warning access-warning-${warning.kind}`}>
+      <Swatch state={warningSwatch[warning.kind]} />
       {place && <span className="access-warning-place">{`${place}: `}</span>}
       <strong>{`${strings.tripAccess.warningKind[warning.kind]}: `}</strong>
       {reason.kind === "no-rule" ? null : (
@@ -67,6 +75,7 @@ export function LockWarnings({ warnings, place }: { warnings: readonly LockWarni
     <div className="access-warnings lock-warnings">
       {warnings.map(({ lock, ...when }) => (
         <p key={`${when.leg}-${lock.id}`} className="access-warning access-warning-lock">
+          <Swatch state="closed-today" />
           {place && <span className="access-warning-place">{`${place(when)}: `}</span>}
           <strong>{strings.tripAccess.lockWarning(lock.name)}</strong>{" "}
           <a href={lock.source.url} target="_blank" rel="noreferrer">
@@ -146,6 +155,16 @@ export function LegAccessView({ access }: { access: LegAccess }) {
   );
 }
 
+/** "Access: Open" with its colour swatch, as on a day row and a phone leg row. */
+export function AccessStatusLine({ state, className }: { state: AccessState; className?: string }) {
+  return (
+    <span className={`day-access-status access-status-${state}${className ? ` ${className}` : ""}`}>
+      <Swatch state={state} />
+      {strings.tripAccess.dayStatus(accessStateLabel(state))}
+    </span>
+  );
+}
+
 /** A day's access: the most restrictive status of its paddle legs and their warnings. */
 export function DayAccessView({ access }: { access: DayAccess }) {
   const { state } = access;
@@ -153,12 +172,7 @@ export function DayAccessView({ access }: { access: DayAccess }) {
     return null;
   return (
     <div className="day-access">
-      {state !== undefined && (
-        <span className={`day-access-status access-status-${state}`}>
-          <Swatch state={state} />
-          {strings.tripAccess.dayStatus(accessStateLabel(state))}
-        </span>
-      )}
+      {state !== undefined && <AccessStatusLine state={state} />}
       <WarningList warnings={access.warnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
       <LockWarnings warnings={access.lockWarnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
       <LegsWithoutRules count={access.legsWithoutRules} />
@@ -173,6 +187,7 @@ export function AireWarnings({ warnings, showPlace }: { warnings: readonly AireW
     <div className="access-warnings aire-warnings">
       {warnings.map((warning) => (
         <p key={`${warning.kind}-${warning.point}`} className="access-warning access-warning-aire">
+          <Swatch state="closed-today" />
           {showPlace && (
             <span className="access-warning-place">{`${strings.tripAccess.warningPlace(warning.day + 1, warning.leg + 1)}: `}</span>
           )}

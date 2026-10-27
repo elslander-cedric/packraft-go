@@ -6,7 +6,7 @@ import { Button } from "../components/Button";
 import { ToggleGroup, type ToggleOption } from "../components/ToggleGroup";
 import { formatDistance, formatElevation, formatTimeEstimate } from "../format";
 import { strings } from "../strings";
-import { AireWarnings, LegAccessView } from "../TripAccessView";
+import { AccessStatusLine, AireWarnings, LegAccessView } from "../TripAccessView";
 
 const modeLabel = { hike: strings.legModeHike, paddle: strings.legModePaddle } as const;
 
@@ -65,12 +65,7 @@ export default function PhoneLegsList({
               <span className="phone-row-mode">{modeLabel[leg.mode]}</span>
               <span className="phone-row-figure">{formatDistance(leg.distanceKm)}</span>
               <span className="phone-row-figure">{formatTimeEstimate(leg.timeH, leg.timeStatus)}</span>
-              {status && (
-                <span className={`phone-row-access access-status-${status}`}>
-                  <span className="visually-hidden">{`${strings.phone.legAccessLabel}: `}</span>
-                  {status === "checking" ? strings.accessChecking : strings.accessState[status]}
-                </span>
-              )}
+              {status && <AccessStatusLine state={status} className="phone-row-access" />}
             </Button>
             {(!route || route.status === "pending") && (
               <span role="status" className="phone-row-routing">
