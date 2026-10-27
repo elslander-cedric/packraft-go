@@ -246,7 +246,11 @@
 
 .phone-row-paddle {
   border-left-color: var(--color-paddle);
-  background: var(--color-paddle-tint);
+}
+
+/* The open row, like the selected day card. */
+.phone-row-open {
+  background: var(--color-surface-hover);
 }
 
 /* A short state line with its action, e.g. "Placing an access point · Cancel". */
@@ -432,7 +436,7 @@
   width: var(--phone-next-mode-width);
 }
 
-/* In the sheet: side by side, edged so it stands out on a paddle row's tint. */
+/* In the sheet: side by side, edged so it stands out on the open row's background. */
 .phone-mode-switch {
   border: 1px solid var(--color-border);
 }

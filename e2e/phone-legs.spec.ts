@@ -132,6 +132,28 @@ test("tapping a row zooms the map to its leg and opens it; opening another close
   await expect.poll(async () => isInside(legLines(page).nth(1), await freeMap(page))).toBe(true);
 });
 
+test("a paddle row has no tint of its own; only the open row's background changes, as a selected day card's does", async ({
+  page,
+}) => {
+  await serveOffline(page);
+  await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "paddle", geometry: [P1, P2] }] });
+  await openPhone(page);
+  await openLegsTab(page);
+  const background = (n: number) => legRows(page).nth(n).evaluate((el) => getComputedStyle(el).backgroundColor);
+
+  const closed = await background(0);
+  expect(await background(1)).toBe(closed);
+
+  await rowButton(page, 2).click();
+  await expect(rowButton(page, 2)).toHaveAttribute("aria-expanded", "true");
+  await expect.poll(() => background(1)).not.toBe(closed);
+  expect(await background(0)).toBe(closed);
+
+  await rowButton(page, 1).click();
+  await expect.poll(() => background(1)).toBe(closed);
+  await expect.poll(() => background(0)).not.toBe(closed);
+});
+
 test("a closed row shows its figures after their icons, without a visible leg number; open, its mode switch is icon-only", async ({
   page,
 }) => {
