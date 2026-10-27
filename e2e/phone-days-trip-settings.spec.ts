@@ -20,6 +20,8 @@ const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name })
 const panel = (page: Page) => sheet(page).getByRole("tabpanel");
 const dayCards = (page: Page) =>
   sheet(page).getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem");
+/** A day card's title: its calendar tile, named by the full date (or "Day n" when undated). */
+const dayTile = (card: Locator) => card.getByRole("button");
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const tripName = (page: Page) => panel(page).getByLabel(strings.tripNameLabel);
 const startDate = (page: Page) => panel(page).getByLabel(strings.startDateLabel);
@@ -95,7 +97,8 @@ test("a two-day trip shows two day cards with their figures; tapping a card zoom
   await tab(page, text.tabs.days).click();
 
   await expect(dayCards(page)).toHaveCount(2);
-  await expect(dayCards(page).nth(0)).toContainText(strings.dayLabel(1));
+  // An undated trip's tiles show "Day" and the day's number.
+  await expect(dayTile(dayCards(page).nth(0))).toHaveAccessibleName(strings.dayLabel(1));
   await expect(dayCards(page).nth(0)).toContainText(strings.dayHikeDistance);
   await expect(dayCards(page).nth(0)).toContainText(strings.climbLabel);
   await expect(dayCards(page).nth(0)).toContainText(strings.dayTimeEstimate);
@@ -194,8 +197,12 @@ test("the Trip tab renames the trip and sets, changes and clears its start date;
   await startDate(page).fill("2026-10-31");
   await expect.poll(async () => (await storedTrip(page)).trip.startDate).toBe("2026-10-31");
   await tab(page, text.tabs.days).click();
-  await expect(dayCards(page).nth(0)).toContainText("Sat 31 Oct 2026");
-  await expect(dayCards(page).nth(1)).toContainText("Sun 1 Nov 2026");
+  // A dated day's title is its date on a calendar tile, never "Day n".
+  await expect(dayTile(dayCards(page).nth(0))).toHaveAccessibleName("Sat 31 Oct 2026");
+  await expect(dayTile(dayCards(page).nth(0))).toHaveText(/^Sat\s*31\s*Oct$/);
+  await expect(dayTile(dayCards(page).nth(1))).toHaveAccessibleName("Sun 1 Nov 2026");
+  await expect(dayTile(dayCards(page).nth(1))).toHaveText(/^Sun\s*1\s*Nov$/);
+  await expect(dayCards(page).nth(0)).not.toContainText(strings.dayTileWord);
 
   await tab(page, text.tabs.trip).click();
   await startDate(page).fill("2027-07-10");
@@ -204,8 +211,8 @@ test("the Trip tab renames the trip and sets, changes and clears its start date;
   await expect(startDate(page)).toHaveValue("2027-07-10");
   await expect(tripName(page)).toHaveValue("Meuse & Lesse");
   await tab(page, text.tabs.days).click();
-  await expect(dayCards(page).nth(0)).toContainText("Sat 10 Jul 2027");
-  await expect(dayCards(page).nth(1)).toContainText("Sun 11 Jul 2027");
+  await expect(dayTile(dayCards(page).nth(0))).toHaveAccessibleName("Sat 10 Jul 2027");
+  await expect(dayTile(dayCards(page).nth(1))).toHaveAccessibleName("Sun 11 Jul 2027");
 
   await tab(page, text.tabs.trip).click();
   await clearDate(page).click();
@@ -214,6 +221,7 @@ test("the Trip tab renames the trip and sets, changes and clears its start date;
   await tab(page, text.tabs.days).click();
   await expect(dayCards(page)).toHaveCount(2);
   await expect(dayCards(page).nth(1)).not.toContainText("Jul");
+  await expect(dayTile(dayCards(page).nth(1))).toHaveAccessibleName(strings.dayLabel(2));
 });
 
 test("the Trip tab has no access summary or totals: each day's access is on its card, the disclaimer under them", async ({
@@ -235,7 +243,7 @@ test("the Trip tab has no access summary or totals: each day's access is on its 
   await expect(dayCards(page).nth(1)).toContainText(strings.tripAccess.dayStatus(strings.accessState.forbidden));
   // The warnings show only on the selected card; tapping it again unselects it.
   const warning = dayCards(page).nth(1).locator(".access-warning-forbidden");
-  const select = dayCards(page).nth(1).getByRole("button", { name: strings.dayLabel(2) });
+  const select = dayTile(dayCards(page).nth(1));
   await expect(warning).toHaveCount(0);
   await expect(select).toHaveAttribute("aria-expanded", "false");
   await dayCards(page).nth(1).tap();
@@ -284,7 +292,7 @@ test.describe("on a narrow phone", () => {
     await page.evaluate(() => document.fonts.ready);
     await tab(page, text.tabs.days).click();
     const card = dayCards(page).nth(0);
-    const figures = card.locator(":scope > span:not(.day-heading)");
+    const figures = card.locator(".day-figures > span");
     await expect(figures.first()).toBeVisible();
     for (const figure of await figures.all()) {
       const lines = await figure.evaluate((el) => {
