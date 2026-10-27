@@ -63,6 +63,8 @@ export const strings = {
   campMarker: "Camp",
   daysPanelLabel: "Days",
   dayLabel: (n: number) => `Day ${n}`,
+  // An undated day's calendar tile on the phone: "Day" above its number.
+  dayTileWord: "Day",
   // A day's calendar date from the trip's start date (#52), e.g. "Sat 31 Oct 2026".
   dayDate: (weekday: string, day: number, month: string, year: number) => `${weekday} ${day} ${month} ${year}`,
   weekdayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],

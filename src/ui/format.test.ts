@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  dayDateParts,
   formatDayDate,
   formatDistance,
   formatDuration,
@@ -19,6 +20,17 @@ describe("formatDayDate", () => {
 
   it("does not shift with the time zone", () => {
     expect(formatDayDate("2026-03-29")).toBe("Sun 29 Mar 2026");
+  });
+});
+
+// The phone's day cards are titled by a calendar tile (weekday, day, month).
+describe("dayDateParts", () => {
+  it("splits a date into weekday, day, month and year", () => {
+    expect(dayDateParts("2026-10-31")).toEqual({ weekday: "Sat", day: 31, month: "Oct", year: 2026 });
+  });
+
+  it("does not shift with the time zone", () => {
+    expect(dayDateParts("2026-03-29")).toEqual({ weekday: "Sun", day: 29, month: "Mar", year: 2026 });
   });
 });
 

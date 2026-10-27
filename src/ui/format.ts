@@ -20,15 +20,24 @@ export function formatDuration(hours: number): string {
   return `${h} ${strings.hourUnit} ${String(min).padStart(2, "0")} ${strings.minuteUnit}`;
 }
 
+/**
+ * A day's calendar date ("YYYY-MM-DD") in parts, e.g. Sat / 31 / Oct / 2026, for the
+ * phone's calendar tile. Read in UTC, so it never shifts a day.
+ */
+export function dayDateParts(date: string): { weekday: string; day: number; month: string; year: number } {
+  const day = new Date(`${date}T00:00:00Z`);
+  return {
+    weekday: strings.weekdayNames[day.getUTCDay()],
+    day: day.getUTCDate(),
+    month: strings.monthNames[day.getUTCMonth()],
+    year: day.getUTCFullYear(),
+  };
+}
+
 /** A day's calendar date ("YYYY-MM-DD") for display, e.g. "Sat 31 Oct 2026". Read in UTC, so it never shifts a day. */
 export function formatDayDate(date: string): string {
-  const day = new Date(`${date}T00:00:00Z`);
-  return strings.dayDate(
-    strings.weekdayNames[day.getUTCDay()],
-    day.getUTCDate(),
-    strings.monthNames[day.getUTCMonth()],
-    day.getUTCFullYear(),
-  );
+  const { weekday, day, month, year } = dayDateParts(date);
+  return strings.dayDate(weekday, day, month, year);
 }
 
 /** A river's flow for display, in m³/s with at most two decimals (#61). */
