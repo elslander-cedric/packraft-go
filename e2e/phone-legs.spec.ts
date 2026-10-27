@@ -1,6 +1,6 @@
 // The phone Legs tab (#121, ADR 0026): leg rows open one at a time and zoom the map to their
-// leg, an open row switches its leg's mode, shows flow figures, aire warnings and Retry; the
-// floating next leg's mode toggle; snap offers float above the sheet.
+// leg, an open row shows flow figures, aire warnings and Retry but no mode switch; the
+// floating next leg's mode toggle; snap offers from a drawn paddle leg float above the sheet.
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { addAccessPoint, serialiseAccessPoints, updateAccessPoint } from "../src/core/accessPoints";
 import { serialiseTrip } from "../src/core/saveFile";
@@ -32,7 +32,6 @@ const modeSwitch = (page: Page, n: number) =>
   legRows(page)
     .nth(n - 1)
     .getByRole("group", { name: strings.legModeLabel(n) });
-const legMode = (page: Page, n: number, mode: string) => modeSwitch(page, n).getByRole("button", { name: mode });
 const nextMode = (page: Page, mode: string) =>
   page.getByRole("group", { name: text.nextLegModeLabel }).getByRole("button", { name: mode });
 const offer = (page: Page) => page.getByRole("region", { name: strings.snap.label });
@@ -120,7 +119,6 @@ test("tapping a row zooms the map to its leg and opens it; opening another close
   await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "false");
   await rowButton(page, 1).click();
   await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "true");
-  await expect(modeSwitch(page, 1)).toBeVisible();
   // Zoomed in on the short leg, which now shows above the sheet.
   await expect.poll(async () => (await first.boundingBox())!.height).toBeGreaterThan(widthBefore * 2);
   await expect.poll(async () => isInside(first, await freeMap(page))).toBe(true);
@@ -128,7 +126,6 @@ test("tapping a row zooms the map to its leg and opens it; opening another close
   await rowButton(page, 2).click();
   await expect(rowButton(page, 2)).toHaveAttribute("aria-expanded", "true");
   await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "false");
-  await expect(modeSwitch(page, 1)).toHaveCount(0);
   await expect.poll(async () => isInside(legLines(page).nth(1), await freeMap(page))).toBe(true);
 });
 
@@ -154,7 +151,7 @@ test("a paddle row has no tint of its own; only the open row's background change
   await expect.poll(() => background(0)).not.toBe(closed);
 });
 
-test("a closed row shows its figures after their icons, without a visible leg number; open, its mode switch is icon-only", async ({
+test("a row shows its figures after their icons, without a visible leg number; open, it has no mode switch and keeps its headline", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -176,14 +173,16 @@ test("a closed row shows its figures after their icons, without a visible leg nu
   await expect(paddle).toContainText(`${labels.drop} 0 m`);
   await expect(paddle).not.toContainText(labels.climb);
 
-  // Open: the mode switch looks like the map's next leg toggle, icon-only with the modes as names.
+  // Open: no mode switch; the time stays on the headline and the figures under it don't change.
+  const time = hike.locator(".phone-row-headline .phone-row-time");
+  const figures = await hike.locator(".phone-row-figures").textContent();
   await hike.click();
-  await expect(legMode(page, 1, strings.legModeHike)).toHaveText("");
-  await expect(iconIn(legMode(page, 1, strings.legModeHike), icons.hike)).toBeVisible();
-  await expect(iconIn(legMode(page, 1, strings.legModePaddle), icons.paddle)).toBeVisible();
-  await expect(legMode(page, 1, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
-  // The time is still there, among the figures.
-  await expect(hike).toContainText(labels.time);
+  await expect(hike).toHaveAttribute("aria-expanded", "true");
+  await expect(modeSwitch(page, 1)).toHaveCount(0);
+  await expect(legRows(page).nth(0).getByRole("button", { name: strings.legModePaddle })).toHaveCount(0);
+  await expect(time).toBeVisible();
+  await expect(time).toContainText(labels.time);
+  await expect(hike.locator(".phone-row-figures")).toHaveText(figures!);
 });
 
 // Durbuy is in Wallonia. 0.001 degrees of latitude is about 111 m.
@@ -197,25 +196,32 @@ function slipwayNearby() {
   return serialiseAccessPoints(updateAccessPoint(added, "ap1", { kind: "slipway", use: "put-in" }, now));
 }
 
-const storedFirstPoint = (page: Page) =>
-  page.evaluate(() => JSON.parse(localStorage.getItem("packraft-go.trip") ?? "null")?.trip?.points?.[0]);
+// A hike leg that ends at the put-in, about 111 m from your slipway.
+const start = { lat: 50.3427, lng: 5.4563 };
 
-test("switching an open row to paddle reroutes it with the river profile; the snap offer floats and can be accepted", async ({
+const storedPutIn = (page: Page) =>
+  page.evaluate(() => JSON.parse(localStorage.getItem("packraft-go.trip") ?? "null")?.trip?.points?.[1]);
+
+/** Taps the map in paddle mode: a paddle leg from the trip's end. */
+async function drawPaddleLeg(page: Page) {
+  await nextMode(page, strings.legModePaddle).click();
+  const map = (await mapRegion(page).boundingBox())!;
+  await page.touchscreen.tap(map.x + map.width / 2, map.y + map.height / 4);
+}
+
+test("a paddle leg drawn from a hike leg's end near your slipway offers to snap the put-in; the offer floats and can be accepted", async ({
   page,
 }) => {
   const network = await serveOffline(page, { brouter: byProfile });
-  await seed(page, { points: [putIn, end], legs: [{ mode: "hike", geometry: [putIn, end] }] }, slipwayNearby());
+  await seed(page, { points: [start, putIn], legs: [{ mode: "hike", geometry: [start, putIn] }] }, slipwayNearby());
   await openPhone(page);
-  await openLegsTab(page);
-  await rowButton(page, 1).click();
   await sheetSettled(page);
   const sheetTop = (await sheet(page).boundingBox())!.y;
 
-  await legMode(page, 1, strings.legModePaddle).click();
-  await expect(legMode(page, 1, strings.legModePaddle)).toHaveAttribute("aria-pressed", "true");
+  await drawPaddleLeg(page);
+  await expect(legLines(page)).toHaveCount(2);
+  await expect(legLines(page).nth(1)).toHaveClass(/leg-paddle/);
   await expect.poll(() => network.brouter.map((url) => url.searchParams.get("profile"))).toContain("river");
-  await expect(legLines(page).first()).toHaveClass(/leg-paddle/);
-  await expect(legRows(page).nth(0)).toContainText(strings.dropLabel);
 
   // The offer floats above the sheet, left of the bottom-right buttons; the sheet keeps its height.
   await expect(offer(page)).toBeVisible();
@@ -228,20 +234,18 @@ test("switching an open row to paddle reroutes it with the river profile; the sn
 
   await offer(page).getByRole("button", { name: strings.snap.accept }).click();
   await expect(offer(page)).toHaveCount(0);
-  await expect.poll(() => storedFirstPoint(page)).toEqual(nearby);
+  await expect.poll(() => storedPutIn(page)).toEqual(nearby);
   expect(network.blocked).toEqual([]);
 });
 
 test("a floating snap offer can be declined, which changes nothing", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
-  await seed(page, { points: [putIn, end], legs: [{ mode: "hike", geometry: [putIn, end] }] }, slipwayNearby());
+  await seed(page, { points: [start, putIn], legs: [{ mode: "hike", geometry: [start, putIn] }] }, slipwayNearby());
   await openPhone(page);
-  await openLegsTab(page);
-  await rowButton(page, 1).click();
-  await legMode(page, 1, strings.legModePaddle).click();
+  await drawPaddleLeg(page);
   await offer(page).getByRole("button", { name: strings.snap.decline }).click();
   await expect(offer(page)).toHaveCount(0);
-  await expect.poll(() => storedFirstPoint(page)).toEqual(putIn);
+  await expect.poll(() => storedPutIn(page)).toEqual(putIn);
 });
 
 test("an open paddle row shows the aire warning", async ({ page }) => {

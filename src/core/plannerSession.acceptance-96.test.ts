@@ -33,6 +33,6 @@ describe("#96 acceptance", () => {
     const c = plannerSession(asked, { type: "cancelReplace" });
     expect(c.trip).toBe(s.trip);
     expect(c.keepStoredSave).toBe(true);
-    expect(plannerSession(asked, { type: "addPoint", at: A })).toBe(asked);
+    expect(plannerSession(asked, { type: "addPoint", at: A, accessPoints: [] })).toBe(asked);
   });
 });

@@ -39,16 +39,20 @@ export function snapCandidate(trip: Trip, change: ModeChange, points: AccessPoin
 
 /**
  * The put-ins and take-outs `after` has that `before` did not: points that
- * became one by a mode change. Only meaningful between trips with the same points.
+ * became one by a mode change or an added point. Only meaningful when `after`
+ * keeps `before`'s points at their indexes.
  */
 export function newModeChanges(before: Trip, after: Trip): ModeChange[] {
   const had = putInsAndTakeOuts(before);
   return putInsAndTakeOuts(after).filter((c) => !had.some((h) => h.point === c.point && h.kind === c.kind));
 }
 
-/** The offers to snap the new put-ins and take-outs after an edit from `before` to `after`. */
+/**
+ * The offers to snap the new put-ins and take-outs after an edit from `before` to `after`:
+ * a mode change or an added point. An edit that shifts or drops points offers nothing.
+ */
 export function snapOffers(before: Trip, after: Trip, points: AccessPoints): SnapOffer[] {
-  if (before.points.length !== after.points.length) return [];
+  if (!before.points.every((point, i) => after.points[i] === point)) return [];
   return newModeChanges(before, after).flatMap((change) => snapCandidate(after, change, points) ?? []);
 }
 

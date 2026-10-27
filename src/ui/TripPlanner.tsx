@@ -38,7 +38,9 @@ export default function TripPlanner({ router }: { router?: Router }) {
         trip={trip}
         selectedPoint={selectedPoint}
         // While an access point is being placed, the click places it instead of a trip point.
-        onMapClick={(at: LatLng) => (access.placing ? access.placeAt(at) : dispatch({ type: "addPoint", at }))}
+        onMapClick={(at: LatLng) =>
+          access.placing ? access.placeAt(at) : dispatch({ type: "addPoint", at, accessPoints: access.points })
+        }
         onPointClick={(index) => dispatch({ type: "pointClicked", index })}
         onPointDrag={(index, to) => dispatch({ type: "movePoint", index, to })}
         accessPoints={{

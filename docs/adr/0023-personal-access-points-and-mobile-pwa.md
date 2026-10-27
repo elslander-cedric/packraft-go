@@ -14,7 +14,7 @@ There's no open dataset of access points in Belgium. The Walloon aire dataset is
 - **Phone scope:** the map, your GPS position, "mark access point here", your access points, and a read-only view of trips. Planning stays desktop.
 - **Marking works offline.** Points are saved on the device. Offline map tiles are out of scope.
 - **Delivered as a PWA** (installable web app, offline-capable), not a native app.
-- **In planning:** a mode change offers to snap to one of your access points within about 200 m. In Wallonia, a put-in or take-out that isn't at an access point of kind "official aire" gets a warning (AGW art. 5). It's never blocked.
+- **In planning:** a mode change, or a new point that makes a put-in or take-out (amended 2026-10-27: the phone has no per-leg mode switch), offers to snap to one of your access points within about 200 m. In Wallonia, a put-in or take-out that isn't at an access point of kind "official aire" gets a warning (AGW art. 5). It's never blocked.
 - **Official aire locations come only from your own marks.** The SPW's agreement doesn't cover the restricted aire dataset.
 
 ## Consequences

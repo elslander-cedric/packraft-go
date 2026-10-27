@@ -45,7 +45,7 @@ const build = (make: Make, session: PlannerSession) => (typeof make === "functio
 
 // Every action that applies to a busy session while no question is open.
 const actions: [name: string, make: Make][] = [
-  ["add point", { type: "addPoint", at: { lat: 50.4, lng: 5.5 } }],
+  ["add point", { type: "addPoint", at: { lat: 50.4, lng: 5.5 }, accessPoints: [] }],
   ["move point", { type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 } }],
   ["delete selected point", { type: "deleteSelectedPoint" }],
   ["insert point", { type: "insertPoint", index: 0, near: { lat: 50.3577, lng: 5.4563 } }],
@@ -113,11 +113,11 @@ table(
   (s) => s.selectedPoint,
 );
 
-// Set leg mode sets the offers; its rows are in "snap offers from set leg mode" below.
+// Set leg mode and add point set the offers; their rows are in "snap offers from ..." below.
 table(
   "snap offers (one offer is listed)",
   {
-    "add point": cleared([]),
+    "add point": cleared([]), // replaced by its own offers, none here
     "move point": cleared([]),
     "delete selected point": cleared([]),
     "insert point": cleared([]),
@@ -236,6 +236,34 @@ describe("snap offers from set leg mode", () => {
   });
 });
 
+describe("snap offers from add point", () => {
+  // "b" is a slipway about 55 m from B.
+  const nearB: LatLng = { lat: 50.3632, lng: 5.4563 };
+  const atB = slipway("b", nearB);
+
+  it("offer to snap the put-in a new paddle leg after a hike leg makes", () => {
+    const session = firstSession({ trip: through(A, B) });
+    const after = plannerSession(session, { type: "addPoint", at: C, mode: "paddle", accessPoints: atB });
+    expect(after.offers.map((o) => [o.change, o.accessPoint.id])).toEqual([[{ kind: "put-in", point: 1 }, "b"]]);
+  });
+
+  it("offer to snap the paddle leg's new end, the trip's take-out", () => {
+    const paddling = run(firstSession({ trip: through(A) }), {
+      type: "addPoint",
+      at: nearB,
+      mode: "paddle",
+      accessPoints: [],
+    });
+    const after = plannerSession(paddling, { type: "addPoint", at: B, mode: "paddle", accessPoints: atB });
+    expect(after.offers.map((o) => o.change)).toEqual([{ kind: "take-out", point: 2 }]);
+  });
+
+  it("replace the earlier offers; a point that makes no put-in or take-out offers nothing", () => {
+    const after = plannerSession(busy(), { type: "addPoint", at: nearA, mode: "hike", accessPoints: access });
+    expect(after.offers).toEqual([]);
+  });
+});
+
 describe("snap offers from access points changed", () => {
   it("drops the offer to a deleted access point and keeps the others", () => {
     const both = [...slipway("near", nearA), ...slipway("c", { lat: 50.3632, lng: 5.4563 })]; // "c" is near B
@@ -348,7 +376,7 @@ describe("stored save kept", () => {
   it("is cleared only by a replace", () => {
     let session = firstSession({ trip: through(A, B), unknownVersion: true });
     const others: PlannerAction[] = [
-      { type: "addPoint", at: C },
+      { type: "addPoint", at: C, accessPoints: [] },
       { type: "undo" },
       { type: "rename", name: "x" },
       { type: "fileRejected", reason: "invalid" },

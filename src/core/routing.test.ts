@@ -53,7 +53,7 @@ describe("auto routing", () => {
     const autoRouter = createAutoRouter(router, state.dispatch);
     await autoRouter.sync(state.trip);
 
-    state.dispatch({ type: "addPoint", at: C });
+    state.dispatch({ type: "addPoint", at: C, accessPoints: [] });
     await autoRouter.sync(state.trip);
     await autoRouter.sync(state.trip);
 

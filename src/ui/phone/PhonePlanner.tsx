@@ -10,7 +10,7 @@ import { BottomSheet, type SheetStop } from "../components/BottomSheet";
 import { Button } from "../components/Button";
 import { SidePanel, sidePanelCover } from "../components/SidePanel";
 import { Tab, TabList, TabPanel, Tabs } from "../components/Tabs";
-import { ToggleGroup } from "../components/ToggleGroup";
+import { ToggleGroup, type ToggleOption } from "../components/ToggleGroup";
 import DaysPanel from "../DaysPanel";
 import SettingsPanel from "../SettingsPanel";
 import { Icon } from "../icons/Icon";
@@ -22,7 +22,7 @@ import PhoneAccessChip from "./PhoneAccessChip";
 import PhoneAccessDetails from "./PhoneAccessDetails";
 import PhoneAccessPoints from "./PhoneAccessPoints";
 import SnapOffers from "../SnapOffers";
-import PhoneLegsList, { legModeOptions } from "./PhoneLegsList";
+import PhoneLegsList from "./PhoneLegsList";
 import PhoneMenu from "./PhoneMenu";
 import PhoneTripTab from "./PhoneTripTab";
 import PhoneTripTotals from "./PhoneTripTotals";
@@ -48,6 +48,17 @@ type NextModePick = {
 };
 const pickedFor = (trip: Trip) => ({ points: trip.points, undoSteps: trip.undoSteps });
 const pickHolds = (pick: NextModePick, trip: Trip) => pick.points === trip.points && pick.undoSteps === trip.undoSteps;
+
+/** Hike / Paddle, icon-only, coloured as the desktop's mode switch: the map's next leg toggle. */
+const legModeOptions: readonly ToggleOption<LegMode>[] = [
+  { value: "hike", label: strings.legModeHike, icon: <Icon icon={icons.hike} />, className: "leg-mode leg-mode-hike" },
+  {
+    value: "paddle",
+    label: strings.legModePaddle,
+    icon: <Icon icon={icons.paddle} />,
+    className: "leg-mode leg-mode-paddle",
+  },
+];
 
 /** Where a day goes: its points and its legs' routes. */
 function dayArea(trip: Trip, day: DaySummary): LatLng[] {
@@ -142,7 +153,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     else if (selectedPoint !== null) dispatch({ type: "deselect" });
     else {
       if (held !== null && trip.points.length === 0) setPick({ ...held, carry: true });
-      dispatch({ type: "addPoint", at, mode: nextMode });
+      dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points });
     }
   };
   // A leg row tap opens it (closing any other) and shows its leg above the half-raised sheet.
@@ -241,7 +252,6 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             openLeg={openLeg}
             onOpen={openLegRow}
             onRetry={(index) => dispatch({ type: "retryLeg", index })}
-            onSetMode={(index, mode) => dispatch({ type: "setLegMode", index, mode, accessPoints: access.points })}
           />
         </TabPanel>
         <TabPanel value="days">
