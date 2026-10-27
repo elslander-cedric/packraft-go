@@ -418,7 +418,7 @@ path.leg-pending {
   color: var(--color-on-accent);
 }
 
-.camp-marker svg {
+.camp-marker > svg {
   display: block;
 }
 

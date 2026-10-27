@@ -1,5 +1,7 @@
 import type { TripSummary } from "@/core/summarise";
 import { formatDistance, formatElevation, formatTimeEstimate } from "../format";
+import { Icon } from "../icons/Icon";
+import { icons } from "../icons/icons";
 import { strings } from "../strings";
 
 /**
@@ -8,7 +10,7 @@ import { strings } from "../strings";
  */
 export default function PhoneTripTotals({ trip }: { trip: TripSummary["trip"] }) {
   if (trip.distanceKm === 0) return null;
-  const { glyphs, labels } = strings.phone.totals;
+  const { labels } = strings.phone.totals;
   const figures = [
     { key: "hike", value: trip.hikeDistanceKm > 0 && formatDistance(trip.hikeDistanceKm) },
     { key: "paddle", value: trip.paddleDistanceKm > 0 && formatDistance(trip.paddleDistanceKm) },
@@ -22,9 +24,7 @@ export default function PhoneTripTotals({ trip }: { trip: TripSummary["trip"] })
         ({ key, value }) =>
           value && (
             <span key={key} className="phone-total">
-              <span aria-hidden className="phone-total-glyph">
-                {glyphs[key]}
-              </span>
+              <Icon icon={icons[key]} className="phone-total-icon" />
               <span className="visually-hidden">{`${labels[key]} `}</span>
               {value}
             </span>

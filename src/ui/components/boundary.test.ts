@@ -3,6 +3,7 @@
 // Native confirm dialogs are gone: confirmations are in-page Alert Dialogs.
 // #26: app code may only use an allowlist of runtime packages, and the
 // checks parse the code instead of matching it with regular expressions.
+// #143 / ADR 0028: Font Awesome icons are only imported in src/ui/icons/.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -11,6 +12,7 @@ import { findNativeConfirm, packagesImportedBy } from "@/testing/dependencyBound
 const ROOT = path.resolve(__dirname, "../../..");
 const SRC = path.resolve(__dirname, "../..");
 const WRAPPERS = path.resolve(__dirname);
+const ICONS = path.join(SRC, "ui", "icons");
 /** Test-only helpers, never bundled into the app (see CLAUDE.md). */
 const TEST_ONLY = [path.join(SRC, "testing"), path.join(SRC, "core", "testing")];
 
@@ -21,6 +23,7 @@ const TEST_ONLY = [path.join(SRC, "testing"), path.join(SRC, "core", "testing")]
  */
 const ALLOWED_RUNTIME_PACKAGES = [
   "@base-ui/react", // ADR 0020
+  "@fortawesome/free-solid-svg-icons", // UI icons, ADR 0028
   "fflate", // ZIP for the GPX export, ADR 0021
   "leaflet", // ADR 0014
   "next", // ADR 0015
@@ -57,6 +60,17 @@ describe("Base UI boundary", () => {
   it("the wrappers do import Base UI", () => {
     const wrappers = sources.filter(({ file }) => isWrapper(file));
     expect(wrappers.some(({ packages }) => packages.includes("@base-ui/react"))).toBe(true);
+  });
+});
+
+describe("Font Awesome boundary", () => {
+  it("only src/ui/icons imports Font Awesome", () => {
+    const offenders = sources
+      .filter(({ file }) => !file.startsWith(ICONS + path.sep))
+      .flatMap(({ relative, packages }) =>
+        packages.filter((name) => name.startsWith("@fortawesome/")).map((name) => `${relative}: ${name}`),
+      );
+    expect(offenders).toEqual([]);
   });
 });
 

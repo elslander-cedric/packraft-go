@@ -189,7 +189,6 @@ export const strings = {
     tabs: { legs: "Legs", days: "Days", trip: "Trip", accessPoints: "Access points", settings: "Settings" },
     // The trip's totals in the sheet's peek: each figure after its icon, named for screen readers.
     totals: {
-      glyphs: { hike: "🥾", paddle: "🛶", climb: "↗", descent: "↘", time: "⏱" },
       labels: {
         hike: "Hike distance",
         paddle: "Paddle distance",
@@ -201,15 +200,10 @@ export const strings = {
     // The side panel that replaces the sheet when the phone is held sideways (#126).
     collapsePanelButton: "Collapse the trip panel",
     expandPanelButton: "Open the trip panel",
-    collapsePanelGlyph: "›",
-    expandPanelGlyph: "‹",
     // The floating hike / paddle toggle for the leg the next map tap adds (#121).
     nextLegModeLabel: "Next leg's mode",
-    // Its icon-only toggles; their names are `legModeHike` and `legModePaddle`.
-    nextLegModeGlyphs: { hike: "🥾", paddle: "🛶" },
-    // The glyphs inside the position and undo buttons; their names are `showPositionButton` and `undoButton`.
-    showPositionGlyph: "◎",
-    undoGlyph: "↶",
+    // Its toggles are icon-only; their names are `legModeHike` and `legModePaddle`.
+    // The position and undo buttons are icon-only too; their names are `showPositionButton` and `undoButton`.
     showPositionButton: "Show my position",
     positionLocating: "Finding your position…",
     // `accuracy` is formatted, e.g. "12 m".
@@ -223,15 +217,12 @@ export const strings = {
     // Your access points in the phone planner (#119; first #63, ADR 0023).
     accessPointsLabel: "Your access points",
     markHereButton: "Mark here",
-    // The floating button bottom left; its glyph is `markAccessPointGlyph`.
+    // The floating button bottom left, icon-only.
     markAccessPointButton: "Mark an access point",
-    markAccessPointGlyph: "⚑",
     // The same button while a route point is selected (#120): it saves that point as an access point.
     selectedPointToAccessPointButton: "Make the selected point an access point",
-    // The glyphs inside the delete and camp buttons shown while a point is selected (#120);
+    // The delete and camp buttons shown while a point is selected (#120) are icon-only;
     // their names are `deletePointButton` and `campButton`.
-    deletePointGlyph: "✕",
-    campGlyph: "⛺",
     markLocating: "Finding your position to mark the access point…",
     // `accuracy` is formatted, e.g. "12 m".
     markedAccuracy: (accuracy: string) => `Marked at your GPS position, accurate to about ${accuracy}.`,
@@ -240,17 +231,14 @@ export const strings = {
     placingCancel: "Cancel",
     savedOnDevice: "Saved on this device.",
     noAccessPoints: "No access points yet.",
-    // The access layer on the phone (#125): the layers button under ◎ is named `accessLayerToggle`.
-    accessLayerGlyph: "≋",
+    // The access layer on the phone (#125): the layers button under the position button is named `accessLayerToggle`.
     // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a popover.
     accessChip: (when: string) => `Access · ${when}`,
     accessChipToday: "today",
-    accessChipGlyph: "▾",
     accessPopoverLabel: "Access layer",
     // The floating menu top left (#124): the rare actions on the whole trip.
     menu: {
       button: "Menu",
-      glyph: "☰",
       newTrip: "New trip",
       saveFile: "Save…",
       openFile: "Open…",

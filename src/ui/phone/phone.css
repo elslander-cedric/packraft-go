@@ -157,7 +157,7 @@
   white-space: nowrap;
 }
 
-.phone-total-glyph {
+.phone-total-icon {
   margin-right: 0.3em;
 }
 
@@ -563,7 +563,7 @@
   font-size: 1rem;
 }
 
-/* The access layer's chip (#125): top centre of the map, between the menu and ◎. */
+/* The access layer's chip (#125): top centre of the map, between the menu and the position button. */
 .phone-access-chip-slot {
   position: absolute;
   top: var(--space-3);

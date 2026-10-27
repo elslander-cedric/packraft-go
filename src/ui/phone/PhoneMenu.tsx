@@ -7,6 +7,8 @@ import type { Trip } from "@/core/trip";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Menu } from "../components/Menu";
 import { TextEntryDialog } from "../components/TextEntryDialog";
+import { Icon } from "../icons/Icon";
+import { icons } from "../icons/icons";
 import { strings } from "../strings";
 
 const text = strings.phone.menu;
@@ -65,7 +67,7 @@ export default function PhoneMenu({
     <>
       <Menu
         label={text.button}
-        trigger={text.glyph}
+        trigger={<Icon icon={icons.menu} />}
         triggerClassName="phone-fab"
         items={[
           { label: text.newTrip, onSelect: () => dispatch({ type: "newTrip", startDate: todayInBrussels(new Date()) }) },

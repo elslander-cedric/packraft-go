@@ -4,7 +4,9 @@
 // starts below the tab row, and there is no "Indicative only" banner over the map (ADR 0026).
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
+import { icons } from "../src/ui/icons/icons";
 import { strings } from "../src/ui/strings";
+import { iconIn } from "./support/icons";
 import { serveOffline } from "./support/offline";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
@@ -78,9 +80,9 @@ test("a named trip shows its name with the totals below: hike, paddle, climb, de
   await expect(name).toBeVisible();
   const figures = totals(page).locator(".phone-total");
   await expect(figures).toHaveCount(5);
-  const { glyphs, labels } = text.totals;
+  const { labels } = text.totals;
   for (const [i, key] of (["hike", "paddle", "climb", "descent", "time"] as const).entries()) {
-    await expect(figures.nth(i)).toContainText(glyphs[key]);
+    await expect(iconIn(figures.nth(i), icons[key])).toBeVisible();
     await expect(figures.nth(i)).toContainText(labels[key]);
   }
   await expect(figures.nth(2)).toContainText(`75 ${strings.metreUnit}`);
@@ -116,8 +118,9 @@ test("a trip with no paddle legs leaves the paddle figure out; with no name only
 
   await expect(sheet(page).getByRole("heading")).toHaveCount(0);
   await expect(totals(page).locator(".phone-total")).toHaveCount(4);
-  await expect(totals(page)).not.toContainText(text.totals.glyphs.paddle);
-  await expect(totals(page)).toContainText(text.totals.glyphs.hike);
+  await expect(iconIn(totals(page), icons.paddle)).toHaveCount(0);
+  await expect(iconIn(totals(page), icons.hike)).toBeVisible();
+  await expect(totals(page)).not.toContainText(text.totals.labels.paddle);
 });
 
 test("a long trip name stays on one line and the totals wrap, with the tab row still in the peek", async ({ page }) => {

@@ -20,8 +20,18 @@ describe("#31: @base-ui/react dependency", () => {
 
   it("is the only UI component library: runtime dependencies are exactly the known set", () => {
     // Updated: ADR 0021 (#41). fflate (ZIP writer, not a UI library) is allowed for the GPX export.
+    // Updated: ADR 0028 (#143). Font Awesome's icon data (not a UI library) draws the icons.
     expect(Object.keys(pkg.dependencies).sort()).toEqual(
-      ["@base-ui/react", "fflate", "leaflet", "next", "react", "react-dom", "react-leaflet"].sort(),
+      [
+        "@base-ui/react",
+        "@fortawesome/free-solid-svg-icons",
+        "fflate",
+        "leaflet",
+        "next",
+        "react",
+        "react-dom",
+        "react-leaflet",
+      ].sort(),
     );
   });
 

@@ -16,11 +16,11 @@ export type SidePanelProps = {
   label: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Names and glyphs of the collapse and expand buttons. */
+  /** Names and icons of the collapse and expand buttons. */
   collapseLabel: string;
-  collapseGlyph: string;
+  collapseIcon: ReactNode;
   expandLabel: string;
-  expandGlyph: string;
+  expandIcon: ReactNode;
   /** Always shown: in the strip when collapsed, at the top when open. */
   summary: ReactNode;
   /** Shown under the summary while open, e.g. the tabs. */
@@ -39,9 +39,9 @@ export function SidePanel({
   open,
   onOpenChange,
   collapseLabel,
-  collapseGlyph,
+  collapseIcon,
   expandLabel,
-  expandGlyph,
+  expandIcon,
   summary,
   header,
   children,
@@ -55,7 +55,7 @@ export function SidePanel({
           aria-expanded={open}
           onClick={() => onOpenChange(!open)}
         >
-          {open ? collapseGlyph : expandGlyph}
+          {open ? collapseIcon : expandIcon}
         </Button>
         <div className="side-panel-summary">{summary}</div>
       </div>
