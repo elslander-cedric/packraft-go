@@ -1,0 +1,5 @@
+/* Icons sit on the text's baseline like a glyph would (ADR 0028). */
+.icon {
+  flex: none;
+  vertical-align: -0.125em;
+}

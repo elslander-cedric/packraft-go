@@ -12,7 +12,7 @@ export type MenuItem = {
 export type MenuProps = {
   /** The trigger button's accessible name. */
   label: string;
-  /** What the trigger button shows, e.g. a glyph. */
+  /** What the trigger button shows, e.g. an icon. */
   trigger: ReactNode;
   triggerClassName?: string;
   items: readonly MenuItem[];

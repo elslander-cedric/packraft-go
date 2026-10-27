@@ -1,5 +1,7 @@
 import { AccessDateSelector, AccessLegend, type AccessDateProps } from "../AccessPanel";
 import { Popover } from "../components/Popover";
+import { Icon } from "../icons/Icon";
+import { icons } from "../icons/icons";
 import { strings } from "../strings";
 
 /**
@@ -13,7 +15,7 @@ export default function PhoneAccessChip({ dateSelector }: { dateSelector: Access
     <Popover
       trigger={
         <>
-          {name} <span aria-hidden="true">{strings.phone.accessChipGlyph}</span>
+          {name} <Icon icon={icons.openPopover} />
         </>
       }
       triggerLabel={name}

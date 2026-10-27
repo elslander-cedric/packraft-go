@@ -13,6 +13,8 @@ import { Tab, TabList, TabPanel, Tabs } from "../components/Tabs";
 import { ToggleGroup } from "../components/ToggleGroup";
 import DaysPanel from "../DaysPanel";
 import SettingsPanel from "../SettingsPanel";
+import { Icon } from "../icons/Icon";
+import { icons } from "../icons/icons";
 import { strings } from "../strings";
 import { useAccessLayer } from "../useAccessLayer";
 import { usePlanner } from "../usePlanner";
@@ -36,7 +38,7 @@ const tabs = Object.keys(strings.phone.tabs) as PhoneTab[];
 /** The floating next leg's mode toggle: icon-only, like the other floating buttons. */
 const nextLegModeOptions = legModeOptions.map((option) => ({
   ...option,
-  glyph: strings.phone.nextLegModeGlyphs[option.value],
+  icon: <Icon icon={icons[option.value]} />,
 }));
 
 /**
@@ -328,7 +330,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           onClick={() => showPosition()}
           disabled={position.state === "locating"}
         >
-          {strings.phone.showPositionGlyph}
+          <Icon icon={icons.showPosition} />
         </Button>
         <Button
           className="phone-fab"
@@ -336,7 +338,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           aria-pressed={layer.on}
           onClick={() => layer.setOn(!layer.on)}
         >
-          {strings.phone.accessLayerGlyph}
+          <Icon icon={icons.accessLayer} />
         </Button>
         {message && (
           <p role={message.kind} className={`phone-message phone-message-${message.kind}`}>
@@ -369,14 +371,14 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           onClick={selectedPoint === null ? marking.mark : markSelectedPoint}
           disabled={selectedPoint === null && marking.locating}
         >
-          {strings.phone.markAccessPointGlyph}
+          <Icon icon={icons.accessPoint} />
         </Button>
       </div>
       <div className="phone-buttons phone-buttons-bottom">
         {selectedPoint !== null && (
           <>
             <Button className="phone-fab" aria-label={strings.deletePointButton} onClick={deleteSelectedPoint}>
-              {strings.phone.deletePointGlyph}
+              <Icon icon={icons.deletePoint} />
             </Button>
             <Button
               className="phone-fab"
@@ -384,7 +386,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
               aria-pressed={isCamp(trip, selectedPoint)}
               onClick={() => dispatch({ type: "toggleCampOnSelectedPoint" })}
             >
-              {strings.phone.campGlyph}
+              <Icon icon={icons.camp} />
             </Button>
           </>
         )}
@@ -396,7 +398,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           className="phone-next-mode"
         />
         <Button className="phone-fab" aria-label={strings.undoButton} onClick={undo} disabled={!canUndo(trip)}>
-          {strings.phone.undoGlyph}
+          <Icon icon={icons.undo} />
         </Button>
       </div>
       <div className="phone-snap-offers">
@@ -413,9 +415,9 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             open={panelOpen}
             onOpenChange={setPanelOpen}
             collapseLabel={strings.phone.collapsePanelButton}
-            collapseGlyph={strings.phone.collapsePanelGlyph}
+            collapseIcon={<Icon icon={icons.collapsePanel} />}
             expandLabel={strings.phone.expandPanelButton}
-            expandGlyph={strings.phone.expandPanelGlyph}
+            expandIcon={<Icon icon={icons.expandPanel} />}
             summary={peekSummary}
             header={tabList}
           >

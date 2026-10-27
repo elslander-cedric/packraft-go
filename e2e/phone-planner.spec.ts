@@ -4,7 +4,9 @@ import { devices, expect, test, type Page } from "@playwright/test";
 import { serialiseTrip } from "../src/core/saveFile";
 import type { Trip } from "../src/core/trip";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
+import { icons } from "../src/ui/icons/icons";
 import { strings } from "../src/ui/strings";
+import { iconIn } from "./support/icons";
 import { brouterFixture, serveOffline } from "./support/offline";
 import { touch } from "./support/touch";
 
@@ -245,7 +247,7 @@ test("a pinch zooms the map and adds no point", async ({ page }) => {
   await expect(map.locator("path.point")).toHaveCount(0);
 });
 
-test("◎ shows the position dot, also with the network blocked", async ({ page, context }) => {
+test("the position button shows the position dot, also with the network blocked", async ({ page, context }) => {
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ ...AT_HOTTON, accuracy: 12 });
   await serveOffline(page);
@@ -327,6 +329,28 @@ test("every control has an accessible name", async ({ page }) => {
       .map((el) => el.outerHTML.slice(0, 80)),
   );
   expect(unnamed).toEqual([]);
+});
+
+test("the floating buttons are icon-only: an icon each, no glyph text, named for screen readers (#143)", async ({
+  page,
+}) => {
+  await serveOffline(page);
+  await openPhone(page);
+  const named = [
+    [strings.phone.menu.button, icons.menu],
+    [strings.phone.showPositionButton, icons.showPosition],
+    [strings.accessLayerToggle, icons.accessLayer],
+    [strings.phone.markAccessPointButton, icons.accessPoint],
+    [strings.legModeHike, icons.hike],
+    [strings.legModePaddle, icons.paddle],
+    [strings.undoButton, icons.undo],
+  ] as const;
+  for (const [name, icon] of named) {
+    const button = page.getByRole("button", { name, exact: true });
+    await expect(button).toHaveText("");
+    await expect(iconIn(button, icon)).toBeVisible();
+    await expect(iconIn(button, icon)).toHaveAttribute("aria-hidden", "true");
+  }
 });
 
 test.describe("which screens get the phone planner", () => {

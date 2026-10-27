@@ -4,8 +4,10 @@
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { addAccessPoint, serialiseAccessPoints, updateAccessPoint } from "../src/core/accessPoints";
 import { serialiseTrip } from "../src/core/saveFile";
+import { icons } from "../src/ui/icons/icons";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
+import { iconIn } from "./support/icons";
 import { brouterFixture, kiwisFixtures, serveOffline, type BRouterReply } from "./support/offline";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
@@ -261,8 +263,9 @@ test("the next leg's mode starts at the last leg's mode; switching it makes the 
   await openPhone(page);
   await expect(nextMode(page, strings.legModePaddle)).toHaveAttribute("aria-pressed", "true");
   // Icon-only, like the other floating buttons, with the modes as accessible names.
-  await expect(nextMode(page, strings.legModeHike)).toHaveText(text.nextLegModeGlyphs.hike);
-  await expect(nextMode(page, strings.legModePaddle)).toHaveText(text.nextLegModeGlyphs.paddle);
+  await expect(nextMode(page, strings.legModeHike)).toHaveText("");
+  await expect(iconIn(nextMode(page, strings.legModeHike), icons.hike)).toBeVisible();
+  await expect(iconIn(nextMode(page, strings.legModePaddle), icons.paddle)).toBeVisible();
 
   await nextMode(page, strings.legModeHike).click();
   const map = (await mapRegion(page).boundingBox())!;

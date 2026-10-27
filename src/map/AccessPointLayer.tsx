@@ -1,7 +1,8 @@
 "use client";
 
 // Your access points on the map (#55, ADR 0023): one marker each, coloured by
-// use and shaped by kind. Click a marker to select it; drag it to move it.
+// use and shaped by kind, with a white flag in it (ADR 0028). Click a marker
+// to select it; drag it to move it.
 // Its own layer, apart from the trip's, and only loaded through TripMap and PhoneMap.
 import type { Marker as LeafletMarker } from "leaflet";
 import { divIcon } from "leaflet";
@@ -10,6 +11,8 @@ import { Marker } from "react-leaflet";
 import type { AccessPoint, AccessPointKind, AccessPointUse, AccessPoints } from "@/core/accessPoints";
 import type { LatLng } from "@/core/trip";
 import { accessPointText } from "@/ui/accessPointText";
+import { icons } from "@/ui/icons/icons";
+import { iconSvg, type IconPlacement } from "@/ui/icons/iconSvg";
 import { strings } from "@/ui/strings";
 import { HIT_SIZE_PX, usePressDrag } from "./pressDrag";
 import "./AccessPointLayer.css";
@@ -44,10 +47,18 @@ const kindShape: Record<AccessPointKind, (fill: string) => string> = {
   "informal-bank": (fill) => `<circle cx="12" cy="12" r="10" fill="${fill}"/>`,
 };
 
+// The flag sits in the widest part of each shape: lower in the triangle.
+const flagPlacement: Record<AccessPointKind, IconPlacement> = {
+  "official-aire": { x: 7, y: 7, width: 10, height: 10 },
+  slipway: { x: 7.5, y: 7.5, width: 9, height: 9 },
+  jetty: { x: 8, y: 11, width: 8, height: 8 },
+  "informal-bank": { x: 7, y: 7, width: 10, height: 10 },
+};
+
 const SIZE = 24;
 
 // Icons are shared and kept: a new icon replaces the marker's element, which would interrupt a drag.
-const icons = new Map<string, ReturnType<typeof divIcon>>();
+const markerIcons = new Map<string, ReturnType<typeof divIcon>>();
 
 // Names and notes are yours: escape them in the marker's HTML.
 const escapeText = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -59,20 +70,21 @@ function accessPointIcon(point: AccessPoint, selected: boolean, fingerSized: boo
   const { heading, detail } = accessPointText(point);
   const label = strings.accessPoints.marker(heading, detail);
   const key = `${use}|${kind}|${selected}|${fingerSized}|${label}`;
-  const known = icons.get(key);
+  const known = markerIcons.get(key);
   if (known) return known;
   // Labels follow names and notes as you type: don't keep every one.
-  if (icons.size > 200) icons.clear();
+  if (markerIcons.size > 200) markerIcons.clear();
   const icon = divIcon({
     className: `access-point-marker use-${use} kind-${kind}${selected ? " access-point-selected" : ""}${fingerSized ? " access-point-hit" : ""}`,
     html:
       `<svg role="img" aria-label="${escapeAttribute(label)}" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}">` +
       `<title>${escapeText(label)}</title>` +
-      `<g stroke="#fff" stroke-width="2" stroke-linejoin="round">${kindShape[kind](useColour[use])}</g></svg>`,
+      `<g stroke="#fff" stroke-width="2" stroke-linejoin="round">${kindShape[kind](useColour[use])}</g>` +
+      `<g color="#fff">${iconSvg(icons.accessPoint, flagPlacement[kind])}</g></svg>`,
     iconSize: fingerSized ? [HIT_SIZE_PX, HIT_SIZE_PX] : [SIZE, SIZE],
     iconAnchor: fingerSized ? [HIT_SIZE_PX / 2, HIT_SIZE_PX / 2] : [SIZE / 2, SIZE / 2],
   });
-  icons.set(key, icon);
+  markerIcons.set(key, icon);
   return icon;
 }
 

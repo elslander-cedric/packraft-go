@@ -1,4 +1,4 @@
-// The access layer on the phone (#125, ADR 0026, stories 74–81): a layers button under ◎,
+// The access layer on the phone (#125, ADR 0026, stories 74–81): a layers button under the position button,
 // a chip with a popover for the date, legend, note and disclaimer; a tap on water edits the
 // route, holding a water off a leg (0.4 s, the app's own timer) or tapping a lock opens its
 // details in the sheet at half, with Close back to the tab. Built-in data and recorded
@@ -106,7 +106,7 @@ const middleOf = (path: ReturnType<typeof water>): Promise<Pixel> =>
     return { x, y };
   });
 
-test("the layers button under ◎ switches the access layer on and off", async ({ page }) => {
+test("the layers button under the position button switches the access layer on and off", async ({ page }) => {
   const network = await openWith(page, nearLesse);
   await expect(layersButton(page)).toHaveAttribute("aria-pressed", "false");
   await expect(waters(page)).toHaveCount(0);

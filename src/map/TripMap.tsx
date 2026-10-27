@@ -9,6 +9,8 @@ import { divIcon } from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import { CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type ModeChange, type Trip } from "@/core/trip";
+import { icons } from "@/ui/icons/icons";
+import { iconSvg } from "@/ui/icons/iconSvg";
 import { strings } from "@/ui/strings";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
@@ -46,14 +48,15 @@ const modeChangeLabel: Record<ModeChange["kind"], string> = {
   "take-out": strings.takeOut,
 };
 
-// A small tent, drawn below and to the right of its point, clear of the point
-// and of the put-in/take-out labels above it.
+// A green triangle with a white tent in it (ADR 0028), drawn below and to the right of
+// its point, clear of the point and of the put-in/take-out labels above it.
+const campTentPlacement = { x: 6, y: 8.5, width: 8, height: 7.5 };
 export const campIcon = divIcon({
   className: "camp-marker",
   html:
     `<svg role="img" aria-label=${JSON.stringify(strings.campMarker)} viewBox="0 0 20 18" width="20" height="18">` +
     '<path d="M10 1 L19 17 H1 Z" fill="#2e6b30" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>' +
-    '<path d="M10 8 L13.5 17 H6.5 Z" fill="#fff"/></svg>',
+    `<g color="#fff">${iconSvg(icons.camp, campTentPlacement)}</g></svg>`,
   iconSize: [20, 18],
   iconAnchor: [-7, -5],
 });
