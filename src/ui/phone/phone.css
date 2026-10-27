@@ -142,10 +142,11 @@
 }
 
 /* Small enough for all five figures to fit one line on a phone; wraps on a narrower screen, but a
-   figure never breaks inside. */
+   figure never breaks inside. Centred in the sheet's head, wrapped lines too. */
 .phone-totals {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-1) var(--space-3);
   margin: 0;
   font-size: 0.75rem;
