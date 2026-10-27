@@ -196,9 +196,16 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   };
 
   // A day card tap shows the whole day on the map, above the half-raised sheet (#123).
+  // The selected card shows its access warnings; tapping it again unselects it.
+  const [selectedDay, setSelectedDay] = useState<number | undefined>(undefined);
   const openDay = (index: number) => {
     const day = summary.days[index];
     if (!day) return;
+    if (index === selectedDay) {
+      setSelectedDay(undefined);
+      return;
+    }
+    setSelectedDay(index);
     raise();
     setFocus({ area: dayArea(trip, day), ...covered() });
   };
@@ -242,15 +249,21 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           />
         </TabPanel>
         <TabPanel value="days">
-          <DaysPanel days={summary.days} access={waterAccess?.days} aire={aire} onSelectDay={openDay} heading={false} />
+          <DaysPanel
+            days={summary.days}
+            access={waterAccess?.days}
+            aire={aire}
+            onSelectDay={openDay}
+            selectedDay={selectedDay}
+            heading={false}
+          />
+          {/* Each day's access is on its card; the disclaimer follows them (#123). */}
+          {waterAccess && summary.days.length > 0 && <p className="phone-disclaimer">{strings.navigationRulesNotice}</p>}
         </TabPanel>
         <TabPanel value="trip">
           <PhoneTripTab
             name={trip.name}
             startDate={trip.startDate}
-            days={summary.days}
-            access={waterAccess}
-            aire={aire}
             onRename={(name) => dispatch({ type: "rename", name })}
             onSetStartDate={(date) => dispatch({ type: "setStartDate", date })}
           />

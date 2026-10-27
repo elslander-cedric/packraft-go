@@ -201,7 +201,6 @@ export const strings = {
     expandPanelButton: "Open the trip panel",
     collapsePanelGlyph: "›",
     expandPanelGlyph: "‹",
-    legAccessLabel: "Access",
     // The floating hike / paddle toggle for the leg the next map tap adds (#121).
     nextLegModeLabel: "Next leg's mode",
     // Its icon-only toggles; their names are `legModeHike` and `legModePaddle`.
@@ -239,8 +238,6 @@ export const strings = {
     placingCancel: "Cancel",
     savedOnDevice: "Saved on this device.",
     noAccessPoints: "No access points yet.",
-    // The Trip tab's access summary per day (#123).
-    dayAccessLabel: "Access per day",
     // The access layer on the phone (#125): the layers button under ◎ is named `accessLayerToggle`.
     accessLayerGlyph: "≋",
     // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a popover.

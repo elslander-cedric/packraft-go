@@ -1,5 +1,5 @@
 // The phone planner's Days, Trip and Settings tabs (#123, ADR 0026): day cards that
-// zoom the map to their day, the trip's name, start date and access summary, and the
+// zoom the map to their day and carry its access, the trip's name and start date, and the
 // planner's settings stored on the device. The trip is seeded in browser storage with
 // routed legs, so nothing is routed: a hike to the Meuse at Dinant, a camp, then a
 // paddle leg on the Meuse (unlisted Walloon water: not allowed, #75).
@@ -24,8 +24,6 @@ const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane pa
 const tripName = (page: Page) => panel(page).getByLabel(strings.tripNameLabel);
 const startDate = (page: Page) => panel(page).getByLabel(strings.startDateLabel);
 const clearDate = (page: Page) => panel(page).getByRole("button", { name: strings.clearStartDateButton });
-const tripSummary = (page: Page) => panel(page).getByRole("region", { name: strings.tripAccess.summaryLabel });
-const dayAccess = (page: Page) => panel(page).getByRole("list", { name: text.dayAccessLabel }).getByRole("listitem");
 const paceFactor = (page: Page) => panel(page).getByLabel(strings.paceFactorLabel);
 const paddleSpeed = (page: Page) => panel(page).getByLabel(strings.paddleSpeedLabel);
 const totals = (page: Page) => sheet(page).locator(".phone-totals");
@@ -195,70 +193,62 @@ test("the Trip tab renames the trip and sets, changes and clears its start date;
   await expect(clearDate(page)).toHaveCount(0);
   await startDate(page).fill("2026-10-31");
   await expect.poll(async () => (await storedTrip(page)).trip.startDate).toBe("2026-10-31");
-  await expect(dayAccess(page).nth(0)).toContainText("Sat 31 Oct 2026");
-  await expect(dayAccess(page).nth(1)).toContainText("Sun 1 Nov 2026");
+  await tab(page, text.tabs.days).click();
+  await expect(dayCards(page).nth(0)).toContainText("Sat 31 Oct 2026");
+  await expect(dayCards(page).nth(1)).toContainText("Sun 1 Nov 2026");
 
+  await tab(page, text.tabs.trip).click();
   await startDate(page).fill("2027-07-10");
-  await expect(dayAccess(page).nth(1)).toContainText("Sun 11 Jul 2027");
   await page.reload();
   await tab(page, text.tabs.trip).click();
   await expect(startDate(page)).toHaveValue("2027-07-10");
   await expect(tripName(page)).toHaveValue("Meuse & Lesse");
+  await tab(page, text.tabs.days).click();
+  await expect(dayCards(page).nth(0)).toContainText("Sat 10 Jul 2027");
+  await expect(dayCards(page).nth(1)).toContainText("Sun 11 Jul 2027");
 
+  await tab(page, text.tabs.trip).click();
   await clearDate(page).click();
   await expect(startDate(page)).toHaveValue("");
   await expect.poll(async () => (await storedTrip(page)).trip.startDate).toBeUndefined();
-  await expect(dayAccess(page)).toHaveCount(2);
-  await expect(dayAccess(page).nth(1)).not.toContainText("Jul");
+  await tab(page, text.tabs.days).click();
+  await expect(dayCards(page)).toHaveCount(2);
+  await expect(dayCards(page).nth(1)).not.toContainText("Jul");
 });
 
-test("the Trip tab's access summary has the disclaimer at its top, per-day status, and no totals", async ({ page }) => {
-  await serveOffline(page);
-  await openWithTrip(page);
-  await tab(page, text.tabs.trip).click();
-
-  const disclaimer = panel(page).getByText(strings.navigationRulesNotice);
-  await expect(disclaimer).toBeVisible();
-  await expect(tripSummary(page)).toBeVisible();
-  // Both measured in one go: the sheet may still be rising to half from the tab press.
-  await expect
-    .poll(async () => {
-      const [above, summary] = await Promise.all([disclaimer.boundingBox(), tripSummary(page).boundingBox()]);
-      return above!.y < summary!.y;
-    })
-    .toBe(true);
-
-  // Unlisted Walloon water is not allowed (#75): a Forbidden warning, never "unknown".
-  await expect(tripSummary(page)).toContainText(strings.tripAccess.warningKind.forbidden);
-  await expect(dayAccess(page)).toHaveCount(2);
-  await expect(dayAccess(page).nth(1)).toContainText(strings.tripAccess.dayStatus(strings.accessState.forbidden));
-  await expect(panel(page)).not.toContainText(strings.accessState.unknown);
-
-  // The totals are in the peek only.
-  const total = (await totals(page).textContent())!;
-  expect(total).toContain(strings.kilometreUnit);
-  await expect(panel(page)).not.toContainText(strings.tripTotalTimeEstimate);
-});
-
-test("the Trip tab's access summary lines up with the fields, with space between its rule and its title", async ({
+test("the Trip tab has no access summary or totals: each day's access is on its card, the disclaimer under them", async ({
   page,
 }) => {
   await serveOffline(page);
   await openWithTrip(page);
   await tab(page, text.tabs.trip).click();
-  await expect(tripSummary(page)).toBeVisible();
+  await expect(tripName(page)).toBeVisible();
+  await expect(panel(page).getByRole("region", { name: strings.tripAccess.summaryLabel })).toHaveCount(0);
+  await expect(panel(page)).not.toContainText(strings.navigationRulesNotice);
+  // The totals are in the peek only.
+  const total = (await totals(page).textContent())!;
+  expect(total).toContain(strings.kilometreUnit);
+  await expect(panel(page)).not.toContainText(strings.tripTotalTimeEstimate);
 
-  // Measured in one go: the sheet may still be rising to half from the tab press.
-  const layout = () =>
-    tripSummary(page).evaluate((summary) => {
-      const box = summary.getBoundingClientRect();
-      const title = summary.querySelector("h2")!.getBoundingClientRect();
-      const status = summary.querySelector(".access-status")!.getBoundingClientRect();
-      const field = summary.parentElement!.querySelector("input")!.getBoundingClientRect();
-      return { fieldLeft: field.left, statusLeft: status.left, titleGap: title.top - box.top };
-    });
-  await expect.poll(async () => (await layout()).statusLeft - (await layout()).fieldLeft).toBe(0);
-  expect((await layout()).titleGap).toBeGreaterThanOrEqual(12);
+  await tab(page, text.tabs.days).click();
+  // Unlisted Walloon water is not allowed (#75): a Forbidden status, never "unknown".
+  await expect(dayCards(page).nth(1)).toContainText(strings.tripAccess.dayStatus(strings.accessState.forbidden));
+  // The warnings show only on the selected card; tapping it again unselects it.
+  const warning = dayCards(page).nth(1).locator(".access-warning-forbidden");
+  const select = dayCards(page).nth(1).getByRole("button", { name: strings.dayLabel(2) });
+  await expect(warning).toHaveCount(0);
+  await expect(select).toHaveAttribute("aria-expanded", "false");
+  await dayCards(page).nth(1).tap();
+  await expect(warning).toContainText(strings.tripAccess.warningKind.forbidden);
+  await expect(select).toHaveAttribute("aria-expanded", "true");
+  await dayCards(page).nth(1).tap();
+  await expect(warning).toHaveCount(0);
+  await expect(dayCards(page).nth(1)).toContainText(strings.tripAccess.dayStatus(strings.accessState.forbidden));
+  await expect(panel(page)).not.toContainText(strings.accessState.unknown);
+  const disclaimer = panel(page).getByText(strings.navigationRulesNotice);
+  await expect(disclaimer).toBeVisible();
+  const [lastCard, below] = await Promise.all([dayCards(page).nth(1).boundingBox(), disclaimer.boundingBox()]);
+  expect(below!.y).toBeGreaterThan(lastCard!.y + lastCard!.height);
 });
 
 test("pace and paddling speed change the time estimates, survive a reload and are not in the trip", async ({ page }) => {

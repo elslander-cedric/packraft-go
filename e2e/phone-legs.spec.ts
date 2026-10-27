@@ -196,6 +196,21 @@ test("an open paddle row shows the aire warning", async ({ page }) => {
   await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
   await rowButton(page, 1).click();
   await expect(legRows(page).nth(0).locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
+  await expect(legRows(page).nth(0).locator(".access-warning-aire .access-swatch").first()).toBeVisible();
+});
+
+test("a paddle row shows its access on a line of its own under the figures, as a day row does", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, { points: [putIn, end], legs: [{ mode: "paddle", geometry: [putIn, end] }] });
+  await openPhone(page);
+  await openLegsTab(page);
+  const button = rowButton(page, 1);
+  const status = button.locator(".day-access-status");
+  await expect(status).toHaveText(/^Access: \S/);
+  await expect(status.locator(".access-swatch")).toHaveCount(1);
+  await sheetSettled(page);
+  const name = (await button.getByText(strings.legLabel(1), { exact: true }).boundingBox())!;
+  expect((await status.boundingBox())!.y).toBeGreaterThanOrEqual(name.y + name.height);
 });
 
 /** A paddle leg along the Semois (stretch 1.B.4c), dated today; see live-walloon-flows.spec.ts. */
