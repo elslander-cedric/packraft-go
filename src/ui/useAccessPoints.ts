@@ -15,13 +15,12 @@ import type { LatLng } from "@/core/trip";
 import { downloadAccessPointsFile, readAccessPointsFile } from "@/persistence/accessPointFile";
 import { loadStoredAccessPoints, storeAccessPoints } from "@/persistence/accessPointStorage";
 import { startDefaultNames, type DefaultNames } from "./defaultNames";
+import { sharedNominatim } from "./sharedNominatim";
 import { strings } from "./strings";
 
-/** One default name source for the whole page, so its one-request-a-second limit holds for all (ADR 0027). */
-let shared: Promise<DefaultNameSource> | null = null;
+/** The page's one default name source, so its one-request-a-second limit holds for all (ADRs 0027, 0030). */
 function defaultNameSource(): Promise<DefaultNameSource> {
-  shared ??= import("@/geocoding/nominatim").then(({ createNominatimNames }) => createNominatimNames());
-  return shared;
+  return sharedNominatim().then(({ names }) => names);
 }
 
 /** A new, unique id for an access point. */
