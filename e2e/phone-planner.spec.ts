@@ -138,8 +138,8 @@ test("on a narrow phone the tab row scrolls sideways and every tab keeps its ful
     const fits = await tab(page, name).evaluate((el) => el.scrollWidth <= el.clientWidth && el.clientHeight < 60);
     expect(fits).toBe(true);
   }
-  await tab(page, strings.phone.tabs.settings).scrollIntoViewIfNeeded();
-  await expect(tab(page, strings.phone.tabs.settings)).toBeInViewport();
+  await tab(page, strings.phone.tabs.accessPoints).scrollIntoViewIfNeeded();
+  await expect(tab(page, strings.phone.tabs.accessPoints)).toBeInViewport();
 });
 
 test("the sheet settles at peek, half or 90% by drag distance, never closes, and the map stays usable", async ({

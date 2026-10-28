@@ -67,9 +67,9 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
   expect(box.width).toBeLessThanOrEqual(380);
   expect(box.width).toBeGreaterThan(SIDEWAYS.width * 0.3);
   for (const name of Object.values(text.tabs)) await expect(panelTab(page, name)).toBeAttached();
-  await panelTab(page, text.tabs.settings).click();
-  await expect(panelTab(page, text.tabs.settings)).toHaveAttribute("aria-selected", "true");
-  await expect(panel(page).getByLabel(strings.paceFactorLabel)).toBeVisible();
+  await panelTab(page, text.tabs.trip).click();
+  await expect(panelTab(page, text.tabs.trip)).toHaveAttribute("aria-selected", "true");
+  await expect(panel(page).getByLabel(strings.tripNameLabel)).toBeVisible();
 
   // The map beside the open panel takes taps.
   await tapMap(page, -80, 0);
@@ -254,4 +254,21 @@ test("sideways, the floating buttons stay in their corners over the map, beside 
   const covered = (await panel(page).boundingBox())!;
   expect(menu.x).toBeLessThan(40);
   expect(covered.x - (undo.x + undo.width)).toBeLessThan(40);
+});
+
+test("sideways, the Settings dialog from the menu fits the short screen with Save and Cancel in reach (#151)", async ({
+  page,
+}) => {
+  await page.setViewportSize(SIDEWAYS);
+  await serveOffline(page);
+  await openPhone(page);
+  await page.getByRole("button", { name: text.menu.button }).click();
+  await page.getByRole("menuitem", { name: text.menu.settings, exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: strings.settingsPanelLabel });
+  await expect(dialog.getByLabel(strings.paceFactorLabel)).toBeVisible();
+  for (const name of [text.menu.settingsConfirm, strings.confirmCancel]) {
+    const button = dialog.getByRole("button", { name });
+    await button.scrollIntoViewIfNeeded();
+    await expect(button).toBeInViewport({ ratio: 1 });
+  }
 });

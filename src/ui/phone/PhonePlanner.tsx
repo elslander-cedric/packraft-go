@@ -12,7 +12,6 @@ import { SidePanel, sidePanelCover } from "../components/SidePanel";
 import { Tab, TabList, TabPanel, Tabs } from "../components/Tabs";
 import { ToggleGroup, type ToggleOption } from "../components/ToggleGroup";
 import DaysPanel from "../DaysPanel";
-import SettingsPanel from "../SettingsPanel";
 import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
 import { strings } from "../strings";
@@ -81,7 +80,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     dispatch,
     summary,
     settings,
-    changeSetting,
+    saveSettings,
     access,
     waterAccess,
     aire,
@@ -287,9 +286,6 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         <TabPanel value="accessPoints">
           <PhoneAccessPoints access={access} marking={marking} changed={pointsChanged} onOpen={openAccessPoint} />
         </TabPanel>
-        <TabPanel value="settings">
-          {settings && <SettingsPanel settings={settings} onChange={changeSetting} heading={false} />}
-        </TabPanel>
       </div>
     </>
   );
@@ -335,6 +331,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           saveFile={saveFile}
           exportGpx={exportGpx}
           openFile={openFile}
+          settings={settings}
+          saveSettings={saveSettings}
         />
       </div>
       <div className="phone-buttons phone-buttons-top">

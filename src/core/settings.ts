@@ -8,12 +8,13 @@ export type Settings = { readonly paceFactor: number; readonly paddleSpeedKmh: n
 
 export const defaultSettings: Settings = { paceFactor: 1, paddleSpeedKmh: 5 };
 
-const isUsable = (value: unknown): value is number =>
+/** True for a value a setting can take: a positive, finite number. */
+export const isUsableSetting = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value) && value > 0;
 
 /** Settings with one of them changed. A value that is not a positive number is ignored. */
 export function withSetting(settings: Settings, name: keyof Settings, value: number): Settings {
-  return isUsable(value) ? { ...settings, [name]: value } : settings;
+  return isUsableSetting(value) ? { ...settings, [name]: value } : settings;
 }
 
 /** Settings in their stored form (JSON). */
@@ -35,7 +36,7 @@ export function restoreSettings(stored: string | null): Settings {
   if (typeof parsed !== "object" || parsed === null) return defaultSettings;
   const { paceFactor, paddleSpeedKmh } = parsed as Record<string, unknown>;
   return {
-    paceFactor: isUsable(paceFactor) ? paceFactor : defaultSettings.paceFactor,
-    paddleSpeedKmh: isUsable(paddleSpeedKmh) ? paddleSpeedKmh : defaultSettings.paddleSpeedKmh,
+    paceFactor: isUsableSetting(paceFactor) ? paceFactor : defaultSettings.paceFactor,
+    paddleSpeedKmh: isUsableSetting(paddleSpeedKmh) ? paddleSpeedKmh : defaultSettings.paddleSpeedKmh,
   };
 }

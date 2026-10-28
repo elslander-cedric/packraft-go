@@ -186,7 +186,7 @@ export const strings = {
     // The phone planner's sheet and tabs (#118, ADR 0026).
     sheetLabel: "Trip",
     tabsLabel: "Trip sections",
-    tabs: { legs: "Legs", days: "Days", trip: "Trip", accessPoints: "Access points", settings: "Settings" },
+    tabs: { legs: "Legs", days: "Days", trip: "Trip", accessPoints: "Access points" },
     // The trip's totals in the sheet's peek: each figure after its icon, named for screen readers.
     totals: {
       labels: {
@@ -262,6 +262,9 @@ export const strings = {
       saveFile: "Save…",
       openFile: "Open…",
       exportGpx: "Export GPX…",
+      // Settings… opens the settings in a dialog (#151); Save stores what was typed.
+      settings: "Settings…",
+      settingsConfirm: "Save",
       // Save… and Export GPX… ask for the trip name first, prefilled with the current one.
       saveTitle: "Save trip",
       saveConfirm: "Save",
