@@ -17,7 +17,7 @@ import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
 import { strings } from "../strings";
 import { useAccessLayer } from "../useAccessLayer";
-import { useBaseMap } from "../useSettings";
+import { useBaseMap, useOverlays } from "../useSettings";
 import { usePlaceSearch } from "../usePlaceSearch";
 import { usePlanner } from "../usePlanner";
 import PhoneAccessChip from "./PhoneAccessChip";
@@ -135,6 +135,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const layer = useAccessLayer(trip);
   // The base map (ADR 0031): a setting on this device, shared with the desktop layout.
   const [baseMap, chooseBaseMap] = useBaseMap();
+  // The overlays (ADR 0032): settings on this device too.
+  const [overlays, switchOverlay] = useOverlays();
   const detailsOpen = layer.selectedWater !== undefined || layer.selectedLock !== undefined;
   // Where the map last zoomed to, for an access point row (#119).
   const [focus, setFocus] = useState<MapFocus | null>(null);
@@ -311,6 +313,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     >
       <ClientPhoneMap
         baseMap={baseMap}
+        overlays={overlays}
         trip={trip}
         onMapTap={onMapTap}
         selectedPoint={selectedPoint}
@@ -364,6 +367,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           onBaseMapChange={chooseBaseMap}
           accessLayerOn={layer.on}
           onAccessLayerChange={layer.setOn}
+          overlays={overlays}
+          onOverlayChange={switchOverlay}
         />
         {message && (
           <p role={message.kind} className={`phone-message phone-message-${message.kind}`}>

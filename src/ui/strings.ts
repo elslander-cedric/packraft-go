@@ -1,6 +1,6 @@
 import type { AccessState } from "@/core/access";
 import type { PlaceKind } from "@/core/placeSearch";
-import type { BaseMapId } from "@/core/settings";
+import type { BaseMapId, OverlayId } from "@/core/settings";
 // All user-facing text lives here (ADR 0013), so other languages can be added later.
 
 export const strings = {
@@ -273,8 +273,6 @@ export const strings = {
     // The edit dialog: what you change is kept until Save stores it on the device.
     accessPointDialogTitle: "Access point details",
     accessPointSave: "Save",
-    // The layers button under the position button (#179) opens the Map menu: the base maps, then the access layer switch.
-    mapMenuButton: "Map",
     // The access layer on the phone (#125): switched on and off in the Map menu, named `accessLayerToggle`.
     // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a dialog.
     accessChip: (when: string) => `Access · ${when}`,
@@ -458,8 +456,22 @@ export const strings = {
     "aerial-be": "Aerial photos (Belgium)",
     "ngi-topo": "NGI topo (Belgium)",
   } satisfies Record<BaseMapId, string>,
-  // The desktop's map button bottom right that opens the base map menu; also the menus' name for the choice.
-  baseMapButton: "Base map",
+  // The menus' name for the choice of base map.
+  baseMapChoice: "Base map",
+  // The Map menu's button (ADR 0032): bottom right on the desktop; on the phone the layers button under
+  // the position button (#179), whose menu adds the access layer's switch before the overlays.
+  mapMenuButton: "Map",
+  // The overlays (ADR 0032): switched on and off in the Map menu, desktop and phone.
+  overlays: {
+    "hiking-trails": "Hiking trails",
+  } satisfies Record<OverlayId, string>,
+  // Shown in the map's attribution control while their overlay is on. Contain HTML links.
+  overlayAttribution: {
+    "hiking-trails":
+      'Hiking trails: &copy; <a href="https://waymarkedtrails.org">Waymarked Trails</a>, ' +
+      '<a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
+      '(<a href="https://creativecommons.org/licenses/by-sa/3.0/de/deed.en">CC BY-SA</a>)',
+  } satisfies Record<OverlayId, string>,
   // Shown in the map's attribution control while their base map is on, each with its source. Contain HTML links.
   baseMapAttribution: {
     wallonia: 'Aerial photos: &copy; <a href="https://geoportail.wallonie.be">SPW</a>',

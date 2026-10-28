@@ -14,10 +14,11 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import type { SearchArea, SearchResult } from "@/core/placeSearch";
-import type { BaseMapId } from "@/core/settings";
+import type { BaseMapId, OverlayId } from "@/core/settings";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import BaseMapTiles from "./BaseMapTiles";
 import { initialMapView, paneZIndex } from "./mapConfig";
+import OverlayTiles from "./OverlayTiles";
 import SearchResultLayer, { type MapCover } from "./SearchResultLayer";
 import { campIcon, legStyle, modeChangeStyle, MapAreaReporter } from "./TripMap";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
@@ -36,6 +37,8 @@ export type MapFocus = ({ at: LatLng } | { area: readonly LatLng[] }) & { covere
 export type PhoneMapProps = {
   /** The base map drawn under everything (ADR 0031), chosen in the Map menu. */
   baseMap: BaseMapId;
+  /** The switched-on overlays (ADR 0032), drawn over the base map. */
+  overlays: readonly OverlayId[];
   trip: Trip;
   /** A tap on the map (not a double tap, not the end of a pinch, not on a point). */
   onMapTap: (at: LatLng) => void;
@@ -369,7 +372,7 @@ function TripLayers({
 }
 
 /**
- * The phone's map (ADR 0026): the trip, the access layer, your access points, your position
+ * The phone's map (ADR 0026): the trip, the overlays, the access layer, your access points, your position
  * and the shown place search result.
  * Pinch zoom is on and double-tap zoom is off, because the first tap of a
  * double tap would add a point. Imports Leaflet, which needs `window`: only load
@@ -377,6 +380,7 @@ function TripLayers({
  */
 export default function PhoneMap({
   baseMap,
+  overlays,
   trip,
   onMapTap,
   selectedPoint,
@@ -401,6 +405,7 @@ export default function PhoneMap({
       zoomControl={false}
     >
       <BaseMapTiles id={baseMap} />
+      <OverlayTiles ids={overlays} />
       {access && <AccessLayer {...access} touch />}
       <MapView trip={trip} position={position} />
       {focus && <Focus focus={focus} />}

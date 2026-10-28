@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { baseMaps } from "./mapConfig";
+import { baseMaps, overlays } from "./mapConfig";
 import { baseMapCheckRequests, runBaseMapCheck, tileAt, wmsTileUrl } from "./baseMapCheck";
 
 const image = { status: 200, headers: new Headers({ "content-type": "image/png" }) };
@@ -38,11 +38,17 @@ describe("base map check (#179)", () => {
 
   it("makes one request per source, OpenTopoMap once, each inside its source's bounds", () => {
     const requests = baseMapCheckRequests();
-    const sources = new Set(baseMaps.flatMap((map) => map.sources));
+    const sources = new Set([...baseMaps.flatMap((map) => map.sources), ...overlays.map((overlay) => overlay.source)]);
     expect(requests).toHaveLength(sources.size);
     expect(new Set(requests.map((request) => new URL(request.url).hostname)).size).toBe(sources.size);
     for (const request of requests) expect(request.url).not.toMatch(/[{}]/);
     expect(requests.find((request) => request.url.includes("vlaanderen"))?.url).toContain("TILEMATRIX=15&");
+  });
+
+  it("also asks the Hiking trails overlay for one tile, after the base maps (ADR 0032)", () => {
+    const last = baseMapCheckRequests().at(-1)!;
+    expect(last.url).toBe("https://tile.waymarkedtrails.org/hiking/12/2098/1380.png");
+    expect(last.label).toBe("Hiking trails: tile.waymarkedtrails.org");
   });
 
   it("reports OK for every image and passes", async () => {

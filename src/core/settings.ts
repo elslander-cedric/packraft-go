@@ -3,6 +3,11 @@ export const baseMapIds = ["opentopomap", "aerial-be", "ngi-topo"] as const;
 
 export type BaseMapId = (typeof baseMapIds)[number];
 
+/** The overlays that can be switched on over any base map (ADR 0032). */
+export const overlayIds = ["hiking-trails"] as const;
+
+export type OverlayId = (typeof overlayIds)[number];
+
 /**
  * The planner's settings on this device.
  * - `paceFactor`: multiplies the Naismith hiking time; above 1 is slower (ADR 0009).
@@ -10,11 +15,14 @@ export type BaseMapId = (typeof baseMapIds)[number];
  *   Both are always positive, finite numbers.
  * - `baseMap`: the base map shown under the trip (ADR 0031). A viewing preference:
  *   never part of the trip, its file or the GPX.
+ * - `overlays`: the overlays switched on (ADR 0032), each once, in the order of `overlayIds`.
+ *   A viewing preference like the base map.
  */
 export type Settings = {
   readonly paceFactor: number;
   readonly paddleSpeedKmh: number;
   readonly baseMap: BaseMapId;
+  readonly overlays: readonly OverlayId[];
 };
 
 /** The settings that are numbers: the planner's pace. */
@@ -23,7 +31,7 @@ export type PaceSetting = "paceFactor" | "paddleSpeedKmh";
 /** The settings time estimates use. */
 export type Pace = Pick<Settings, PaceSetting>;
 
-export const defaultSettings: Settings = { paceFactor: 1, paddleSpeedKmh: 5, baseMap: baseMapIds[0] };
+export const defaultSettings: Settings = { paceFactor: 1, paddleSpeedKmh: 5, baseMap: baseMapIds[0], overlays: [] };
 
 /** True for a value a setting can take: a positive, finite number. */
 export const isUsableSetting = (value: unknown): value is number =>
@@ -40,6 +48,12 @@ export const isBaseMapId = (value: unknown): value is BaseMapId => baseMapIds.so
 /** Settings with another base map chosen; the same settings when it is already the one. */
 export function withBaseMap(settings: Settings, baseMap: BaseMapId): Settings {
   return settings.baseMap === baseMap ? settings : { ...settings, baseMap };
+}
+
+/** Settings with an overlay switched on or off; the same settings when it already is. */
+export function withOverlay(settings: Settings, overlay: OverlayId, on: boolean): Settings {
+  if (settings.overlays.includes(overlay) === on) return settings;
+  return { ...settings, overlays: overlayIds.filter((id) => (id === overlay ? on : settings.overlays.includes(id))) };
 }
 
 /** Settings in their stored form (JSON). */
@@ -59,10 +73,12 @@ export function restoreSettings(stored: string | null): Settings {
     // Unreadable: use the defaults.
   }
   if (typeof parsed !== "object" || parsed === null) return defaultSettings;
-  const { paceFactor, paddleSpeedKmh, baseMap } = parsed as Record<string, unknown>;
+  const { paceFactor, paddleSpeedKmh, baseMap, overlays } = parsed as Record<string, unknown>;
   return {
     paceFactor: isUsableSetting(paceFactor) ? paceFactor : defaultSettings.paceFactor,
     paddleSpeedKmh: isUsableSetting(paddleSpeedKmh) ? paddleSpeedKmh : defaultSettings.paddleSpeedKmh,
     baseMap: isBaseMapId(baseMap) ? baseMap : defaultSettings.baseMap,
+    // Unknown ids are dropped, so an overlay that is gone never comes back as another.
+    overlays: Array.isArray(overlays) ? overlayIds.filter((id) => overlays.includes(id)) : defaultSettings.overlays,
   };
 }

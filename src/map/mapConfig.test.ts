@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { baseMapIds, defaultSettings } from "@/core/settings";
+import { baseMapIds, defaultSettings, overlayIds } from "@/core/settings";
 import { strings } from "@/ui/strings";
-import { baseMap, baseMaps, initialMapView, type TileSource } from "./mapConfig";
+import { baseMap, baseMaps, initialMapView, overlays, paneZIndex, type TileSource } from "./mapConfig";
 
 // Rough bounding box of Belgium, independent of the app's own numbers.
 const BELGIUM = { south: 49.49, north: 51.51, west: 2.54, east: 6.41 };
@@ -165,5 +165,38 @@ describe("base maps", () => {
       expect(ngi.attribution).toContain("NGI");
       expect(ngi.attribution).toContain("TomTom");
     });
+  });
+});
+
+describe("overlays (ADR 0032)", () => {
+  it("offer Hiking trails, one per overlay id, each named from the strings", () => {
+    expect(overlays.map((overlay) => overlay.id)).toEqual([...overlayIds]);
+    for (const overlay of overlays) expect(overlay.name).toBe(strings.overlays[overlay.id]);
+  });
+
+  it("draw Hiking trails from Waymarked Trails, native tiles up to zoom 18 (it answers 404 at 19)", () => {
+    const [trails] = overlays;
+    expect(trails.source).toMatchObject({
+      kind: "tiles",
+      url: "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png",
+      maxNativeZoom: 18,
+    });
+    expect(trails.source.minZoom).toBeUndefined();
+    expect(trails.source.bounds).toBeUndefined();
+  });
+
+  it("credit Waymarked Trails and OpenStreetMap contributors under CC BY-SA", () => {
+    const { attribution } = overlays[0].source;
+    expect(attribution).toBe(strings.overlayAttribution["hiking-trails"]);
+    expect(attribution).toContain("Waymarked Trails");
+    expect(attribution).toContain("OpenStreetMap");
+    expect(attribution).toContain("CC BY-SA");
+  });
+
+  it("sit above the base map's tiles and below the access layer and the trip", () => {
+    const leafletTilePane = 200;
+    expect(paneZIndex.overlays).toBeGreaterThan(leafletTilePane);
+    expect(paneZIndex.overlays).toBeLessThan(paneZIndex.access);
+    expect(paneZIndex.overlays).toBeLessThan(paneZIndex.tripModeChanges);
   });
 });

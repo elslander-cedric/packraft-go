@@ -1,5 +1,12 @@
 import { useSyncExternalStore } from "react";
-import { defaultSettings, withBaseMap, type BaseMapId, type Settings } from "@/core/settings";
+import {
+  defaultSettings,
+  withBaseMap,
+  withOverlay,
+  type BaseMapId,
+  type OverlayId,
+  type Settings,
+} from "@/core/settings";
 import { loadStoredSettings, storeSettings } from "@/persistence/settingsStorage";
 
 // Browser storage is an external store: read it once, then keep the current
@@ -40,6 +47,20 @@ export function useBaseMap(): [BaseMapId, (id: BaseMapId) => void] {
     settings?.baseMap ?? defaultSettings.baseMap,
     (id) => {
       if (settings) saveSettings(withBaseMap(settings, id));
+    },
+  ];
+}
+
+/**
+ * The switched-on overlays (ADR 0032) and a way to switch one on or off, shared by the
+ * desktop and the phone. None until the settings are read in the browser.
+ */
+export function useOverlays(): [readonly OverlayId[], (id: OverlayId, on: boolean) => void] {
+  const [settings, saveSettings] = useSettings();
+  return [
+    settings?.overlays ?? defaultSettings.overlays,
+    (id, on) => {
+      if (settings) saveSettings(withOverlay(settings, id, on));
     },
   ];
 }

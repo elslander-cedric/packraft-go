@@ -7,7 +7,7 @@ import { serialiseTrip } from "../src/core/saveFile";
 import type { Trip } from "../src/core/trip";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
-import { mapLayersButton, toggleAccessLayer } from "./support/mapMenu";
+import { mapMenuButton, toggleAccessLayer } from "./support/mapMenu";
 import { nominatimFixture, serveOffline } from "./support/offline";
 
 // The mobile preset: 375 × 812, a touch phone.
@@ -37,7 +37,6 @@ const pin = (page: Page) => mapRegion(page).locator(".search-result-marker");
 const pinLabel = (page: Page) => mapRegion(page).locator(".search-result-label");
 const menuButton = (page: Page) => page.getByRole("button", { name: strings.phone.menu.button });
 const positionButton = (page: Page) => page.getByRole("button", { name: strings.phone.showPositionButton });
-const layersButton = mapLayersButton;
 const chip = (page: Page) => page.getByRole("button", { name: /^Access · / });
 const accessDialog = (page: Page) => page.getByRole("dialog", { name: strings.phone.accessDialogTitle });
 const panel = (page: Page) => page.getByRole("complementary", { name: strings.phone.sheetLabel });
@@ -273,7 +272,7 @@ async function expectPillBetweenButtons(page: Page) {
   const pillBox = await box(page.locator(".phone-place-search"));
   expect(apart(pillBox, await box(menuButton(page)))).toBe(true);
   expect(apart(pillBox, await box(positionButton(page)))).toBe(true);
-  expect(apart(pillBox, await box(layersButton(page)))).toBe(true);
+  expect(apart(pillBox, await box(mapMenuButton(page)))).toBe(true);
   // Still a 44 px touch target, as every phone control.
   expect(pillBox.width).toBeGreaterThanOrEqual(44);
 }
@@ -283,7 +282,7 @@ async function expectChipUnderPill(page: Page) {
   const pillBox = await box(page.locator(".phone-place-search"));
   const chipBox = await box(chip(page));
   expect(chipBox.y).toBeGreaterThanOrEqual(pillBox.y + pillBox.height);
-  expect(apart(chipBox, await box(layersButton(page)))).toBe(true);
+  expect(apart(chipBox, await box(mapMenuButton(page)))).toBe(true);
   await expectOnScreen(page, chip(page));
   expect(await chip(page).evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
 }

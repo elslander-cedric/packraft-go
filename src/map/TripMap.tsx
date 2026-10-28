@@ -9,23 +9,27 @@ import { divIcon } from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import { CircleMarker, MapContainer, Marker, Pane, Polyline, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import type { SearchArea, SearchResult } from "@/core/placeSearch";
-import type { BaseMapId } from "@/core/settings";
+import type { BaseMapId, OverlayId } from "@/core/settings";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type ModeChange, type Trip } from "@/core/trip";
 import { icons } from "@/ui/icons/icons";
 import { iconSvg } from "@/ui/icons/iconSvg";
-import BaseMapMenu from "@/ui/BaseMapMenu";
+import MapMenu from "@/ui/MapMenu";
 import { strings } from "@/ui/strings";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 import BaseMapTiles from "./BaseMapTiles";
 import MapControl from "./MapControl";
 import { initialMapView, paneZIndex } from "./mapConfig";
+import OverlayTiles from "./OverlayTiles";
 import SearchResultLayer from "./SearchResultLayer";
 
 export type TripMapProps = {
   /** The base map drawn under everything (ADR 0031), and choosing another with the map's button. */
   baseMap: BaseMapId;
   onBaseMapChange: (id: BaseMapId) => void;
+  /** The switched-on overlays (ADR 0032), drawn over the base map. */
+  overlays: readonly OverlayId[];
+  onOverlayChange: (id: OverlayId, on: boolean) => void;
   trip: Trip;
   /** Index of the selected point, if any. */
   selectedPoint: number | null;
@@ -166,7 +170,7 @@ function TripLayers({
   onMapClick,
   onPointClick,
   onPointDrag,
-}: Omit<TripMapProps, "baseMap" | "onBaseMapChange">) {
+}: Omit<TripMapProps, "baseMap" | "onBaseMapChange" | "overlays" | "onOverlayChange">) {
   const map = useMap();
   const [preview, setPreview] = useState<DragPreview | null>(null);
   // The browser sends a click after a drag ends; that click must not add or select a point.
@@ -312,7 +316,16 @@ export function MapAreaReporter({ onChange }: { onChange: (area: SearchArea) => 
 }
 
 // Imports Leaflet, which needs `window`: only load this through ClientTripMap.
-export default function TripMap({ baseMap, onBaseMapChange, access, searchResult, onAreaChange, ...props }: TripMapProps) {
+export default function TripMap({
+  baseMap,
+  onBaseMapChange,
+  overlays,
+  onOverlayChange,
+  access,
+  searchResult,
+  onAreaChange,
+  ...props
+}: TripMapProps) {
   return (
     <MapContainer
       center={[...initialMapView.center]}
@@ -320,8 +333,14 @@ export default function TripMap({ baseMap, onBaseMapChange, access, searchResult
       style={{ height: "100%", width: "100%" }}
     >
       <BaseMapTiles id={baseMap} />
+      <OverlayTiles ids={overlays} />
       <MapControl position="bottomright">
-        <BaseMapMenu value={baseMap} onChange={onBaseMapChange} />
+        <MapMenu
+          baseMap={baseMap}
+          onBaseMapChange={onBaseMapChange}
+          overlays={overlays}
+          onOverlayChange={onOverlayChange}
+        />
       </MapControl>
       {access && <AccessLayer {...access} />}
       <TripLayers {...props} />
