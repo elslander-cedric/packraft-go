@@ -21,14 +21,20 @@ const pin = divIcon({
   tooltipAnchor: [0, -30],
 });
 
+/** How many pixels of the map are hidden at its top, right and bottom (the phone's pill, panel and sheet; #174). */
+export type MapCover = { top: number; right: number; bottom: number };
+
+const UNCOVERED: MapCover = { top: 0, right: 0, bottom: 0 };
+
 /**
  * Moves the map to `result` whenever a new one is shown (a new object each
- * pick), and draws its pin. Not interactive: clicks and drags reach the map,
- * so a point can be added right on it. Never saved.
+ * pick), into the part `cover` leaves free, and draws its pin. Not interactive:
+ * clicks and drags reach the map, so a point can be added right on it. Never saved.
  */
-export default function SearchResultLayer({ result }: { result: SearchResult }) {
+export default function SearchResultLayer({ result, cover }: { result: SearchResult; cover?: () => MapCover }) {
   const map = useMap();
   useEffect(() => {
+    const { top, right, bottom } = cover?.() ?? UNCOVERED;
     if (result.box) {
       const { south, west, north, east } = result.box;
       map.fitBounds(
@@ -36,11 +42,15 @@ export default function SearchResultLayer({ result }: { result: SearchResult }) 
           [south, west],
           [north, east],
         ]),
-        { maxZoom: MAX_RESULT_ZOOM },
+        { maxZoom: MAX_RESULT_ZOOM, paddingTopLeft: [0, top], paddingBottomRight: [right, bottom] },
       );
     } else {
-      map.setView(result.at, MAX_RESULT_ZOOM);
+      // The result at the centre of the free part.
+      const at = map.project(result.at, MAX_RESULT_ZOOM).add([right / 2, (bottom - top) / 2]);
+      map.setView(map.unproject(at, MAX_RESULT_ZOOM), MAX_RESULT_ZOOM);
     }
+    // Only a new result moves the map: the cover is read then, not followed as the sheet moves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, result]);
 
   return (

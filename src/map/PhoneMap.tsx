@@ -14,9 +14,11 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
+import type { SearchArea, SearchResult } from "@/core/placeSearch";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import { baseLayer, initialMapView, paneZIndex } from "./mapConfig";
-import { campIcon, legStyle, modeChangeStyle } from "./TripMap";
+import SearchResultLayer, { type MapCover } from "./SearchResultLayer";
+import { campIcon, legStyle, modeChangeStyle, MapAreaReporter } from "./TripMap";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 import { HOLD_MS, useHold } from "./hold";
@@ -50,6 +52,11 @@ export type PhoneMapProps = {
   focus?: MapFocus | null;
   /** The access layer, while it is switched on (#125): hold a water or tap a lock for its details. */
   access?: Omit<AccessLayerProps, "touch"> | null;
+  /** The shown place search result (#174): the map moves to it, into the part `searchCover` leaves free, and pins it. */
+  searchResult?: SearchResult | null;
+  searchCover?: () => MapCover;
+  /** The visible map, when it loads and after every move (place search ranks places in it). */
+  onAreaChange?: (area: SearchArea) => void;
 };
 
 /** Zoom used to show your position: close enough to see the river bank. */
@@ -359,7 +366,8 @@ function TripLayers({
 }
 
 /**
- * The phone's map (ADR 0026): the trip, the access layer, your access points and your position.
+ * The phone's map (ADR 0026): the trip, the access layer, your access points, your position
+ * and the shown place search result.
  * Pinch zoom is on and double-tap zoom is off, because the first tap of a
  * double tap would add a point. Imports Leaflet, which needs `window`: only load
  * this through ClientPhoneMap.
@@ -375,6 +383,9 @@ export default function PhoneMap({
   accessPoints,
   focus,
   access,
+  searchResult,
+  searchCover,
+  onAreaChange,
 }: PhoneMapProps) {
   return (
     <MapContainer
@@ -403,6 +414,8 @@ export default function PhoneMap({
         onLegHold={onLegHold}
       />
       {accessPoints && <AccessPointLayer {...accessPoints} pressDrag />}
+      {searchResult && <SearchResultLayer result={searchResult} cover={searchCover} />}
+      {onAreaChange && <MapAreaReporter onChange={onAreaChange} />}
       {position && (
         <>
           <Circle

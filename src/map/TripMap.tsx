@@ -286,7 +286,7 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
 }
 
 /** Tells `onChange` the visible map when it loads and after every move. */
-function MapAreaReporter({ onChange }: { onChange: (area: SearchArea) => void }) {
+export function MapAreaReporter({ onChange }: { onChange: (area: SearchArea) => void }) {
   const map = useMap();
   const report = () => {
     const bounds = map.getBounds();

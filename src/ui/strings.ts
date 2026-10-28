@@ -410,6 +410,9 @@ export const strings = {
     placeholder: "Place or coordinates",
     search: "Search",
     clear: "Clear search",
+    // The phone's pill opens the field, which closes back to it (#174).
+    pill: (shown?: string) => (shown ? `Search a place, showing ${shown}` : "Search a place"),
+    back: "Close search",
     resultsLabel: "Search results",
     searching: "Searching…",
     nothingFound: (text: string) => `Nothing found for “${text}”. Try a village, a road, a river or coordinates.`,

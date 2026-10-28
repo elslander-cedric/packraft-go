@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import type { Router } from "@/core/router";
 import type { DaySummary } from "@/core/summarise";
 import { canGoBackToStart, canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import ClientPhoneMap from "@/map/ClientPhoneMap";
 import type { MapFocus } from "@/map/PhoneMap";
-import { BottomSheet, type SheetStop } from "../components/BottomSheet";
+import type { MapCover } from "@/map/SearchResultLayer";
+import { BottomSheet, sheetStopShare, type SheetStop } from "../components/BottomSheet";
 import { Button } from "../components/Button";
 import { SidePanel, sidePanelCover } from "../components/SidePanel";
 import { Tab, TabList, TabPanel, Tabs } from "../components/Tabs";
@@ -16,6 +17,7 @@ import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
 import { strings } from "../strings";
 import { useAccessLayer } from "../useAccessLayer";
+import { usePlaceSearch } from "../usePlaceSearch";
 import { usePlanner } from "../usePlanner";
 import PhoneAccessChip from "./PhoneAccessChip";
 import PhoneAccessDetails from "./PhoneAccessDetails";
@@ -25,6 +27,7 @@ import SnapOffers from "../SnapOffers";
 import PhoneLegDetailsDialog from "./PhoneLegDetailsDialog";
 import PhoneLegsList from "./PhoneLegsList";
 import PhoneMenu from "./PhoneMenu";
+import PhonePlaceSearch from "./PhonePlaceSearch";
 import PhoneTripTotals from "./PhoneTripTotals";
 import { positionMessage } from "./position";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
@@ -145,6 +148,19 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const nextMode = held?.mode ?? trip.legs[trip.legs.length - 1]?.mode ?? "hike";
   // The leg whose access details dialog is open (#158), if any.
   const [detailsLeg, setDetailsLeg] = useState<number | null>(null);
+  // Place search (#174) belongs to the map, not the trip: it lives here, outside the planner session.
+  const search = usePlaceSearch();
+  // What hides the map where a search result is shown: the pill and the access chip under it,
+  // and the sheet or the side panel, measured when a result is shown.
+  const root = useRef<HTMLDivElement>(null);
+  const searchCover = (): MapCover => {
+    const top = root.current?.getBoundingClientRect().top ?? 0;
+    const rows = root.current?.querySelectorAll(".phone-place-search, .phone-access-chip-slot") ?? [];
+    const rowsBottom = Math.max(top, ...Array.from(rows, (row) => row.getBoundingClientRect().bottom));
+    const panel = root.current?.querySelector(".side-panel")?.getBoundingClientRect().width ?? 0;
+    const sheet = stop === "peek" ? (peekPx ?? 0) : sheetStopShare[stop] * window.innerHeight;
+    return { top: rowsBottom - top, right: sideways ? panel : 0, bottom: sideways ? 0 : sheet };
+  };
 
   // While an access point is being placed, the tap places it; while a point is selected, it only
   // clears the selection (#120); otherwise it adds a trip point with the next leg's mode.
@@ -281,6 +297,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
 
   return (
     <div
+      ref={root}
       className={
         sideways
           ? `phone phone-sideways ${panelOpen ? "phone-panel-open" : "phone-panel-collapsed"}`
@@ -304,6 +321,9 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         }}
         focus={focus}
         access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: openAccessDetails }}
+        searchResult={search.state.shown}
+        searchCover={searchCover}
+        onAreaChange={search.setArea}
       />
       {layer.on && (
         <div className="phone-access-chip-slot">
@@ -324,6 +344,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           saveSettings={saveSettings}
         />
       </div>
+      <PhonePlaceSearch search={search} />
       <div className="phone-buttons phone-buttons-top">
         <Button
           className="phone-fab"
