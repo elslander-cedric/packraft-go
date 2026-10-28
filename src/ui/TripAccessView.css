@@ -1,25 +1,16 @@
-/* Access status and warnings on leg rows, day rows and the trip summary (#58). */
-.leg-access,
-.day-access {
+/* Access status and warnings on leg rows, and the warning chips on day cards (#58). */
+.leg-access {
   min-width: 0;
   font-size: 0.85rem;
   overflow-wrap: anywhere;
 }
 
-/* On a day row (a wrapping flex row), the access block takes a line of its own. */
-.day-access {
-  flex-basis: 100%;
-}
-
-.leg-access p,
-.day-access p,
-.trip-access p {
+.leg-access p {
   margin: var(--space-1) 0 0;
 }
 
 .leg-access-status,
-.day-access-status,
-.trip-access .access-status {
+.access-status-line {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -44,24 +35,8 @@
 }
 
 .leg-access-flow,
-.access-note,
-.trip-access-note {
+.access-note {
   color: var(--color-muted);
-}
-
-.trip-access {
-  flex: 0 1 auto;
-  min-height: 6rem;
-  max-height: 30%;
-  padding: 0 1rem 0.5rem;
-  border-top: 1px solid var(--color-border);
-  overflow-y: auto;
-  font-size: 0.85rem;
-  overflow-wrap: anywhere;
-}
-
-.trip-access h2 {
-  font-size: 1rem;
 }
 .access-warning-aire strong,
 .access-warning-lock strong {
@@ -71,4 +46,35 @@
 /* Unknown access: a quiet note, visibly lighter than the coloured warnings (#78). */
 .access-note {
   font-style: italic;
+}
+
+/* A day card's chips: one per leg with warnings, on a line of their own under the figures. */
+.day-warning-chips {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.button.day-warning-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 10px;
+  border-color: currentColor;
+  border-radius: 999px;
+  color: var(--color-warning);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Red is only for explicit bans, as on the map. */
+.button.day-warning-chip-forbidden {
+  color: var(--color-danger);
+}
+
+.day-warning-chip-more {
+  opacity: 0.75;
 }

@@ -20,8 +20,12 @@ const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name })
 const panel = (page: Page) => sheet(page).getByRole("tabpanel");
 const dayCards = (page: Page) =>
   sheet(page).getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem");
+/** A day card's warning chips (ADR 0029). */
+const dayChips = (page: Page, day: number) =>
+  dayCards(page).nth(day).getByRole("group", { name: strings.tripAccess.dayWarningsLabel }).getByRole("button");
 /** A day card's title: its calendar tile, named by the full date (or "Day n" when undated). */
-const dayTile = (card: Locator) => card.getByRole("button");
+// The tile is the card's first button; its warning chips follow.
+const dayTile = (card: Locator) => card.getByRole("button").first();
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const tripName = (page: Page) => panel(page).getByLabel(strings.tripNameLabel);
 const startDate = (page: Page) => panel(page).getByLabel(strings.startDateLabel);
@@ -104,7 +108,7 @@ test("a two-day trip shows two day cards with their figures; tapping a card zoom
   await expect(dayCards(page).nth(0)).toContainText(strings.dayTimeEstimate);
   await expect(dayCards(page).nth(1)).toContainText(strings.dayPaddleDistance);
   // The paddle day is on unlisted Walloon water: not allowed, never "unknown" (#75).
-  await expect(dayCards(page).nth(1)).toContainText(strings.tripAccess.dayStatus(strings.accessState.forbidden));
+  await expect(dayChips(page, 1)).toContainText(strings.tripAccess.chip(2, strings.tripAccess.chipKind.forbidden));
 
   await dayCards(page).nth(1).tap();
   await expect.poll(() => inView(page, points(page).nth(1))).toBe(true);
@@ -230,14 +234,14 @@ test("the Trip tab renames the trip and sets, changes and clears its start date;
   await expect(dayTile(dayCards(page).nth(1))).toHaveAccessibleName(strings.dayLabel(2));
 });
 
-test("the Trip tab has no access summary or totals: each day's access is on its card, the disclaimer under them", async ({
+test("the Trip tab has no access summary or totals; a day card's chip opens its leg, the disclaimer under the cards", async ({
   page,
 }) => {
   await serveOffline(page);
   await openWithTrip(page);
   await tab(page, text.tabs.trip).click();
   await expect(tripName(page)).toBeVisible();
-  await expect(panel(page).getByRole("region", { name: strings.tripAccess.summaryLabel })).toHaveCount(0);
+  await expect(panel(page)).not.toContainText(strings.tripAccess.chipKind.forbidden);
   await expect(panel(page)).not.toContainText(strings.navigationRulesNotice);
   // The totals are in the peek only.
   const total = (await totals(page).textContent())!;
@@ -245,24 +249,31 @@ test("the Trip tab has no access summary or totals: each day's access is on its 
   await expect(panel(page)).not.toContainText(strings.tripTotalTimeEstimate);
 
   await tab(page, text.tabs.days).click();
-  // Unlisted Walloon water is not allowed (#75): a Forbidden status, never "unknown".
-  await expect(dayCards(page).nth(1)).toContainText(strings.tripAccess.dayStatus(strings.accessState.forbidden));
-  // The warnings show only on the selected card; tapping it again unselects it.
-  const warning = dayCards(page).nth(1).locator(".access-warning-forbidden");
+  // Unlisted Walloon water is not allowed (#75): a Forbidden chip, never "unknown". The cards
+  // carry no warning text, selected or not (ADR 0029); the hike day has no chip.
+  const forbidden = strings.tripAccess.chipKind.forbidden;
+  // Forbidden is the most serious; the put-in and take-out without an aire are the 2 more.
+  await expect(dayChips(page, 1)).toHaveAccessibleName(strings.tripAccess.chipName(2, forbidden, 3));
+  await expect(dayChips(page, 0)).toHaveCount(0);
   const select = dayTile(dayCards(page).nth(1));
-  await expect(warning).toHaveCount(0);
-  await expect(select).toHaveAttribute("aria-expanded", "false");
   await dayCards(page).nth(1).tap();
-  await expect(warning).toContainText(strings.tripAccess.warningKind.forbidden);
   await expect(select).toHaveAttribute("aria-expanded", "true");
-  await dayCards(page).nth(1).tap();
-  await expect(warning).toHaveCount(0);
-  await expect(dayCards(page).nth(1)).toContainText(strings.tripAccess.dayStatus(strings.accessState.forbidden));
+  await expect(dayCards(page).nth(1).locator(".access-warning")).toHaveCount(0);
   await expect(panel(page)).not.toContainText(strings.accessState.unknown);
   const disclaimer = panel(page).getByText(strings.navigationRulesNotice);
   await expect(disclaimer).toBeVisible();
   const [lastCard, below] = await Promise.all([dayCards(page).nth(1).boundingBox(), disclaimer.boundingBox()]);
   expect(below!.y).toBeGreaterThan(lastCard!.y + lastCard!.height);
+
+  // The chip opens its leg in the Legs tab, with the warning, and doesn't touch the card's selection.
+  await dayChips(page, 1).tap();
+  await expect(tab(page, text.tabs.legs)).toHaveAttribute("aria-selected", "true");
+  const leg = panel(page).locator(".phone-row").nth(1);
+  await expect(leg).toHaveClass(/phone-row-open/);
+  await expect(leg.locator(".access-warning-forbidden")).toContainText(strings.tripAccess.warningKind.forbidden);
+  await expect(leg.getByRole("button", { expanded: true })).toBeInViewport();
+  await tab(page, text.tabs.days).click();
+  await expect(select).toHaveAttribute("aria-expanded", "true");
 });
 
 test("pace and paddling speed change the time estimates, survive a reload and are not in the trip", async ({ page }) => {

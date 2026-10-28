@@ -298,11 +298,11 @@ export const strings = {
   accessResearched: (date: string) => `Researched ${date}`,
   accessUnverified: (what: string) => `Not confirmed: ${what}`,
   accessDataCredit: "Access geometry © OpenStreetMap contributors (ODbL).",
-  // Access status and warnings on paddle legs, day rows and the trip (#58).
+  // Access status and warnings on paddle legs, and the warning chips on day cards (#58).
   tripAccess: {
     legStatusOn: (date: string, state: string) => `Access on ${date}: ${state}`,
     legStatusInGeneral: (state: string) => `Access in general (no start date): ${state}`,
-    dayStatus: (state: string) => `Access: ${state}`,
+    statusLine: (state: string) => `Access: ${state}`,
     checkFlowOnTheDay: "Rules OK; check the flow on the day.",
     warningKind: {
       forbidden: "Forbidden",
@@ -311,15 +311,21 @@ export const strings = {
     },
     // Unknown access is a gentle note, never a warning (#78).
     noRule: "No access rules known here.",
-    legsWithoutRules: (n: number) => (n === 1 ? "1 leg without known rules" : `${n} legs without known rules`),
-    warningPlace: (day: number, leg: number) => `Day ${day}, leg ${leg}`,
-    legPlace: (leg: number) => `Leg ${leg}`,
-    summaryLabel: "Access summary",
-    summaryCount: (n: number) => (n === 1 ? "1 access warning" : `${n} access warnings`),
-    summaryNone: "No access warnings.",
     // Lock warning (#60): the lock's name is the lock's own, from the data.
     lockWarning: (name: string) => `Lock at ${name}: portage required.`,
-    neverBlocks: "Warnings are information only: you can still plan, save and export.",
+    // A day card's chips: one per leg with warnings, its most serious kind; the text is on the leg.
+    dayWarningsLabel: "Access warnings",
+    chipKind: {
+      forbidden: "Forbidden",
+      closed: "Closed",
+      "check-flow": "Check flow",
+      lock: "Lock",
+      aire: "No aire",
+    },
+    chip: (leg: number, kind: string) => `Leg ${leg} · ${kind}`,
+    chipMore: (n: number) => `+${n}`,
+    chipName: (leg: number, kind: string, count: number) =>
+      count === 1 ? `Leg ${leg}: ${kind}. Show the leg` : `Leg ${leg}: ${kind} and ${count - 1} more. Show the leg`,
   },
   // Live Walloon flows on a stretch for today (#61, ADR 0024).
   flow: {

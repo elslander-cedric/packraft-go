@@ -36,7 +36,7 @@ async function watchStatuses(page: import("@playwright/test").Page) {
     const seen: string[] = [];
     (window as unknown as { __seen: string[] }).__seen = seen;
     const record = () => {
-      for (const el of document.querySelectorAll(".leg-access-status, .day-access-status, .trip-access .access-status")) {
+      for (const el of document.querySelectorAll(".leg-access-status, .day-warning-chip")) {
         const text = `${el.className}|${el.textContent}`;
         if (seen[seen.length - 1] !== text) seen.push(text);
       }
@@ -57,16 +57,16 @@ test("status history is checking, then closed: open never appears; nothing leaks
   const leg = page.getByRole("complementary", { name: strings.legsPanelLabel }).locator(".leg-row").first();
   await expect(leg.locator(".leg-access-status")).toContainText(strings.accessChecking);
   await expect.poll(() => network.kiwis.length).toBeGreaterThan(0);
-  // Day row and trip summary make no claim while checking.
-  await expect(page.locator(".day-access-status")).toContainText(strings.accessChecking);
-  // Other real warnings (the two aire warnings) stay visible; only the flow-dependent closed warning waits.
-  const summary = page.getByRole("region", { name: strings.tripAccess.summaryLabel });
-  await expect(summary).toContainText(strings.tripAccess.summaryCount(2));
-  await expect(summary).toContainText(strings.accessChecking);
+  // The day's chip makes no claim about the flow while checking: the two aire warnings stay
+  // visible, and only the flow-dependent closed warning waits (ADR 0029).
+  const chip = page.locator(".day-warning-chip");
+  const { chipKind, chipMore } = strings.tripAccess;
+  await expect(chip).toContainText(chipKind.aire);
+  await expect(chip).toContainText(chipMore(1));
   held.release();
-  await expect(summary).toContainText(strings.tripAccess.summaryCount(3));
+  await expect(chip).toContainText(chipKind.closed);
+  await expect(chip).toContainText(chipMore(2));
   await expect(leg.locator(".leg-access-status")).toContainText(strings.accessState["closed-today"]);
-  await expect(page.locator(".day-access-status")).toContainText(strings.accessState["closed-today"]);
 
   const seen = await history(page);
   expect(seen[0]).toContain(strings.accessChecking);

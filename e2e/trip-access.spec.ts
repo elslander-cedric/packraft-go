@@ -1,4 +1,4 @@
-// #58: access status and warnings on paddle legs, day rows and a trip summary.
+// #58: access status and warnings on paddle legs, and a warning chip per leg on day rows (ADR 0029).
 // The trip is seeded in browser storage with a paddle leg routed along the
 // Ghent–Terneuzen canal, which the built-in Flemish data marks as forbidden.
 import { expect, test, type Page } from "@playwright/test";
@@ -46,7 +46,8 @@ async function seed(page: Page, startDate?: string, water = canal) {
 const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
 const legRow = (page: Page, n: number) => legsPanel(page).locator(".leg-row").nth(n);
 const daysPanel = (page: Page) => page.getByRole("complementary", { name: strings.daysPanelLabel });
-const tripSummary = (page: Page) => page.getByRole("region", { name: strings.tripAccess.summaryLabel });
+const dayChips = (page: Page) =>
+  daysPanel(page).getByRole("group", { name: strings.tripAccess.dayWarningsLabel }).getByRole("button");
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
@@ -68,15 +69,19 @@ test("a paddle leg on a forbidden Flemish canal shows a warning with its reason;
   // The hike leg has no access status.
   await expect(legRow(page, 0).locator(".leg-access-status")).toHaveCount(0);
 
-  // The day row and the trip summary list the warning too.
+  // The day row only points at the leg: one chip, no warning text, and no trip summary (ADR 0029).
   const day = daysPanel(page).getByRole("listitem").first();
-  await expect(day.locator(".day-access-status")).toHaveText(
-    strings.tripAccess.dayStatus(strings.accessState.forbidden),
-  );
-  await expect(day).toContainText("Ghent–Terneuzen canal");
-  await expect(tripSummary(page)).toContainText(strings.tripAccess.summaryCount(1));
-  await expect(tripSummary(page)).toContainText("Ghent–Terneuzen canal");
-  await expect(tripSummary(page)).toContainText(strings.tripAccess.neverBlocks);
+  const forbidden = strings.tripAccess.chipKind.forbidden;
+  await expect(dayChips(page)).toHaveCount(1);
+  await expect(dayChips(page)).toHaveText(strings.tripAccess.chip(2, forbidden));
+  await expect(dayChips(page)).toHaveAccessibleName(strings.tripAccess.chipName(2, forbidden, 1));
+  await expect(day).not.toContainText("Ghent–Terneuzen canal");
+  await expect(page.getByText("Access summary")).toHaveCount(0);
+
+  // The chip shows its leg: the Legs panel scrolls to it and highlights it.
+  await dayChips(page).click();
+  await expect(legRow(page, 1)).toHaveClass(/leg-row-shown/);
+  await expect(legRow(page, 1)).toBeInViewport();
 
   // Warnings never block: saving and exporting still work, and so does editing.
   const [save] = await Promise.all([
@@ -93,7 +98,7 @@ test("a paddle leg on a forbidden Flemish canal shows a warning with its reason;
     .getByRole("group", { name: strings.legModeLabel(2) })
     .getByRole("button", { name: strings.legModeHike })
     .click();
-  await expect(tripSummary(page)).toHaveCount(0);
+  await expect(dayChips(page)).toHaveCount(0);
   expect(network.blocked).toEqual([]);
 });
 

@@ -254,6 +254,17 @@ body {
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
+/* The leg a day row's warning chip asked to show: highlighted for a moment (#58). */
+.leg-row-shown {
+  animation: leg-row-shown 2s ease-out;
+}
+
+@keyframes leg-row-shown {
+  from {
+    background: var(--color-surface-hover);
+  }
+}
+
 .leg-row-heading,
 .leg-figures {
   display: flex;

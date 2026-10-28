@@ -12,8 +12,8 @@ export type PhoneTripTabProps = {
 
 /**
  * The Trip tab (#123): the trip's name and start date. The totals are in the
- * peek and each day's access is on its card in the Days tab, so neither is
- * repeated here.
+ * peek and the access warnings are on the legs (a day card's chips lead there),
+ * so neither is repeated here.
  */
 export default function PhoneTripTab({ name, startDate, onRename, onSetStartDate }: PhoneTripTabProps) {
   return (

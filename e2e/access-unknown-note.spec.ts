@@ -35,11 +35,15 @@ async function seed(page: Page, waters: P[][]) {
 }
 
 const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const tripSummary = (page: Page) => page.getByRole("region", { name: strings.tripAccess.summaryLabel });
+const dayChips = (page: Page) =>
+  page
+    .getByRole("complementary", { name: strings.daysPanelLabel })
+    .getByRole("group", { name: strings.tripAccess.dayWarningsLabel })
+    .getByRole("button");
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
-test("a leg in the Netherlands shows a neutral note and the trip summary shows no warning for it (#78)", async ({ page }) => {
+test("a leg in the Netherlands shows a neutral note and its day gets no warning chip (#78)", async ({ page }) => {
   await serveOffline(page);
   await seed(page, [netherlands]);
   await page.goto("/");
@@ -50,19 +54,16 @@ test("a leg in the Netherlands shows a neutral note and the trip summary shows n
   await expect(leg.locator(".access-note")).toHaveText(strings.tripAccess.noRule);
   await expect(leg.locator(".access-warning")).toHaveCount(0);
 
-  await expect(tripSummary(page)).toContainText(strings.tripAccess.summaryNone);
-  await expect(tripSummary(page)).toContainText(strings.tripAccess.legsWithoutRules(1));
-  await expect(tripSummary(page).locator(".access-warning")).toHaveCount(0);
+  await expect(dayChips(page)).toHaveCount(0);
 });
 
-test("a trip with a forbidden leg and an unknown leg shows exactly one warning (#78)", async ({ page }) => {
+test("a trip with a forbidden leg and an unknown leg gets exactly one warning chip (#78)", async ({ page }) => {
   await serveOffline(page);
   await seed(page, [canal, netherlands]);
   await page.goto("/");
 
-  const summary = tripSummary(page);
-  await expect(summary).toContainText(strings.tripAccess.summaryCount(1));
-  await expect(summary).toContainText(strings.tripAccess.legsWithoutRules(1));
-  await expect(summary.locator(".access-warning")).toHaveCount(1);
-  await expect(summary.locator(".access-warning")).toContainText(strings.tripAccess.warningKind.forbidden);
+  // Wait for the access text before counting chips.
+  await expect(legsPanel(page).locator(".leg-access-status").first()).toBeVisible();
+  await expect(dayChips(page)).toHaveCount(1);
+  await expect(dayChips(page)).toContainText(strings.tripAccess.chipKind.forbidden);
 });

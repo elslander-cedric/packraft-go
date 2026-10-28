@@ -265,7 +265,7 @@ test("a paddle row shows its access on a line of its own under the figures, as a
   await openPhone(page);
   await openLegsTab(page);
   const button = rowButton(page, 1);
-  const status = button.locator(".day-access-status");
+  const status = button.locator(".access-status-line");
   await expect(status).toHaveText(/^Access: \S/);
   await expect(status.locator(".access-swatch")).toHaveCount(1);
   await sheetSettled(page);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { Router } from "@/core/router";
 import { canUndo, isCamp, type LatLng } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
@@ -10,9 +10,9 @@ import DaysPanel from "./DaysPanel";
 import EditToolbar from "./EditToolbar";
 import LegsPanel from "./LegsPanel";
 import SettingsPanel from "./SettingsPanel";
+import type { ShownLeg } from "./shownLeg";
 import SnapOffers from "./SnapOffers";
 import { strings } from "./strings";
-import { TripAccessSummary } from "./TripAccessView";
 import TripToolbar from "./TripToolbar";
 import { usePlanner } from "./usePlanner";
 
@@ -29,6 +29,9 @@ export default function TripPlanner({ router }: { router?: Router }) {
     usePlanner(router);
   const { trip, selectedPoint, offers, fileError, keepStoredSave, question, pendingTrip } = session;
   const newTripButton = useRef<HTMLButtonElement>(null);
+  // A day row's warning chip scrolls to its leg in the Legs panel, where the warnings are (#58).
+  const [shownLeg, setShownLeg] = useState<ShownLeg | null>(null);
+  const showLeg = (leg: number) => setShownLeg({ leg, seq: (shownLeg?.seq ?? 0) + 1 });
   const openFileButton = useRef<HTMLButtonElement>(null);
   const confirmation = confirmations[question];
 
@@ -85,9 +88,9 @@ export default function TripPlanner({ router }: { router?: Router }) {
           aire={aire}
           onRetry={(index) => dispatch({ type: "retryLeg", index })}
           onSetMode={(index, mode) => dispatch({ type: "setLegMode", index, mode, accessPoints: access.points })}
+          shownLeg={shownLeg}
         />
-        <DaysPanel days={summary.days} access={waterAccess?.days} aire={aire} />
-        {waterAccess && <TripAccessSummary access={waterAccess.trip} aire={aire} />}
+        <DaysPanel days={summary.days} access={waterAccess?.days} aire={aire} onShowLeg={showLeg} />
         <AccessPointsPanel access={access} />
         {settings && <SettingsPanel settings={settings} onChange={changeSetting} />}
       </div>

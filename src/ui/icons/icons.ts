@@ -3,16 +3,20 @@
 import {
   faArrowTrendDown,
   faArrowTrendUp,
+  faBan,
   faBars,
+  faCalendarXmark,
   faChevronDown,
   faChevronLeft,
   faChevronRight,
   faClock,
   faFlag,
+  faGaugeHigh,
   faLayerGroup,
   faLocationCrosshairs,
   faRotateLeft,
   faShoePrints,
+  faStairs,
   faTent,
   faWater,
   faXmark,
@@ -38,4 +42,10 @@ export const icons = {
   // The side panel is on the right: it opens leftwards and collapses rightwards.
   expandPanel: faChevronLeft,
   collapsePanel: faChevronRight,
+  // A day card's warning chips, by the leg's most serious kind.
+  warningForbidden: faBan,
+  warningClosed: faCalendarXmark,
+  warningCheckFlow: faGaugeHigh,
+  warningLock: faStairs,
+  warningAire: faFlag,
 };

@@ -38,11 +38,12 @@ const legRow = (page: Page) =>
   page.getByRole("complementary", { name: strings.legsPanelLabel }).locator(".leg-row").first();
 const dayRow = (page: Page) =>
   page.getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem").first();
-const tripSummary = (page: Page) => page.getByRole("region", { name: strings.tripAccess.summaryLabel });
+const dayChip = (page: Page) =>
+  dayRow(page).getByRole("group", { name: strings.tripAccess.dayWarningsLabel }).getByRole("button");
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
-test("a paddle leg through a lock shows the warning on the leg, the day and the trip; nothing is blocked", async ({
+test("a paddle leg through a lock shows the warning on the leg, and a Lock chip on its day", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -51,10 +52,9 @@ test("a paddle leg through a lock shows the warning on the leg, the day and the 
 
   const text = strings.tripAccess.lockWarning("Écluse d'Anderlecht - Sluis van Anderlecht");
   await expect(legRow(page).locator(".access-warning-lock")).toContainText(text);
-  await expect(dayRow(page).locator(".access-warning-lock")).toContainText(text);
-  await expect(tripSummary(page).locator(".access-warning-lock")).toContainText(text);
-  await expect(tripSummary(page).locator(".access-status")).toHaveText(strings.tripAccess.summaryCount(1));
-  await expect(tripSummary(page)).toContainText(strings.tripAccess.neverBlocks);
+  // The day only points at the leg (ADR 0029).
+  await expect(dayChip(page)).toContainText(strings.tripAccess.chipKind.lock);
+  await expect(dayRow(page).locator(".access-warning-lock")).toHaveCount(0);
   // The warning is a lock's own, with its rule source.
   await expect(legRow(page).locator(".access-warning-lock").getByRole("link", { name: /Brussels police regulation/ })).toBeVisible();
 });
@@ -65,7 +65,7 @@ test("a paddle leg away from any lock has no lock warning", async ({ page }) => 
   await page.goto("/");
 
   // Wait for the access content before checking what is absent.
-  await expect(tripSummary(page).locator(".access-status")).toHaveText(strings.tripAccess.summaryNone);
   await expect(legRow(page).locator(".leg-access-status")).toBeVisible();
   await expect(page.locator(".access-warning-lock")).toHaveCount(0);
+  await expect(dayChip(page)).toHaveCount(0);
 });
