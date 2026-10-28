@@ -126,14 +126,14 @@ async function centreOf(page: Page, n: number) {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-test("rotating keeps the open tab, the open leg row and the selected point; the sheet's stop maps to the panel and back", async ({
+test("rotating keeps the open tab, the tapped leg row and the selected point; the sheet's stop maps to the panel and back", async ({
   page,
 }) => {
   await serveOffline(page, routed);
   await openPhone(page);
   const screen = PORTRAIT.height;
 
-  // Portrait: three points, the middle one selected, the Legs tab with leg 2 open.
+  // Portrait: three points, the middle one selected, the Legs tab, leg 2 tapped.
   const map = (await mapRegion(page).boundingBox())!;
   for (const [dx, dy] of [
     [-120, 0],
@@ -147,7 +147,6 @@ test("rotating keeps the open tab, the open leg row and the selected point; the 
   await expect(points(page).nth(1)).toHaveClass(/point-selected/);
   await sheetTab(page, text.tabs.legs).click();
   await rowButton(page, 2).click();
-  await expect(rowButton(page, 2)).toHaveAttribute("aria-expanded", "true");
   await expect.poll(() => sheetHeight(page)).toBeGreaterThan(screen * 0.45);
 
   // Sideways: the sheet at half becomes the open panel, with the same place kept.
@@ -155,7 +154,7 @@ test("rotating keeps the open tab, the open leg row and the selected point; the 
   await expect(sheet(page)).toHaveCount(0);
   await expect(collapse(page)).toBeVisible();
   await expect(panelTab(page, text.tabs.legs)).toHaveAttribute("aria-selected", "true");
-  await expect(rowButton(page, 2)).toHaveAttribute("aria-expanded", "true");
+  await expect(rowButton(page, 2)).toBeVisible();
   await expect(points(page).nth(1)).toHaveClass(/point-selected/);
 
   // Collapsing the panel doesn't change the sheet's last stop: back in portrait it is at half.
@@ -166,7 +165,7 @@ test("rotating keeps the open tab, the open leg row and the selected point; the 
   await expect.poll(() => sheetHeight(page)).toBeGreaterThan(screen * 0.45);
   expect(await sheetHeight(page)).toBeLessThan(screen * 0.55);
   await expect(sheetTab(page, text.tabs.legs)).toHaveAttribute("aria-selected", "true");
-  await expect(rowButton(page, 2)).toHaveAttribute("aria-expanded", "true");
+  await expect(rowButton(page, 2)).toBeVisible();
   await expect(points(page).nth(1)).toHaveClass(/point-selected/);
 
   // At 90% the sheet also becomes the open panel, and comes back at 90%.

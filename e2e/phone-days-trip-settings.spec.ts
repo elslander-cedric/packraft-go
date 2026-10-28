@@ -277,7 +277,7 @@ test("Cancel and Escape drop the Trip details draft, and the next opening starts
   expect(await storedTrip(page)).toEqual(before);
 });
 
-test("the Days tab carries the access: a day card's chip opens its leg, the disclaimer under the cards", async ({
+test("the Days tab carries the access: a day card's chip opens its leg's details dialog, the disclaimer under the cards", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -299,14 +299,17 @@ test("the Days tab carries the access: a day card's chip opens its leg, the disc
   const [lastCard, below] = await Promise.all([dayCards(page).nth(1).boundingBox(), disclaimer.boundingBox()]);
   expect(below!.y).toBeGreaterThan(lastCard!.y + lastCard!.height);
 
-  // The chip opens its leg in the Legs tab, with the warning, and doesn't touch the card's selection.
+  // The chip opens its leg's details dialog over the Days tab (#158), with the warning, and
+  // doesn't touch the card's selection; Close goes back to the chip.
   await dayChips(page, 1).tap();
-  await expect(tab(page, text.tabs.legs)).toHaveAttribute("aria-selected", "true");
-  const leg = panel(page).locator(".phone-row").nth(1);
-  await expect(leg).toHaveClass(/phone-row-open/);
-  await expect(leg.locator(".access-warning-forbidden")).toContainText(strings.tripAccess.warningKind.forbidden);
-  await expect(leg.getByRole("button", { expanded: true })).toBeInViewport();
-  await tab(page, text.tabs.days).click();
+  const dialog = page.getByRole("dialog", { name: new RegExp(`^${strings.legLabel(2)} · ${strings.legModePaddle} · `) });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator(".access-warning-forbidden")).toContainText(strings.tripAccess.warningKind.forbidden);
+  await expect(dialog.locator(".access-warning-aire").first()).toBeVisible();
+  await dialog.getByRole("button", { name: text.legDetailsClose }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(dayChips(page, 1)).toBeFocused();
+  await expect(tab(page, text.tabs.days)).toHaveAttribute("aria-selected", "true");
   await expect(select).toHaveAttribute("aria-expanded", "true");
 });
 

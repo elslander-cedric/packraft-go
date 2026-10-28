@@ -235,11 +235,6 @@
   border-left-color: var(--color-paddle);
 }
 
-/* The open row, like the selected day card. */
-.phone-row-open {
-  background: var(--color-surface-hover);
-}
-
 /* A short state line with its action, e.g. "Placing an access point · Cancel". */
 .phone-state-line {
   display: flex;
@@ -370,7 +365,7 @@
   font-size: 0.8rem;
 }
 
-/* The Legs tab (#121): a row's head is the button that opens it. */
+/* The Legs tab (#121): a row's head is the button that shows its leg on the map. */
 .phone-row-head {
   display: flex;
   flex-basis: 100%;
@@ -449,14 +444,32 @@
   font-size: 0.85rem;
 }
 
-.phone-row-details {
+/* A row's icon-only button for its access details (#158), level with its access line at the
+   row's right; out of the flow, so the time stays lined up with the other rows'. */
+.phone-row-head:has(.phone-row-details-button) {
+  position: relative;
+}
+
+.button.phone-row-details-button {
+  position: absolute;
+  right: 0;
+  bottom: calc(-1 * var(--space-2));
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 1.1rem;
+}
+
+/* A leg's details in their dialog. */
+.phone-leg-details {
   display: flex;
-  flex-basis: 100%;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
   min-width: 0;
-  padding-right: var(--space-2);
 }
 
 /* The next leg's mode over the map, with the other bottom-right buttons: an icon-only, rounded

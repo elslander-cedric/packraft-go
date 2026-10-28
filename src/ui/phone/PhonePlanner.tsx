@@ -22,7 +22,7 @@ import PhoneAccessDetails from "./PhoneAccessDetails";
 import PhoneAccessPointDialog from "./PhoneAccessPointDialog";
 import PhoneAccessPoints from "./PhoneAccessPoints";
 import SnapOffers from "../SnapOffers";
-import type { ShownLeg } from "../shownLeg";
+import PhoneLegDetailsDialog from "./PhoneLegDetailsDialog";
 import PhoneLegsList from "./PhoneLegsList";
 import PhoneMenu from "./PhoneMenu";
 import PhoneTripTotals from "./PhoneTripTotals";
@@ -151,9 +151,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     setPick(held);
   }
   const nextMode = held?.mode ?? trip.legs[trip.legs.length - 1]?.mode ?? "hike";
-  // The open leg row (#121); only one at a time, and none once its leg is gone.
-  const [openLegState, setOpenLeg] = useState<number | null>(null);
-  const openLeg = openLegState !== null && openLegState < trip.legs.length ? openLegState : null;
+  // The leg whose access details dialog is open (#158), if any.
+  const [detailsLeg, setDetailsLeg] = useState<number | null>(null);
 
   // While an access point is being placed, the tap places it; while a point is selected, it only
   // clears the selection (#120); otherwise it adds a trip point with the next leg's mode.
@@ -165,24 +164,12 @@ export default function PhonePlanner({ router }: { router?: Router }) {
       dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points });
     }
   };
-  // A leg row tap opens it (closing any other) and shows its leg above the half-raised sheet.
-  const openLegRow = (index: number) => {
-    if (index === openLeg) {
-      setOpenLeg(null);
-      return;
-    }
-    setOpenLeg(index);
+  // A leg row tap shows its leg above the half-raised sheet; rows don't open (#158).
+  const selectLegRow = (index: number) => {
     const route = trip.legs[index]?.route;
     const area = route?.status === "routed" ? route.geometry : trip.points.slice(index, index + 2);
     raise();
     setFocus({ area, ...covered() });
-  };
-  // A day card's warning chip opens its leg in the Legs tab, scrolled to the top, with its warnings (#58).
-  const [shownLeg, setShownLeg] = useState<ShownLeg | null>(null);
-  const showLeg = (index: number) => {
-    setTab("legs");
-    if (index !== openLeg) openLegRow(index);
-    setShownLeg({ leg: index, seq: (shownLeg?.seq ?? 0) + 1 });
   };
   // With a route point selected, the access-point button saves that point as an access point (#120).
   const markSelectedPoint = () => {
@@ -264,9 +251,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             legs={trip.legs}
             access={waterAccess}
             aire={aire}
-            openLeg={openLeg}
-            onOpen={openLegRow}
-            shownLeg={shownLeg}
+            onSelect={selectLegRow}
+            onShowDetails={setDetailsLeg}
             onRetry={(index) => dispatch({ type: "retryLeg", index })}
           />
         </TabPanel>
@@ -278,7 +264,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             onSelectDay={openDay}
             selectedDay={selectedDay}
             heading={false}
-            onShowLeg={showLeg}
+            // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
+            onShowLeg={setDetailsLeg}
           />
           {/* The disclaimer follows the day cards and their warning chips (#123). */}
           {waterAccess && summary.days.length > 0 && <p className="phone-disclaimer">{strings.navigationRulesNotice}</p>}
@@ -423,6 +410,13 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           <Icon icon={icons.undo} />
         </Button>
       </div>
+      <PhoneLegDetailsDialog
+        leg={detailsLeg}
+        summary={summary}
+        access={waterAccess}
+        aire={aire}
+        onClose={() => setDetailsLeg(null)}
+      />
       <div className="phone-snap-offers">
         <SnapOffers
           offers={offers}

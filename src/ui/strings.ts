@@ -208,6 +208,10 @@ export const strings = {
       // A paddle leg that ends higher than it starts (ADR 0018).
       rise: "Rise, upstream?",
     },
+    // A leg row's icon-only button and the dialog it opens with the leg's access and warnings (#158).
+    legDetailsButton: (n: number) => `Access details, leg ${n}`,
+    legDetailsTitle: (n: number, mode: string, distance: string) => `Leg ${n} · ${mode} · ${distance}`,
+    legDetailsClose: "Close",
     // A day card's figures, each after its icon, named for screen readers.
     dayFigures: {
       hike: "Hike distance",
