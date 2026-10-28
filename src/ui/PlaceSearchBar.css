@@ -40,5 +40,6 @@
 
   .access-overlay {
     top: calc(2 * var(--space-2) + var(--control-height));
+    max-height: calc(100% - 2 * var(--space-2) - var(--control-height) - var(--map-bottom-right-reserve));
   }
 }

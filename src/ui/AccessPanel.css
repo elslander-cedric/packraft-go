@@ -14,7 +14,8 @@
   align-items: flex-end;
   gap: var(--space-2);
   max-width: 20rem;
-  max-height: calc(100% - 3rem);
+  /* Leaves the bottom-right corner to the base map button and the attribution under it (#179). */
+  max-height: calc(100% - var(--space-2) - var(--map-bottom-right-reserve));
   font-size: 0.85rem;
 }
 

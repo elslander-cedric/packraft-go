@@ -1,5 +1,6 @@
 import type { AccessState } from "@/core/access";
 import type { PlaceKind } from "@/core/placeSearch";
+import type { BaseMapId } from "@/core/settings";
 // All user-facing text lives here (ADR 0013), so other languages can be added later.
 
 export const strings = {
@@ -272,7 +273,9 @@ export const strings = {
     // The edit dialog: what you change is kept until Save stores it on the device.
     accessPointDialogTitle: "Access point details",
     accessPointSave: "Save",
-    // The access layer on the phone (#125): the layers button under the position button is named `accessLayerToggle`.
+    // The layers button under the position button (#179) opens the Map menu: the base maps, then the access layer switch.
+    mapMenuButton: "Map",
+    // The access layer on the phone (#125): switched on and off in the Map menu, named `accessLayerToggle`.
     // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a dialog.
     accessChip: (when: string) => `Access · ${when}`,
     accessChipToday: "today",
@@ -449,6 +452,22 @@ export const strings = {
   accessAttribution:
     'Access data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
     '(<a href="https://opendatacommons.org/licenses/odbl/">ODbL</a>)',
+  // The base maps (ADR 0031): the choices in the desktop's base map menu and the phone's Map menu.
+  baseMaps: {
+    opentopomap: "OpenTopoMap",
+    "aerial-be": "Aerial photos (Belgium)",
+    "ngi-topo": "NGI topo (Belgium)",
+  } satisfies Record<BaseMapId, string>,
+  // The desktop's map button bottom right that opens the base map menu; also the menus' name for the choice.
+  baseMapButton: "Base map",
+  // Shown in the map's attribution control while their base map is on, each with its source. Contain HTML links.
+  baseMapAttribution: {
+    wallonia: 'Aerial photos: &copy; <a href="https://geoportail.wallonie.be">SPW</a>',
+    // The wording Digitaal Vlaanderen's licence asks for, in Dutch.
+    flanders: '<a href="https://www.vlaanderen.be/digitaal-vlaanderen">Bron: Luchtopnamen Digitaal Vlaanderen</a>',
+    brussels: 'Aerial photos: UrbIS &copy; <a href="https://paradigm.brussels">paradigm.brussels</a>',
+    ngi: 'Topo: &copy; <a href="https://www.ngi.be">NGI/IGN</a>, TomTom',
+  },
   // Shown in the map's attribution control. Contains HTML links.
   mapAttribution:
     'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +

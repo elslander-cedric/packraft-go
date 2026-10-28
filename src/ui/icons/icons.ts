@@ -56,7 +56,8 @@ export const icons = {
   editAccessPoint: faPen,
   deleteAccessPoint: faTrashCan,
   camp: faTent,
-  accessLayer: faLayerGroup,
+  // The base map button (desktop) and the button that opens the Map menu (phone).
+  mapMenu: faLayerGroup,
   menu: faBars,
   openAccessDialog: faChevronDown,
   // The side panel is on the right: it opens leftwards and collapses rightwards.

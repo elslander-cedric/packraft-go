@@ -7,6 +7,7 @@ import { serialiseTrip } from "../src/core/saveFile";
 import type { Trip } from "../src/core/trip";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
+import { mapLayersButton, toggleAccessLayer } from "./support/mapMenu";
 import { nominatimFixture, serveOffline } from "./support/offline";
 
 // The mobile preset: 375 × 812, a touch phone.
@@ -36,7 +37,7 @@ const pin = (page: Page) => mapRegion(page).locator(".search-result-marker");
 const pinLabel = (page: Page) => mapRegion(page).locator(".search-result-label");
 const menuButton = (page: Page) => page.getByRole("button", { name: strings.phone.menu.button });
 const positionButton = (page: Page) => page.getByRole("button", { name: strings.phone.showPositionButton });
-const layersButton = (page: Page) => page.getByRole("button", { name: strings.accessLayerToggle, exact: true });
+const layersButton = mapLayersButton;
 const chip = (page: Page) => page.getByRole("button", { name: /^Access · / });
 const accessDialog = (page: Page) => page.getByRole("dialog", { name: strings.phone.accessDialogTitle });
 const panel = (page: Page) => page.getByRole("complementary", { name: strings.phone.sheetLabel });
@@ -259,7 +260,7 @@ async function withTripDayChip(page: Page) {
   await offline(page);
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, serialiseTrip(dated)]);
   await openPhone(page);
-  await layersButton(page).click();
+  await toggleAccessLayer(page);
   await chip(page).click();
   await accessDialog(page).getByLabel(strings.accessTripDayLabel).selectOption("2026-12-15");
   await accessDialog(page).getByRole("button", { name: strings.phone.accessDialogClose }).click();

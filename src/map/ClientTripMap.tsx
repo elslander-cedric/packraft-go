@@ -6,6 +6,7 @@ import PlaceSearchBar from "@/ui/PlaceSearchBar";
 import { strings } from "@/ui/strings";
 import { useAccessLayer } from "@/ui/useAccessLayer";
 import { usePlaceSearch } from "@/ui/usePlaceSearch";
+import { useBaseMap } from "@/ui/useSettings";
 import type { TripMapProps } from "./TripMap";
 
 // Leaflet touches `window` on import, so the map is never rendered on the server.
@@ -14,18 +15,22 @@ const TripMap = dynamic(() => import("./TripMap"), {
   loading: () => <div className="map-loading">{strings.mapLoading}</div>,
 });
 
-type ClientTripMapProps = Omit<TripMapProps, "access" | "searchResult" | "onAreaChange">;
+type ClientTripMapProps = Omit<TripMapProps, "baseMap" | "onBaseMapChange" | "access" | "searchResult" | "onAreaChange">;
 
 export default function ClientTripMap(props: ClientTripMapProps) {
   const layer = useAccessLayer(props.trip);
   // Place search (#173) belongs to the map, not the trip: it lives here, outside the planner session.
   const search = usePlaceSearch();
   const close = () => layer.select(null);
+  // The base map is a setting on this device (ADR 0031), shared with the phone layout.
+  const [baseMap, chooseBaseMap] = useBaseMap();
 
   return (
     <section className="map" aria-label={strings.mapLabel}>
       <TripMap
         {...props}
+        baseMap={baseMap}
+        onBaseMapChange={chooseBaseMap}
         access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: layer.select }}
         searchResult={search.state.shown}
         onAreaChange={search.setArea}

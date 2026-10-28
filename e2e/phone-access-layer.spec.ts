@@ -1,4 +1,4 @@
-// The access layer on the phone (#125, ADR 0026, stories 74–81): a layers button under the position button,
+// The access layer on the phone (#125, ADR 0026, stories 74–81): a switch in the Map menu under the position button (#179),
 // a chip with a dialog for the date, legend, note and disclaimer; a tap on water edits the
 // route, holding a water off a leg (0.4 s, the app's own timer) or tapping a lock opens its
 // details in the sheet at half, with Close back to the tab. Built-in data and recorded
@@ -8,6 +8,7 @@ import { serialiseTrip } from "../src/core/saveFile";
 import type { Trip } from "../src/core/trip";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
+import { accessLayerItem, mapLayersButton, toggleAccessLayer } from "./support/mapMenu";
 import { serveOffline } from "./support/offline";
 import { touch, type Pixel } from "./support/touch";
 
@@ -20,7 +21,6 @@ const waters = (page: Page) => mapRegion(page).locator("path.access-feature");
 const water = (page: Page, id: string) => mapRegion(page).locator(`path.access-record-${id}`);
 const lock = (page: Page, id: string) => mapRegion(page).locator(`path.access-lock-${id}`);
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const layersButton = (page: Page) => page.getByRole("button", { name: strings.accessLayerToggle, exact: true });
 const chip = (page: Page) => page.getByRole("button", { name: /^Access · / });
 // Behind the access dialog, which hides the rest of the page from the accessibility tree while open.
 const waterBehind = (page: Page, id: string) => page.locator(`.leaflet-container path.access-record-${id}`);
@@ -109,25 +109,28 @@ const middleOf = (path: ReturnType<typeof water>): Promise<Pixel> =>
     return { x, y };
   });
 
-test("the layers button under the position button switches the access layer on and off", async ({ page }) => {
+test("the layers button under the position button opens the Map menu; its switch turns the access layer on and off", async ({
+  page,
+}) => {
   const network = await openWith(page, nearLesse);
-  await expect(layersButton(page)).toHaveAttribute("aria-pressed", "false");
   await expect(waters(page)).toHaveCount(0);
   await expect(chip(page)).toHaveCount(0);
 
   // It sits under the position button, top right.
   const position = (await page.getByRole("button", { name: phoneText.showPositionButton }).boundingBox())!;
-  const layers = (await layersButton(page).boundingBox())!;
+  const layers = (await mapLayersButton(page).boundingBox())!;
   expect(layers.y).toBeGreaterThan(position.y + position.height - 1);
   expect(Math.abs(layers.x + layers.width - (position.x + position.width))).toBeLessThan(2);
 
-  await layersButton(page).click();
-  await expect(layersButton(page)).toHaveAttribute("aria-pressed", "true");
+  await mapLayersButton(page).click();
+  await expect(accessLayerItem(page)).toHaveAttribute("aria-checked", "false");
+  await accessLayerItem(page).click();
   await expect(water(page, LESSE)).toBeVisible();
   await expect(chip(page)).toBeVisible();
 
-  await layersButton(page).click();
-  await expect(layersButton(page)).toHaveAttribute("aria-pressed", "false");
+  await mapLayersButton(page).click();
+  await expect(accessLayerItem(page)).toHaveAttribute("aria-checked", "true");
+  await accessLayerItem(page).click();
   await expect(waters(page)).toHaveCount(0);
   await expect(chip(page)).toHaveCount(0);
   expect(network.blocked).toEqual([]);
@@ -138,7 +141,7 @@ test("the chip's dialog holds the date, legend, note and disclaimer; Today and T
 }) => {
   await page.clock.setFixedTime(new Date("2026-07-15T10:00:00+02:00"));
   const network = await openWith(page, nearLesse);
-  await layersButton(page).click();
+  await toggleAccessLayer(page);
 
   // Today (15 July) is outside the Lesse's season.
   await expect(chip(page)).toHaveAccessibleName(phoneText.accessChip(phoneText.accessChipToday));
@@ -170,7 +173,7 @@ test("the chip's dialog holds the date, legend, note and disclaimer; Today and T
 
 test("with the layer on, a tap on water adds a route point", async ({ page }) => {
   await openWith(page, nearLesse);
-  await layersButton(page).click();
+  await toggleAccessLayer(page);
   await settled(page, water(page, LESSE));
   const middle = await middleOf(water(page, LESSE));
   await page.touchscreen.tap(middle.x, middle.y);
@@ -181,7 +184,7 @@ test("with the layer on, a tap on water adds a route point", async ({ page }) =>
 
 test("holding a water off a leg opens its details in the sheet at half; Close goes back to the tab", async ({ page }) => {
   await openWith(page, nearLesse);
-  await layersButton(page).click();
+  await toggleAccessLayer(page);
   await settled(page, water(page, LESSE));
   await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
   await expect(tab(page, phoneText.tabs.legs)).toHaveAttribute("aria-selected", "true");
@@ -204,7 +207,7 @@ test("holding a water off a leg opens its details in the sheet at half; Close go
 
 test("a tap on a lock opens its details in the sheet", async ({ page }) => {
   await openWith(page, nearLock);
-  await layersButton(page).click();
+  await toggleAccessLayer(page);
   await expect(lock(page, ANDERLECHT_LOCK)).toBeVisible();
   await settled(page, lock(page, ANDERLECHT_LOCK));
   const at = (await lock(page, ANDERLECHT_LOCK).boundingBox())!;
@@ -222,7 +225,7 @@ test("a tap on a lock opens its details in the sheet", async ({ page }) => {
 // Spec story 81: details open at half even from 90%, not only from the peek.
 test("a tap on a lock with the sheet at 90% opens its details with the sheet at half", async ({ page }) => {
   await openWith(page, nearLock);
-  await layersButton(page).click();
+  await toggleAccessLayer(page);
   await expect(lock(page, ANDERLECHT_LOCK)).toBeVisible();
   await settled(page, lock(page, ANDERLECHT_LOCK));
   const fingers = await touch(page);
@@ -259,7 +262,7 @@ test("sideways, a tap on a lock opens the side panel with its details above the 
   await openWith(page, nearLock);
   const panel = page.getByRole("complementary", { name: phoneText.sheetLabel });
   await expect(panel.getByRole("button", { name: phoneText.expandPanelButton })).toBeVisible();
-  await layersButton(page).click();
+  await toggleAccessLayer(page);
   await expect(lock(page, ANDERLECHT_LOCK)).toBeVisible();
   await settled(page, lock(page, ANDERLECHT_LOCK));
   const at = (await lock(page, ANDERLECHT_LOCK).boundingBox())!;
@@ -278,7 +281,7 @@ test("sideways, a tap on a lock opens the side panel with its details above the 
 
 test("with the layer on, holding a leg on water still inserts a point, not details", async ({ page }) => {
   await openWith(page, alongLesse);
-  await layersButton(page).click();
+  await toggleAccessLayer(page);
   const leg = mapRegion(page).locator(".leaflet-overlay-pane path.leg").first();
   await settled(page, leg);
   await (await touch(page)).hold(await middleOf(leg), 550);

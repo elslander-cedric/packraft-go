@@ -17,6 +17,7 @@ import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
 import { strings } from "../strings";
 import { useAccessLayer } from "../useAccessLayer";
+import { useBaseMap } from "../useSettings";
 import { usePlaceSearch } from "../usePlaceSearch";
 import { usePlanner } from "../usePlanner";
 import PhoneAccessChip from "./PhoneAccessChip";
@@ -26,6 +27,7 @@ import PhoneAccessPoints from "./PhoneAccessPoints";
 import SnapOffers from "../SnapOffers";
 import PhoneLegDetailsDialog from "./PhoneLegDetailsDialog";
 import PhoneLegsList from "./PhoneLegsList";
+import PhoneMapMenu from "./PhoneMapMenu";
 import PhoneMenu from "./PhoneMenu";
 import PhonePlaceSearch from "./PhonePlaceSearch";
 import PhoneTripTotals from "./PhoneTripTotals";
@@ -131,6 +133,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const marking = useMarkAccessPoint(access, position, showPosition, placed);
   // The access layer (#125): on or off, its date, and the water or lock whose details are open.
   const layer = useAccessLayer(trip);
+  // The base map (ADR 0031): a setting on this device, shared with the desktop layout.
+  const [baseMap, chooseBaseMap] = useBaseMap();
   const detailsOpen = layer.selectedWater !== undefined || layer.selectedLock !== undefined;
   // Where the map last zoomed to, for an access point row (#119).
   const [focus, setFocus] = useState<MapFocus | null>(null);
@@ -306,6 +310,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
       style={peekPx === null ? undefined : ({ "--sheet-peek": `${peekPx}px` } as CSSProperties)}
     >
       <ClientPhoneMap
+        baseMap={baseMap}
         trip={trip}
         onMapTap={onMapTap}
         selectedPoint={selectedPoint}
@@ -354,14 +359,12 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         >
           <Icon icon={icons.showPosition} />
         </Button>
-        <Button
-          className="phone-fab"
-          aria-label={strings.accessLayerToggle}
-          aria-pressed={layer.on}
-          onClick={() => layer.setOn(!layer.on)}
-        >
-          <Icon icon={icons.accessLayer} />
-        </Button>
+        <PhoneMapMenu
+          baseMap={baseMap}
+          onBaseMapChange={chooseBaseMap}
+          accessLayerOn={layer.on}
+          onAccessLayerChange={layer.setOn}
+        />
         {message && (
           <p role={message.kind} className={`phone-message phone-message-${message.kind}`}>
             {message.text}

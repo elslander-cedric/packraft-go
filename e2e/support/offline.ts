@@ -1,11 +1,84 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { Page } from "@playwright/test";
+import type { BaseMapId } from "../../src/core/settings";
 
 const TILE_FIXTURE = readFileSync(path.join(__dirname, "../fixtures/tile.png"));
 const BROUTER_FIXTURES = path.join(__dirname, "../../src/routing/fixtures");
 
-export type TileRequest = { z: number; x: number; y: number };
+/** Where a map tile comes from: OpenTopoMap, one region's aerial photos or the NGI's topo map. */
+export type TileSource = "opentopomap" | "wallonia" | "flanders" | "brussels" | "ngi";
+
+/**
+ * One map tile the page asked for, with its source and the base map that source belongs to
+ * (OpenTopoMap tiles are OpenTopoMap's, even when drawn under a Belgian base map).
+ */
+export type TileRequest = { z: number; x: number; y: number; source: TileSource; baseMap: BaseMapId };
+
+const baseMapOf: Record<TileSource, BaseMapId> = {
+  opentopomap: "opentopomap",
+  wallonia: "aerial-be",
+  flanders: "aerial-be",
+  brussels: "aerial-be",
+  ngi: "ngi-topo",
+};
+
+// Half the width of the Web Mercator world, in metres.
+const MERCATOR_HALF = 20037508.342789244;
+
+/** The tile a WMS GetMap in EPSG:3857 asks for, from its BBOX (minx,miny,maxx,maxy). */
+function wmsTile(url: URL): Omit<TileRequest, "source" | "baseMap"> | null {
+  const bbox = (url.searchParams.get("bbox") ?? url.searchParams.get("BBOX"))?.split(",").map(Number);
+  if (bbox?.length !== 4 || bbox.some((n) => !Number.isFinite(n))) return null;
+  const [minX, , maxX, maxY] = bbox;
+  const width = maxX - minX;
+  return {
+    z: Math.round(Math.log2((2 * MERCATOR_HALF) / width)),
+    x: Math.round((minX + MERCATOR_HALF) / width),
+    y: Math.round((MERCATOR_HALF - maxY) / width),
+  };
+}
+
+/** The source of a map tile drawn on the page (an image's `src`), or null for anything else. */
+export const tileSourceOf = (src: string): TileSource | null => tileRequest(new URL(src))?.source ?? null;
+
+/** The map tile this URL asks for, or null when it isn't one of the base maps' tile requests. */
+function tileRequest(url: URL): TileRequest | null {
+  const tile = (source: TileSource, z: string, x: string, y: string): TileRequest => ({
+    z: Number(z),
+    x: Number(x),
+    y: Number(y),
+    source,
+    baseMap: baseMapOf[source],
+  });
+  const param = (name: string) => url.searchParams.get(name) ?? url.searchParams.get(name.toLowerCase());
+  let match: RegExpMatchArray | null;
+  if (url.hostname.endsWith("tile.opentopomap.org") && (match = url.pathname.match(/^\/(\d+)\/(\d+)\/(\d+)\.png$/)))
+    return tile("opentopomap", match[1], match[2], match[3]);
+  if (
+    url.hostname === "geoservices.wallonie.be" &&
+    url.pathname === "/arcgis/services/IMAGERIE/ORTHO_LAST/MapServer/WMSServer" &&
+    param("REQUEST") === "GetMap"
+  ) {
+    const at = wmsTile(url);
+    return at && { ...at, source: "wallonia", baseMap: baseMapOf.wallonia };
+  }
+  if (url.hostname === "geo.api.vlaanderen.be" && url.pathname === "/OMWRGBMRVL/wmts" && param("REQUEST") === "GetTile")
+    return tile("flanders", param("TILEMATRIX") ?? "", param("TILECOL") ?? "", param("TILEROW") ?? "");
+  if (
+    url.hostname === "geoservices-urbis.irisnet.be" &&
+    (match = decodeURIComponent(url.pathname).match(
+      /^\/geowebcache\/service\/wmts\/rest\/Ortho\/default\/EPSG:900913\/EPSG:900913:(\d+)\/(\d+)\/(\d+)$/,
+    ))
+  )
+    return tile("brussels", match[1], match[3], match[2]);
+  if (
+    url.hostname === "cartoweb.wmts.ngi.be" &&
+    (match = url.pathname.match(/^\/1\.0\.0\/topo\/default\/3857\/(\d+)\/(\d+)\/(\d+)\.png$/))
+  )
+    return tile("ngi", match[1], match[3], match[2]);
+  return null;
+}
 
 /** How the stand-in BRouter server answers one request. */
 export type BRouterReply = { status: number; body: string };
@@ -84,10 +157,11 @@ export function delayedKiwis(answer: (url: URL) => BRouterReply | Promise<BRoute
 }
 
 /**
- * Serves OpenTopoMap tiles from a fixture, answers BRouter, KiWIS and Nominatim from recorded
+ * Serves every base map's tiles (OpenTopoMap, the Walloon WMS, the Flemish and Brussels WMTS,
+ * the NGI's CartoWeb.be; ADR 0031) from one fixture, answers BRouter, KiWIS and Nominatim from recorded
  * responses, and blocks every other external request, so e2e tests never
  * touch live services (ADR 0019).
- * Returns the tiles, BRouter routes, KiWIS and Nominatim requests the page asked for, and any other
+ * Returns the tiles (with the base map each was for), BRouter routes, KiWIS and Nominatim requests the page asked for, and any other
  * external requests it tried.
  */
 export async function serveOffline(page: Page, options: OfflineOptions = {}) {
@@ -104,11 +178,9 @@ export async function serveOffline(page: Page, options: OfflineOptions = {}) {
     (url) => !["localhost", "127.0.0.1"].includes(url.hostname),
     async (route) => {
       const url = new URL(route.request().url());
-      const tile = url.hostname.endsWith("tile.opentopomap.org")
-        ? url.pathname.match(/^\/(\d+)\/(\d+)\/(\d+)\.png$/)
-        : null;
+      const tile = tileRequest(url);
       if (tile) {
-        tiles.push({ z: Number(tile[1]), x: Number(tile[2]), y: Number(tile[3]) });
+        tiles.push(tile);
         await route.fulfill({ status: 200, contentType: "image/png", body: TILE_FIXTURE });
       } else if (url.hostname === "brouter.de" && url.pathname === "/brouter") {
         brouter.push(url);
