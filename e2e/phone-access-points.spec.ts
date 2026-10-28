@@ -40,7 +40,6 @@ const deleteButton = (page: Page, heading: string) =>
   section(page).getByRole("button", { name: phoneText.deleteAccessPoint(heading), exact: true });
 const placingLine = (page: Page) => page.getByRole("status").filter({ hasText: phoneText.placingState });
 const cancelPlacing = (page: Page) => page.getByRole("button", { name: phoneText.placingCancel });
-const savedNote = (page: Page) => section(page).getByRole("status").filter({ hasText: phoneText.savedOnDevice });
 const toggle = (page: Page, group: string, option: string) =>
   details(page).getByRole("group", { name: group }).getByRole("button", { name: option });
 
@@ -165,7 +164,6 @@ test("the floating button marks one at my GPS position, saved at once, and opens
   // Under the dialog: the Access points tab, with the new point's row selected.
   await expect(accessTab(page)).toHaveAttribute("aria-selected", "true");
   await expect(rowButton(page, 0)).toHaveAttribute("aria-current", "true");
-  await expect(savedNote(page)).toBeVisible();
 
   // The edit button opens the details again; Cancel drops the changes and keeps the point selected.
   await editButton(page, "Slipway by the bridge").click();
@@ -249,7 +247,6 @@ test("with the network blocked, marking, editing and deleting keep working and a
   await details(page).getByLabel(text.noteLabel).fill("Second");
   await save(page).click();
   await expect(markers(page)).toHaveCount(2);
-  await expect(savedNote(page)).toBeVisible();
   await expect.poll(async () => (await stored(page)).accessPoints.length).toBe(2);
 
   // The edit button opens the details to edit; Save stores them.
@@ -308,10 +305,9 @@ test("without a fix the button enters place mode; Cancel leaves it; the next tap
   await expect(routePoints(page)).toHaveCount(1);
   await expect(placingLine(page)).toHaveCount(0);
   expect((await stored(page)).accessPoints).toHaveLength(1);
-  // Under the details, the Access points tab; the point is saved on the device.
+  // Under the details, the Access points tab; the point is stored on the device.
   await cancel(page).click();
   await expect(accessTab(page)).toHaveAttribute("aria-selected", "true");
-  await expect(savedNote(page)).toBeVisible();
 
   // The point placed by tapping survives a reload.
   await page.reload();

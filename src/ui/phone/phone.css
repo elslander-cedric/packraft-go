@@ -246,11 +246,6 @@
 }
 
 /* Access points on the phone (#63, #119): big targets for the form and the list. */
-.phone-saved {
-  margin: 0 0 var(--space-2);
-  color: var(--color-muted);
-}
-
 .phone-access-point-form .toggle,
 .phone-access-point-form .button,
 .phone-access-point-form input {

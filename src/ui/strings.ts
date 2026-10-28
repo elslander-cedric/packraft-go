@@ -247,7 +247,6 @@ export const strings = {
     // The state line while the next map tap places an access point.
     placingState: "Placing an access point",
     placingCancel: "Cancel",
-    savedOnDevice: "Saved on this device.",
     noAccessPoints: "No access points yet. Mark one with the button at the bottom of the map.",
     // The tab's two lists while the trip has a route (#156): on the route in route order, then the rest nearest you.
     onRouteHeading: "On the route",
