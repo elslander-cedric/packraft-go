@@ -281,3 +281,31 @@
   min-height: 2.75rem;
   width: 100%;
 }
+
+/* Variant A and the access layer (#169 feedback): never overlap the access layer's date.
+   Desktop: the bar leaves room for the access overlay top right (at most 20rem); on a map too
+   narrow for both, the bar takes the row and the overlay moves under it. */
+.map:has(.ps-desktop-bar) {
+  container-type: inline-size;
+}
+
+.ps-desktop-bar {
+  z-index: 1150;
+  width: min(22rem, calc(100% - 3.5rem - 20rem - 2 * var(--space-2)));
+}
+
+@container (max-width: 40rem) {
+  .ps-desktop-bar {
+    width: auto;
+    right: var(--space-2);
+  }
+
+  .access-overlay {
+    top: calc(var(--space-2) + 2.75rem + var(--space-2));
+  }
+}
+
+/* Phone: the access chip moves from beside the buttons to a second row, under the pill. */
+.phone:has(.ps-phone-pill) .phone-access-chip-slot {
+  top: calc(var(--space-3) + 2.75rem + var(--space-2));
+}
