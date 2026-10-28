@@ -1,0 +1,93 @@
+/* The look every dialog shares (ConfirmDialog, FormDialog, InfoDialog, TextEntryDialog):
+   a flat panel with the sheet's corners, a divider under the title, and finger-sized
+   buttons and fields. Each dialog's own stylesheet adds its width and layout. */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  /* Above the Leaflet map's panes and controls. */
+  z-index: var(--z-overlay);
+  background: var(--color-backdrop);
+}
+
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: var(--z-overlay);
+  box-sizing: border-box;
+  max-width: calc(100vw - 2rem);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  color: var(--color-text);
+  transform: translate(-50%, -50%);
+}
+
+/* The divider under the title runs from edge to edge. */
+.dialog-title {
+  margin: 0 calc(-1 * var(--space-3)) var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 1rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.dialog .button {
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border-color: var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-hover);
+}
+
+.dialog .button:hover:not([data-disabled]) {
+  background: var(--color-border-subtle);
+}
+
+/* The filled buttons need no border. */
+.dialog .button:is(.button-primary, .button-danger):not([data-disabled]) {
+  border-color: transparent;
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+
+.dialog .button-primary:not([data-disabled]) {
+  background: var(--color-primary);
+}
+
+.dialog .button-primary:hover:not([data-disabled]) {
+  background: var(--color-primary-hover);
+}
+
+.dialog .button-danger:not([data-disabled]) {
+  background: var(--color-danger-fill);
+}
+
+.dialog .button-danger:hover:not([data-disabled]) {
+  background: var(--color-danger-fill-hover);
+}
+
+/* Fields take the buttons' height, border and corners. */
+.dialog :is(input:not([type="checkbox"], [type="radio"], [type="file"]), select, textarea) {
+  box-sizing: border-box;
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  font: inherit;
+}
+
+.dialog input:not([type="checkbox"], [type="radio"], [type="file"]) {
+  height: var(--control-height);
+}
+
+.dialog textarea {
+  padding-block: var(--space-2);
+}

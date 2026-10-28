@@ -1,36 +1,13 @@
-/* A dialog that only shows information; it looks like the other dialogs (FormDialog). */
-.info-dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  /* Above the Leaflet map's panes and controls. */
-  z-index: var(--z-overlay);
-  background: var(--color-backdrop);
-}
-
+/* A dialog that only shows information; the panel, title and actions are in Dialog.css. */
 .info-dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  z-index: var(--z-overlay);
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
   width: 28rem;
-  max-width: calc(100vw - 2rem);
   max-height: 85dvh;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: var(--shadow-popup);
-  transform: translate(-50%, -50%);
 }
 
-.info-dialog-title {
+.info-dialog .dialog-title {
   flex: none;
-  margin: 0 0 var(--space-2);
-  font-size: 1rem;
 }
 
 /* The content scrolls; the title and Close stay put. */
@@ -40,13 +17,7 @@
   overflow-y: auto;
 }
 
-.info-dialog-actions {
-  display: flex;
+.info-dialog .dialog-actions {
   flex: none;
-  justify-content: flex-end;
   margin-top: var(--space-3);
-}
-
-.info-dialog-actions .button {
-  min-height: 2.75rem;
 }

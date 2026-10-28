@@ -274,17 +274,17 @@ export const strings = {
     menu: {
       button: "Menu",
       newTrip: "New trip",
-      // Trip details… opens the trip's name and start date in a dialog (#154); Save applies what was typed.
-      tripDetails: "Trip details…",
+      // Edit trip opens the trip's name and start date in the Trip details dialog (#154); Save applies what was typed.
+      tripDetails: "Edit trip",
       tripDetailsTitle: "Trip details",
       tripDetailsConfirm: "Save",
-      saveFile: "Save…",
-      openFile: "Open…",
-      exportGpx: "Export GPX…",
-      // Settings… opens the settings in a dialog (#151); Save stores what was typed.
-      settings: "Settings…",
+      saveFile: "Save trip",
+      openFile: "Open trip",
+      exportGpx: "Export GPX",
+      // Settings opens the settings in a dialog (#151); Save stores what was typed.
+      settings: "Settings",
       settingsConfirm: "Save",
-      // Save… and Export GPX… ask for the trip name first, prefilled with the current one.
+      // Save trip and Export GPX ask for the trip name first, prefilled with the current one.
       saveTitle: "Save trip",
       saveConfirm: "Save",
       exportTitle: "Export GPX",

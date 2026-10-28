@@ -37,7 +37,7 @@ const tabs = Object.keys(strings.phone.tabs) as PhoneTab[];
 
 /**
  * The next leg's mode the planner picked, and the trip state it was picked for: the trip's
- * points and undo steps, which every edit, undo, New trip and Open… replace, and routing keeps.
+ * points and undo steps, which every edit, undo, New trip and Open trip replace, and routing keeps.
  */
 type NextModePick = {
   mode: LegMode;
@@ -142,7 +142,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
 
   // The next leg's mode (#121): the last leg's mode (hike for an empty trip), unless the planner
   // picked another since the trip last changed. Any edit (adding a leg with it, delete, undo…),
-  // New trip and Open… drop the pick; routing doesn't. Only the first point, which adds no leg,
+  // New trip and Open trip drop the pick; routing doesn't. Only the first point, which adds no leg,
   // carries it over to the second.
   const [pick, setPick] = useState<NextModePick | null>(null);
   let held = pick;

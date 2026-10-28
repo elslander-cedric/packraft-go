@@ -1,6 +1,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import type { ReactNode, RefObject } from "react";
 import { Button } from "./Button";
+import "./Dialog.css";
 import "./FormDialog.css";
 
 export type FormDialogProps = {
@@ -43,9 +44,9 @@ export function FormDialog({
       }}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop className="form-dialog-backdrop" />
-        <Dialog.Popup className="form-dialog" finalFocus={returnFocusTo ?? true}>
-          <Dialog.Title className="form-dialog-title">{title}</Dialog.Title>
+        <Dialog.Backdrop className="dialog-backdrop" />
+        <Dialog.Popup className="dialog form-dialog" finalFocus={returnFocusTo ?? true}>
+          <Dialog.Title className="dialog-title">{title}</Dialog.Title>
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -53,9 +54,9 @@ export function FormDialog({
             }}
           >
             <div className="form-dialog-fields">{children}</div>
-            <div className="form-dialog-actions">
+            <div className="dialog-actions">
               <Dialog.Close className="button">{cancelLabel}</Dialog.Close>
-              <Button type="submit" disabled={confirmDisabled}>
+              <Button type="submit" className="button-primary" disabled={confirmDisabled}>
                 {confirmLabel}
               </Button>
             </div>

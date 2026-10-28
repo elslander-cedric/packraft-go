@@ -3,21 +3,21 @@
   z-index: var(--z-overlay);
 }
 
+/* Flat, like the dialogs: no border or shadow. */
 .menu {
   min-width: 12rem;
-  padding: var(--space-1) 0;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius);
+  overflow: hidden;
+  border-radius: var(--radius-control);
   background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: var(--shadow-popup);
 }
 
 .menu-item {
   display: flex;
   align-items: center;
+  gap: var(--space-2);
   /* Finger-sized rows. */
-  min-height: 2.75rem;
+  min-height: var(--control-height);
   padding: 0 var(--space-3);
   cursor: default;
   user-select: none;
@@ -30,4 +30,17 @@
 
 .menu-item[data-disabled] {
   color: var(--color-muted);
+}
+
+/* A fixed-width slot, so the labels line up whatever the icon's width. */
+.menu-item-icon {
+  display: inline-flex;
+  justify-content: center;
+  width: 1.25em;
+  color: var(--color-muted);
+}
+
+.menu-separator {
+  height: 1px;
+  background: var(--color-border);
 }

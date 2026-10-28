@@ -12,6 +12,12 @@
   --color-danger: #b00020;
   --color-danger-hover: #8c0019;
   --color-on-danger: #fff;
+  /* Filled buttons: a dialog's main action and its destructive one. The same in both themes,
+     dark enough for white text (the dark theme's --color-focus and --color-danger are too light). */
+  --color-primary: #1b6fb5;
+  --color-primary-hover: #155a94;
+  --color-danger-fill: #b00020;
+  --color-danger-fill-hover: #8c0019;
   --color-warning: #b35f00;
   --color-border-subtle: #eee;
   --color-notice: #fff4ce;
@@ -29,6 +35,11 @@
   --space-2: 0.5rem;
   --space-3: 1rem;
   --radius: 3px;
+  /* The bottom sheet's and the dialogs' corners, and the menu's, dialog buttons' and fields'. */
+  --radius-large: 0.75rem;
+  --radius-control: 0.375rem;
+  /* A finger-sized control: dialog buttons and fields, menu rows. */
+  --control-height: 2.75rem;
   --shadow-popup: 0 0.25rem 1rem rgb(0 0 0 / 20%);
   /* Buttons floating on the map (phone) and the bottom sheet's edge. */
   --shadow-float: 0 1px 4px rgb(0 0 0 / 30%);

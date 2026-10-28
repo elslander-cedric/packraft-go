@@ -1,6 +1,6 @@
 // The phone planner's sheet header and chrome after the first try on an Android phone:
 // the bottom buttons sit above the sheet, the selected tab stands out, the header shows
-// the totals by mode with climb and descent (the trip name is in Trip details…, #154), the tab content
+// the totals by mode with climb and descent (the trip name is in Trip details, #154), the tab content
 // starts below the tab row, and there is no "Indicative only" banner over the map (ADR 0026).
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
@@ -76,7 +76,7 @@ test("the header shows the totals, not the trip name: hike, paddle, climb, desce
   await open(page, hikeAndPaddle("Dinant weekend"));
   await expect(points(page)).toHaveCount(3);
 
-  // The name is in Trip details… only (#154).
+  // The name is in Trip details only (#154).
   await expect(sheet(page).getByRole("heading")).toHaveCount(0);
   await expect(sheet(page)).not.toContainText("Dinant weekend");
   const figures = totals(page).locator(".phone-total");

@@ -1,5 +1,5 @@
 import { Menu as BaseMenu } from "@base-ui/react/menu";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import "./Menu.css";
 
 export type MenuItem = {
@@ -7,6 +7,10 @@ export type MenuItem = {
   onSelect: () => void;
   /** A disabled item stays in the menu, so the menu keeps its shape. */
   disabled?: boolean;
+  /** Drawn before the label, e.g. an icon. */
+  icon?: ReactNode;
+  /** Starts a new group: a divider above the item. */
+  groupStart?: boolean;
 };
 
 export type MenuProps = {
@@ -20,7 +24,8 @@ export type MenuProps = {
 
 /**
  * A button that opens a list of actions (Base UI Menu, ADR 0020). Choosing an
- * item closes the menu and runs it; Escape or a tap outside closes it.
+ * item closes the menu and runs it; Escape or a tap outside closes it. Items may
+ * have an icon, and dividers only between groups.
  */
 export function Menu({ label, trigger, triggerClassName, items }: MenuProps) {
   return (
@@ -32,9 +37,13 @@ export function Menu({ label, trigger, triggerClassName, items }: MenuProps) {
         <BaseMenu.Positioner className="menu-positioner" side="bottom" align="start" sideOffset={4}>
           <BaseMenu.Popup className="menu">
             {items.map((item) => (
-              <BaseMenu.Item key={item.label} className="menu-item" disabled={item.disabled} onClick={item.onSelect}>
-                {item.label}
-              </BaseMenu.Item>
+              <Fragment key={item.label}>
+                {item.groupStart && <BaseMenu.Separator className="menu-separator" />}
+                <BaseMenu.Item className="menu-item" disabled={item.disabled} onClick={item.onSelect}>
+                  {item.icon && <span className="menu-item-icon">{item.icon}</span>}
+                  {item.label}
+                </BaseMenu.Item>
+              </Fragment>
             ))}
           </BaseMenu.Popup>
         </BaseMenu.Positioner>

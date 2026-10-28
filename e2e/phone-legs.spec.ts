@@ -420,7 +420,7 @@ test("on an empty trip, a picked next leg's mode holds over the first point to t
   await expect(legLines(page).first()).toHaveClass(/leg-paddle/);
 });
 
-test("a picked next leg's mode doesn't outlive New trip or Open…", async ({ page }) => {
+test("a picked next leg's mode doesn't outlive New trip or Open trip", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await seed(page, { points: [P0, P1], legs: [{ mode: "hike", geometry: [P0, P1] }] });
   await openPhone(page);
@@ -439,7 +439,7 @@ test("a picked next leg's mode doesn't outlive New trip or Open…", async ({ pa
   await choose(menu.newTrip);
   await expectNextMode(page, strings.legModeHike);
 
-  // Open…: the opened trip's last leg's mode.
+  // Open trip: the opened trip's last leg's mode.
   await nextMode(page, strings.legModePaddle).click();
   const opened = serialiseTrip({ name: "Opened", points: [P0, P1], legs: [{ mode: "hike" }] });
   const [chooser] = await Promise.all([page.waitForEvent("filechooser"), choose(menu.openFile)]);

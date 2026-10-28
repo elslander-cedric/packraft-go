@@ -39,13 +39,13 @@ const paddleSpeed = (page: Page) => settingsDialog(page).getByLabel(strings.padd
 const saveSettings = (page: Page) => settingsDialog(page).getByRole("button", { name: text.menu.settingsConfirm });
 const cancelSettings = (page: Page) => settingsDialog(page).getByRole("button", { name: strings.confirmCancel });
 const menuButton = (page: Page) => page.getByRole("button", { name: text.menu.button });
-/** Menu → Settings…: the settings dialog. */
+/** Menu → Settings: the settings dialog. */
 async function openSettings(page: Page) {
   await menuButton(page).click();
   await page.getByRole("menuitem", { name: text.menu.settings, exact: true }).click();
   await expect(settingsDialog(page)).toBeVisible();
 }
-/** Menu → Trip details…: the trip's name and start date. */
+/** Menu → Edit trip: the trip's name and start date. */
 async function openDetails(page: Page) {
   await menuButton(page).click();
   await page.getByRole("menuitem", { name: text.menu.tripDetails, exact: true }).click();
@@ -185,7 +185,7 @@ test("the Days tab has no heading or rule of its own; the cards run edge to edge
   await expect(dayCards(page).nth(0)).toHaveCSS("border-bottom-width", "1px");
 });
 
-test("the sheet has no Trip or Settings tab; the menu's Settings… opens a dialog without a heading of its own", async ({
+test("the sheet has no Trip or Settings tab; the menu's Settings opens a dialog without a heading of its own", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -204,7 +204,7 @@ test("the sheet has no Trip or Settings tab; the menu's Settings… opens a dial
   await expect(cancelSettings(page)).toBeInViewport({ ratio: 1 });
 });
 
-test("Trip details… renames the trip and sets, changes and clears its start date on Save; all autosaved, no date drift", async ({
+test("Edit trip renames the trip and sets, changes and clears its start date on Save; all autosaved, no date drift", async ({
   page,
 }) => {
   await serveOffline(page);

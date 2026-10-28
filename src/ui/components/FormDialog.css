@@ -1,42 +1,10 @@
-/* A dialog around a small form; it looks like the other dialogs (TextEntryDialog). */
-.form-dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  /* Above the Leaflet map's panes and controls. */
-  z-index: var(--z-overlay);
-  background: var(--color-backdrop);
-}
-
+/* A dialog around a small form; the panel, title and actions are in Dialog.css. */
 .form-dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  z-index: var(--z-overlay);
-  box-sizing: border-box;
   width: 24rem;
-  max-width: calc(100vw - 2rem);
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: var(--shadow-popup);
-  transform: translate(-50%, -50%);
-}
-
-.form-dialog-title {
-  margin: 0 0 var(--space-2);
-  font-size: 1rem;
 }
 
 .form-dialog-fields {
   margin: 0 0 var(--space-3);
-}
-
-.form-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
 }
