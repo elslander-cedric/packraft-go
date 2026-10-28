@@ -1,0 +1,110 @@
+/* The field: input plus icon buttons, 44 px tall. */
+.search-box-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  min-height: var(--control-height);
+  padding-left: var(--space-2);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.search-box-group:focus-within {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.search-box-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 1rem;
+  outline: none;
+}
+
+.search-box-input::placeholder {
+  color: var(--color-muted);
+}
+
+.search-box-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.search-box-icon-button:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Above Leaflet's panes and controls (z-index up to 1000) and the map's overlays. */
+.search-box-positioner {
+  z-index: var(--z-overlay);
+  outline: none;
+}
+
+.search-box-popup {
+  box-sizing: border-box;
+  width: var(--anchor-width);
+  max-width: var(--available-width);
+  max-height: min(24rem, var(--available-height));
+  overflow-y: auto;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-popup);
+}
+
+.search-box-list {
+  outline: none;
+}
+
+.search-box-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: var(--control-height);
+  box-sizing: border-box;
+  padding: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+}
+
+.search-box-item:first-child {
+  border-top: none;
+}
+
+.search-box-item[data-highlighted] {
+  background: var(--color-surface-hover);
+}
+
+.search-box-message {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.search-box-message-alert {
+  color: var(--color-danger);
+}
+
+.search-box-message-alert .button {
+  color: var(--color-text);
+}

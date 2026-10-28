@@ -1,0 +1,22 @@
+/* The search result's pin (#173): a red pin with a dark edge, its name above it. */
+.search-result-marker {
+  background: none;
+  border: none;
+}
+
+.search-result-pin {
+  display: block;
+  width: 28px;
+  height: 36px;
+  color: var(--color-search-result);
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 50%));
+}
+
+.search-result-pin svg {
+  width: 100%;
+  height: 100%;
+}
+
+.search-result-label {
+  font-weight: 600;
+}
