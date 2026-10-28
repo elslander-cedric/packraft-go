@@ -1,6 +1,6 @@
 import { addDays, type CalendarDate } from "./calendarDate";
 import type { LegRoute, RoutedPoint } from "./router";
-import { defaultSettings, type Settings } from "./settings";
+import { defaultSettings, type Pace } from "./settings";
 import type { LatLng, Leg, LegMode, Trip } from "./trip";
 
 /**
@@ -156,12 +156,12 @@ const NAISMITH_FLAT_KMH = 5;
 const NAISMITH_CLIMB_M_PER_H = 600;
 
 /** Hike time in hours (ADR 0009): Naismith's rule scaled by the planner's pace factor. */
-function hikeTimeH(km: number, climbM: number, settings: Settings): number {
+function hikeTimeH(km: number, climbM: number, settings: Pace): number {
   return (km / NAISMITH_FLAT_KMH + climbM / NAISMITH_CLIMB_M_PER_H) * settings.paceFactor;
 }
 
 /** Paddle time in hours (ADR 0009): distance at the planner's paddling speed. */
-function paddleTimeH(km: number, settings: Settings): number {
+function paddleTimeH(km: number, settings: Pace): number {
   return km / settings.paddleSpeedKmh;
 }
 
@@ -169,7 +169,7 @@ function paddleTimeH(km: number, settings: Settings): number {
  * Figures for each leg and the whole trip, with times from the planner's settings. Totals are always derived, never
  * stored (ADR 0008). Legs are measured as straight lines until they are routed.
  */
-export function summarise(trip: Trip, settings: Settings = defaultSettings): TripSummary {
+export function summarise(trip: Trip, settings: Pace = defaultSettings): TripSummary {
   const legs = trip.legs.map((leg, i): LegSummary => {
     if (leg.route?.status === "routed") {
       const km = pathKm(leg.route.geometry);

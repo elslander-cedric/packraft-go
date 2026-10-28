@@ -5,7 +5,7 @@ import { aireWarnings } from "@/core/aire";
 import type { Router } from "@/core/router";
 import { firstSession, plannerSession } from "@/core/plannerSession";
 import { createAutoRouter } from "@/core/routing";
-import { defaultSettings, withSetting, type Settings } from "@/core/settings";
+import { defaultSettings, withSetting, type PaceSetting } from "@/core/settings";
 import { summarise } from "@/core/summarise";
 import { renameTrip } from "@/core/trip";
 import { tripAccess } from "@/core/tripAccess";
@@ -48,7 +48,7 @@ export function usePlanner(router?: Router) {
   // until they are read, figures use the defaults.
   const [settings, setSettings] = useSettings();
   // An empty field (null), like any unusable value, changes nothing.
-  const changeSetting = (name: keyof Settings, value: number | null) => {
+  const changeSetting = (name: PaceSetting, value: number | null) => {
     if (settings === null || value === null) return;
     const changed = withSetting(settings, name, value);
     if (changed !== settings) setSettings(changed);

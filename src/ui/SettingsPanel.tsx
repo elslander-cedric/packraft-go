@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { isUsableSetting, type Settings } from "@/core/settings";
+import { isUsableSetting, type PaceSetting, type Settings } from "@/core/settings";
 import { NumberField } from "./components/NumberField";
 import { strings } from "./strings";
 
@@ -7,7 +7,7 @@ export type SettingsPanelProps = {
   /** The settings as they are when the panel is first shown. */
   settings: Settings;
   /** The planner typed a value (null while a field is empty); the core decides whether it is usable. */
-  onChange: (name: keyof Settings, value: number | null) => void;
+  onChange: (name: PaceSetting, value: number | null) => void;
   /** False where something else already names the panel (the phone's Settings dialog). */
   heading?: boolean;
 };

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { isUsableSetting, type Settings } from "@/core/settings";
+import { isUsableSetting, type PaceSetting, type Settings } from "@/core/settings";
 import { FormDialog } from "../components/FormDialog";
 import SettingsPanel from "../SettingsPanel";
 import { strings } from "../strings";
 
 /** The values in the fields: null while one is empty. */
-type Draft = Record<keyof Settings, number | null>;
+type Draft = Record<PaceSetting, number | null>;
 
 export type PhoneSettingsDialogProps = {
   open: boolean;
@@ -41,7 +41,7 @@ export default function PhoneSettingsDialog({ open, settings, onSave, onClose }:
       cancelLabel={strings.confirmCancel}
       confirmDisabled={!usable}
       onConfirm={() => {
-        if (usable) onSave({ paceFactor, paddleSpeedKmh });
+        if (usable) onSave({ ...settings, paceFactor, paddleSpeedKmh });
         onClose();
       }}
       onCancel={onClose}

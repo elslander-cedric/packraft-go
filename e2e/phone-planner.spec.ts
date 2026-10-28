@@ -342,7 +342,7 @@ test("the floating buttons are icon-only: an icon each, no glyph text, named for
   const named = [
     [strings.phone.menu.button, icons.menu],
     [strings.phone.showPositionButton, icons.showPosition],
-    [strings.accessLayerToggle, icons.accessLayer],
+    [strings.phone.mapMenuButton, icons.mapLayers],
     [strings.phone.markAccessPointButton, icons.accessPoint],
     [strings.legModeHike, icons.hike],
     [strings.legModePaddle, icons.paddle],

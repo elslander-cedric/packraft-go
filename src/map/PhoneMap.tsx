@@ -10,13 +10,14 @@ import {
   Marker,
   Pane,
   Polyline,
-  TileLayer,
   useMap,
   useMapEvents,
 } from "react-leaflet";
 import type { SearchArea, SearchResult } from "@/core/placeSearch";
+import type { BaseMapId } from "@/core/settings";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type Trip } from "@/core/trip";
-import { baseLayer, initialMapView, paneZIndex } from "./mapConfig";
+import BaseMapLayers from "./BaseMapLayers";
+import { initialMapView, paneZIndex } from "./mapConfig";
 import SearchResultLayer, { type MapCover } from "./SearchResultLayer";
 import { campIcon, legStyle, modeChangeStyle, MapAreaReporter } from "./TripMap";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
@@ -33,6 +34,8 @@ import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
 export type MapFocus = ({ at: LatLng } | { area: readonly LatLng[] }) & { coveredBelow: number; coveredRight?: number };
 
 export type PhoneMapProps = {
+  /** The base map drawn under everything (ADR 0031), chosen in the Map menu. */
+  baseMap: BaseMapId;
   trip: Trip;
   /** A tap on the map (not a double tap, not the end of a pinch, not on a point). */
   onMapTap: (at: LatLng) => void;
@@ -373,6 +376,7 @@ function TripLayers({
  * this through ClientPhoneMap.
  */
 export default function PhoneMap({
+  baseMap,
   trip,
   onMapTap,
   selectedPoint,
@@ -396,12 +400,7 @@ export default function PhoneMap({
       touchZoom
       zoomControl={false}
     >
-      <TileLayer
-        url={baseLayer.url}
-        subdomains={[...baseLayer.subdomains]}
-        maxZoom={baseLayer.maxZoom}
-        attribution={baseLayer.attribution}
-      />
+      <BaseMapLayers id={baseMap} />
       {access && <AccessLayer {...access} touch />}
       <MapView trip={trip} position={position} />
       {focus && <Focus focus={focus} />}

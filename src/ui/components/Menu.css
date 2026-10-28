@@ -44,3 +44,45 @@
   height: 1px;
   background: var(--color-border);
 }
+
+/* A choice's mark: a dot before the current value, in the icons' slot. */
+.menu-radio-mark {
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: var(--color-focus);
+}
+
+/* A toggle: its label, then a switch drawn like the Switch wrapper's. */
+.menu-toggle {
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.menu-toggle-track {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 1.1rem;
+  padding: 2px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 1rem;
+  background: var(--color-border);
+}
+
+.menu-toggle[data-checked] .menu-toggle-track {
+  border-color: var(--color-focus);
+  background: var(--color-focus);
+}
+
+.menu-toggle-thumb {
+  width: calc(1.1rem - 6px);
+  height: calc(1.1rem - 6px);
+  border-radius: 50%;
+  background: var(--color-surface);
+  transition: transform 0.15s;
+}
+
+.menu-toggle[data-checked] .menu-toggle-thumb {
+  transform: translateX(0.9rem);
+}

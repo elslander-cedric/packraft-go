@@ -154,8 +154,8 @@ describe("#7 AC1 (core side): each leg and the trip have a time", () => {
 
 describe("#7 AC4/AC5 (core side): changing and restoring settings", () => {
   it("withSetting changes one setting and keeps the other", () => {
-    expect(withSetting(defaultSettings, "paceFactor", 1.2)).toEqual({ paceFactor: 1.2, paddleSpeedKmh: 5 });
-    expect(withSetting(defaultSettings, "paddleSpeedKmh", 3.5)).toEqual({ paceFactor: 1, paddleSpeedKmh: 3.5 });
+    expect(withSetting(defaultSettings, "paceFactor", 1.2)).toEqual({ ...defaultSettings, paceFactor: 1.2, paddleSpeedKmh: 5 });
+    expect(withSetting(defaultSettings, "paddleSpeedKmh", 3.5)).toEqual({ ...defaultSettings, paceFactor: 1, paddleSpeedKmh: 3.5 });
   });
 
   it("unusable values (zero, negative, NaN, Infinity) are ignored", () => {
@@ -166,7 +166,7 @@ describe("#7 AC4/AC5 (core side): changing and restoring settings", () => {
   });
 
   it("settings round-trip through their stored form", () => {
-    const s = { paceFactor: 1.3, paddleSpeedKmh: 6.5 };
+    const s = { ...defaultSettings, paceFactor: 1.3, paddleSpeedKmh: 6.5 };
     expect(restoreSettings(serialiseSettings(s))).toEqual(s);
   });
 
@@ -177,8 +177,8 @@ describe("#7 AC4/AC5 (core side): changing and restoring settings", () => {
   });
 
   it("bad individual fields fall back to their default; good ones are kept", () => {
-    expect(restoreSettings('{"paceFactor":-2,"paddleSpeedKmh":4}')).toEqual({ paceFactor: 1, paddleSpeedKmh: 4 });
-    expect(restoreSettings('{"paceFactor":1.4,"paddleSpeedKmh":"fast"}')).toEqual({ paceFactor: 1.4, paddleSpeedKmh: 5 });
+    expect(restoreSettings('{"paceFactor":-2,"paddleSpeedKmh":4}')).toEqual({ ...defaultSettings, paceFactor: 1, paddleSpeedKmh: 4 });
+    expect(restoreSettings('{"paceFactor":1.4,"paddleSpeedKmh":"fast"}')).toEqual({ ...defaultSettings, paceFactor: 1.4, paddleSpeedKmh: 5 });
     expect(restoreSettings('{"paceFactor":0,"paddleSpeedKmh":null}')).toEqual(defaultSettings);
   });
 

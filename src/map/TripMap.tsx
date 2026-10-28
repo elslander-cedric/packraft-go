@@ -7,18 +7,25 @@ import type {
 } from "leaflet";
 import { divIcon } from "leaflet";
 import { useEffect, useRef, useState } from "react";
-import { CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { CircleMarker, MapContainer, Marker, Pane, Polyline, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import type { SearchArea, SearchResult } from "@/core/placeSearch";
+import type { BaseMapId } from "@/core/settings";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type ModeChange, type Trip } from "@/core/trip";
 import { icons } from "@/ui/icons/icons";
 import { iconSvg } from "@/ui/icons/iconSvg";
+import BaseMapMenu from "@/ui/BaseMapMenu";
 import { strings } from "@/ui/strings";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
-import { baseLayer, initialMapView, paneZIndex } from "./mapConfig";
+import BaseMapLayers from "./BaseMapLayers";
+import MapControl from "./MapControl";
+import { initialMapView, paneZIndex } from "./mapConfig";
 import SearchResultLayer from "./SearchResultLayer";
 
 export type TripMapProps = {
+  /** The base map drawn under everything (ADR 0031), and choosing another with the map's button. */
+  baseMap: BaseMapId;
+  onBaseMapChange: (id: BaseMapId) => void;
   trip: Trip;
   /** Index of the selected point, if any. */
   selectedPoint: number | null;
@@ -153,7 +160,13 @@ function LegLine({ mode, status, positions }: { mode: LegMode; status: LegStatus
  * click a point, drag a point. While a point is dragged it is drawn at the
  * mouse; the trip itself only changes when it is dropped.
  */
-function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag }: TripMapProps) {
+function TripLayers({
+  trip,
+  selectedPoint,
+  onMapClick,
+  onPointClick,
+  onPointDrag,
+}: Omit<TripMapProps, "baseMap" | "onBaseMapChange">) {
   const map = useMap();
   const [preview, setPreview] = useState<DragPreview | null>(null);
   // The browser sends a click after a drag ends; that click must not add or select a point.
@@ -299,19 +312,17 @@ export function MapAreaReporter({ onChange }: { onChange: (area: SearchArea) => 
 }
 
 // Imports Leaflet, which needs `window`: only load this through ClientTripMap.
-export default function TripMap({ access, searchResult, onAreaChange, ...props }: TripMapProps) {
+export default function TripMap({ baseMap, onBaseMapChange, access, searchResult, onAreaChange, ...props }: TripMapProps) {
   return (
     <MapContainer
       center={[...initialMapView.center]}
       zoom={initialMapView.zoom}
       style={{ height: "100%", width: "100%" }}
     >
-      <TileLayer
-        url={baseLayer.url}
-        subdomains={[...baseLayer.subdomains]}
-        maxZoom={baseLayer.maxZoom}
-        attribution={baseLayer.attribution}
-      />
+      <BaseMapLayers id={baseMap} />
+      <MapControl position="bottomright">
+        <BaseMapMenu value={baseMap} onChange={onBaseMapChange} />
+      </MapControl>
       {access && <AccessLayer {...access} />}
       <TripLayers {...props} />
       {props.accessPoints && <AccessPointLayer {...props.accessPoints} />}

@@ -212,7 +212,7 @@ test("sideways, the floating buttons stay in their corners over the map, beside 
   const buttons = [
     page.getByRole("button", { name: text.menu.button }),
     page.getByRole("button", { name: text.showPositionButton }),
-    page.getByRole("button", { name: strings.accessLayerToggle, exact: true }),
+    page.getByRole("button", { name: text.mapMenuButton, exact: true }),
     page.getByRole("button", { name: text.selectedPointToAccessPointButton }),
     page.getByRole("button", { name: strings.deletePointButton }),
     page.getByRole("button", { name: strings.campButton }),

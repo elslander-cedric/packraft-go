@@ -10,6 +10,10 @@ These scripts are manual only: never part of `npm test`, `npm run e2e` or CI. Th
 
 `npm run check:kiwis` (#64). Makes two requests to the SPW hydrometry service (the series list, then the values of those series), one at a time with a 2 s pause, no retries, identifying itself with the project URL only. It compares the answers with the recorded fixtures in `src/hydrometry/fixtures/` and with what the KiWIS adapter makes of them: table layout, series names, value columns, and the time offset (timestamps must be Belgian local time with its offset, +01:00 / +02:00, because the 08:00 reading is picked from the text; UTC is a MISMATCH). Prints MATCH / DRIFT / MISMATCH; exit code 1 means a mismatch (live Walloon flows are probably broken). Drift alone passes. Never writes fixtures; re-record by hand only on a mismatch. Logic: `src/hydrometry/liveCheck.ts` (unit-tested offline); entry point: `scripts/check-kiwis.mts`.
 
+## Live base map check
+
+`npm run check:basemaps` (#179, ADR 0031). Asks every base map source for one tile: OpenTopoMap, the Walloon SPW orthophoto WMS, the Flemish orthophoto WMTS, Brussels' UrbIS and the NGI's CartoWeb.be topo. One request at a time with a 1.5 s pause, no retries, identifying itself with the project URL only. Prints OK / FAILED per source (FAILED with the HTTP status, a non-image answer or the network error, and the URL asked for); exit code 1 means a source failed and that base map is probably broken in the live app. Run it now and then, or when a base map shows blank tiles. Logic: `src/map/baseMapCheck.ts` (unit-tested offline); entry point: `scripts/check-basemaps.mts`.
+
 ## Walloon stretch geometry
 
 Walloon stretch geometry (#54, ADR 0024):
