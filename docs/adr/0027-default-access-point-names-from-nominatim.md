@@ -16,3 +16,4 @@ A point you haven't named gets a default name from the nearest road and place ("
 - Nominatim's usage policy (1 request/second, identify the app, credit OSM) applies. The map's "© OpenStreetMap contributors" credit covers attribution.
 - Tests replay recorded Nominatim responses, never the live server (ADR 0019).
 - The access point format stays version 1: no version is in production use yet, and a point without a name reads as unnamed.
+- Place search (ADR 0030) shares the same Nominatim client and its one request a second; a waiting search goes first.
