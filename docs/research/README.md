@@ -13,6 +13,7 @@ Each document records when it was researched and links a source for every claim.
 | [paddle-routes.md](paddle-routes.md) | Official paddle route sets and legal stretches in Belgium |
 | [hydrometry.md](hydrometry.md) | Walloon live river flows (KiWIS API), the licence, and the AGW Annex 2 gauge and threshold table: can the app compute "open today?" |
 | [data-sources.md](data-sources.md) | Which access, route and waterway data is machine-readable, and under what licence |
+| [nominatim-search.md](nominatim-search.md) | Nominatim `/search` for place search: usage policy, viewbox ranking, `jsonv2` result shape, limits and errors (researched 2026-10-28) |
 
 Researched 2026-10-12, from sources the user supplied (Sport Vlaanderen, Peddelsport Vlaanderen, kayak.spw.wallonie.be) and the official sources they lead to.
 
