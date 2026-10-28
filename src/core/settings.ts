@@ -34,7 +34,8 @@ export function withSetting(settings: Settings, name: PaceSetting, value: number
   return isUsableSetting(value) ? { ...settings, [name]: value } : settings;
 }
 
-const isBaseMapId = (value: unknown): value is BaseMapId => baseMapIds.some((id) => id === value);
+/** True for the id of one of the base maps. */
+export const isBaseMapId = (value: unknown): value is BaseMapId => baseMapIds.some((id) => id === value);
 
 /** Settings with another base map chosen; the same settings when it is already the one. */
 export function withBaseMap(settings: Settings, baseMap: BaseMapId): Settings {

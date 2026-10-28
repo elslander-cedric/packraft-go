@@ -6,7 +6,7 @@
   width: var(--map-control-size);
   height: var(--map-control-size);
   padding: 0;
-  border: 2px solid rgb(0 0 0 / 20%);
+  border: var(--map-control-border);
   border-radius: var(--radius);
   font-size: 1rem;
 }

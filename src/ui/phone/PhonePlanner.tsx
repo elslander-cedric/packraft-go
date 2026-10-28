@@ -2,7 +2,6 @@
 
 import { useRef, useState, type CSSProperties } from "react";
 import type { Router } from "@/core/router";
-import { defaultSettings, withBaseMap } from "@/core/settings";
 import type { DaySummary } from "@/core/summarise";
 import { canGoBackToStart, canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import ClientPhoneMap from "@/map/ClientPhoneMap";
@@ -18,6 +17,7 @@ import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
 import { strings } from "../strings";
 import { useAccessLayer } from "../useAccessLayer";
+import { useBaseMap } from "../useSettings";
 import { usePlaceSearch } from "../usePlaceSearch";
 import { usePlanner } from "../usePlanner";
 import PhoneAccessChip from "./PhoneAccessChip";
@@ -134,7 +134,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   // The access layer (#125): on or off, its date, and the water or lock whose details are open.
   const layer = useAccessLayer(trip);
   // The base map (ADR 0031): a setting on this device, shared with the desktop layout.
-  const baseMap = settings?.baseMap ?? defaultSettings.baseMap;
+  const [baseMap, chooseBaseMap] = useBaseMap();
   const detailsOpen = layer.selectedWater !== undefined || layer.selectedLock !== undefined;
   // Where the map last zoomed to, for an access point row (#119).
   const [focus, setFocus] = useState<MapFocus | null>(null);
@@ -361,7 +361,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         </Button>
         <PhoneMapMenu
           baseMap={baseMap}
-          onBaseMapChange={(id) => settings && saveSettings(withBaseMap(settings, id))}
+          onBaseMapChange={chooseBaseMap}
           accessLayerOn={layer.on}
           onAccessLayerChange={layer.setOn}
         />

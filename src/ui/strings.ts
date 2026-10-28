@@ -274,7 +274,7 @@ export const strings = {
     accessPointDialogTitle: "Access point details",
     accessPointSave: "Save",
     // The layers button under the position button (#179) opens the Map menu: the base maps, then the access layer switch.
-    mapMenuButton: "Map layers",
+    mapMenuButton: "Map",
     // The access layer on the phone (#125): switched on and off in the Map menu, named `accessLayerToggle`.
     // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a dialog.
     accessChip: (when: string) => `Access · ${when}`,
@@ -463,6 +463,7 @@ export const strings = {
   // Shown in the map's attribution control while their base map is on, each with its source. Contain HTML links.
   baseMapAttribution: {
     wallonia: 'Aerial photos: &copy; <a href="https://geoportail.wallonie.be">SPW</a>',
+    // The wording Digitaal Vlaanderen's licence asks for, in Dutch.
     flanders: '<a href="https://www.vlaanderen.be/digitaal-vlaanderen">Bron: Luchtopnamen Digitaal Vlaanderen</a>',
     brussels: 'Aerial photos: UrbIS &copy; <a href="https://paradigm.brussels">paradigm.brussels</a>',
     ngi: 'Topo: &copy; <a href="https://www.ngi.be">NGI/IGN</a>, TomTom',

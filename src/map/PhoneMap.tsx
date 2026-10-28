@@ -16,7 +16,7 @@ import {
 import type { SearchArea, SearchResult } from "@/core/placeSearch";
 import type { BaseMapId } from "@/core/settings";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type Trip } from "@/core/trip";
-import BaseMapLayers from "./BaseMapLayers";
+import BaseMapTiles from "./BaseMapTiles";
 import { initialMapView, paneZIndex } from "./mapConfig";
 import SearchResultLayer, { type MapCover } from "./SearchResultLayer";
 import { campIcon, legStyle, modeChangeStyle, MapAreaReporter } from "./TripMap";
@@ -400,7 +400,7 @@ export default function PhoneMap({
       touchZoom
       zoomControl={false}
     >
-      <BaseMapLayers id={baseMap} />
+      <BaseMapTiles id={baseMap} />
       {access && <AccessLayer {...access} touch />}
       <MapView trip={trip} position={position} />
       {focus && <Focus focus={focus} />}

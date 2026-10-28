@@ -27,7 +27,7 @@ export default function PhoneMapMenu({
   return (
     <Menu
       label={strings.phone.mapMenuButton}
-      trigger={<Icon icon={icons.mapLayers} />}
+      trigger={<Icon icon={icons.mapMenu} />}
       triggerClassName="phone-fab"
       align="end"
       items={[

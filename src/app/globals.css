@@ -47,6 +47,8 @@
   --control-height: 2.75rem;
   /* A button among Leaflet's controls on the desktop map, like the zoom buttons (#179). */
   --map-control-size: 2.25rem;
+  /* The border of Leaflet's own controls (its zoom buttons), for our map controls. */
+  --map-control-border: 2px solid rgb(0 0 0 / 20%);
   /* The map's bottom-right corner: the base map button, its margins and up to three lines of attribution. */
   --map-bottom-right-reserve: calc(var(--map-control-size) + 6rem);
   --shadow-popup: 0 0.25rem 1rem rgb(0 0 0 / 20%);

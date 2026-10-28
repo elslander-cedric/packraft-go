@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { Settings } from "@/core/settings";
+import { defaultSettings, withBaseMap, type BaseMapId, type Settings } from "@/core/settings";
 import { loadStoredSettings, storeSettings } from "@/persistence/settingsStorage";
 
 // Browser storage is an external store: read it once, then keep the current
@@ -28,4 +28,18 @@ function changeSettings(settings: Settings) {
  */
 export function useSettings(): [Settings | null, (settings: Settings) => void] {
   return [useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot), changeSettings];
+}
+
+/**
+ * The chosen base map (ADR 0031) and a way to choose another, shared by the desktop and
+ * the phone. The default until the settings are read in the browser.
+ */
+export function useBaseMap(): [BaseMapId, (id: BaseMapId) => void] {
+  const [settings, saveSettings] = useSettings();
+  return [
+    settings?.baseMap ?? defaultSettings.baseMap,
+    (id) => {
+      if (settings) saveSettings(withBaseMap(settings, id));
+    },
+  ];
 }

@@ -11,7 +11,7 @@ export default function BaseMapMenu({ value, onChange }: { value: BaseMapId; onC
   return (
     <Menu
       label={strings.baseMapButton}
-      trigger={<Icon icon={icons.mapLayers} />}
+      trigger={<Icon icon={icons.mapMenu} />}
       triggerClassName="base-map-button"
       side="top"
       align="end"

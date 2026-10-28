@@ -11,7 +11,7 @@ const leafletBounds = (bounds: Bounds): LatLngBoundsExpression => [[...bounds[0]
  * (ADR 0031). The map zooms no further in than the base map goes; switching to one
  * that goes less far zooms out to its max. Imports Leaflet: map components only.
  */
-export default function BaseMapLayers({ id }: { id: BaseMapId }) {
+export default function BaseMapTiles({ id }: { id: BaseMapId }) {
   const map = useMap();
   const { maxZoom, sources } = baseMap(id);
   useEffect(() => {

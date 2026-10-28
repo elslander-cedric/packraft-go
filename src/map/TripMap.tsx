@@ -17,7 +17,7 @@ import BaseMapMenu from "@/ui/BaseMapMenu";
 import { strings } from "@/ui/strings";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
-import BaseMapLayers from "./BaseMapLayers";
+import BaseMapTiles from "./BaseMapTiles";
 import MapControl from "./MapControl";
 import { initialMapView, paneZIndex } from "./mapConfig";
 import SearchResultLayer from "./SearchResultLayer";
@@ -319,7 +319,7 @@ export default function TripMap({ baseMap, onBaseMapChange, access, searchResult
       zoom={initialMapView.zoom}
       style={{ height: "100%", width: "100%" }}
     >
-      <BaseMapLayers id={baseMap} />
+      <BaseMapTiles id={baseMap} />
       <MapControl position="bottomright">
         <BaseMapMenu value={baseMap} onChange={onBaseMapChange} />
       </MapControl>

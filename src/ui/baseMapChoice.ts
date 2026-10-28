@@ -1,4 +1,4 @@
-import { baseMapIds, type BaseMapId } from "@/core/settings";
+import { baseMapIds, isBaseMapId, type BaseMapId } from "@/core/settings";
 import type { MenuChoice } from "./components/Menu";
 import { strings } from "./strings";
 
@@ -12,8 +12,7 @@ export function baseMapChoice(value: BaseMapId, onChange: (id: BaseMapId) => voi
     })),
     value,
     onChange: (chosen) => {
-      const id = baseMapIds.find((known) => known === chosen);
-      if (id) onChange(id);
+      if (isBaseMapId(chosen)) onChange(chosen);
     },
   };
 }

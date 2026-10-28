@@ -1,13 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { defaultSettings, withBaseMap } from "@/core/settings";
 import { AccessDetailPanel, AccessLayerControls, LockDetailPanel } from "@/ui/AccessPanel";
 import PlaceSearchBar from "@/ui/PlaceSearchBar";
 import { strings } from "@/ui/strings";
 import { useAccessLayer } from "@/ui/useAccessLayer";
 import { usePlaceSearch } from "@/ui/usePlaceSearch";
-import { useSettings } from "@/ui/useSettings";
+import { useBaseMap } from "@/ui/useSettings";
 import type { TripMapProps } from "./TripMap";
 
 // Leaflet touches `window` on import, so the map is never rendered on the server.
@@ -24,14 +23,14 @@ export default function ClientTripMap(props: ClientTripMapProps) {
   const search = usePlaceSearch();
   const close = () => layer.select(null);
   // The base map is a setting on this device (ADR 0031), shared with the phone layout.
-  const [settings, saveSettings] = useSettings();
+  const [baseMap, chooseBaseMap] = useBaseMap();
 
   return (
     <section className="map" aria-label={strings.mapLabel}>
       <TripMap
         {...props}
-        baseMap={settings?.baseMap ?? defaultSettings.baseMap}
-        onBaseMapChange={(id) => settings && saveSettings(withBaseMap(settings, id))}
+        baseMap={baseMap}
+        onBaseMapChange={chooseBaseMap}
         access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: layer.select }}
         searchResult={search.state.shown}
         onAreaChange={search.setArea}
