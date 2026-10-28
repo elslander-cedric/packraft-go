@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import type { ReactNode } from "react";
 import { AccessDetailPanel, AccessLayerControls, LockDetailPanel } from "@/ui/AccessPanel";
 import { strings } from "@/ui/strings";
 import { useAccessLayer } from "@/ui/useAccessLayer";
@@ -12,7 +13,7 @@ const TripMap = dynamic(() => import("./TripMap"), {
   loading: () => <div className="map-loading">{strings.mapLoading}</div>,
 });
 
-export default function ClientTripMap(props: Omit<TripMapProps, "access">) {
+export default function ClientTripMap({ overlay, ...props }: Omit<TripMapProps, "access"> & { overlay?: ReactNode }) {
   const layer = useAccessLayer(props.trip);
   const close = () => layer.select(null);
 
@@ -22,6 +23,7 @@ export default function ClientTripMap(props: Omit<TripMapProps, "access">) {
         {...props}
         access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: layer.select }}
       />
+      {overlay}
       <div className="access-overlay">
         <AccessLayerControls on={layer.on} onToggle={layer.setOn} dateSelector={layer.dateSelector} />
         {layer.selectedWater && <AccessDetailPanel feature={layer.selectedWater} date={layer.date} onClose={close} />}

@@ -16,6 +16,7 @@ import {
 } from "react-leaflet";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import { baseLayer, initialMapView, paneZIndex } from "./mapConfig";
+import SearchResultLayer, { type SearchResultLayerProps } from "@/ui/prototype/placeSearch/SearchResultLayer";
 import { campIcon, legStyle, modeChangeStyle } from "./TripMap";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
@@ -50,6 +51,8 @@ export type PhoneMapProps = {
   focus?: MapFocus | null;
   /** The access layer, while it is switched on (#125): hold a water or tap a lock for its details. */
   access?: Omit<AccessLayerProps, "touch"> | null;
+  /** PROTOTYPE (#169): the place search result. */
+  searchResult?: SearchResultLayerProps | null;
 };
 
 /** Zoom used to show your position: close enough to see the river bank. */
@@ -375,6 +378,7 @@ export default function PhoneMap({
   accessPoints,
   focus,
   access,
+  searchResult,
 }: PhoneMapProps) {
   return (
     <MapContainer
@@ -403,6 +407,7 @@ export default function PhoneMap({
         onLegHold={onLegHold}
       />
       {accessPoints && <AccessPointLayer {...accessPoints} pressDrag />}
+      {searchResult && <SearchResultLayer {...searchResult} />}
       {position && (
         <>
           <Circle

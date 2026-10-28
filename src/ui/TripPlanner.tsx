@@ -15,6 +15,9 @@ import SnapOffers from "./SnapOffers";
 import { strings } from "./strings";
 import TripToolbar from "./TripToolbar";
 import { usePlanner } from "./usePlanner";
+import { PrototypeSwitcher, useVariant } from "./prototype/PrototypeSwitcher";
+import { usePlaceSearchPrototype } from "./prototype/placeSearch/usePlaceSearchPrototype";
+import { DesktopMapBar, DesktopMapControl, DesktopSidebarSection, variantNames, variants } from "./prototype/placeSearch/variants";
 
 /** The questions asked before a trip with points is replaced. */
 const confirmations = { newTrip: strings.newTripConfirm, openFile: strings.openFileConfirm } as const;
@@ -34,12 +37,19 @@ export default function TripPlanner({ router }: { router?: Router }) {
   const showLeg = (leg: number) => setShownLeg({ leg, seq: (shownLeg?.seq ?? 0) + 1 });
   const openFileButton = useRef<HTMLButtonElement>(null);
   const confirmation = confirmations[question];
+  // PROTOTYPE (#169): place search variants.
+  const [variant, setVariant] = useVariant(variants);
+  const search = usePlaceSearchPrototype();
 
   return (
     <div className="planner">
       <ClientTripMap
         trip={trip}
         selectedPoint={selectedPoint}
+        overlay={variant === "A" ? <DesktopMapBar search={search} /> : variant === "C" ? <DesktopMapControl search={search} /> : null}
+        searchResult={
+          search.shown && { result: search.shown, seq: search.shownSeq, label: variant === "C" ? "popup" : "tooltip", onClear: search.clear }
+        }
         // While an access point is being placed, the click places it instead of a trip point.
         onMapClick={(at: LatLng) =>
           access.placing ? access.placeAt(at) : dispatch({ type: "addPoint", at, accessPoints: access.points })
@@ -54,6 +64,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
         }}
       />
       <div className="sidebar">
+        {variant === "B" && <DesktopSidebarSection search={search} />}
         {keepStoredSave && (
           <p className="autosave-warning" role="alert">
             {strings.autosaveUnknownVersion}
@@ -112,6 +123,7 @@ export default function TripPlanner({ router }: { router?: Router }) {
         onCancel={() => dispatch({ type: "cancelReplace" })}
         returnFocusTo={question === "openFile" ? openFileButton : newTripButton}
       />
+      <PrototypeSwitcher keys={variants} names={variantNames} current={variant} onChange={setVariant} />
     </div>
   );
 }

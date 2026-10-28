@@ -31,6 +31,18 @@ import { useMarkAccessPoint } from "./useMarkAccessPoint";
 import { useSideways } from "./usePhoneLayout";
 import { usePosition } from "./usePosition";
 import "./phone.css";
+import { PrototypeSwitcher, useVariant } from "../prototype/PrototypeSwitcher";
+import { usePlaceSearchPrototype } from "../prototype/placeSearch/usePlaceSearchPrototype";
+import {
+  PhoneSearchButton,
+  PhoneSearchDialog,
+  PhoneSearchPill,
+  PhoneSheetField,
+  PhoneSheetOutcome,
+  PhoneShownLine,
+  variantNames,
+  variants,
+} from "../prototype/placeSearch/variants";
 
 type PhoneTab = keyof typeof strings.phone.tabs;
 const tabs = Object.keys(strings.phone.tabs) as PhoneTab[];
@@ -145,6 +157,11 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const nextMode = held?.mode ?? trip.legs[trip.legs.length - 1]?.mode ?? "hike";
   // The leg whose access details dialog is open (#158), if any.
   const [detailsLeg, setDetailsLeg] = useState<number | null>(null);
+  // PROTOTYPE (#169): place search variants.
+  const [variant, setVariant] = useVariant(variants);
+  const search = usePlaceSearchPrototype();
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const searchingInSheet = variant === "C" && search.status.kind !== "idle";
 
   // While an access point is being placed, the tap places it; while a point is selected, it only
   // clears the selection (#120); otherwise it adds a trip point with the next leg's mode.
@@ -217,9 +234,14 @@ export default function PhonePlanner({ router }: { router?: Router }) {
 
   // What the sheet holds, and the side panel instead when sideways (#126): the same content.
   const peekSummary = (
-    <div className="phone-peek-summary">
-      <PhoneTripTotals trip={summary.trip} />
-    </div>
+    <>
+      {variant === "C" && (
+        <PhoneSheetField search={search} onFocus={() => (sideways ? setPanelOpen(true) : setStop("full"))} />
+      )}
+      <div className="phone-peek-summary">
+        <PhoneTripTotals trip={summary.trip} />
+      </div>
+    </>
   );
   const tabList = (
     <TabList label={strings.phone.tabsLabel}>
@@ -238,7 +260,10 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         date={layer.date}
         onClose={() => layer.select(null)}
       />
-      <div className="phone-tab-panels" hidden={detailsOpen}>
+      {variant === "C" && (
+        <PhoneSheetOutcome search={search} onPicked={() => (sideways ? undefined : setStop("peek"))} />
+      )}
+      <div className="phone-tab-panels" hidden={detailsOpen || searchingInSheet}>
         <TabPanel value="legs">
           <PhoneLegsList
             summary={summary}
@@ -303,6 +328,15 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           onMove: (id, to) => access.update(id, { position: to }),
         }}
         focus={focus}
+        searchResult={
+          search.shown && {
+            result: search.shown,
+            seq: search.shownSeq,
+            label: variant === "C" ? "popup" : "tooltip",
+            onClear: search.clear,
+            coveredBelow: sideways ? 0 : stop === "peek" ? 0.2 : stop === "half" ? 0.5 : 0.9,
+          }
+        }
         access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: openAccessDetails }}
       />
       {layer.on && (
@@ -324,7 +358,9 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           saveSettings={saveSettings}
         />
       </div>
+      {variant === "A" && <PhoneSearchPill search={search} />}
       <div className="phone-buttons phone-buttons-top">
+        {variant === "B" && <PhoneSearchButton onOpen={() => setSearchDialogOpen(true)} />}
         <Button
           className="phone-fab"
           aria-label={strings.phone.showPositionButton}
@@ -348,6 +384,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         )}
       </div>
       <div className="phone-buttons phone-buttons-bottom phone-buttons-left">
+        {variant === "B" && <PhoneShownLine search={search} />}
         {marking.locating && (
           <p role="status" className="phone-message">
             {strings.phone.markLocating}
@@ -458,6 +495,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         )}
       </Tabs>
       <PhoneAccessPointDialog point={editing} onSave={access.update} onClose={() => setEditingId(null)} />
+      <PhoneSearchDialog search={search} open={searchDialogOpen} onClose={() => setSearchDialogOpen(false)} />
+      <PrototypeSwitcher keys={variants} names={variantNames} current={variant} onChange={setVariant} />
     </div>
   );
 }

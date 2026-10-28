@@ -15,6 +15,7 @@ import { strings } from "@/ui/strings";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 import { baseLayer, initialMapView, paneZIndex } from "./mapConfig";
+import SearchResultLayer, { type SearchResultLayerProps } from "@/ui/prototype/placeSearch/SearchResultLayer";
 
 export type TripMapProps = {
   trip: Trip;
@@ -30,6 +31,8 @@ export type TripMapProps = {
   access?: AccessLayerProps | null;
   /** Your access points (#55), drawn in their own layer. */
   accessPoints?: AccessPointLayerProps;
+  /** PROTOTYPE (#169): the place search result. */
+  searchResult?: SearchResultLayerProps | null;
 };
 
 // Hike legs are thin and earth-coloured, paddle legs wider and water-blue, so the mix shows at a glance.
@@ -280,7 +283,7 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
 }
 
 // Imports Leaflet, which needs `window`: only load this through ClientTripMap.
-export default function TripMap({ access, ...props }: TripMapProps) {
+export default function TripMap({ access, searchResult, ...props }: TripMapProps) {
   return (
     <MapContainer
       center={[...initialMapView.center]}
@@ -296,6 +299,7 @@ export default function TripMap({ access, ...props }: TripMapProps) {
       {access && <AccessLayer {...access} />}
       <TripLayers {...props} />
       {props.accessPoints && <AccessPointLayer {...props.accessPoints} />}
+      {searchResult && <SearchResultLayer {...searchResult} />}
     </MapContainer>
   );
 }

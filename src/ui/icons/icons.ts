@@ -24,6 +24,8 @@ import {
   faHourglassHalf,
   faLayerGroup,
   faLocationCrosshairs,
+  faLocationDot,
+  faMagnifyingGlass,
   faPen,
   faRotateLeft,
   faShoePrints,
@@ -80,4 +82,8 @@ export const icons = {
   openTrip: faFolderOpen,
   exportGpx: faFileExport,
   settings: faGear,
+  // PROTOTYPE (place search, #169).
+  search: faMagnifyingGlass,
+  searchResult: faLocationDot,
+  clearSearch: faXmark,
 };

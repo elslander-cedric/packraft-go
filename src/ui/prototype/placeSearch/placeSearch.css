@@ -1,0 +1,283 @@
+/* PROTOTYPE (place search UI, #169): throwaway. Not scoped under .phone: the sheet and dialogs
+   are portals outside it. */
+
+/* The field: input plus icon buttons, 44 px tall. */
+.ps-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+  padding-left: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.ps-field input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.5rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 1rem;
+  outline: none;
+}
+
+.ps-field:focus-within {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.ps-icon-button {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.ps-results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-2);
+  border: none;
+  border-top: 1px solid var(--color-border-subtle);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ps-result:hover,
+.ps-result:focus-visible {
+  background: var(--color-surface-hover);
+}
+
+.ps-result-label {
+  font-weight: 600;
+}
+
+.ps-result-kind {
+  margin-left: var(--space-1);
+  color: var(--color-muted);
+  font-weight: 400;
+  font-size: 0.8em;
+}
+
+.ps-result-detail {
+  color: var(--color-muted);
+  font-size: 0.85em;
+}
+
+.ps-message {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.ps-message-alert {
+  color: var(--color-danger);
+}
+
+.ps-message-alert .button {
+  color: var(--color-text);
+}
+
+/* Desktop A: over the map, right of Leaflet's zoom buttons. */
+.ps-desktop-bar {
+  position: absolute;
+  top: var(--space-2);
+  left: 3.5rem;
+  z-index: 1100;
+  width: 22rem;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popup);
+}
+
+.ps-desktop-bar .ps-field {
+  border: none;
+}
+
+/* Desktop B: the sidebar's first section. */
+.ps-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ps-shown {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* Desktop C: a Leaflet-looking control under the zoom buttons. */
+.ps-desktop-control {
+  position: absolute;
+  top: 5.2rem;
+  left: 10px;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.ps-control-button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid rgb(0 0 0 / 20%);
+  border-radius: 4px;
+  background: var(--color-surface);
+}
+
+.ps-control-panel {
+  width: 20rem;
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popup);
+}
+
+/* Phone A: a pill between the menu (left) and the buttons (right). */
+.ps-phone-pill {
+  position: absolute;
+  top: var(--space-3);
+  left: calc(var(--space-3) + 2.75rem + var(--space-2));
+  right: calc(var(--panel-cover, 0px) + var(--space-3) + 2.75rem + var(--space-2));
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  border-radius: 1.375rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+}
+
+.ps-pill-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: 1.375rem;
+  background: transparent;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.ps-pill-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ps-pill-placeholder {
+  color: var(--color-muted);
+}
+
+.ps-phone-pill-open {
+  left: var(--space-3);
+  right: calc(var(--panel-cover, 0px) + var(--space-3));
+  flex-direction: column;
+  align-items: stretch;
+  border-radius: var(--radius-large);
+  max-height: calc(100dvh - var(--sheet-height) - 2 * var(--space-3));
+  overflow-y: auto;
+}
+
+.ps-pill-row {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1);
+}
+
+.ps-pill-row .ps-field {
+  border: none;
+}
+
+/* Phone B: the dialog's field and results. */
+.ps-dialog-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.ps-dialog-outcome {
+  max-height: 40dvh;
+  overflow-y: auto;
+}
+
+/* Phone C: the field in the peek, the results in the sheet. */
+.ps-sheet-field {
+  display: flex;
+  padding: 0 var(--space-3) var(--space-2);
+}
+
+.ps-sheet-outcome:empty {
+  display: none;
+}
+
+/* The result marker: a pin in the accent colour, white edge. */
+.search-result-marker {
+  background: none;
+  border: none;
+}
+
+.search-result-pin {
+  display: block;
+  width: 28px;
+  height: 36px;
+  color: #d0021b;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 50%));
+}
+
+.search-result-pin svg {
+  width: 100%;
+  height: 100%;
+}
+
+.search-result-label {
+  font-weight: 600;
+}
+
+.search-result-popup-detail {
+  margin: 2px 0 var(--space-2);
+  color: var(--color-muted);
+  font-size: 0.85em;
+}
+
+.search-result-popup-clear {
+  min-height: 2.75rem;
+  width: 100%;
+}
