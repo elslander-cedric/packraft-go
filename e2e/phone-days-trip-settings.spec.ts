@@ -208,7 +208,8 @@ test("the sheet has no Trip or Settings tab; the menu's Settings opens a dialog 
     "border-top-width",
     "0px",
   );
-  await expect(paceFactor(page)).toBeFocused();
+  // A form dialog opens without the keyboard on a touch screen (#163): no field is focused.
+  await expect(paceFactor(page)).not.toBeFocused();
   await expect(saveSettings(page)).toBeInViewport({ ratio: 1 });
   await expect(cancelSettings(page)).toBeInViewport({ ratio: 1 });
 });

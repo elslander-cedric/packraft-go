@@ -10,13 +10,18 @@
   background: var(--color-backdrop);
 }
 
+/* Centred in the visible area, which shrinks above an on-screen keyboard (#163):
+   useVisibleArea sets --visible-top and --visible-height from window.visualViewport.
+   A dialog taller than that area scrolls inside. */
 .dialog {
   position: fixed;
-  top: 50%;
+  top: calc(var(--visible-top, 0px) + var(--visible-height, 100dvh) / 2);
   left: 50%;
   z-index: var(--z-overlay);
   box-sizing: border-box;
   max-width: calc(100vw - 2rem);
+  max-height: calc(var(--visible-height, 100dvh) - 2rem);
+  overflow-y: auto;
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-large);

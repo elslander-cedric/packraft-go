@@ -1,8 +1,6 @@
 /* A dialog around a small form; the panel, title and actions are in Dialog.css. */
 .form-dialog {
   width: 24rem;
-  max-height: calc(100dvh - 2rem);
-  overflow-y: auto;
 }
 
 .form-dialog-fields {

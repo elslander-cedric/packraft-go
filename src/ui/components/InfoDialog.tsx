@@ -1,7 +1,8 @@
 import { Dialog } from "@base-ui/react/dialog";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import "./Dialog.css";
 import "./InfoDialog.css";
+import { useVisibleArea } from "./visibleArea";
 
 export type InfoDialogProps = {
   open: boolean;
@@ -18,6 +19,8 @@ export type InfoDialogProps = {
  * Dialog, ADR 0020). Focus goes back to whatever opened it.
  */
 export function InfoDialog({ open, title, children, closeLabel, onClose }: InfoDialogProps) {
+  const popup = useRef<HTMLDivElement>(null);
+  const area = useVisibleArea(open, popup);
   return (
     <Dialog.Root
       open={open}
@@ -27,7 +30,7 @@ export function InfoDialog({ open, title, children, closeLabel, onClose }: InfoD
     >
       <Dialog.Portal>
         <Dialog.Backdrop className="dialog-backdrop" />
-        <Dialog.Popup className="dialog info-dialog">
+        <Dialog.Popup ref={popup} className="dialog info-dialog" style={area}>
           <Dialog.Title className="dialog-title">{title}</Dialog.Title>
           <div className="info-dialog-body">{children}</div>
           <div className="dialog-actions">

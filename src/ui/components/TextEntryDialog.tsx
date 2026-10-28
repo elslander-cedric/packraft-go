@@ -1,8 +1,9 @@
 import { Dialog } from "@base-ui/react/dialog";
-import { useState, type RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { Button } from "./Button";
 import "./Dialog.css";
 import "./TextEntryDialog.css";
+import { useVisibleArea } from "./visibleArea";
 
 export type TextEntryDialogProps = {
   open: boolean;
@@ -23,7 +24,8 @@ export type TextEntryDialogProps = {
 
 /**
  * An in-page dialog that asks for one line of text (Base UI Dialog, ADR 0020).
- * Focus starts in the field with its text selected; Enter confirms.
+ * Focus starts in the field with its text selected, so on a phone the keyboard
+ * opens with it and the dialog sits above the keyboard (#163); Enter confirms.
  */
 export function TextEntryDialog({
   open,
@@ -44,6 +46,10 @@ export function TextEntryDialog({
     if (open) setValue(initialValue);
   }
 
+  const popup = useRef<HTMLDivElement>(null);
+  const field = useRef<HTMLInputElement>(null);
+  const area = useVisibleArea(open, popup);
+
   return (
     <Dialog.Root
       open={open}
@@ -53,7 +59,13 @@ export function TextEntryDialog({
     >
       <Dialog.Portal>
         <Dialog.Backdrop className="dialog-backdrop" />
-        <Dialog.Popup className="dialog text-entry-dialog" finalFocus={returnFocusTo ?? true}>
+        <Dialog.Popup
+          ref={popup}
+          className="dialog text-entry-dialog"
+          style={area}
+          initialFocus={field}
+          finalFocus={returnFocusTo ?? true}
+        >
           <Dialog.Title className="dialog-title">{title}</Dialog.Title>
           <form
             onSubmit={(event) => {
@@ -64,6 +76,7 @@ export function TextEntryDialog({
             <label className="text-entry-field">
               <span>{label}</span>
               <input
+                ref={field}
                 type="text"
                 value={value}
                 onChange={(event) => setValue(event.target.value)}

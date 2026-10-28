@@ -1,8 +1,9 @@
 import { Dialog } from "@base-ui/react/dialog";
-import type { ReactNode, RefObject } from "react";
+import { useRef, type ReactNode, type RefObject } from "react";
 import { Button } from "./Button";
 import "./Dialog.css";
 import "./FormDialog.css";
+import { hasCoarsePointer, useVisibleArea } from "./visibleArea";
 
 export type FormDialogProps = {
   open: boolean;
@@ -23,7 +24,9 @@ export type FormDialogProps = {
 
 /**
  * An in-page dialog around a small form (Base UI Dialog, ADR 0020). The
- * screen keeps the fields' values; Enter in a field confirms.
+ * screen keeps the fields' values; Enter in a field confirms. On a touch screen
+ * it opens without the keyboard, so the whole form shows first; it stays above
+ * the keyboard once a field is tapped (#163).
  */
 export function FormDialog({
   open,
@@ -36,6 +39,8 @@ export function FormDialog({
   onCancel,
   returnFocusTo,
 }: FormDialogProps) {
+  const popup = useRef<HTMLDivElement>(null);
+  const area = useVisibleArea(open, popup);
   return (
     <Dialog.Root
       open={open}
@@ -45,7 +50,13 @@ export function FormDialog({
     >
       <Dialog.Portal>
         <Dialog.Backdrop className="dialog-backdrop" />
-        <Dialog.Popup className="dialog form-dialog" finalFocus={returnFocusTo ?? true}>
+        <Dialog.Popup
+          ref={popup}
+          className="dialog form-dialog"
+          style={area}
+          initialFocus={() => (hasCoarsePointer() ? popup.current : true)}
+          finalFocus={returnFocusTo ?? true}
+        >
           <Dialog.Title className="dialog-title">{title}</Dialog.Title>
           <form
             onSubmit={(event) => {
