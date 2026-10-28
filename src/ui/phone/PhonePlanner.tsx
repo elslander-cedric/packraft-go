@@ -286,6 +286,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         <TabPanel value="accessPoints">
           <PhoneAccessPoints
             access={access}
+            trip={trip}
+            position={position.state === "shown" ? position.at : null}
             changed={pointsChanged}
             onOpen={openAccessPoint}
             onEdit={(id) => {

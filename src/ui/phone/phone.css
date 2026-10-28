@@ -276,9 +276,38 @@
   padding: var(--space-1) var(--space-3);
 }
 
+/* The lists run edge to edge like the Legs and Days rows (#156): cancel the body's side
+   padding, and the panels' top gap unless the saved note comes first. */
+.phone-access-point-lists {
+  margin: 0 calc(-1 * var(--space-3));
+}
+
+.phone-access-point-lists:first-child {
+  margin-top: calc(-1 * var(--space-3));
+}
+
+/* "On the route" and "Not on the route", lined up with the row text (its 4 px bar plus padding). */
+.phone-access-point-heading {
+  margin: 0;
+  padding: var(--space-3) var(--space-3) var(--space-2) calc(var(--space-2) + 4px);
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Each list, or the line saying none is on the route, leaves extra room before "Not on the route". */
+.phone-access-point-none {
+  margin: 0 0 var(--space-3);
+  padding: 0 var(--space-3) 0 calc(var(--space-2) + 4px);
+}
+
+/* A line above the first row as well as below each one, like the Legs and Days rows. */
 .phone-access-point-list {
   margin: 0 0 var(--space-3);
   padding: 0;
+  border-top: 1px solid var(--color-border);
   list-style: none;
 }
 
@@ -286,6 +315,7 @@
 .phone-access-point-item {
   display: flex;
   align-items: center;
+  padding-right: var(--space-1);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -311,6 +341,11 @@
   font-size: 1.1rem;
 }
 
+/* One background whether selected or not (#156): the left bar marks the selected row. */
+.button.phone-access-point-row:hover:not([data-disabled]) {
+  background: var(--color-surface);
+}
+
 .button.phone-access-point-row[aria-current] {
   border-left-color: var(--color-focus);
 }
@@ -319,6 +354,14 @@
 .phone-access-point-note {
   flex-basis: 100%;
   white-space: pre-line;
+}
+
+/* How far along the route, or from you (#156). */
+.phone-access-point-figure {
+  flex-basis: 100%;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .phone-access-point-detail {

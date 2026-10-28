@@ -245,6 +245,16 @@ export const strings = {
     placingCancel: "Cancel",
     savedOnDevice: "Saved on this device.",
     noAccessPoints: "No access points yet. Mark one with the button at the bottom of the map.",
+    // The tab's two lists while the trip has a route (#156): on the route in route order, then the rest nearest you.
+    onRouteHeading: "On the route",
+    notOnRouteHeading: "Not on the route",
+    noneOnRoute: "None of your access points is on this route.",
+    // How far along the route a row is, e.g. "km 2.3", and whether the trip's put-in or take-out is there.
+    alongRoute: (km: string) => `km ${km}`,
+    yourPutIn: "Your put-in",
+    yourTakeOut: "Your take-out",
+    // How far a row is from your position, e.g. "1.8 km from you".
+    fromYou: (distance: string) => `${distance} from you`,
     // A row's icon-only buttons; `heading` is how the row reads (its name, else its note or use and kind).
     editAccessPoint: (heading: string) => `Edit ${heading}`,
     deleteAccessPoint: (heading: string) => `Delete ${heading}`,
