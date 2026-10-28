@@ -247,7 +247,6 @@ export const strings = {
     // The state line while the next map tap places an access point.
     placingState: "Placing an access point",
     placingCancel: "Cancel",
-    savedOnDevice: "Saved on this device.",
     noAccessPoints: "No access points yet. Mark one with the button at the bottom of the map.",
     // The tab's two lists while the trip has a route (#156): on the route in route order, then the rest nearest you.
     onRouteHeading: "On the route",
@@ -266,10 +265,11 @@ export const strings = {
     accessPointDialogTitle: "Access point details",
     accessPointSave: "Save",
     // The access layer on the phone (#125): the layers button under the position button is named `accessLayerToggle`.
-    // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a popover.
+    // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a dialog.
     accessChip: (when: string) => `Access · ${when}`,
     accessChipToday: "today",
-    accessPopoverLabel: "Access layer",
+    accessDialogTitle: "Access layer",
+    accessDialogClose: "Close",
     // The floating menu top left (#124): the rare actions on the whole trip.
     menu: {
       button: "Menu",

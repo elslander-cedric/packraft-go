@@ -66,7 +66,7 @@ test("an unnamed, empty trip shows no name and no totals; there's no disclaimer 
   await expect(sheet(page).getByRole("heading")).toHaveCount(0);
   await expect(sheet(page)).not.toContainText(strings.tripNamePlaceholder);
   await expect(totals(page)).toHaveCount(0);
-  // The disclaimer is in the access popover only (ADR 0026), not a line over the map.
+  // The disclaimer is in the access dialog only (ADR 0026), not a line over the map.
   await expect(page.getByRole("note")).toBeHidden();
   await expect(page.getByText(strings.navigationRulesNotice)).toBeHidden();
 });

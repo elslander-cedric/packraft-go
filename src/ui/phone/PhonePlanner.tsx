@@ -131,14 +131,6 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const detailsOpen = layer.selectedWater !== undefined || layer.selectedLock !== undefined;
   // Where the map last zoomed to, for an access point row (#119).
   const [focus, setFocus] = useState<MapFocus | null>(null);
-  // Your access points changed since opening, for "Saved on this device" (the hook saves every Save at once).
-  // Kept here, not in the tab, which is unmounted while another tab is open.
-  const [seenPoints, setSeenPoints] = useState(access.points);
-  const [pointsChanged, setPointsChanged] = useState(false);
-  if (access.points !== seenPoints) {
-    setSeenPoints(access.points);
-    setPointsChanged(true);
-  }
 
   // The next leg's mode (#121): the last leg's mode (hike for an empty trip), unless the planner
   // picked another since the trip last changed. Any edit (adding a leg with it, delete, undo…),
@@ -276,7 +268,6 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             access={access}
             trip={trip}
             position={position.state === "shown" ? position.at : null}
-            changed={pointsChanged}
             onOpen={openAccessPoint}
             onEdit={(id) => {
               access.select(id);

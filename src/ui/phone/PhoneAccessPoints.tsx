@@ -22,8 +22,6 @@ type Props = {
   trip: Trip;
   /** Your position when shown, to order the points not on the route; null otherwise. */
   position: LatLng | null;
-  /** Your access points changed since the planner opened (each Save is stored at once). */
-  changed: boolean;
   /** A row was tapped: show that access point on the map. */
   onOpen: (id: string) => void;
   /** A row's edit button: open that point's details in the edit dialog. */
@@ -45,7 +43,7 @@ function alongRoute({ alongKm, role }: OnRoute): string {
  * the floating button on the map; the details are a dialog. Every change is
  * saved on the device at once by `useAccessPoints`, with or without signal.
  */
-export default function PhoneAccessPoints({ access, trip, position, changed, onOpen, onEdit }: Props) {
+export default function PhoneAccessPoints({ access, trip, position, onOpen, onEdit }: Props) {
   const { points, selected } = access;
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const lists = useRef<HTMLDivElement>(null);
@@ -58,18 +56,11 @@ export default function PhoneAccessPoints({ access, trip, position, changed, onO
     if (selected) lists.current?.querySelector("[aria-current]")?.scrollIntoView?.({ block: "nearest" });
   }, [selected]);
 
-  const savedNote =
-    access.savingPaused === null ? (
-      changed && (
-        <p role="status" className="phone-saved">
-          {text.savedOnDevice}
-        </p>
-      )
-    ) : (
-      <p role="alert" className="phone-position-alert">
-        {access.savingPaused === "unknown-version" ? pointText.autosaveUnknownVersion : pointText.damagedNotBackedUp}
-      </p>
-    );
+  const savingPausedAlert = access.savingPaused !== null && (
+    <p role="alert" className="phone-position-alert">
+      {access.savingPaused === "unknown-version" ? pointText.autosaveUnknownVersion : pointText.damagedNotBackedUp}
+    </p>
+  );
 
   const row = (point: AccessPoint, figure: string | null): ReactNode => {
     const { heading, note, detail } = accessPointText(point);
@@ -108,7 +99,7 @@ export default function PhoneAccessPoints({ access, trip, position, changed, onO
 
   return (
     <section className="phone-access-points" aria-label={text.accessPointsLabel}>
-      {savedNote}
+      {savingPausedAlert}
       {points.length === 0 ? (
         <p className="phone-empty">{text.noAccessPoints}</p>
       ) : (

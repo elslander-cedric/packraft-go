@@ -1,8 +1,9 @@
 import { AlertDialog } from "@base-ui/react/alert-dialog";
-import type { RefObject } from "react";
+import { useRef, type RefObject } from "react";
 import { Button } from "./Button";
 import "./Dialog.css";
 import "./ConfirmDialog.css";
+import { useVisibleArea } from "./visibleArea";
 
 type FocusTarget = RefObject<HTMLElement | null>;
 
@@ -34,6 +35,8 @@ export function ConfirmDialog({
   onCancel,
   returnFocusTo,
 }: ConfirmDialogProps) {
+  const popup = useRef<HTMLDivElement>(null);
+  const area = useVisibleArea(open, popup);
   return (
     <AlertDialog.Root
       open={open}
@@ -43,7 +46,12 @@ export function ConfirmDialog({
     >
       <AlertDialog.Portal>
         <AlertDialog.Backdrop className="dialog-backdrop" />
-        <AlertDialog.Popup className="dialog confirm-dialog" finalFocus={returnFocusTo ?? true}>
+        <AlertDialog.Popup
+          ref={popup}
+          className="dialog confirm-dialog"
+          style={area}
+          finalFocus={returnFocusTo ?? true}
+        >
           <AlertDialog.Title className="dialog-title">{title}</AlertDialog.Title>
           <AlertDialog.Description className="confirm-dialog-message">{message}</AlertDialog.Description>
           <div className="dialog-actions">

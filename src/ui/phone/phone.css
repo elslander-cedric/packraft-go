@@ -246,11 +246,6 @@
 }
 
 /* Access points on the phone (#63, #119): big targets for the form and the list. */
-.phone-saved {
-  margin: 0 0 var(--space-2);
-  color: var(--color-muted);
-}
-
 .phone-access-point-form .toggle,
 .phone-access-point-form .button,
 .phone-access-point-form input {
@@ -799,8 +794,33 @@
   white-space: nowrap;
 }
 
-.phone-access-popover .phone-disclaimer {
-  margin-top: 0;
+/* The access layer's dialog (#163): the dialogs' text size; the date row's fields take
+   the dialogs' 44 px height from Dialog.css. */
+.phone-access-dialog .access-date {
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* As in Edit trip: each label above its field, the fields full width, Today beside the date. */
+.phone-access-dialog .access-date label {
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.phone-access-dialog .access-date label:has(select) {
+  flex-basis: 100%;
+}
+
+.phone-access-dialog .access-date :is(input, select) {
+  font-size: 1rem;
+}
+
+.phone-access-dialog .access-legend {
+  margin-top: var(--space-3);
 }
 
 /* A water's or a lock's details in the sheet, above the open tab: part of the sheet, not a floating card. */

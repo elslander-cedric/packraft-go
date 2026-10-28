@@ -1,5 +1,5 @@
 // The access layer on the phone (#125, ADR 0026, stories 74–81): a layers button under the position button,
-// a chip with a popover for the date, legend, note and disclaimer; a tap on water edits the
+// a chip with a dialog for the date, legend, note and disclaimer; a tap on water edits the
 // route, holding a water off a leg (0.4 s, the app's own timer) or tapping a lock opens its
 // details in the sheet at half, with Close back to the tab. Built-in data and recorded
 // fixtures only; no live service is called.
@@ -22,7 +22,10 @@ const lock = (page: Page, id: string) => mapRegion(page).locator(`path.access-lo
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const layersButton = (page: Page) => page.getByRole("button", { name: strings.accessLayerToggle, exact: true });
 const chip = (page: Page) => page.getByRole("button", { name: /^Access · / });
-const popover = (page: Page) => page.getByRole("dialog", { name: phoneText.accessPopoverLabel });
+// Behind the access dialog, which hides the rest of the page from the accessibility tree while open.
+const waterBehind = (page: Page, id: string) => page.locator(`.leaflet-container path.access-record-${id}`);
+const chipBehind = (page: Page) => page.locator(".phone-access-chip");
+const accessDialog = (page: Page) => page.getByRole("dialog", { name: phoneText.accessDialogTitle });
 const sheet = (page: Page) => page.getByRole("dialog", { name: phoneText.sheetLabel });
 const waterDetails = (page: Page) => sheet(page).getByRole("region", { name: strings.accessDetailLabel });
 const lockDetails = (page: Page) => sheet(page).getByRole("region", { name: strings.lockDetailLabel });
@@ -130,7 +133,7 @@ test("the layers button under the position button switches the access layer on a
   expect(network.blocked).toEqual([]);
 });
 
-test("the chip's popover holds the date, legend, note and disclaimer; Today and Trip day colour the waters", async ({
+test("the chip's dialog holds the date, legend, note and disclaimer; Today and Trip day colour the waters; Close goes back to the chip", async ({
   page,
 }) => {
   await page.clock.setFixedTime(new Date("2026-07-15T10:00:00+02:00"));
@@ -142,20 +145,26 @@ test("the chip's popover holds the date, legend, note and disclaimer; Today and 
   await expect(water(page, LESSE)).toHaveAttribute("stroke", ORANGE);
 
   await chip(page).click();
-  await expect(popover(page)).toBeVisible();
-  const legend = popover(page).getByRole("region", { name: strings.accessLegendLabel });
+  await expect(accessDialog(page)).toBeVisible();
+  const legend = accessDialog(page).getByRole("region", { name: strings.accessLegendLabel });
   for (const label of Object.values(strings.accessState)) await expect(legend.getByText(label, { exact: true })).toBeVisible();
-  await expect(popover(page)).toContainText(strings.accessLegendNote);
-  await expect(popover(page)).toContainText(strings.navigationRulesNotice);
+  await expect(accessDialog(page)).toContainText(strings.accessLegendNote);
+  await expect(accessDialog(page)).toContainText(strings.navigationRulesNotice);
 
   // The trip's first day (15 December) is in season.
-  await popover(page).getByLabel(strings.accessTripDayLabel).selectOption("2026-12-15");
-  await expect(water(page, LESSE)).toHaveAttribute("stroke", GREEN);
-  await expect(chip(page)).toHaveAccessibleName(phoneText.accessChip("2026-12-15"));
+  await accessDialog(page).getByLabel(strings.accessTripDayLabel).selectOption("2026-12-15");
+  await expect(waterBehind(page, LESSE)).toHaveAttribute("stroke", GREEN);
+  await expect(chipBehind(page)).toHaveAttribute("aria-label", phoneText.accessChip("2026-12-15"));
 
-  await popover(page).getByRole("button", { name: strings.accessTodayButton }).click();
-  await expect(water(page, LESSE)).toHaveAttribute("stroke", ORANGE);
-  await expect(chip(page)).toHaveAccessibleName(phoneText.accessChip(phoneText.accessChipToday));
+  await accessDialog(page).getByRole("button", { name: strings.accessTodayButton }).click();
+  await expect(waterBehind(page, LESSE)).toHaveAttribute("stroke", ORANGE);
+  await expect(chipBehind(page)).toHaveAttribute("aria-label", phoneText.accessChip(phoneText.accessChipToday));
+
+  // A dialog like the others (#163): finger-sized date field, Close goes back to the chip.
+  await expect(accessDialog(page).getByLabel(strings.accessDateLabel)).toHaveCSS("height", "44px");
+  await accessDialog(page).getByRole("button", { name: phoneText.accessDialogClose }).click();
+  await expect(accessDialog(page)).toHaveCount(0);
+  await expect(chip(page)).toBeFocused();
   expect(network.blocked).toEqual([]);
 });
 

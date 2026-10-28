@@ -134,7 +134,7 @@ body {
   font-size: 0.9rem;
 }
 
-/* The phone planner shows the disclaimer in the access popover
+/* The phone planner shows the disclaimer in the access dialog
    instead (ADR 0026). Keep this query in step with PHONE_QUERY in usePhoneLayout.ts. */
 @media (max-width: 640px), (max-height: 640px) and (pointer: coarse) {
   .navigation-notice {

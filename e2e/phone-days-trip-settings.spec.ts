@@ -208,7 +208,8 @@ test("the sheet has no Trip or Settings tab; the menu's Settings opens a dialog 
     "border-top-width",
     "0px",
   );
-  await expect(paceFactor(page)).toBeFocused();
+  // A form dialog opens without the keyboard on a touch screen (#163): no field is focused.
+  await expect(paceFactor(page)).not.toBeFocused();
   await expect(saveSettings(page)).toBeInViewport({ ratio: 1 });
   await expect(cancelSettings(page)).toBeInViewport({ ratio: 1 });
 });
@@ -303,7 +304,7 @@ test("the Days tab carries the access: a day card's chip opens its leg's details
   await expect(select).toHaveAttribute("aria-expanded", "true");
   await expect(dayCards(page).nth(1).locator(".access-warning")).toHaveCount(0);
   await expect(panel(page)).not.toContainText(strings.accessState.unknown);
-  // The disclaimer is in the access chip's popover only.
+  // The disclaimer is in the access chip's dialog only.
   await expect(panel(page).getByText(strings.navigationRulesNotice)).toHaveCount(0);
 
   // The chip opens its leg's details dialog over the Days tab (#158), with the warning, and
