@@ -43,11 +43,12 @@ export type PhoneMenuProps = {
 };
 
 /**
- * The phone's floating menu top left (#124, ADR 0026): New trip, Trip details… (#154),
- * which opens the trip's name and start date in a dialog, Save…, Open…,
- * Export GPX… and Settings… (#151), which opens the settings dialog. Save and Export ask for the trip name first, prefilled with
- * the current one. A new trip starts with today in Brussels as its start date.
- * New trip and Open… ask before losing points, as on desktop.
+ * The phone's floating menu top left (#124, ADR 0026), each item with an icon, in three
+ * groups: New trip, Edit trip (#154), which opens the trip's name and start date in a
+ * dialog, Save trip and Open trip; Export GPX; Settings (#151), which opens the settings
+ * dialog. Save and Export ask for the trip name first, prefilled with the current one.
+ * A new trip starts with today in Brussels as its start date. New trip and Open trip
+ * ask before losing points, as on desktop.
  */
 export default function PhoneMenu({
   trip,
@@ -81,12 +82,27 @@ export default function PhoneMenu({
         trigger={<Icon icon={icons.menu} />}
         triggerClassName="phone-fab"
         items={[
-          { label: text.newTrip, onSelect: () => dispatch({ type: "newTrip", startDate: todayInBrussels(new Date()) }) },
-          { label: text.tripDetails, onSelect: () => setDetailsOpen(true) },
-          { label: text.saveFile, onSelect: () => askName("save") },
-          { label: text.openFile, onSelect: () => fileInput.current?.click() },
-          { label: text.exportGpx, onSelect: () => askName("export"), disabled: trip.legs.length === 0 },
-          { label: text.settings, onSelect: () => setSettingsOpen(true) },
+          {
+            label: text.newTrip,
+            icon: <Icon icon={icons.newTrip} />,
+            onSelect: () => dispatch({ type: "newTrip", startDate: todayInBrussels(new Date()) }),
+          },
+          { label: text.tripDetails, icon: <Icon icon={icons.editTrip} />, onSelect: () => setDetailsOpen(true) },
+          { label: text.saveFile, icon: <Icon icon={icons.saveTrip} />, onSelect: () => askName("save") },
+          { label: text.openFile, icon: <Icon icon={icons.openTrip} />, onSelect: () => fileInput.current?.click() },
+          {
+            label: text.exportGpx,
+            icon: <Icon icon={icons.exportGpx} />,
+            groupStart: true,
+            onSelect: () => askName("export"),
+            disabled: trip.legs.length === 0,
+          },
+          {
+            label: text.settings,
+            icon: <Icon icon={icons.settings} />,
+            groupStart: true,
+            onSelect: () => setSettingsOpen(true),
+          },
         ]}
       />
       {fileError && (

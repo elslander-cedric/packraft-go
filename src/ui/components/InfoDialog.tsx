@@ -1,5 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog";
 import type { ReactNode } from "react";
+import "./Dialog.css";
 import "./InfoDialog.css";
 
 export type InfoDialogProps = {
@@ -25,11 +26,11 @@ export function InfoDialog({ open, title, children, closeLabel, onClose }: InfoD
       }}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop className="info-dialog-backdrop" />
-        <Dialog.Popup className="info-dialog">
-          <Dialog.Title className="info-dialog-title">{title}</Dialog.Title>
+        <Dialog.Backdrop className="dialog-backdrop" />
+        <Dialog.Popup className="dialog info-dialog">
+          <Dialog.Title className="dialog-title">{title}</Dialog.Title>
           <div className="info-dialog-body">{children}</div>
-          <div className="info-dialog-actions">
+          <div className="dialog-actions">
             <Dialog.Close className="button">{closeLabel}</Dialog.Close>
           </div>
         </Dialog.Popup>

@@ -18,7 +18,7 @@
   background: var(--color-surface);
   color: var(--color-text);
   border-top: 1px solid var(--color-border-strong);
-  border-radius: 0.75rem 0.75rem 0 0;
+  border-radius: var(--radius-large) var(--radius-large) 0 0;
   box-shadow: var(--shadow-sheet);
   outline: 0;
   pointer-events: auto;

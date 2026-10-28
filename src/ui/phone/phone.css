@@ -262,6 +262,16 @@
   font-size: 1rem;
 }
 
+/* Labels as in the other dialogs: the text's own size and colour, a little above the field. */
+.phone-access-point-form .access-point-field {
+  gap: var(--space-2);
+}
+
+.phone-access-point-form .access-point-field > :is(span, label) {
+  font-size: inherit;
+  color: var(--color-text);
+}
+
 /* The dialog's title names it; the details' own heading only labels them. */
 .phone-access-point-form .access-point-details h3 {
   display: none;
@@ -663,7 +673,7 @@
 .phone-trip-details label {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .phone-trip-details input {

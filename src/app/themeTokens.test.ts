@@ -57,6 +57,11 @@ const pairs: [string, string][] = [
   ["--color-on-accent", "--color-hike"],
   ["--color-on-accent", "--color-paddle"],
   ["--color-on-accent", "--color-camp"],
+  // A dialog's filled main and destructive buttons (white text in both themes).
+  ["--color-on-accent", "--color-primary"],
+  ["--color-on-accent", "--color-primary-hover"],
+  ["--color-on-accent", "--color-danger-fill"],
+  ["--color-on-accent", "--color-danger-fill-hover"],
 ];
 
 describe("theme tokens (#141)", () => {

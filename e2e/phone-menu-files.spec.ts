@@ -1,6 +1,6 @@
 // The phone menu and files (#124, spec #114 stories 54–60): a floating menu top
-// left with New trip, Save…, Open… and Export GPX…. Save and Export ask for the
-// trip name first; New trip and Open… ask before losing points, as on desktop.
+// left with New trip, Edit trip, Save trip, Open trip, Export GPX and Settings. Save and
+// Export ask for the trip name first; New trip and Open trip ask before losing points, as on desktop.
 // Also restores the phone's open-a-trip-file coverage (first #71).
 import { readFile } from "node:fs/promises";
 import { devices, expect, test, type Page } from "@playwright/test";
@@ -70,7 +70,7 @@ async function choose(page: Page, name: string) {
   await menuItem(page, name).click();
 }
 
-/** The trip's name as Trip details… shows it (#154); the dialog is closed again without changes. */
+/** The trip's name as Trip details shows it (#154); the dialog is closed again without changes. */
 async function expectTripName(page: Page, name: string) {
   await choose(page, text.tripDetails);
   const dialog = nameDialog(page, text.tripDetailsTitle);
@@ -84,7 +84,7 @@ async function openFile(page: Page, content: string) {
   await chooser.setFiles({ name: "trip.json", mimeType: "application/json", buffer: Buffer.from(content) });
 }
 
-test("the menu sits top left with New trip, Save…, Open…, Export GPX… and Settings…", async ({ page }) => {
+test("the menu sits top left with its items in three groups, each with an icon", async ({ page }) => {
   await serveOffline(page);
   await openPhone(page);
   const button = (await menuButton(page).boundingBox())!;
@@ -101,6 +101,14 @@ test("the menu sits top left with New trip, Save…, Open…, Export GPX… and 
     text.exportGpx,
     text.settings,
   ]);
+  // Dividers only between the groups: the trip items, Export GPX, Settings.
+  const rows = page.locator(".menu > *");
+  await expect(rows).toHaveCount(8);
+  await expect(rows.nth(4)).toHaveAttribute("role", "separator");
+  await expect(rows.nth(6)).toHaveAttribute("role", "separator");
+  for (const item of await page.getByRole("menuitem").all()) {
+    await expect(item.locator("svg.icon")).toHaveCount(1);
+  }
   // Nothing to export without a leg.
   await expect(menuItem(page, text.exportGpx)).toHaveAttribute("aria-disabled", "true");
 });
@@ -144,7 +152,7 @@ test("New trip asks first when there are points, then starts with today in Bruss
   await context.close();
 });
 
-test("Open… replaces the trip after the same question as on desktop, and it survives a reload", async ({ page }) => {
+test("Open trip replaces the trip after the same question as on desktop, and it survives a reload", async ({ page }) => {
   const network = await serveOffline(page);
   await seed(page, OURTHE);
   await openPhone(page);
@@ -164,7 +172,7 @@ test("Open… replaces the trip after the same question as on desktop, and it su
   expect(network.brouter).toEqual([]);
 });
 
-test("Open… with a file that isn't a trip file shows why and keeps the trip", async ({ page }) => {
+test("Open trip with a file that isn't a trip file shows why and keeps the trip", async ({ page }) => {
   await serveOffline(page);
   await seed(page, OURTHE);
   await openPhone(page);
@@ -176,7 +184,7 @@ test("Open… with a file that isn't a trip file shows why and keeps the trip", 
   expect(await stored(page)).toBe(before);
 });
 
-test("Save… asks for the name, prefilled; the file and the trip take the name from the dialog", async ({ page }) => {
+test("Save trip asks for the name, prefilled; the file and the trip take the name from the dialog", async ({ page }) => {
   await serveOffline(page);
   await seed(page, OURTHE);
   await openPhone(page);
@@ -208,7 +216,7 @@ test("Save… asks for the name, prefilled; the file and the trip take the name 
   await expectTripName(page, name);
 });
 
-test("Export GPX… asks for the name; the GPX files are well-formed, named from it, and stay below 180°", async ({
+test("Export GPX asks for the name; the GPX files are well-formed, named from it, and stay below 180°", async ({
   page,
 }) => {
   await serveOffline(page);
