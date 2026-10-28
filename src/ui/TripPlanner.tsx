@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { Router } from "@/core/router";
-import { canUndo, isCamp, type LatLng } from "@/core/trip";
+import { canGoBackToStart, canUndo, isCamp, type LatLng } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import AccessPointsPanel from "./AccessPointsPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
@@ -74,9 +74,17 @@ export default function TripPlanner({ router }: { router?: Router }) {
         />
         <EditToolbar
           canUndo={canUndo(trip)}
+          backToStartDisabledReason={
+            canGoBackToStart(trip)
+              ? null
+              : trip.points.length < 2
+                ? strings.backToStartNeedsTwoPoints
+                : strings.backToStartAlreadyThere
+          }
           canDeletePoint={selectedPoint !== null}
           selectedPointIsCamp={selectedPoint === null ? null : isCamp(trip, selectedPoint)}
           onUndo={undo}
+          onBackToStart={() => dispatch({ type: "backToStart" })}
           onDeletePoint={deleteSelectedPoint}
           onToggleCamp={() => dispatch({ type: "toggleCampOnSelectedPoint" })}
         />

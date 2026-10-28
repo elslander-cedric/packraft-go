@@ -3,10 +3,13 @@ import { strings } from "./strings";
 
 type EditToolbarProps = {
   canUndo: boolean;
+  /** Why Back to start is unavailable, or null when it is available. */
+  backToStartDisabledReason: string | null;
   canDeletePoint: boolean;
   /** Whether the selected point is a camp; null when no point is selected. */
   selectedPointIsCamp: boolean | null;
   onUndo: () => void;
+  onBackToStart: () => void;
   onDeletePoint: () => void;
   onToggleCamp: () => void;
 };
@@ -14,9 +17,11 @@ type EditToolbarProps = {
 /** Buttons for route edits that are not done on the map itself. */
 export default function EditToolbar({
   canUndo,
+  backToStartDisabledReason,
   canDeletePoint,
   selectedPointIsCamp,
   onUndo,
+  onBackToStart,
   onDeletePoint,
   onToggleCamp,
 }: EditToolbarProps) {
@@ -29,6 +34,9 @@ export default function EditToolbar({
           disabledReason={canUndo ? null : strings.undoDisabledReason}
         >
           {strings.undoButton}
+        </ToolbarButton>
+        <ToolbarButton onClick={onBackToStart} hint={strings.backToStartHint} disabledReason={backToStartDisabledReason}>
+          {strings.backToStartButton}
         </ToolbarButton>
         <ToolbarButton
           onClick={onDeletePoint}

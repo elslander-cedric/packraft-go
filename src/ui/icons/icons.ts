@@ -1,6 +1,7 @@
 // The app's UI icons (#143, ADR 0028): Font Awesome Free Solid, imported only here,
 // so switching to another set only touches src/ui/icons/. Their names stay in strings.ts.
 import {
+  faArrowsSpin,
   faArrowTrendDown,
   faArrowTrendUp,
   faBan,
@@ -44,6 +45,8 @@ export const icons = {
   time: faClock,
   showPosition: faLocationCrosshairs,
   undo: faRotateLeft,
+  // Back to start (GLOSSARY "Loop"), on the phone's map.
+  backToStart: faArrowsSpin,
   accessPoint: faFlag,
   deletePoint: faXmark,
   // An access point row's edit and delete buttons (phone).

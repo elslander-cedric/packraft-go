@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import type { Router } from "@/core/router";
 import type { DaySummary } from "@/core/summarise";
-import { canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
+import { canGoBackToStart, canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import ClientPhoneMap from "@/map/ClientPhoneMap";
 import type { MapFocus } from "@/map/PhoneMap";
 import { BottomSheet, type SheetStop } from "../components/BottomSheet";
@@ -361,6 +361,15 @@ export default function PhonePlanner({ router }: { router?: Router }) {
               {strings.phone.placingCancel}
             </Button>
           </div>
+        )}
+        {canGoBackToStart(trip) && (
+          <Button
+            className="phone-fab"
+            aria-label={strings.phone.backToStartButton}
+            onClick={() => dispatch({ type: "backToStart", mode: nextMode })}
+          >
+            <Icon icon={icons.backToStart} />
+          </Button>
         )}
         <Button
           className="phone-fab"

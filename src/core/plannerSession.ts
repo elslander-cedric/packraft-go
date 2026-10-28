@@ -4,11 +4,11 @@
 // effects (autosave, route requests, reading and downloading files, key bindings).
 //
 // One rule per piece of state (see ADR 0025):
-// - selected point: cleared by add, move and delete point, set leg mode, undo,
+// - selected point: cleared by add, move and delete point, back to start, set leg mode, undo,
 //   accept offer and any replace of the trip; insert point makes it follow the
 //   selected point when the insert shifts its index; kept by everything else.
 // - snap offers: set leg mode and add point replace them with the offers worked
-//   out from the trip they produced; move, insert, delete, undo and replace drop them; accept and
+//   out from the trip they produced; move, insert, delete, back to start, undo and replace drop them; accept and
 //   decline remove that one offer; access points changed drops the offers to a
 //   deleted access point and makes the offers to a moved one follow it.
 // - file error: set by file rejected; cleared by every other action except a
@@ -25,6 +25,7 @@ import { distanceM } from "./geo";
 import { snapOffers, snapToAccessPoint, type SnapOffer } from "./snap";
 import {
   applyEdit,
+  canGoBackToStart,
   emptyTrip,
   newTripNeedsConfirmation,
   renameTrip,
@@ -57,6 +58,8 @@ export type PlannerSession = {
 export type PlannerAction =
   | { readonly type: "addPoint"; readonly at: LatLng; readonly mode?: LegMode; readonly accessPoints: AccessPoints }
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
+  /** Adds a leg from the last point back to the start (GLOSSARY "Loop"), in `mode` when given. */
+  | { readonly type: "backToStart"; readonly mode?: LegMode }
   | { readonly type: "deleteSelectedPoint" }
   /** Inserts a point on leg `leg` of the route, nearest to `near` (#122). */
   | { readonly type: "insertPoint"; readonly index: number; readonly near: LatLng }
@@ -147,6 +150,9 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
     }
     case "movePoint":
       return edited(session, applyEdit(trip, action));
+    case "backToStart":
+      if (!canGoBackToStart(trip)) return session;
+      return edited(session, applyEdit(trip, { type: "addPoint", at: trip.points[0], mode: action.mode }));
     case "insertPoint": {
       const after = applyEdit(trip, action);
       if (after === trip) return session;
