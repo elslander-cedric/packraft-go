@@ -493,9 +493,10 @@
 }
 
 /* A card's title is a calendar tile with its date (weekday, day, month), the camp
-   colour along its top; the legs, figures and access sit beside it. */
+   colour along its top, centred on the card's height; the figures and access sit beside it. */
 .phone-tab-panels .day-card {
   flex-wrap: nowrap;
+  align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-left: 0;
@@ -503,7 +504,6 @@
 
 .day-tile {
   flex: 0 0 3.5rem;
-  align-self: flex-start;
   min-height: 3.75rem;
   padding: var(--space-1) 0;
   border: 1px solid var(--color-border);
@@ -537,22 +537,56 @@
 
 .day-card-body {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
+.day-figure {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.day-figure-icon {
+  margin-right: 0.3em;
+}
+
+/* Like a leg row: the distances as a headline, in their modes' colours, the time on the right. */
+.day-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-3);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.day-figure-hike .day-figure-icon {
+  color: var(--color-hike);
+}
+
+.day-figure-paddle .day-figure-icon {
+  color: var(--color-paddle);
+}
+
+.day-headline .day-figure-time {
+  margin-left: auto;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Climb, descent and the legs, smaller and muted under the headline. */
 .day-figures {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 0.75rem;
+  gap: var(--space-1) var(--space-3);
+  color: var(--color-muted);
+  font-size: 0.85rem;
 }
 
-.day-figures > span {
-  white-space: nowrap;
-}
-
-.day-figures .day-time {
-  flex-basis: 100%;
+.day-figures .day-legs {
+  margin-left: auto;
 }
 
 /* The Trip tab (#123): name, start date and the trip's access summary. */

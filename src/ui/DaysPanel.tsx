@@ -4,6 +4,8 @@ import type { DaySummary } from "@/core/summarise";
 import type { DayAccess } from "@/core/tripAccess";
 import type { ReactNode } from "react";
 import { dayDateParts, formatDayDate, formatDistance, formatElevation, formatTimeEstimate } from "./format";
+import { Icon } from "./icons/Icon";
+import { icons } from "./icons/icons";
 import { strings } from "./strings";
 import { DayWarningChips } from "./TripAccessView";
 
@@ -13,7 +15,7 @@ import { DayWarningChips } from "./TripAccessView";
  * their calendar dates (#52). A day with access, lock or aire warnings shows one chip
  * per leg that has any; the warnings themselves are on the leg, which a chip shows (#58).
  * Where cards take taps (the phone), each card is titled by a calendar tile with its
- * date instead of "Day n".
+ * date instead of "Day n", and its figures are shown after icons.
  */
 export default function DaysPanel({
   days,
@@ -86,10 +88,26 @@ function DayFigures({ day }: { day: DaySummary }) {
   );
 }
 
+type DayFigureKey = "hike" | "paddle" | "climb" | "descent" | "time";
+
+/** One figure after its icon; the icon's meaning is read out before the value. */
+function DayFigure({ figure, value }: { figure: DayFigureKey; value: string | false }) {
+  if (!value) return null;
+  return (
+    <span className={`day-figure day-figure-${figure}`}>
+      <Icon icon={icons[figure]} className="day-figure-icon" />
+      <span className="visually-hidden">{`${strings.phone.dayFigures[figure]} `}</span>
+      {value}
+    </span>
+  );
+}
+
 /**
  * A phone day card: a calendar tile (weekday, day, month) is its title; an undated
- * trip's tile shows "Day" and the day's number. The card takes the tap and zooms the
- * map to that day (#123); its warning chips take taps of their own.
+ * trip's tile shows "Day" and the day's number. Beside it, like a leg row, the hike and
+ * paddle distances as a headline with the time on the right, and under them the climb,
+ * descent and legs; a figure that is zero is left out. The card takes the tap and zooms
+ * the map to that day (#123); its warning chips take taps of their own.
  */
 function PhoneDayCard({
   day,
@@ -128,9 +146,15 @@ function PhoneDayCard({
         )}
       </button>
       <div className="day-card-body">
-        <span className="day-legs">{strings.dayLegs(day.firstLeg + 1, day.lastLeg + 1)}</span>
+        <div className="day-headline">
+          <DayFigure figure="hike" value={day.hikeDistanceKm > 0 && formatDistance(day.hikeDistanceKm)} />
+          <DayFigure figure="paddle" value={day.paddleDistanceKm > 0 && formatDistance(day.paddleDistanceKm)} />
+          <DayFigure figure="time" value={formatTimeEstimate(day.timeH, day.timeStatus)} />
+        </div>
         <div className="day-figures">
-          <DayFigures day={day} />
+          <DayFigure figure="climb" value={Math.round(day.climbM) > 0 && formatElevation(day.climbM)} />
+          <DayFigure figure="descent" value={Math.round(day.descentM) > 0 && formatElevation(day.descentM)} />
+          <span className="day-legs">{strings.dayLegs(day.firstLeg + 1, day.lastLeg + 1)}</span>
         </div>
         {warnings}
       </div>
