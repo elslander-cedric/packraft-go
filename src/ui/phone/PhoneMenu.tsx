@@ -12,6 +12,7 @@ import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
 import { strings } from "../strings";
 import PhoneSettingsDialog from "./PhoneSettingsDialog";
+import PhoneTripDetailsDialog from "./PhoneTripDetailsDialog";
 
 const text = strings.phone.menu;
 
@@ -42,7 +43,8 @@ export type PhoneMenuProps = {
 };
 
 /**
- * The phone's floating menu top left (#124, ADR 0026): New trip, Save…, Open…,
+ * The phone's floating menu top left (#124, ADR 0026): New trip, Trip details… (#154),
+ * which opens the trip's name and start date in a dialog, Save…, Open…,
  * Export GPX… and Settings… (#151), which opens the settings dialog. Save and Export ask for the trip name first, prefilled with
  * the current one. A new trip starts with today in Brussels as its start date.
  * New trip and Open… ask before losing points, as on desktop.
@@ -64,6 +66,7 @@ export default function PhoneMenu({
   const [naming, setNaming] = useState<NamedFile>("save");
   const [namingOpen, setNamingOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const askName = (file: NamedFile) => {
     setNaming(file);
     setNamingOpen(true);
@@ -79,6 +82,7 @@ export default function PhoneMenu({
         triggerClassName="phone-fab"
         items={[
           { label: text.newTrip, onSelect: () => dispatch({ type: "newTrip", startDate: todayInBrussels(new Date()) }) },
+          { label: text.tripDetails, onSelect: () => setDetailsOpen(true) },
           { label: text.saveFile, onSelect: () => askName("save") },
           { label: text.openFile, onSelect: () => fileInput.current?.click() },
           { label: text.exportGpx, onSelect: () => askName("export"), disabled: trip.legs.length === 0 },
@@ -115,6 +119,14 @@ export default function PhoneMenu({
           setNamingOpen(false);
         }}
         onCancel={() => setNamingOpen(false)}
+      />
+      <PhoneTripDetailsDialog
+        open={detailsOpen}
+        name={trip.name}
+        startDate={trip.startDate}
+        onRename={(name) => dispatch({ type: "rename", name })}
+        onSetStartDate={(date) => dispatch({ type: "setStartDate", date })}
+        onClose={() => setDetailsOpen(false)}
       />
       {settings && (
         <PhoneSettingsDialog

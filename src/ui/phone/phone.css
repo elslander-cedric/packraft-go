@@ -45,10 +45,6 @@
   padding: 0;
 }
 
-.phone .side-panel:not([data-open]) .phone-trip-name {
-  display: none;
-}
-
 .phone .side-panel:not([data-open]) .phone-totals {
   flex-direction: column;
   flex-wrap: nowrap;
@@ -119,7 +115,7 @@
   color: var(--color-danger);
 }
 
-/* The peek's header: the trip name on its own line, the totals under it (or alone, unnamed). */
+/* The peek's header: the trip's totals. */
 .phone-peek-summary {
   display: flex;
   flex-direction: column;
@@ -129,15 +125,6 @@
 
 .phone-peek-summary:empty {
   display: none;
-}
-
-.phone-trip-name {
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  font-size: 1.05rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Small enough for all five figures to fit one line on a phone; wraps on a narrower screen, but a
@@ -610,20 +597,20 @@
   margin-left: auto;
 }
 
-/* The Trip tab (#123): name, start date and the trip's access summary. */
-.phone-trip-tab {
+/* The Trip details dialog from the menu (#154): name and start date. */
+.phone-trip-details {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.phone-trip-tab label {
+.phone-trip-details label {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
-.phone-trip-tab input {
+.phone-trip-details input {
   min-height: 2.75rem;
   font-size: 1rem;
 }
@@ -650,7 +637,7 @@
 }
 
 /* The Settings tab (#123): the desktop's fields, finger-sized. The tab names the panel, and the
-   sheet body already pads it: no heading, rule or padding of its own, like the Trip tab. */
+   sheet body already pads it: no heading, rule or padding of its own. */
 /* The settings dialog from the menu (#151). */
 .form-dialog .settings-panel {
   padding: 0;

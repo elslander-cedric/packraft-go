@@ -1,6 +1,6 @@
 // The phone planner's sheet header and chrome after the first try on an Android phone:
 // the bottom buttons sit above the sheet, the selected tab stands out, the header shows
-// the trip name (if any) above the totals by mode with climb and descent, the tab content
+// the totals by mode with climb and descent (the trip name is in Trip details…, #154), the tab content
 // starts below the tab row, and there is no "Indicative only" banner over the map (ADR 0026).
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
@@ -66,18 +66,19 @@ test("an unnamed, empty trip shows no name and no totals; there's no disclaimer 
   await expect(sheet(page).getByRole("heading")).toHaveCount(0);
   await expect(sheet(page)).not.toContainText(strings.tripNamePlaceholder);
   await expect(totals(page)).toHaveCount(0);
-  // The disclaimer is in the access popover and the Trip tab only (ADR 0026), not a line over the map.
+  // The disclaimer is in the access popover and the Days tab only (ADR 0026), not a line over the map.
   await expect(page.getByRole("note")).toBeHidden();
   await expect(page.getByText(strings.navigationRulesNotice)).toBeHidden();
 });
 
-test("a named trip shows its name with the totals below: hike, paddle, climb, descent and time", async ({ page }) => {
+test("the header shows the totals, not the trip name: hike, paddle, climb, descent and time", async ({ page }) => {
   await serveOffline(page);
   await open(page, hikeAndPaddle("Dinant weekend"));
   await expect(points(page)).toHaveCount(3);
 
-  const name = sheet(page).getByRole("heading", { name: "Dinant weekend" });
-  await expect(name).toBeVisible();
+  // The name is in Trip details… only (#154).
+  await expect(sheet(page).getByRole("heading")).toHaveCount(0);
+  await expect(sheet(page)).not.toContainText("Dinant weekend");
   const figures = totals(page).locator(".phone-total");
   await expect(figures).toHaveCount(5);
   const { labels } = text.totals;
@@ -87,13 +88,6 @@ test("a named trip shows its name with the totals below: hike, paddle, climb, de
   }
   await expect(figures.nth(2)).toContainText(`75 ${strings.metreUnit}`);
   await expect(figures.nth(3)).toContainText(`85 ${strings.metreUnit}`);
-  // The totals are below the name, not beside it (measured in one go: the sheet may still be sliding in).
-  const below = await sheet(page).evaluate(
-    (el) =>
-      el.querySelector(".phone-totals")!.getBoundingClientRect().top >=
-      el.querySelector("h2")!.getBoundingClientRect().bottom - 1,
-  );
-  expect(below).toBe(true);
 });
 
 test("on a phone, all five totals fit on one line", async ({ page }) => {
@@ -108,7 +102,7 @@ test("on a phone, all five totals fit on one line", async ({ page }) => {
   expect(new Set(tops).size).toBe(1);
 });
 
-test("a trip with no paddle legs leaves the paddle figure out; with no name only the totals show", async ({ page }) => {
+test("a trip with no paddle legs leaves the paddle figure out", async ({ page }) => {
   await serveOffline(page);
   const save = hikeAndPaddle("   ");
   save.trip.points = save.trip.points.slice(0, 2);
@@ -116,22 +110,19 @@ test("a trip with no paddle legs leaves the paddle figure out; with no name only
   await open(page, save);
   await expect(points(page)).toHaveCount(2);
 
-  await expect(sheet(page).getByRole("heading")).toHaveCount(0);
   await expect(totals(page).locator(".phone-total")).toHaveCount(4);
   await expect(iconIn(totals(page), icons.paddle)).toHaveCount(0);
   await expect(iconIn(totals(page), icons.hike)).toBeVisible();
   await expect(totals(page)).not.toContainText(text.totals.labels.paddle);
 });
 
-test("a long trip name stays on one line and the totals wrap, with the tab row still in the peek", async ({ page }) => {
+test("on a narrow phone the totals wrap, with the tab row still in the peek", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await serveOffline(page);
   await open(page, hikeAndPaddle("A very long trip name for a week on the Lesse, the Meuse and the Semois"));
   await expect(points(page)).toHaveCount(3);
   await settled(page);
 
-  const name = sheet(page).getByRole("heading");
-  expect(await name.evaluate((el) => el.scrollWidth > el.clientWidth && el.clientHeight < 40)).toBe(true);
   // No figure breaks inside or spills out of the screen.
   for (const figure of await totals(page).locator(".phone-total").all()) {
     const { x, width, height } = await box(figure);
@@ -175,14 +166,16 @@ test("the leg and day lists sit right under the tab row; every other tab's conte
   for (const name of Object.values(text.tabs)) {
     await tab(page, name).click();
     await settled(page);
-    // Measured in one go: the panel's content re-renders as the tab opens.
-    const gap = await sheet(page).evaluate((el) => {
-      const tabs = el.querySelector('[role="tablist"]')!.getBoundingClientRect();
-      const first = el.querySelector('[role="tabpanel"]:not([hidden]) > *')!.getBoundingClientRect();
-      return first.top - tabs.bottom;
-    });
-    if (flush.includes(name)) expect(Math.round(gap), name).toBe(0);
-    else expect(gap, name).toBeGreaterThanOrEqual(12);
+    // Measured in one go, polled: the panel's content re-renders as the tab opens, and right
+    // after Days the flush Days panel may still be the one shown.
+    const gap = () =>
+      sheet(page).evaluate((el) => {
+        const tabs = el.querySelector('[role="tablist"]')!.getBoundingClientRect();
+        const first = el.querySelector('[role="tabpanel"]:not([hidden]) > *')!.getBoundingClientRect();
+        return Math.round(first.top - tabs.bottom);
+      });
+    if (flush.includes(name)) await expect.poll(gap, { message: name }).toBe(0);
+    else await expect.poll(gap, { message: name }).toBeGreaterThanOrEqual(12);
   }
 });
 

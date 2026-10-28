@@ -4,6 +4,7 @@
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { addAccessPoint, serialiseAccessPoints, updateAccessPoint } from "../src/core/accessPoints";
 import { serialiseTrip } from "../src/core/saveFile";
+import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { icons } from "../src/ui/icons/icons";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
@@ -408,7 +409,10 @@ test("a picked next leg's mode doesn't outlive New trip or Open…", async ({ pa
   const opened = serialiseTrip({ name: "Opened", points: [P0, P1], legs: [{ mode: "hike" }] });
   const [chooser] = await Promise.all([page.waitForEvent("filechooser"), choose(menu.openFile)]);
   await chooser.setFiles({ name: "trip.json", mimeType: "application/json", buffer: Buffer.from(opened) });
-  await expect(sheet(page).getByRole("heading", { name: "Opened", exact: true })).toBeVisible();
+  // The peek shows no name (#154): wait for the opened trip in storage instead.
+  await expect
+    .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "{}").trip?.name, TRIP_KEY))
+    .toBe("Opened");
   await expectNextMode(page, strings.legModeHike);
 });
 

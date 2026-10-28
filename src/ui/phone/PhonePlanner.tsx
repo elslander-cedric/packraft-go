@@ -25,7 +25,6 @@ import SnapOffers from "../SnapOffers";
 import type { ShownLeg } from "../shownLeg";
 import PhoneLegsList from "./PhoneLegsList";
 import PhoneMenu from "./PhoneMenu";
-import PhoneTripTab from "./PhoneTripTab";
 import PhoneTripTotals from "./PhoneTripTotals";
 import { positionMessage } from "./position";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
@@ -236,10 +235,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   };
 
   // What the sheet holds, and the side panel instead when sideways (#126): the same content.
-  const tripName = trip.name.trim();
   const peekSummary = (
     <div className="phone-peek-summary">
-      {tripName && <h2 className="phone-trip-name">{tripName}</h2>}
       <PhoneTripTotals trip={summary.trip} />
     </div>
   );
@@ -285,14 +282,6 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           />
           {/* The disclaimer follows the day cards and their warning chips (#123). */}
           {waterAccess && summary.days.length > 0 && <p className="phone-disclaimer">{strings.navigationRulesNotice}</p>}
-        </TabPanel>
-        <TabPanel value="trip">
-          <PhoneTripTab
-            name={trip.name}
-            startDate={trip.startDate}
-            onRename={(name) => dispatch({ type: "rename", name })}
-            onSetStartDate={(date) => dispatch({ type: "setStartDate", date })}
-          />
         </TabPanel>
         <TabPanel value="accessPoints">
           <PhoneAccessPoints

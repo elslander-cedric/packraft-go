@@ -1,6 +1,6 @@
-// The phone planner's Days and Trip tabs (#123, ADR 0026) and its Settings dialog from
-// the menu (#151): day cards that zoom the map to their day and carry its access, the
-// trip's name and start date, and the planner's settings stored on the device. The trip is seeded in browser storage with
+// The phone planner's Days tab (#123, ADR 0026) and its Trip details and Settings dialogs
+// from the menu (#154, #151): day cards that zoom the map to their day and carry its access,
+// the trip's name and start date, and the planner's settings stored on the device. The trip is seeded in browser storage with
 // routed legs, so nothing is routed: a hike to the Meuse at Dinant, a camp, then a
 // paddle leg on the Meuse (unlisted Walloon water: not allowed, #75).
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
@@ -27,9 +27,12 @@ const dayChips = (page: Page, day: number) =>
 // The tile is the card's first button; its warning chips follow.
 const dayTile = (card: Locator) => card.getByRole("button").first();
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const tripName = (page: Page) => panel(page).getByLabel(strings.tripNameLabel);
-const startDate = (page: Page) => panel(page).getByLabel(strings.startDateLabel);
-const clearDate = (page: Page) => panel(page).getByRole("button", { name: strings.clearStartDateButton });
+const detailsDialog = (page: Page) => page.getByRole("dialog", { name: text.menu.tripDetailsTitle });
+const tripName = (page: Page) => detailsDialog(page).getByLabel(strings.tripNameLabel);
+const startDate = (page: Page) => detailsDialog(page).getByLabel(strings.startDateLabel);
+const clearDate = (page: Page) => detailsDialog(page).getByRole("button", { name: strings.clearStartDateButton });
+const saveDetails = (page: Page) => detailsDialog(page).getByRole("button", { name: text.menu.tripDetailsConfirm });
+const cancelDetails = (page: Page) => detailsDialog(page).getByRole("button", { name: strings.confirmCancel });
 const settingsDialog = (page: Page) => page.getByRole("dialog", { name: strings.settingsPanelLabel });
 const paceFactor = (page: Page) => settingsDialog(page).getByLabel(strings.paceFactorLabel);
 const paddleSpeed = (page: Page) => settingsDialog(page).getByLabel(strings.paddleSpeedLabel);
@@ -41,6 +44,12 @@ async function openSettings(page: Page) {
   await menuButton(page).click();
   await page.getByRole("menuitem", { name: text.menu.settings, exact: true }).click();
   await expect(settingsDialog(page)).toBeVisible();
+}
+/** Menu → Trip details…: the trip's name and start date. */
+async function openDetails(page: Page) {
+  await menuButton(page).click();
+  await page.getByRole("menuitem", { name: text.menu.tripDetails, exact: true }).click();
+  await expect(detailsDialog(page)).toBeVisible();
 }
 const totals = (page: Page) => sheet(page).locator(".phone-totals");
 
@@ -176,12 +185,12 @@ test("the Days tab has no heading or rule of its own; the cards run edge to edge
   await expect(dayCards(page).nth(0)).toHaveCSS("border-bottom-width", "1px");
 });
 
-test("the sheet has no Settings tab; the menu's Settings… opens a dialog without a heading of its own", async ({
+test("the sheet has no Trip or Settings tab; the menu's Settings… opens a dialog without a heading of its own", async ({
   page,
 }) => {
   await serveOffline(page);
   await openWithTrip(page);
-  await expect(sheet(page).getByRole("tab")).toHaveText([text.tabs.legs, text.tabs.days, text.tabs.trip, text.tabs.accessPoints]);
+  await expect(sheet(page).getByRole("tab")).toHaveText([text.tabs.legs, text.tabs.days, text.tabs.accessPoints]);
 
   await openSettings(page);
   // The dialog's title is its only heading: it already names the fields.
@@ -195,21 +204,23 @@ test("the sheet has no Settings tab; the menu's Settings… opens a dialog witho
   await expect(cancelSettings(page)).toBeInViewport({ ratio: 1 });
 });
 
-test("the Trip tab renames the trip and sets, changes and clears its start date; all autosaved, no date drift", async ({
+test("Trip details… renames the trip and sets, changes and clears its start date on Save; all autosaved, no date drift", async ({
   page,
 }) => {
   await serveOffline(page);
   await openWithTrip(page);
-  await tab(page, text.tabs.trip).click();
+  await openDetails(page);
 
   await expect(tripName(page)).toHaveValue("Dinant weekend");
-  await tripName(page).fill("Meuse & Lesse");
-  await expect(sheet(page).getByRole("heading", { name: "Meuse & Lesse" })).toBeVisible();
-  await expect.poll(async () => (await storedTrip(page)).trip.name).toBe("Meuse & Lesse");
-
   await expect(startDate(page)).toHaveValue("");
   await expect(clearDate(page)).toHaveCount(0);
+  await tripName(page).fill("Meuse & Lesse");
   await startDate(page).fill("2026-10-31");
+  // Typing is a draft: nothing changes until Save.
+  expect((await storedTrip(page)).trip.name).toBe("Dinant weekend");
+  await saveDetails(page).click();
+  await expect(detailsDialog(page)).toHaveCount(0);
+  await expect.poll(async () => (await storedTrip(page)).trip.name).toBe("Meuse & Lesse");
   await expect.poll(async () => (await storedTrip(page)).trip.startDate).toBe("2026-10-31");
   await tab(page, text.tabs.days).click();
   // A dated day's title is its date on a calendar tile, never "Day n".
@@ -219,19 +230,26 @@ test("the Trip tab renames the trip and sets, changes and clears its start date;
   await expect(dayTile(dayCards(page).nth(1))).toHaveText(/^Sun\s*1\s*Nov$/);
   await expect(dayCards(page).nth(0)).not.toContainText(strings.dayTileWord);
 
-  await tab(page, text.tabs.trip).click();
+  await openDetails(page);
   await startDate(page).fill("2027-07-10");
+  // Enter in a field saves.
+  await startDate(page).press("Enter");
+  await expect(detailsDialog(page)).toHaveCount(0);
+  await expect.poll(async () => (await storedTrip(page)).trip.startDate).toBe("2027-07-10");
   await page.reload();
-  await tab(page, text.tabs.trip).click();
+  await openDetails(page);
   await expect(startDate(page)).toHaveValue("2027-07-10");
   await expect(tripName(page)).toHaveValue("Meuse & Lesse");
+  await cancelDetails(page).click();
   await tab(page, text.tabs.days).click();
   await expect(dayTile(dayCards(page).nth(0))).toHaveAccessibleName("Sat 10 Jul 2027");
   await expect(dayTile(dayCards(page).nth(1))).toHaveAccessibleName("Sun 11 Jul 2027");
 
-  await tab(page, text.tabs.trip).click();
+  await openDetails(page);
   await clearDate(page).click();
   await expect(startDate(page)).toHaveValue("");
+  await expect(clearDate(page)).toHaveCount(0);
+  await saveDetails(page).click();
   await expect.poll(async () => (await storedTrip(page)).trip.startDate).toBeUndefined();
   await tab(page, text.tabs.days).click();
   await expect(dayCards(page)).toHaveCount(2);
@@ -239,20 +257,31 @@ test("the Trip tab renames the trip and sets, changes and clears its start date;
   await expect(dayTile(dayCards(page).nth(1))).toHaveAccessibleName(strings.dayLabel(2));
 });
 
-test("the Trip tab has no access summary or totals; a day card's chip opens its leg, the disclaimer under the cards", async ({
+test("Cancel and Escape drop the Trip details draft, and the next opening starts from the trip", async ({ page }) => {
+  await serveOffline(page);
+  await openWithTrip(page);
+  const before = await storedTrip(page);
+
+  await openDetails(page);
+  await tripName(page).fill("Not this");
+  await startDate(page).fill("2027-07-10");
+  await cancelDetails(page).click();
+  await expect(detailsDialog(page)).toHaveCount(0);
+
+  await openDetails(page);
+  await expect(tripName(page)).toHaveValue("Dinant weekend");
+  await expect(startDate(page)).toHaveValue("");
+  await tripName(page).fill("Nor this");
+  await page.keyboard.press("Escape");
+  await expect(detailsDialog(page)).toHaveCount(0);
+  expect(await storedTrip(page)).toEqual(before);
+});
+
+test("the Days tab carries the access: a day card's chip opens its leg, the disclaimer under the cards", async ({
   page,
 }) => {
   await serveOffline(page);
   await openWithTrip(page);
-  await tab(page, text.tabs.trip).click();
-  await expect(tripName(page)).toBeVisible();
-  await expect(panel(page)).not.toContainText(strings.tripAccess.chipKind.forbidden);
-  await expect(panel(page)).not.toContainText(strings.navigationRulesNotice);
-  // The totals are in the peek only.
-  const total = (await totals(page).textContent())!;
-  expect(total).toContain(strings.kilometreUnit);
-  await expect(panel(page)).not.toContainText(strings.tripTotalTimeEstimate);
-
   await tab(page, text.tabs.days).click();
   // Unlisted Walloon water is not allowed (#75): a Forbidden chip, never "unknown". The cards
   // carry no warning text, selected or not (ADR 0029); the hike day has no chip.
