@@ -4,6 +4,7 @@ import { Button } from "./components/Button";
 import { FlowFiguresView } from "./FlowFiguresView";
 import { Switch } from "./components/Switch";
 import { accessStateLabel, strings } from "./strings";
+import { StatusIcon } from "./TripAccessView";
 import "./AccessPanel.css";
 
 const states: readonly Exclude<AccessState, "checking">[] = ["open", "closed-today", "forbidden", "unknown"];
@@ -183,7 +184,7 @@ export function AccessDetailPanel({
         </Button>
       </header>
       <p className={`access-status access-status-${status.state}`}>
-        <Swatch state={status.state} />
+        <StatusIcon state={status.state} />
         {accessStateLabel(status.state)}
       </p>
       <p className="access-legend-note access-status-date">{strings.accessStatusOn(date)}</p>

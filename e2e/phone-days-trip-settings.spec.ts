@@ -129,13 +129,22 @@ test("a two-day trip shows two day cards with their figures; tapping a card zoom
   await expect(dayCards(page).nth(0)).toContainText(names.time);
   await expect(dayCards(page).nth(0)).not.toContainText(names.paddle);
   await expect(dayCards(page).nth(1)).toContainText(names.paddle);
-  // The calendar tile sits in the middle of the card's height.
-  const [card, tile] = await Promise.all([dayCards(page).nth(1).boundingBox(), dayTile(dayCards(page).nth(1)).boundingBox()]);
-  expect(Math.abs(tile!.y + tile!.height / 2 - (card!.y + card!.height / 2))).toBeLessThanOrEqual(1);
+  // The figures start level with the top of the calendar tile.
+  const [body, tile] = await Promise.all([
+    dayCards(page).nth(1).locator(".day-card-body").boundingBox(),
+    dayTile(dayCards(page).nth(1)).boundingBox(),
+  ]);
+  expect(Math.abs(body!.y - tile!.y)).toBeLessThanOrEqual(1);
   // The paddle day is on unlisted Walloon water: not allowed, never "unknown" (#75).
   await expect(dayChips(page, 1)).toContainText(strings.tripAccess.chip(2, strings.tripAccess.chipKind.forbidden));
 
+  // The tapped card is marked by the accent bar on its left, the other has none.
+  const bar = (n: number) => dayCards(page).nth(n).evaluate((el) => getComputedStyle(el).borderLeftColor);
+  const transparent = "rgba(0, 0, 0, 0)";
+  expect(await bar(1)).toBe(transparent);
   await dayCards(page).nth(1).tap();
+  await expect.poll(() => bar(1)).not.toBe(transparent);
+  expect(await bar(0)).toBe(transparent);
   await expect.poll(() => inView(page, points(page).nth(1))).toBe(true);
   await expect.poll(() => inView(page, points(page).nth(2))).toBe(true);
   await expect.poll(() => inView(page, points(page).nth(0))).toBe(false);
@@ -277,7 +286,7 @@ test("Cancel and Escape drop the Trip details draft, and the next opening starts
   expect(await storedTrip(page)).toEqual(before);
 });
 
-test("the Days tab carries the access: a day card's chip opens its leg's details dialog, the disclaimer under the cards", async ({
+test("the Days tab carries the access: a day card's chip opens its leg's details dialog; no disclaimer under the cards", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -294,10 +303,8 @@ test("the Days tab carries the access: a day card's chip opens its leg's details
   await expect(select).toHaveAttribute("aria-expanded", "true");
   await expect(dayCards(page).nth(1).locator(".access-warning")).toHaveCount(0);
   await expect(panel(page)).not.toContainText(strings.accessState.unknown);
-  const disclaimer = panel(page).getByText(strings.navigationRulesNotice);
-  await expect(disclaimer).toBeVisible();
-  const [lastCard, below] = await Promise.all([dayCards(page).nth(1).boundingBox(), disclaimer.boundingBox()]);
-  expect(below!.y).toBeGreaterThan(lastCard!.y + lastCard!.height);
+  // The disclaimer is in the access chip's popover only.
+  await expect(panel(page).getByText(strings.navigationRulesNotice)).toHaveCount(0);
 
   // The chip opens its leg's details dialog over the Days tab (#158), with the warning, and
   // doesn't touch the card's selection; Close goes back to the chip.

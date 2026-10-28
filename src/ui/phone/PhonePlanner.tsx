@@ -164,10 +164,12 @@ export default function PhonePlanner({ router }: { router?: Router }) {
       dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points });
     }
   };
-  // A leg row tap shows its leg above the half-raised sheet; rows don't open (#158).
+  // A leg row tap shows its leg above the half-raised sheet and marks the row; rows don't open (#158).
+  const [selectedLeg, setSelectedLeg] = useState<number | undefined>(undefined);
   const selectLegRow = (index: number) => {
     const route = trip.legs[index]?.route;
     const area = route?.status === "routed" ? route.geometry : trip.points.slice(index, index + 2);
+    setSelectedLeg(index);
     raise();
     setFocus({ area, ...covered() });
   };
@@ -251,6 +253,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             legs={trip.legs}
             access={waterAccess}
             aire={aire}
+            selected={selectedLeg}
             onSelect={selectLegRow}
             onShowDetails={setDetailsLeg}
             onRetry={(index) => dispatch({ type: "retryLeg", index })}
@@ -267,8 +270,6 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
             onShowLeg={setDetailsLeg}
           />
-          {/* The disclaimer follows the day cards and their warning chips (#123). */}
-          {waterAccess && summary.days.length > 0 && <p className="phone-disclaimer">{strings.navigationRulesNotice}</p>}
         </TabPanel>
         <TabPanel value="accessPoints">
           <PhoneAccessPoints

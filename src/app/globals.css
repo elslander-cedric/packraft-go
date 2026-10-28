@@ -7,13 +7,16 @@
   --color-surface-hover: #f2f2f2;
   --color-border: #ccc;
   --color-border-strong: #999;
+  /* The accent (selected tab, focus rings, switches): the paddle button's blue in both themes.
+     Never used for text; links have their own colour, light enough to read in the dark theme. */
   --color-focus: #1b6fb5;
+  --color-link: #1b6fb5;
   --color-on-accent: #fff;
   --color-danger: #b00020;
   --color-danger-hover: #8c0019;
   --color-on-danger: #fff;
   /* Filled buttons: a dialog's main action and its destructive one. The same in both themes,
-     dark enough for white text (the dark theme's --color-focus and --color-danger are too light). */
+     dark enough for white text (the dark theme's --color-link and --color-danger are too light). */
   --color-primary: #1b6fb5;
   --color-primary-hover: #155a94;
   --color-danger-fill: #b00020;
@@ -43,7 +46,6 @@
   --shadow-popup: 0 0.25rem 1rem rgb(0 0 0 / 20%);
   /* Buttons floating on the map (phone) and the bottom sheet's edge. */
   --shadow-float: 0 1px 4px rgb(0 0 0 / 30%);
-  --shadow-sheet: 0 -2px 8px rgb(0 0 0 / 20%);
   /* Behind the tiles while they load (Leaflet's own grey in the light theme). */
   --color-map-background: #ddd;
   /* Above Leaflet's panes and controls (z-index up to 1000). */
@@ -68,7 +70,7 @@
     --color-surface-hover: #2c2c2e;
     --color-border: #444;
     --color-border-strong: #707070;
-    --color-focus: #6cb0ef;
+    --color-link: #6cb0ef;
     --color-danger: #ff8080;
     --color-danger-hover: #ffa3a3;
     --color-on-danger: #1c1c1e;
@@ -80,7 +82,6 @@
     --color-paddle-tint: #16283a;
     --shadow-popup: 0 0.25rem 1rem rgb(0 0 0 / 60%);
     --shadow-float: 0 1px 4px rgb(0 0 0 / 70%);
-    --shadow-sheet: 0 -2px 8px rgb(0 0 0 / 60%);
     --color-map-background: #2a2a2a;
   }
 }
@@ -133,7 +134,7 @@ body {
   font-size: 0.9rem;
 }
 
-/* The phone planner shows the disclaimer in the access popover and the Days tab
+/* The phone planner shows the disclaimer in the access popover
    instead (ADR 0026). Keep this query in step with PHONE_QUERY in usePhoneLayout.ts. */
 @media (max-width: 640px), (max-height: 640px) and (pointer: coarse) {
   .navigation-notice {
@@ -533,6 +534,6 @@ path.leg-pending {
 
   .leaflet-container .leaflet-control-attribution a,
   .leaflet-container a.leaflet-popup-close-button {
-    color: var(--color-focus);
+    color: var(--color-link);
   }
 }

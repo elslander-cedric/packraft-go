@@ -14,7 +14,7 @@ ADR 0023 gave phones a read-only view: the map, your position, your access point
 - **Layout (portrait):** a full-screen map with a bottom sheet over it (Base UI Drawer, non-modal, never closes; ADR 0020) (#106).
   - **Stops:** three fixed stops (peek, half, 90%), chosen by drag distance.
   - **Peek:** the trip name, the totals and the tabs.
-  - **Tabs:** Legs, Days, Access points. The tab row scrolls sideways when it doesn't fit. (The Trip tab, with only the trip's name and start date, became the Trip details dialog, Edit trip in the menu: #154.)
+  - **Tabs:** Legs, Days, Access points. The tabs share the row's width equally; a name too long for its share wraps onto a second line (amended 2026-10-28: the row scrolled sideways until then). (The Trip tab, with only the trip's name and start date, became the Trip details dialog, Edit trip in the menu: #154.)
     - **Legs:** compact rows; a tap zooms the map to the leg and opens the row.
     - **Days:** a card per day; a day's access warnings are chips that open their leg (ADR 0029).
     - **Trip:** name and start date (the access summary went in #123; ADR 0029).
@@ -40,7 +40,7 @@ ADR 0023 gave phones a read-only view: the map, your position, your access point
   - holding a water opens its details, and a tap opens a lock's;
   - details show in the sheet.
 
-  The "Indicative only" disclaimer (ADR 0024) lives in that popover and under the day cards, not as a permanent line.
+  The "Indicative only" disclaimer (ADR 0024) lives in that popover, not as a permanent line or under the day cards.
 - **Names and dates:** saving or exporting asks for the trip name in a dialog. A new trip on the phone gets today as its start date. The start date stays trip data (#106).
 - **No how-to text** in the phone UI: gestures are found by use. Short state lines ("Placing an access point · Cancel") are fine.
 - **Planning needs a signal,** as on desktop (ADR 0023). There's no offline mode or banner: legs that can't be routed show their failure with Retry, while access points and your position keep working offline (#108).

@@ -4,23 +4,24 @@
 
 .tab-list {
   display: flex;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  touch-action: pan-x;
   border-bottom: 1px solid var(--color-border);
-  scrollbar-width: none;
 }
 
+/* The tabs share the row's width equally. A label too long for its share wraps onto a second line
+   rather than being cut off ("Access points" on a 320 px phone). */
 .tab {
-  flex: none;
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 2.75rem;
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2);
   border: none;
   border-bottom: 3px solid transparent;
   background: none;
   color: var(--color-muted);
   font: inherit;
-  white-space: nowrap;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
   cursor: pointer;
 }
 

@@ -59,10 +59,8 @@
   flex-wrap: wrap;
 }
 
-.access-point-field textarea,
 .access-point-field input[type="text"] {
   font: inherit;
-  resize: vertical;
 }
 
 .access-point-checked {

@@ -159,9 +159,10 @@ export function AccessPointDetails({ point, onChange: update, onDelete, onClose,
       </div>
       <label className="access-point-field">
         <span>{text.noteLabel}</span>
-        <textarea
+        {/* One line. An imported note may hold line breaks; the field shows it on one line. */}
+        <input
+          type="text"
           value={point.note}
-          rows={2}
           placeholder={text.notePlaceholder}
           onChange={(event) => update({ note: event.target.value })}
         />

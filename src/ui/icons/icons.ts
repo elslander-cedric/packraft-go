@@ -6,10 +6,12 @@ import {
   faBan,
   faBars,
   faCalendarXmark,
+  faCircleCheck,
   faChevronDown,
   faChevronLeft,
   faChevronRight,
   faCircleInfo,
+  faCircleQuestion,
   faClock,
   faFileCirclePlus,
   faFileExport,
@@ -18,6 +20,7 @@ import {
   faFolderOpen,
   faGear,
   faGaugeHigh,
+  faHourglassHalf,
   faLayerGroup,
   faLocationCrosshairs,
   faPen,
@@ -55,7 +58,13 @@ export const icons = {
   collapsePanel: faChevronRight,
   // A leg row's button that opens its access details (phone, #158).
   legDetails: faCircleInfo,
-  // A day card's warning chips, by the leg's most serious kind.
+  // A leg's access status (phone rows and details), in the status's colour.
+  accessOpen: faCircleCheck,
+  accessClosedToday: faCalendarXmark,
+  accessForbidden: faBan,
+  accessUnknown: faCircleQuestion,
+  accessChecking: faHourglassHalf,
+  // A day card's warning chips and the warnings themselves, by kind.
   warningForbidden: faBan,
   warningClosed: faCalendarXmark,
   warningCheckFlow: faGaugeHigh,

@@ -41,7 +41,7 @@ const pairs: [string, string][] = [
   ["--color-text", "--color-surface"],
   ["--color-muted", "--color-surface"],
   ["--color-danger", "--color-surface"],
-  ["--color-focus", "--color-surface"],
+  ["--color-link", "--color-surface"],
   ["--color-warning", "--color-surface"],
   ["--color-text", "--color-surface-hover"],
   ["--color-muted", "--color-surface-hover"],
@@ -80,6 +80,19 @@ describe("theme tokens (#141)", () => {
       expect(contrast(theme[fg], theme[bg])).toBeGreaterThanOrEqual(4.5);
     });
   }
+
+  // The accent is never text: underlines, outlines and switch fills need 3:1 (WCAG 1.4.11).
+  it.each([
+    ["light", light],
+    ["dark", dark],
+  ] as const)("%s: the accent stands out from the surface (3:1)", (_, theme) => {
+    expect(contrast(theme["--color-focus"], theme["--color-surface"])).toBeGreaterThanOrEqual(3);
+  });
+
+  it("uses the paddle button's blue as the accent in both themes", () => {
+    expect(light["--color-focus"]).toBe(light["--color-paddle"]);
+    expect(dark["--color-focus"]).toBe(light["--color-paddle"]);
+  });
 
   it("colours the phone's status bar like the dark surface", () => {
     expect(DARK_THEME_COLOR).toBe(dark["--color-surface"]);

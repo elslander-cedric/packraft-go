@@ -7,7 +7,7 @@ import { formatDistance, formatElevation, formatTimeEstimate } from "../format";
 import { Icon } from "../icons/Icon";
 import { icons, type IconDefinition } from "../icons/icons";
 import { strings } from "../strings";
-import { AccessStatusLine } from "../TripAccessView";
+import { LegAccessIcons } from "../TripAccessView";
 
 /** True when a leg has access details or aire warnings to show in its dialog. */
 export function hasLegDetails(access: TripAccess | null, aire: readonly AireWarning[], legIndex: number): boolean {
@@ -58,14 +58,16 @@ export type PhoneLegsListProps = {
   /** A row's details button was tapped. */
   onShowDetails: (legIndex: number) => void;
   onRetry: (legIndex: number) => void;
+  /** The leg last tapped, marked by the row's left bar. */
+  selected?: number;
 };
 
 /**
  * The Legs tab (#121): one row per leg, its mode icon and distance as a headline with the
  * time on the right, and under it the climb and descent (drop on a paddle leg), each after
- * its icon, then the access. The leg's number is only read out. Rows don't open (#158): a
- * row with access details or aire warnings has an info button beside its access line,
- * which shows them in a dialog. A leg's mode is not changed here. A leg whose routing
+ * its icon, then icons for the access and each kind of warning. The leg's number is
+ * only read out. Rows don't open (#158): a row with access details or aire warnings has an
+ * info button beside its access, which shows them in full in a dialog. A leg's mode is not changed here. A leg whose routing
  * failed shows the failure with Retry.
  */
 export default function PhoneLegsList({
@@ -73,6 +75,7 @@ export default function PhoneLegsList({
   legs,
   access,
   aire,
+  selected,
   onSelect,
   onShowDetails,
   onRetry,
@@ -88,7 +91,7 @@ export default function PhoneLegsList({
         return (
           <li key={i} className={`phone-row phone-row-${leg.mode}`}>
             <div className="phone-row-head">
-              <Button className="phone-row-toggle" onClick={() => onSelect(i)}>
+              <Button className="phone-row-toggle" aria-current={i === selected || undefined} onClick={() => onSelect(i)}>
                 <span className="visually-hidden">{`${strings.legLabel(i + 1)} `}</span>
                 <span className="phone-row-headline">
                   <FigureView
@@ -109,7 +112,12 @@ export default function PhoneLegsList({
                     ))}
                   </span>
                 )}
-                {status && <AccessStatusLine state={status} className="phone-row-access" />}
+                <LegAccessIcons
+                  state={status}
+                  access={legAccess}
+                  aire={aire.filter((warning) => warning.leg === i)}
+                  className="phone-row-access"
+                />
               </Button>
               {hasLegDetails(access, aire, i) && (
                 <Button
