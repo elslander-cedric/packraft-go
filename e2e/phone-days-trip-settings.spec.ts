@@ -103,10 +103,16 @@ test("a two-day trip shows two day cards with their figures; tapping a card zoom
   await expect(dayCards(page)).toHaveCount(2);
   // An undated trip's tiles show "Day" and the day's number.
   await expect(dayTile(dayCards(page).nth(0))).toHaveAccessibleName(strings.dayLabel(1));
-  await expect(dayCards(page).nth(0)).toContainText(strings.dayHikeDistance);
-  await expect(dayCards(page).nth(0)).toContainText(strings.climbLabel);
-  await expect(dayCards(page).nth(0)).toContainText(strings.dayTimeEstimate);
-  await expect(dayCards(page).nth(1)).toContainText(strings.dayPaddleDistance);
+  // Each figure after its icon, its name read out; a figure that is zero is left out.
+  const names = strings.phone.dayFigures;
+  await expect(dayCards(page).nth(0)).toContainText(`${names.hike} 4.4 km`);
+  await expect(dayCards(page).nth(0)).toContainText(`${names.climb} 35 m`);
+  await expect(dayCards(page).nth(0)).toContainText(names.time);
+  await expect(dayCards(page).nth(0)).not.toContainText(names.paddle);
+  await expect(dayCards(page).nth(1)).toContainText(names.paddle);
+  // The calendar tile sits in the middle of the card's height.
+  const [card, tile] = await Promise.all([dayCards(page).nth(1).boundingBox(), dayTile(dayCards(page).nth(1)).boundingBox()]);
+  expect(Math.abs(tile!.y + tile!.height / 2 - (card!.y + card!.height / 2))).toBeLessThanOrEqual(1);
   // The paddle day is on unlisted Walloon water: not allowed, never "unknown" (#75).
   await expect(dayChips(page, 1)).toContainText(strings.tripAccess.chip(2, strings.tripAccess.chipKind.forbidden));
 
@@ -309,15 +315,20 @@ test.describe("on a narrow phone", () => {
     await page.evaluate(() => document.fonts.ready);
     await tab(page, text.tabs.days).click();
     const card = dayCards(page).nth(0);
-    const figures = card.locator(".day-figures > span");
+    const figures = card.locator(".day-figure, .day-legs");
     await expect(figures.first()).toBeVisible();
     for (const figure of await figures.all()) {
-      const lines = await figure.evaluate((el) => {
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        return new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top))).size;
+      // The icon and the visible text share one line: every box overlaps the first one vertically.
+      const oneLine = await figure.evaluate((el) => {
+        const boxes = [...el.childNodes].flatMap((node) => {
+          if (node instanceof Element && node.classList.contains("visually-hidden")) return [];
+          const range = document.createRange();
+          range.selectNode(node);
+          return [...range.getClientRects()].filter((r) => r.width > 0);
+        });
+        return boxes.length > 0 && boxes.every((b) => b.top < boxes[0].bottom && b.bottom > boxes[0].top);
       });
-      expect(lines, (await figure.textContent()) ?? "").toBe(1);
+      expect(oneLine, (await figure.textContent()) ?? "").toBe(true);
     }
   });
 });

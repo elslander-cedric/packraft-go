@@ -208,6 +208,14 @@ export const strings = {
       // A paddle leg that ends higher than it starts (ADR 0018).
       rise: "Rise, upstream?",
     },
+    // A day card's figures, each after its icon, named for screen readers.
+    dayFigures: {
+      hike: "Hike distance",
+      paddle: "Paddle distance",
+      climb: "Climb",
+      descent: "Descent",
+      time: "Estimated time",
+    },
     // The side panel that replaces the sheet when the phone is held sideways (#126).
     collapsePanelButton: "Collapse the trip panel",
     expandPanelButton: "Open the trip panel",
