@@ -325,6 +325,24 @@ test("a paddle row's info button opens its details dialog with the access and th
   await expect(detailsButton(page, 1)).toBeFocused();
 });
 
+test("the sheet lets Escape through to the page, so it reaches a dialog opened from the sheet before focus moves in", async ({
+  page,
+}) => {
+  await serveOffline(page);
+  await seed(page, { points: [putIn, end], legs: [{ mode: "paddle", geometry: [putIn, end] }] });
+  await openPhone(page);
+  await openLegsTab(page);
+  await rowButton(page, 1).focus();
+  await page.evaluate(() => {
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") document.body.dataset.escapeReached = String(!event.defaultPrevented);
+    });
+  });
+  await page.keyboard.press("Escape");
+  await expect(page.locator("body")).toHaveAttribute("data-escape-reached", "true");
+  await expect(sheet(page)).toBeVisible();
+});
+
 test("a paddle row shows its access as icons on a line of their own under the figures, each icon once", async ({ page }) => {
   await serveOffline(page);
   await seed(page, { points: [putIn, end], legs: [{ mode: "paddle", geometry: [putIn, end] }] });

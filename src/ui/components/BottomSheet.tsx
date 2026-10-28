@@ -49,8 +49,15 @@ export function BottomSheet({ label, stop, onStopChange, peek, children, onPeekH
   return (
     <Drawer.Root
       open
-      // The sheet never closes: dragging it down past the peek just settles it back.
-      onOpenChange={() => {}}
+      // The sheet never closes: dragging it down past the peek just settles it back. Escape is
+      // not the sheet's to take: let it go on to the page, e.g. to a dialog opened from the
+      // sheet before focus has moved into it, or to the planner's deselect.
+      onOpenChange={(_open, details) => {
+        if (details.reason === "escape-key") {
+          details.cancel();
+          details.allowPropagation();
+        }
+      }}
       modal={false}
       disablePointerDismissal
       snapPoints={snapPoints}
