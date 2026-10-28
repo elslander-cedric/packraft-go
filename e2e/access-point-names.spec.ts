@@ -113,6 +113,39 @@ test.describe("on the phone", () => {
   const section = (page: Page) => sheet(page).getByRole("region", { name: phoneText.accessPointsLabel, exact: true });
   const rows = (page: Page) => section(page).getByRole("list").getByRole("listitem");
 
+  const dialog = (page: Page) => page.getByRole("dialog", { name: phoneText.accessPointDialogTitle });
+
+  test("a point marked offline gets its default name back online, also while its details are open, which leads its row", async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(["geolocation"]);
+    await context.setGeolocation({ latitude: 50.268, longitude: 5.446, accuracy: 10 });
+    const network = await serveOffline(page, { nominatim: nominatimFixture("reverse-road.json") });
+    await openMap(page);
+    await sheet(page).getByRole("tab", { name: phoneText.tabs.accessPoints }).click();
+
+    await context.setOffline(true);
+    await page.getByRole("button", { name: phoneText.markAccessPointButton }).click();
+    await expect(dialog(page)).toBeVisible();
+    await expect.poll(async () => (await stored(page))?.[0]?.nameSource).toBe("to-look-up");
+    await expect(nameField(page)).toHaveAttribute("placeholder", text.namePlaceholder);
+    expect(network.nominatim).toHaveLength(0);
+
+    // The default name arrives while the details are open: the name field shows it, and Save keeps it.
+    await dialog(page).getByLabel(text.noteLabel).fill("Gravel bank");
+    await context.setOffline(false);
+    await expect(nameField(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
+    await dialog(page).getByRole("button", { name: phoneText.accessPointSave }).click();
+    await expect.poll(async () => (await stored(page))[0]).toMatchObject({
+      name: DEFAULT_NAME,
+      nameSource: "default",
+      note: "Gravel bank",
+    });
+    await expect(rows(page).first().locator(".phone-row-heading")).toHaveText(DEFAULT_NAME);
+    expect(network.blocked).toEqual([]);
+  });
+
   test("a point marked offline gets its default name back online, which leads its row", async ({ page, context }) => {
     await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({ latitude: 50.268, longitude: 5.446, accuracy: 10 });
@@ -121,7 +154,8 @@ test.describe("on the phone", () => {
     await sheet(page).getByRole("tab", { name: phoneText.tabs.accessPoints }).click();
 
     await context.setOffline(true);
-    await section(page).getByRole("button", { name: phoneText.markHereButton }).click();
+    await page.getByRole("button", { name: phoneText.markAccessPointButton }).click();
+    await dialog(page).getByRole("button", { name: strings.confirmCancel }).click();
     await expect(rows(page)).toHaveCount(1);
     await expect.poll(async () => (await stored(page))?.[0]?.nameSource).toBe("to-look-up");
     // Unnamed, without a note: its use and kind lead.
@@ -133,6 +167,7 @@ test.describe("on the phone", () => {
     await context.setOffline(false);
     await expect(rows(page).first().locator(".phone-row-heading")).toHaveText(DEFAULT_NAME);
     await expect(rows(page).first()).toContainText(text.useAndKind(text.uses.both, text.kinds["informal-bank"]));
+    await rows(page).first().getByRole("button", { name: phoneText.editAccessPoint(DEFAULT_NAME) }).click();
     await expect(nameField(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
     await expect.poll(async () => (await stored(page))[0]).toMatchObject({ name: DEFAULT_NAME, nameSource: "default" });
     expect(network.blocked).toEqual([]);
@@ -166,8 +201,7 @@ test.describe("on the phone", () => {
     await expect(row).toContainText(text.useAndKind(text.uses["put-in"], text.kinds.slipway));
 
     // Open it, which centres it above the sheet, and drag it with a finger once the map has settled.
-    await row.getByRole("button").click();
-    await expect(nameField(page)).toHaveValue("Hotton bridge");
+    await row.getByRole("button").first().click();
     let last = "";
     await expect
       .poll(

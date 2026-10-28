@@ -30,6 +30,7 @@ const deleteButton = (page: Page) => page.getByRole("button", { name: strings.de
 const campButton = (page: Page) => page.getByRole("button", { name: strings.campButton });
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const markButton = (page: Page) => page.getByRole("button", { name: text.markAccessPointButton });
+const editDialog = (page: Page) => page.getByRole("dialog", { name: text.accessPointDialogTitle });
 const pointToAccessButton = (page: Page) => page.getByRole("button", { name: text.selectedPointToAccessPointButton });
 
 /** Your access points as saved on the device. */
@@ -59,6 +60,22 @@ async function openPhone(page: Page) {
 async function spot(page: Page, dx: number, dy: number) {
   const box = (await mapRegion(page).boundingBox())!;
   return { x: box.x + box.width / 2 + dx, y: box.y + box.height / 3 + dy };
+}
+
+/** Waits for the sheet to stop moving (it slides between stops). */
+async function sheetSettled(page: Page) {
+  let last = "";
+  await expect
+    .poll(
+      async () => {
+        const now = JSON.stringify(await sheet(page).boundingBox());
+        const settled = now === last;
+        last = now;
+        return settled;
+      },
+      { intervals: [200] },
+    )
+    .toBe(true);
 }
 
 async function tapAt(page: Page, at: { x: number; y: number }) {
@@ -210,6 +227,9 @@ test("with a point selected, the access-point button makes it an access point", 
   await tapAt(page, at);
   await expect(pointToAccessButton(page)).toBeVisible();
   await pointToAccessButton(page).click();
+  // Its details open; Cancel keeps the new point.
+  await expect(editDialog(page)).toBeVisible();
+  await editDialog(page).getByRole("button", { name: strings.confirmCancel }).click();
 
   await expect(markers(page)).toHaveCount(1);
   const marker = await centreOf(markers(page).first());
@@ -228,7 +248,19 @@ test("a route point under an access point can still be selected and dragged", as
   const at = await centreOf(points(page).nth(0));
   await tapAt(page, at);
   await pointToAccessButton(page).click();
+  await editDialog(page).getByRole("button", { name: strings.confirmCancel }).click();
+  await expect(editDialog(page)).toHaveCount(0);
   await expect(markers(page)).toHaveCount(1);
+  // The new access point raised the sheet to half, over the point: lower it to the peek again.
+  await sheetSettled(page);
+  const box = (await sheet(page).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + 208, { steps: 5 });
+  await page.mouse.move(box.x + box.width / 2, box.y + 408, { steps: 5 });
+  await page.mouse.up();
+  await sheetSettled(page);
+  expect(await centreOf(points(page).nth(0))).toEqual(at);
 
   // A tap there selects the route point, not the access point on top of it.
   await tapAt(page, at);
@@ -274,6 +306,7 @@ test("a finger drags an access point: it moves, is saved on the device, and the 
     .getByRole("listitem")
     .first()
     .getByRole("button")
+    .first()
     .click();
   let last = "";
   await expect

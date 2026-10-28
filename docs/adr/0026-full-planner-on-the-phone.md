@@ -18,12 +18,13 @@ ADR 0023 gave phones a read-only view: the map, your position, your access point
     - **Legs:** compact rows; a tap zooms the map to the leg and opens the row.
     - **Days:** a card per day; a day's access warnings are chips that open their leg (ADR 0029).
     - **Trip:** name and start date (the access summary went in #123; ADR 0029).
+    - **Access points:** your list; each row has edit and delete buttons. Edit opens the point's details in a dialog that stores them on Save (amended 2026-10-28: the details were inline in the tab, with a "Mark here" button, until then).
 - **Layout (sideways):** a full-height side panel on the right with the same tabs, collapsible to a strip with the totals. Rotating keeps the open tab, the open leg row and any selection (#109).
 - **Floating buttons over the map:**
   - top left, the menu: new, save, open, export GPX, and settings (pace factor and paddling speed) in a dialog that stores them on Save. They were a tab until #151.
   - top right: ◎ show my position, and the access layer switch;
   - bottom right: the next leg's mode (hike / paddle) and undo, plus delete and camp while a point is selected;
-  - bottom left: mark an access point (at your GPS position, or the selected route point; without a fix, place it on the map).
+  - bottom left: mark an access point (at your GPS position, or the selected route point; without a fix, place it on the map). The new point opens in the details dialog.
 - **Touch editing** (#107):
   - tap the map to add a point (with a point selected, a tap only clears the selection);
   - tap a point to select it;

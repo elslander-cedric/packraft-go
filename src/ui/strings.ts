@@ -225,8 +225,6 @@ export const strings = {
     // The position and undo buttons are icon-only too; their names are `showPositionButton` and `undoButton`.
     showPositionButton: "Show my position",
     positionLocating: "Finding your position…",
-    // `accuracy` is formatted, e.g. "12 m".
-    positionAccuracy: (accuracy: string) => `Your position, accurate to about ${accuracy}.`,
     positionMarker: "Your position",
     positionDenied:
       "Location permission was denied, so your position can't be shown. To show it, allow location for this site in your browser settings, then try again.",
@@ -235,7 +233,6 @@ export const strings = {
     positionUnsupported: "This browser can't share your location.",
     // Your access points in the phone planner (#119; first #63, ADR 0023).
     accessPointsLabel: "Your access points",
-    markHereButton: "Mark here",
     // The floating button bottom left, icon-only.
     markAccessPointButton: "Mark an access point",
     // The same button while a route point is selected (#120): it saves that point as an access point.
@@ -243,13 +240,17 @@ export const strings = {
     // The delete and camp buttons shown while a point is selected (#120) are icon-only;
     // their names are `deletePointButton` and `campButton`.
     markLocating: "Finding your position to mark the access point…",
-    // `accuracy` is formatted, e.g. "12 m".
-    markedAccuracy: (accuracy: string) => `Marked at your GPS position, accurate to about ${accuracy}.`,
     // The state line while the next map tap places an access point.
     placingState: "Placing an access point",
     placingCancel: "Cancel",
     savedOnDevice: "Saved on this device.",
-    noAccessPoints: "No access points yet.",
+    noAccessPoints: "No access points yet. Mark one with the button at the bottom of the map.",
+    // A row's icon-only buttons; `heading` is how the row reads (its name, else its note or use and kind).
+    editAccessPoint: (heading: string) => `Edit ${heading}`,
+    deleteAccessPoint: (heading: string) => `Delete ${heading}`,
+    // The edit dialog: what you change is kept until Save stores it on the device.
+    accessPointDialogTitle: "Access point details",
+    accessPointSave: "Save",
     // The access layer on the phone (#125): the layers button under the position button is named `accessLayerToggle`.
     // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a popover.
     accessChip: (when: string) => `Access · ${when}`,

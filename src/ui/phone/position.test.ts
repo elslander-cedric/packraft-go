@@ -23,11 +23,8 @@ describe("positionMessage", () => {
     expect(positionMessage({ state: "locating" })).toEqual({ kind: "status", text: strings.phone.positionLocating });
   });
 
-  it("gives the accuracy of a shown position, rounded to whole metres", () => {
-    expect(positionMessage({ state: "shown", at: { lat: 50, lng: 5 }, accuracyM: 12.4 })).toEqual({
-      kind: "status",
-      text: strings.phone.positionAccuracy("12 m"),
-    });
+  it("says nothing once the position is shown: the map shows it", () => {
+    expect(positionMessage({ state: "shown", at: { lat: 50, lng: 5 }, accuracyM: 12.4 })).toBeNull();
   });
 
   it("explains each failure as an alert", () => {
