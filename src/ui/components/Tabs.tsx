@@ -17,7 +17,7 @@ export function Tabs<T extends string>({ value, onChange, children }: TabsProps<
   );
 }
 
-/** The row of tabs. It scrolls sideways when the tabs don't fit. */
+/** The row of tabs, sharing its width equally. */
 export function TabList({ label, children }: { label: string; children: ReactNode }) {
   return (
     <BaseTabs.List

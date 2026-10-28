@@ -136,6 +136,33 @@ test("tapping a row zooms the map to its leg and doesn't open the row (#158)", a
   await expect.poll(async () => isInside(legLines(page).nth(1), await freeMap(page))).toBe(true);
 });
 
+test("the tapped row is marked by the accent bar on its left; no other row has a bar, whatever its mode", async ({
+  page,
+}) => {
+  await serveOffline(page);
+  await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "paddle", geometry: [P1, P2] }] });
+  await openPhone(page);
+  await openLegsTab(page);
+  const bar = (n: number) => legRows(page).nth(n).evaluate((el) => getComputedStyle(el).borderLeftColor);
+  const accent = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.color = "var(--color-focus)";
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+
+  expect([await bar(0), await bar(1)]).toEqual(["rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0)"]);
+  await rowButton(page, 2).click();
+  await expect(rowButton(page, 2)).toHaveAttribute("aria-current", "true");
+  await expect(rowButton(page, 1)).not.toHaveAttribute("aria-current");
+  expect([await bar(0), await bar(1)]).toEqual(["rgba(0, 0, 0, 0)", accent]);
+  await rowButton(page, 1).click();
+  await expect.poll(() => bar(0)).toBe(accent);
+  expect(await bar(1)).toBe("rgba(0, 0, 0, 0)");
+});
+
 test("rows have no tint of their own and keep their background when tapped", async ({ page }) => {
   await serveOffline(page);
   await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "paddle", geometry: [P1, P2] }] });
@@ -268,7 +295,10 @@ test("a paddle row's info button opens its details dialog with the access and th
   await seed(page, { points: [putIn, end], legs: [{ mode: "paddle", geometry: [putIn, end] }] }, slipwayNearby());
   await openPhone(page);
   await openLegsTab(page);
+  // The row shows the aire warning as an icon only (its name read out); the text is in the dialog.
   await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
+  await expect(legRows(page).nth(0).locator('.leg-access-icons svg[data-icon="flag"]')).toHaveCount(1);
+  await expect(legRows(page).nth(0).locator(".leg-access-icons")).toContainText(strings.tripAccess.chipKind.aire);
   await rowButton(page, 1).click();
   await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
   await expect(detailsDialog(page)).toHaveCount(0);
@@ -279,7 +309,7 @@ test("a paddle row's info button opens its details dialog with the access and th
   await expect(dialog).toHaveAccessibleName(new RegExp(`^${strings.legLabel(1)} · ${strings.legModePaddle} · \\S`));
   await expect(dialog.locator(".leg-access-status")).toBeVisible();
   await expect(dialog.locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
-  await expect(dialog.locator(".access-warning-aire .access-swatch").first()).toBeVisible();
+  await expect(dialog.locator(".access-warning-aire .access-icon svg").first()).toBeVisible();
   // The row still doesn't open behind it.
   await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
 
@@ -295,15 +325,21 @@ test("a paddle row's info button opens its details dialog with the access and th
   await expect(detailsButton(page, 1)).toBeFocused();
 });
 
-test("a paddle row shows its access on a line of its own under the figures, as a day row does", async ({ page }) => {
+test("a paddle row shows its access as icons on a line of their own under the figures, each icon once", async ({ page }) => {
   await serveOffline(page);
   await seed(page, { points: [putIn, end], legs: [{ mode: "paddle", geometry: [putIn, end] }] });
   await openPhone(page);
   await openLegsTab(page);
   const button = rowButton(page, 1);
-  const status = button.locator(".access-status-line");
+  const status = button.locator(".leg-access-icons");
+  // The status's name is read out first; nothing but the icons is visible.
   await expect(status).toHaveText(/^Access: \S/);
-  await expect(status.locator(".access-swatch")).toHaveCount(1);
+  await expect(status.locator(":scope > span > :not(.visually-hidden, .access-icon)")).toHaveCount(0);
+  // Without access points nearby, both ends lack an aire: one flag for both.
+  const names = await status.locator("svg").evaluateAll((svgs) => svgs.map((svg) => svg.getAttribute("data-icon")));
+  expect(names.length).toBeGreaterThanOrEqual(2);
+  expect(new Set(names).size).toBe(names.length);
+  expect(names.filter((name) => name === "flag")).toHaveLength(1);
   await sheetSettled(page);
   const figures = (await button.locator(".phone-row-figures").boundingBox())!;
   expect((await status.boundingBox())!.y).toBeGreaterThanOrEqual(figures.y + figures.height);

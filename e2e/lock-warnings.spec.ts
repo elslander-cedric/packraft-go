@@ -69,3 +69,18 @@ test("a paddle leg away from any lock has no lock warning", async ({ page }) => 
   await expect(page.locator(".access-warning-lock")).toHaveCount(0);
   await expect(dayChip(page)).toHaveCount(0);
 });
+
+test.describe("on the phone", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("a paddle leg through a lock shows the lock icon on its row, once", async ({ page }) => {
+    await serveOffline(page);
+    await seed(page, throughLock);
+    await page.goto("/");
+    const sheet = page.getByRole("dialog", { name: strings.phone.sheetLabel });
+    await sheet.getByRole("tab", { name: strings.phone.tabs.legs }).click();
+    const icons = sheet.getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem").first().locator(".leg-access-icons");
+    await expect(icons.locator('svg[data-icon="stairs"]')).toHaveCount(1);
+    await expect(icons).toContainText(strings.tripAccess.chipKind.lock);
+  });
+});

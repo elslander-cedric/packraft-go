@@ -120,7 +120,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: 0 var(--space-3) var(--space-1);
+  padding: var(--space-2) var(--space-3);
 }
 
 .phone-peek-summary:empty {
@@ -227,12 +227,9 @@
   gap: var(--space-2);
 }
 
-.phone-row-hike {
-  border-left-color: var(--color-hike);
-}
-
-.phone-row-paddle {
-  border-left-color: var(--color-paddle);
+/* Like the access point rows, the left bar marks the selected leg; the mode shows in its icon. */
+.phone-legs .phone-row:has(.phone-row-toggle[aria-current]) {
+  border-left-color: var(--color-focus);
 }
 
 /* A short state line with its action, e.g. "Placing an access point · Cancel". */
@@ -256,8 +253,7 @@
 
 .phone-access-point-form .toggle,
 .phone-access-point-form .button,
-.phone-access-point-form input,
-.phone-access-point-form textarea {
+.phone-access-point-form input {
   min-height: 2.75rem;
   font-size: 1rem;
 }
@@ -272,13 +268,38 @@
   color: var(--color-text);
 }
 
-/* The dialog's title names it; the details' own heading only labels them. */
+/* The dialog's title names it and rules it off: the details need no heading or dashed rule of their own. */
+.phone-access-point-form .access-point-details {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
 .phone-access-point-form .access-point-details h3 {
   display: none;
 }
 
-.phone-access-point-form .toggle {
+/* Use and kind: separate options with the fields' rounded corners, the chosen one in the accent. */
+.phone-access-point-form .toggle-group {
+  gap: var(--space-2);
+}
+
+.phone-access-point-form .toggle,
+.phone-access-point-form .toggle + .toggle {
   padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+}
+
+.phone-access-point-form .toggle[data-pressed] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-accent);
+}
+
+/* "Added …, changed …" stands a little apart from the date field above it. */
+.phone-access-point-form .access-point-dates {
+  margin-top: var(--space-3);
 }
 
 /* The lists run edge to edge like the Legs and Days rows (#156): cancel the body's side
@@ -406,10 +427,12 @@
 }
 
 /* The mode icon and distance, large, with the time on the right while the row is closed. */
+/* The same sizes as a day card's headline. */
 .phone-row-headline {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
+  line-height: 1.2;
 }
 
 .phone-row-figure {
@@ -421,8 +444,13 @@
   margin-right: 0.3em;
 }
 
+/* Every icon on a leg row is one size, whatever the text beside it: the headline's. */
+.phone-legs .icon {
+  font-size: 0.95rem;
+}
+
 .phone-row-distance {
-  font-size: 1.25rem;
+  font-size: 0.95rem;
   font-weight: 700;
 }
 
@@ -436,6 +464,7 @@
 
 .phone-row-time {
   margin-left: auto;
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
@@ -448,14 +477,20 @@
   font-size: 0.85rem;
 }
 
-/* A paddle leg's access, on a line of its own under the figures, as on a day row. */
+/* A paddle leg's access icons, on a line of their own under the figures, their bottoms on the line's. */
 .phone-row-access {
   align-self: flex-start;
+  align-items: flex-end;
   font-size: 0.85rem;
 }
 
-/* A row's icon-only button for its access details (#158), level with its access line at the
-   row's right; out of the flow, so the time stays lined up with the other rows'. */
+.phone-row-access > span,
+.phone-row-access .access-icon {
+  display: flex;
+}
+
+/* A row's icon-only button for its access details (#158), at the row's right with its icon's
+   bottom level with the access icons'; out of the flow, so the time stays lined up with the other rows'. */
 .phone-row-head:has(.phone-row-details-button) {
   position: relative;
 }
@@ -463,14 +498,22 @@
 .button.phone-row-details-button {
   position: absolute;
   right: 0;
-  bottom: calc(-1 * var(--space-2));
+  bottom: 0;
   min-width: 2.75rem;
   min-height: 2.75rem;
-  padding: 0;
+  display: inline-flex;
+  /* Its icon's bottom level with the access icons' (the row button's bottom padding). */
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0 0 var(--space-1);
   border: 0;
   background: transparent;
   color: var(--color-muted);
-  font-size: 1.1rem;
+}
+
+/* Larger than the row's other icons, its right edge in line with the time's. */
+.phone-legs .phone-row-details-button .icon {
+  font-size: 1.35rem;
 }
 
 /* A leg's details in their dialog. */
@@ -478,8 +521,19 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-width: 0;
+}
+
+/* The parts of the access (status, rules, warnings, notes, extra rules) stand apart from each
+   other; inside the extra rules, the source link stands apart from the rules above it. */
+.phone-leg-details .leg-access > * + * {
+  margin-top: var(--space-3);
+}
+
+.phone-leg-details .leg-access-extra > a {
+  display: inline-block;
+  margin-top: var(--space-2);
 }
 
 /* The next leg's mode over the map, with the other bottom-right buttons: an icon-only, rounded
@@ -561,27 +615,37 @@
   cursor: pointer;
 }
 
-/* The selected card, which shows its access warnings. */
-.phone-tab-panels .day-row-selected {
-  background: var(--color-surface-hover);
+/* The selected card, which shows its access warnings: the left bar marks it, as on the leg rows. */
+.phone-tab-panels .day-card.day-row-selected {
+  border-left-color: var(--color-focus);
 }
 
-/* A card's title is a calendar tile with its date (weekday, day, month), the camp
-   colour along its top, centred on the card's height; the figures and access sit beside it. */
+/* No flash of the browser's tap highlight on a card or row: the left bar marks the selected one. */
+.phone-tab-panels .day-card,
+.phone-tab-panels .day-tile,
+.button.phone-row-toggle,
+.button.phone-access-point-row {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* A card's title is a calendar tile with its date (weekday, day, month), the
+   accent along its top; the figures and access sit beside it, their top level with the tile's. */
 .phone-tab-panels .day-card {
   flex-wrap: nowrap;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-left: 0;
+  /* The leg rows' insets: 12 px above and below (their padding plus their button's), 16 px
+     on the right, and 8 px left of the 4 px bar. */
+  padding: calc(var(--space-2) + var(--space-1)) var(--space-3) calc(var(--space-2) + var(--space-1)) var(--space-2);
+  border-left: 4px solid transparent;
 }
 
 .day-tile {
-  flex: 0 0 3.5rem;
-  min-height: 3.75rem;
+  flex: 0 0 3.25rem;
+  min-height: 3.25rem;
   padding: var(--space-1) 0;
   border: 1px solid var(--color-border);
-  border-top: 6px solid var(--color-camp);
+  border-top: 6px solid var(--color-focus);
   border-radius: 6px;
   background: var(--color-surface);
   color: inherit;
@@ -600,12 +664,12 @@
 
 .day-tile-small {
   color: var(--color-muted);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
 }
 
 .day-tile-number {
-  font-size: 1.4rem;
+  font-size: 1.15rem;
   font-weight: 700;
 }
 
@@ -632,8 +696,9 @@
   flex-wrap: wrap;
   align-items: baseline;
   column-gap: var(--space-3);
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
+  line-height: 1.2;
 }
 
 .day-figure-hike .day-figure-icon {
@@ -646,7 +711,7 @@
 
 .day-headline .day-figure-time {
   margin-left: auto;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
@@ -695,11 +760,6 @@
   margin: 0;
   color: var(--color-muted);
   font-size: 0.85rem;
-}
-
-/* Under the Days tab's cards, which run edge to edge. */
-.phone-tab-panels .days-panel + .phone-disclaimer {
-  margin-top: var(--space-3);
 }
 
 /* The Settings tab (#123): the desktop's fields, finger-sized. The tab names the panel, and the

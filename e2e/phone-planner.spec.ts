@@ -121,19 +121,24 @@ test("the peek shows the five tabs (an empty, unnamed trip has no name or totals
   expect(await sheetHeight(page)).toBeLessThan(page.viewportSize()!.height * 0.55);
 });
 
-test("on a narrow phone every tab keeps its full name and the whole tab row fits on screen", async ({ page }) => {
+test("on a narrow phone the tabs share the row equally, each keeps its full name and the row fits on screen", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await serveOffline(page);
   await openPhone(page);
   await dataFonts(page);
 
-  // Each tab is as wide as its text: nothing is squeezed or wrapped. With three tabs (#154) none is
-  // scrolled out of view.
+  // Each tab gets the same width; a long name may wrap onto a second line but is never cut off,
+  // and no tab is out of view.
+  const widths: number[] = [];
   for (const name of Object.values(strings.phone.tabs)) {
     const fits = await tab(page, name).evaluate((el) => el.scrollWidth <= el.clientWidth && el.clientHeight < 60);
     expect(fits).toBe(true);
     await expect(tab(page, name)).toBeInViewport({ ratio: 1 });
+    widths.push((await tab(page, name).boundingBox())!.width);
   }
+  for (const width of widths) expect(Math.abs(width - widths[0])).toBeLessThanOrEqual(1);
 });
 
 test("the sheet settles at peek, half or 90% by drag distance, never closes, and the map stays usable", async ({
