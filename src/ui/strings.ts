@@ -1,4 +1,5 @@
 import type { AccessState } from "@/core/access";
+import type { PlaceKind } from "@/core/placeSearch";
 // All user-facing text lives here (ADR 0013), so other languages can be added later.
 
 export const strings = {
@@ -402,6 +403,44 @@ export const strings = {
       `Point ${point}, the ${kind}, is in Wallonia but not within 200 m of an access point of yours marked as an ` +
       "official aire. In Wallonia you may only get on or off the water at an aire (AGW art. 5).",
     kinds: { "put-in": "put-in", "take-out": "take-out" },
+  },
+  // Place search (#173, ADR 0030): the bar over the map, its dropdown and the result's pin.
+  placeSearch: {
+    label: "Search a place",
+    placeholder: "Place or coordinates",
+    search: "Search",
+    clear: "Clear search",
+    resultsLabel: "Search results",
+    searching: "Searching…",
+    nothingFound: (text: string) => `Nothing found for “${text}”. Try a village, a road, a river or coordinates.`,
+    failed: "Search failed.",
+    offline: "No connection. Place search needs the internet; coordinates such as 50.27, 5.44 work offline.",
+    retry: "Retry",
+    badCoordinates:
+      "These aren't coordinates on Earth. Use decimal degrees, latitude first, such as 50.27, 5.44 or 50.27N 5.44E.",
+    // The kind hint next to a result's label, one per PlaceKind.
+    kinds: {
+      city: "city",
+      town: "town",
+      village: "village",
+      hamlet: "hamlet",
+      municipality: "municipality",
+      district: "district",
+      province: "province",
+      region: "region",
+      river: "river",
+      stream: "stream",
+      lake: "lake",
+      reservoir: "reservoir",
+      weir: "weir",
+      dam: "dam",
+      bridge: "bridge",
+      road: "road",
+      address: "address",
+      "car-park": "car park",
+      campsite: "campsite",
+      peak: "peak",
+    } satisfies Record<PlaceKind, string>,
   },
   // Shown in the map's attribution control while the access layer is on. Contains HTML links.
   accessAttribution:

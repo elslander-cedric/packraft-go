@@ -24,6 +24,8 @@ import {
   faHourglassHalf,
   faLayerGroup,
   faLocationCrosshairs,
+  faLocationDot,
+  faMagnifyingGlass,
   faPen,
   faRotateLeft,
   faShoePrints,
@@ -80,4 +82,8 @@ export const icons = {
   openTrip: faFolderOpen,
   exportGpx: faFileExport,
   settings: faGear,
+  // Place search (#173): the bar's magnifier and ×, and the search result's pin on the map.
+  search: faMagnifyingGlass,
+  clearSearch: faXmark,
+  searchResult: faLocationDot,
 };

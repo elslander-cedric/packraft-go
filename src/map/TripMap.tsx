@@ -8,6 +8,7 @@ import type {
 import { divIcon } from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import { CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import type { SearchArea, SearchResult } from "@/core/placeSearch";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type ModeChange, type Trip } from "@/core/trip";
 import { icons } from "@/ui/icons/icons";
 import { iconSvg } from "@/ui/icons/iconSvg";
@@ -15,6 +16,7 @@ import { strings } from "@/ui/strings";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 import { baseLayer, initialMapView, paneZIndex } from "./mapConfig";
+import SearchResultLayer from "./SearchResultLayer";
 
 export type TripMapProps = {
   trip: Trip;
@@ -30,6 +32,10 @@ export type TripMapProps = {
   access?: AccessLayerProps | null;
   /** Your access points (#55), drawn in their own layer. */
   accessPoints?: AccessPointLayerProps;
+  /** The shown place search result (#173): the map moves to it and pins it. */
+  searchResult?: SearchResult | null;
+  /** The visible map, when it loads and after every move (place search ranks places in it). */
+  onAreaChange?: (area: SearchArea) => void;
 };
 
 // Hike legs are thin and earth-coloured, paddle legs wider and water-blue, so the mix shows at a glance.
@@ -279,8 +285,21 @@ function TripLayers({ trip, selectedPoint, onMapClick, onPointClick, onPointDrag
   );
 }
 
+/** Tells `onChange` the visible map when it loads and after every move. */
+function MapAreaReporter({ onChange }: { onChange: (area: SearchArea) => void }) {
+  const map = useMap();
+  const report = () => {
+    const bounds = map.getBounds();
+    onChange({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() });
+  };
+  useMapEvents({ moveend: report });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(report, [map]);
+  return null;
+}
+
 // Imports Leaflet, which needs `window`: only load this through ClientTripMap.
-export default function TripMap({ access, ...props }: TripMapProps) {
+export default function TripMap({ access, searchResult, onAreaChange, ...props }: TripMapProps) {
   return (
     <MapContainer
       center={[...initialMapView.center]}
@@ -296,6 +315,8 @@ export default function TripMap({ access, ...props }: TripMapProps) {
       {access && <AccessLayer {...access} />}
       <TripLayers {...props} />
       {props.accessPoints && <AccessPointLayer {...props.accessPoints} />}
+      {searchResult && <SearchResultLayer result={searchResult} />}
+      {onAreaChange && <MapAreaReporter onChange={onAreaChange} />}
     </MapContainer>
   );
 }

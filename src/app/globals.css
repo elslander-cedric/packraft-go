@@ -31,6 +31,8 @@
   --color-paddle: #1b6fb5;
   --color-paddle-tint: #eef5fc;
   --color-camp: #2e6b30;
+  /* The place search result's pin (#173). */
+  --color-search-result: #d0021b;
   /* The lock marker's swatch, drawn like the marker on the map in both themes. */
   --color-lock-ring: #1a1a1a;
   --color-lock-fill: #fff;
