@@ -16,7 +16,7 @@ The map has one base map, OpenTopoMap (ADR 0014). It is good for hiking but show
 - **The choice is a viewing preference on the device:** stored with the planner's settings (`packraft-go.settings`), never in the trip, its file or the GPX.
 - **Each source keeps its own attribution**, shown by Leaflet's attribution control while that base map is on (text in `strings.ts`, ADR 0013).
 - **No new runtime dependency:** `L.tileLayer` and `L.tileLayer.wms` cover every source. No WMTS plugin, no Proj4Leaflet.
-- Overlays (GLOSSARY: Overlay) other than the access layer, such as hiking trails or hillshade, are a later decision.
+- Overlays (GLOSSARY: Overlay) other than the access layer, such as hiking trails or hillshade, are a later decision (see ADR 0032).
 
 ## Considered options
 - **Esri World Imagery:** global and sharp, but keyless use from Leaflet isn't covered by Esri's terms; the licensed route needs an ArcGIS account and a key with paid usage beyond the free tier (ADR 0012).
