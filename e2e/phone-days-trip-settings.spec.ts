@@ -1,6 +1,6 @@
-// The phone planner's Days, Trip and Settings tabs (#123, ADR 0026): day cards that
-// zoom the map to their day and carry its access, the trip's name and start date, and the
-// planner's settings stored on the device. The trip is seeded in browser storage with
+// The phone planner's Days and Trip tabs (#123, ADR 0026) and its Settings dialog from
+// the menu (#151): day cards that zoom the map to their day and carry its access, the
+// trip's name and start date, and the planner's settings stored on the device. The trip is seeded in browser storage with
 // routed legs, so nothing is routed: a hike to the Meuse at Dinant, a camp, then a
 // paddle leg on the Meuse (unlisted Walloon water: not allowed, #75).
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
@@ -30,8 +30,18 @@ const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane pa
 const tripName = (page: Page) => panel(page).getByLabel(strings.tripNameLabel);
 const startDate = (page: Page) => panel(page).getByLabel(strings.startDateLabel);
 const clearDate = (page: Page) => panel(page).getByRole("button", { name: strings.clearStartDateButton });
-const paceFactor = (page: Page) => panel(page).getByLabel(strings.paceFactorLabel);
-const paddleSpeed = (page: Page) => panel(page).getByLabel(strings.paddleSpeedLabel);
+const settingsDialog = (page: Page) => page.getByRole("dialog", { name: strings.settingsPanelLabel });
+const paceFactor = (page: Page) => settingsDialog(page).getByLabel(strings.paceFactorLabel);
+const paddleSpeed = (page: Page) => settingsDialog(page).getByLabel(strings.paddleSpeedLabel);
+const saveSettings = (page: Page) => settingsDialog(page).getByRole("button", { name: text.menu.settingsConfirm });
+const cancelSettings = (page: Page) => settingsDialog(page).getByRole("button", { name: strings.confirmCancel });
+const menuButton = (page: Page) => page.getByRole("button", { name: text.menu.button });
+/** Menu → Settings…: the settings dialog. */
+async function openSettings(page: Page) {
+  await menuButton(page).click();
+  await page.getByRole("menuitem", { name: text.menu.settings, exact: true }).click();
+  await expect(settingsDialog(page)).toBeVisible();
+}
 const totals = (page: Page) => sheet(page).locator(".phone-totals");
 
 const START = { lat: 50.25, lng: 4.85 };
@@ -166,34 +176,23 @@ test("the Days tab has no heading or rule of its own; the cards run edge to edge
   await expect(dayCards(page).nth(0)).toHaveCSS("border-bottom-width", "1px");
 });
 
-test("the Settings tab has no heading, rule or padding of its own; its fields line up with the Trip tab's", async ({
+test("the sheet has no Settings tab; the menu's Settings… opens a dialog without a heading of its own", async ({
   page,
 }) => {
   await serveOffline(page);
   await openWithTrip(page);
-  const fieldBox = async (tabName: string, field: (page: Page) => Locator) => {
-    await tab(page, tabName).click();
-    // Polled: the sheet may still be settling at its stop.
-    let box = (await field(page).boundingBox())!;
-    await expect
-      .poll(async () => {
-        const previous = box;
-        box = (await field(page).boundingBox())!;
-        return [box.x - previous.x, box.y - previous.y];
-      })
-      .toEqual([0, 0]);
-    return box;
-  };
-  const trip = await fieldBox(text.tabs.trip, tripName);
-  const settings = await fieldBox(text.tabs.settings, paceFactor);
+  await expect(sheet(page).getByRole("tab")).toHaveText([text.tabs.legs, text.tabs.days, text.tabs.trip, text.tabs.accessPoints]);
 
-  // The tab already names the panel.
-  await expect(panel(page).getByRole("heading", { name: strings.settingsPanelLabel })).toHaveCount(0);
-  await expect(panel(page).getByRole("region", { name: strings.settingsPanelLabel })).toHaveCSS(
+  await openSettings(page);
+  // The dialog's title is its only heading: it already names the fields.
+  await expect(settingsDialog(page).getByRole("heading")).toHaveCount(1);
+  await expect(settingsDialog(page).getByRole("region", { name: strings.settingsPanelLabel })).toHaveCSS(
     "border-top-width",
     "0px",
   );
-  expect(Math.round(settings.x)).toBe(Math.round(trip.x));
+  await expect(paceFactor(page)).toBeFocused();
+  await expect(saveSettings(page)).toBeInViewport({ ratio: 1 });
+  await expect(cancelSettings(page)).toBeInViewport({ ratio: 1 });
 });
 
 test("the Trip tab renames the trip and sets, changes and clears its start date; all autosaved, no date drift", async ({
@@ -282,28 +281,79 @@ test("the Trip tab has no access summary or totals; a day card's chip opens its 
   await expect(select).toHaveAttribute("aria-expanded", "true");
 });
 
-test("pace and paddling speed change the time estimates, survive a reload and are not in the trip", async ({ page }) => {
+test("pace and paddling speed change the time estimates on Save, survive a reload and are not in the trip", async ({
+  page,
+}) => {
   await serveOffline(page);
   await openWithTrip(page);
-  await tab(page, text.tabs.settings).click();
+  const time = async () => minutes((await totals(page).textContent())!);
+  const before = await time();
+  await openSettings(page);
   await expect(paceFactor(page)).toHaveValue("1");
   await expect(paddleSpeed(page)).toHaveValue("5");
-  const before = minutes((await totals(page).textContent())!);
 
+  // Typing is a draft: nothing is stored until Save. (The sheet behind the dialog is inert meanwhile.)
   await paceFactor(page).fill("2");
-  await expect.poll(async () => minutes((await totals(page).textContent())!)).toBeGreaterThan(before);
-  const slower = minutes((await totals(page).textContent())!);
   await paddleSpeed(page).fill("2.5");
-  await expect.poll(async () => minutes((await totals(page).textContent())!)).toBeGreaterThan(slower);
+  expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY)).toBeNull();
+  await saveSettings(page).click();
+  await expect(settingsDialog(page)).toHaveCount(0);
+  await expect(menuButton(page)).toBeFocused();
+  await expect.poll(time).toBeGreaterThan(before);
 
   await page.reload();
-  await tab(page, text.tabs.settings).click();
+  await openSettings(page);
   await expect(paceFactor(page)).toHaveValue("2");
   await expect(paddleSpeed(page)).toHaveValue("2.5");
   const settings = await page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY);
   expect(settings).toContain("2.5");
   const trip = JSON.stringify(await storedTrip(page));
   expect(trip).not.toMatch(/pace|paddleSpeed/i);
+});
+
+test("Cancel and Escape drop the draft, and the next opening starts from the stored settings", async ({ page }) => {
+  await serveOffline(page);
+  await openWithTrip(page);
+  const before = (await totals(page).textContent())!;
+
+  await openSettings(page);
+  await paceFactor(page).fill("3");
+  await cancelSettings(page).click();
+  await expect(settingsDialog(page)).toHaveCount(0);
+  await openSettings(page);
+  await expect(paceFactor(page)).toHaveValue("1");
+
+  await paddleSpeed(page).fill("1");
+  await page.keyboard.press("Escape");
+  await expect(settingsDialog(page)).toHaveCount(0);
+  await openSettings(page);
+  await expect(paddleSpeed(page)).toHaveValue("5");
+  await cancelSettings(page).click();
+
+  expect(await totals(page).textContent()).toBe(before);
+  expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY)).toBeNull();
+});
+
+test("Save waits for usable values; Enter in a field saves", async ({ page }) => {
+  await serveOffline(page);
+  await openWithTrip(page);
+  await openSettings(page);
+
+  for (const unusable of ["", "0", "-1"]) {
+    await paceFactor(page).fill(unusable);
+    await expect(paceFactor(page)).toHaveAttribute("aria-invalid", "true");
+    await expect(saveSettings(page)).toBeDisabled();
+    // Enter doesn't save an unusable value either.
+    await paceFactor(page).press("Enter");
+    await expect(settingsDialog(page)).toBeVisible();
+  }
+
+  await paceFactor(page).fill("1.5");
+  await expect(paceFactor(page)).toHaveAttribute("aria-invalid", "false");
+  await expect(saveSettings(page)).toBeEnabled();
+  await paceFactor(page).press("Enter");
+  await expect(settingsDialog(page)).toHaveCount(0);
+  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY)).toContain('"paceFactor":1.5');
 });
 
 test.describe("on a narrow phone", () => {

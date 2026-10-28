@@ -77,7 +77,7 @@ async function openFile(page: Page, content: string) {
   await chooser.setFiles({ name: "trip.json", mimeType: "application/json", buffer: Buffer.from(content) });
 }
 
-test("the menu sits top left with New trip, Save…, Open… and Export GPX…", async ({ page }) => {
+test("the menu sits top left with New trip, Save…, Open…, Export GPX… and Settings…", async ({ page }) => {
   await serveOffline(page);
   await openPhone(page);
   const button = (await menuButton(page).boundingBox())!;
@@ -86,7 +86,13 @@ test("the menu sits top left with New trip, Save…, Open… and Export GPX…",
   expect(button.width).toBeGreaterThanOrEqual(44);
 
   await menuButton(page).click();
-  await expect(page.getByRole("menuitem")).toHaveText([text.newTrip, text.saveFile, text.openFile, text.exportGpx]);
+  await expect(page.getByRole("menuitem")).toHaveText([
+    text.newTrip,
+    text.saveFile,
+    text.openFile,
+    text.exportGpx,
+    text.settings,
+  ]);
   // Nothing to export without a leg.
   await expect(menuItem(page, text.exportGpx)).toHaveAttribute("aria-disabled", "true");
 });

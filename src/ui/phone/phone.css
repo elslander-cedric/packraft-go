@@ -630,12 +630,13 @@
 
 /* The Settings tab (#123): the desktop's fields, finger-sized. The tab names the panel, and the
    sheet body already pads it: no heading, rule or padding of its own, like the Trip tab. */
-.phone-tab-panels .settings-panel {
+/* The settings dialog from the menu (#151). */
+.form-dialog .settings-panel {
   padding: 0;
   border: 0;
 }
 
-.phone-tab-panels .settings-panel input {
+.form-dialog .settings-panel input {
   min-height: 2.75rem;
   font-size: 1rem;
 }

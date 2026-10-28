@@ -14,14 +14,13 @@ ADR 0023 gave phones a read-only view: the map, your position, your access point
 - **Layout (portrait):** a full-screen map with a bottom sheet over it (Base UI Drawer, non-modal, never closes; ADR 0020) (#106).
   - **Stops:** three fixed stops (peek, half, 90%), chosen by drag distance.
   - **Peek:** the trip name, the totals and the tabs.
-  - **Tabs:** Legs, Days, Trip, Access points, Settings. The tab row scrolls sideways when it doesn't fit.
+  - **Tabs:** Legs, Days, Trip, Access points. The tab row scrolls sideways when it doesn't fit.
     - **Legs:** compact rows; a tap zooms the map to the leg and opens the row.
     - **Days:** a card per day; a day's access warnings are chips that open their leg (ADR 0029).
     - **Trip:** name and start date (the access summary went in #123; ADR 0029).
-    - **Settings:** pace factor and paddling speed.
 - **Layout (sideways):** a full-height side panel on the right with the same tabs, collapsible to a strip with the totals. Rotating keeps the open tab, the open leg row and any selection (#109).
 - **Floating buttons over the map:**
-  - top left, the menu: new, save, open, export GPX;
+  - top left, the menu: new, save, open, export GPX, and settings (pace factor and paddling speed) in a dialog that stores them on Save. They were a tab until #151.
   - top right: ◎ show my position, and the access layer switch;
   - bottom right: the next leg's mode (hike / paddle) and undo, plus delete and camp while a point is selected;
   - bottom left: mark an access point (at your GPS position, or the selected route point; without a fix, place it on the map).

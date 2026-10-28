@@ -47,8 +47,9 @@ export function usePlanner(router?: Router) {
   // Settings live in browser storage (null only without one, e.g. on a server);
   // until they are read, figures use the defaults.
   const [settings, setSettings] = useSettings();
-  const changeSetting = (name: keyof Settings, value: number) => {
-    if (settings === null) return;
+  // An empty field (null), like any unusable value, changes nothing.
+  const changeSetting = (name: keyof Settings, value: number | null) => {
+    if (settings === null || value === null) return;
     const changed = withSetting(settings, name, value);
     if (changed !== settings) setSettings(changed);
   };
@@ -128,6 +129,7 @@ export function usePlanner(router?: Router) {
     summary,
     settings,
     changeSetting,
+    saveSettings: setSettings,
     access,
     waterAccess,
     aire,
