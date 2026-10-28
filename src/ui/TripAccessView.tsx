@@ -1,16 +1,20 @@
 import type { AccessState } from "@/core/access";
 import type { AireWarning } from "@/core/aire";
 import type { LockWarning } from "@/core/locks";
-import type { AccessNote, AccessSummary, AccessWarning, DayAccess, LegAccess } from "@/core/tripAccess";
+import type { LegWarnings } from "@/core/dayWarnings";
+import type { AccessNote, AccessWarning, LegAccess } from "@/core/tripAccess";
 import { accessColours } from "@/map/accessColours";
+import { Button } from "./components/Button";
 import { FlowFiguresView } from "./FlowFiguresView";
 import { formatDayDate } from "./format";
+import { Icon } from "./icons/Icon";
+import { icons, type IconDefinition } from "./icons/icons";
 import { accessStateLabel, strings } from "./strings";
 import "./TripAccessView.css";
 
-// Access status and warnings on leg rows, day rows and the trip summary (#58).
+// Access status and warnings on leg rows, and the warning chips on day cards (#58).
 // Renders the core's trip access; no domain logic. Warnings are paragraphs, not
-// list items, so leg and day rows keep exactly one list item each.
+// list items, so leg rows keep exactly one list item each.
 
 function Swatch({ state }: { state: AccessState }) {
   return <span className="access-swatch" style={{ background: accessColours[state] }} aria-hidden="true" />;
@@ -24,12 +28,11 @@ const warningSwatch: Record<AccessWarning["kind"], AccessState> = {
 };
 
 /** One warning: its kind, the water and rule behind it, and the rule's source. */
-function Warning({ warning, place }: { warning: AccessWarning; place?: string }) {
+function Warning({ warning }: { warning: AccessWarning }) {
   const { reason } = warning;
   return (
     <p className={`access-warning access-warning-${warning.kind}`}>
       <Swatch state={warningSwatch[warning.kind]} />
-      {place && <span className="access-warning-place">{`${place}: `}</span>}
       <strong>{`${strings.tripAccess.warningKind[warning.kind]}: `}</strong>
       {reason.kind === "no-rule" ? null : (
         <>
@@ -62,21 +65,14 @@ function Note({ note }: { note: AccessNote }) {
   );
 }
 
-/** The neutral line in day and trip summaries: how many legs have no known rules. Absent when none. */
-function LegsWithoutRules({ count }: { count: number }) {
-  if (count === 0) return null;
-  return <p className="access-note access-note-count">{strings.tripAccess.legsWithoutRules(count)}</p>;
-}
-
 /** Lock warnings (#60): "lock at X: portage required", with the region's rule source. Never blocks. */
-export function LockWarnings({ warnings, place }: { warnings: readonly LockWarning[]; place?: Placed2 }) {
+export function LockWarnings({ warnings }: { warnings: readonly LockWarning[] }) {
   if (warnings.length === 0) return null;
   return (
     <div className="access-warnings lock-warnings">
       {warnings.map(({ lock, ...when }) => (
         <p key={`${when.leg}-${lock.id}`} className="access-warning access-warning-lock">
           <Swatch state="closed-today" />
-          {place && <span className="access-warning-place">{`${place(when)}: `}</span>}
           <strong>{strings.tripAccess.lockWarning(lock.name)}</strong>{" "}
           <a href={lock.source.url} target="_blank" rel="noreferrer">
             {lock.source.title}
@@ -86,16 +82,12 @@ export function LockWarnings({ warnings, place }: { warnings: readonly LockWarni
     </div>
   );
 }
-type Placed2 = (when: { leg: number; day: number }) => string | undefined;
-
-type Placed =(warning: AccessWarning) => string | undefined;
-
-function WarningList({ warnings, place }: { warnings: readonly AccessWarning[]; place?: Placed }) {
+function WarningList({ warnings }: { warnings: readonly AccessWarning[] }) {
   if (warnings.length === 0) return null;
   return (
     <div className="access-warnings">
       {warnings.map((warning, i) => (
-        <Warning key={i} warning={warning} place={place?.(warning)} />
+        <Warning key={i} warning={warning} />
       ))}
     </div>
   );
@@ -155,73 +147,67 @@ export function LegAccessView({ access }: { access: LegAccess }) {
   );
 }
 
-/** "Access: Open" with its colour swatch, as on a day row and a phone leg row. */
+/** "Access: Open" with its colour swatch, as on a phone leg row. */
 export function AccessStatusLine({ state, className }: { state: AccessState; className?: string }) {
   return (
-    <span className={`day-access-status access-status-${state}${className ? ` ${className}` : ""}`}>
+    <span className={`access-status-line access-status-${state}${className ? ` ${className}` : ""}`}>
       <Swatch state={state} />
-      {strings.tripAccess.dayStatus(accessStateLabel(state))}
+      {strings.tripAccess.statusLine(accessStateLabel(state))}
     </span>
   );
 }
 
-/** A day's access: the most restrictive status of its paddle legs and, with `details`, their warnings. */
-export function DayAccessView({ access, details = true }: { access: DayAccess; details?: boolean }) {
-  const { state } = access;
-  if (!details && state === undefined) return null;
-  if (state === undefined && access.warnings.length === 0 && access.lockWarnings.length === 0 && access.legsWithoutRules === 0)
-    return null;
+const chipIcon: Record<LegWarnings["kind"], IconDefinition> = {
+  forbidden: icons.warningForbidden,
+  closed: icons.warningClosed,
+  "check-flow": icons.warningCheckFlow,
+  lock: icons.warningLock,
+  aire: icons.warningAire,
+};
+
+/**
+ * A day card's warnings: one chip per leg with any, naming its most serious kind and
+ * how many more it has. The warnings' text is on the leg; a chip shows that leg.
+ */
+export function DayWarningChips({ legs, onShowLeg }: { legs: readonly LegWarnings[]; onShowLeg: (leg: number) => void }) {
+  if (legs.length === 0) return null;
   return (
-    <div className="day-access">
-      {state !== undefined && <AccessStatusLine state={state} />}
-      {details && (
-        <>
-          <WarningList warnings={access.warnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
-          <LockWarnings warnings={access.lockWarnings} place={(w) => strings.tripAccess.legPlace(w.leg + 1)} />
-          <LegsWithoutRules count={access.legsWithoutRules} />
-        </>
-      )}
+    <div className="day-warning-chips" role="group" aria-label={strings.tripAccess.dayWarningsLabel}>
+      {legs.map(({ leg, kind, count }) => {
+        const label = strings.tripAccess.chipKind[kind];
+        return (
+          <Button
+            key={leg}
+            className={`day-warning-chip day-warning-chip-${kind}`}
+            aria-label={strings.tripAccess.chipName(leg + 1, label, count)}
+            onClick={(event) => {
+              // On the phone the chip sits on a day card, which takes taps of its own.
+              event.stopPropagation();
+              onShowLeg(leg);
+            }}
+          >
+            <Icon icon={chipIcon[kind]} />
+            {strings.tripAccess.chip(leg + 1, label)}
+            {count > 1 && <span className="day-warning-chip-more">{strings.tripAccess.chipMore(count - 1)}</span>}
+          </Button>
+        );
+      })}
     </div>
   );
 }
 
 /** Walloon aire warnings (#62): a put-in or take-out in Wallonia without an official aire of yours nearby. */
-export function AireWarnings({ warnings, showPlace }: { warnings: readonly AireWarning[]; showPlace?: boolean }) {
+export function AireWarnings({ warnings }: { warnings: readonly AireWarning[] }) {
   if (warnings.length === 0) return null;
   return (
     <div className="access-warnings aire-warnings">
       {warnings.map((warning) => (
         <p key={`${warning.kind}-${warning.point}`} className="access-warning access-warning-aire">
           <Swatch state="closed-today" />
-          {showPlace && (
-            <span className="access-warning-place">{`${strings.tripAccess.warningPlace(warning.day + 1, warning.leg + 1)}: `}</span>
-          )}
           <strong>{`${strings.aire.warningKind}: `}</strong>
           {strings.aire.text(strings.aire.kinds[warning.kind], warning.point + 1)}
         </p>
       ))}
     </div>
-  );
-}
-
-/** The trip's access summary: every warning, and that none of them blocks anything. */
-export function TripAccessSummary({ access, aire = [] }: { access: AccessSummary; aire?: readonly AireWarning[] }) {
-  if (access.state === undefined && aire.length === 0) return null;
-  const { warnings, lockWarnings } = access;
-  const count = warnings.length + lockWarnings.length + aire.length;
-  return (
-    <section className="trip-access" aria-label={strings.tripAccess.summaryLabel}>
-      <h2>{strings.tripAccess.summaryLabel}</h2>
-      <p className={`access-status access-status-${access.state ?? "unknown"}`}>
-        <Swatch state={access.state ?? "unknown"} />
-        {count === 0 ? strings.tripAccess.summaryNone : strings.tripAccess.summaryCount(count)}
-      </p>
-      {access.state === "checking" && <p className="access-status access-status-checking">{strings.accessChecking}</p>}
-      <WarningList warnings={warnings} place={(w) => strings.tripAccess.warningPlace(w.day + 1, w.leg + 1)} />
-      <LockWarnings warnings={lockWarnings} place={(w) => strings.tripAccess.warningPlace(w.day + 1, w.leg + 1)} />
-      <AireWarnings warnings={aire} showPlace />
-      <LegsWithoutRules count={access.legsWithoutRules} />
-      <p className="trip-access-note">{strings.tripAccess.neverBlocks}</p>
-    </section>
   );
 }

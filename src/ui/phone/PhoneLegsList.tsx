@@ -2,10 +2,12 @@ import type { AireWarning } from "@/core/aire";
 import type { LegSummary, TripSummary } from "@/core/summarise";
 import type { TripAccess } from "@/core/tripAccess";
 import type { Leg } from "@/core/trip";
+import { useRef } from "react";
 import { Button } from "../components/Button";
 import { formatDistance, formatElevation, formatTimeEstimate } from "../format";
 import { Icon } from "../icons/Icon";
 import { icons, type IconDefinition } from "../icons/icons";
+import { useScrollToShownLeg, type ShownLeg } from "../shownLeg";
 import { strings } from "../strings";
 import { AccessStatusLine, AireWarnings, LegAccessView } from "../TripAccessView";
 
@@ -52,6 +54,8 @@ export type PhoneLegsListProps = {
   openLeg: number | null;
   /** A row was tapped. */
   onOpen: (legIndex: number) => void;
+  /** The leg a day card's warning chip asked to show; its row is scrolled to the top. */
+  shownLeg: ShownLeg | null;
   onRetry: (legIndex: number) => void;
 };
 
@@ -69,11 +73,14 @@ export default function PhoneLegsList({
   aire,
   openLeg,
   onOpen,
+  shownLeg,
   onRetry,
 }: PhoneLegsListProps) {
+  const list = useRef<HTMLOListElement>(null);
+  useScrollToShownLeg(list, shownLeg);
   if (summary.legs.length === 0) return <p className="phone-empty">{strings.legsPanelEmpty}</p>;
   return (
-    <ol className="phone-legs" aria-label={strings.legsPanelLabel}>
+    <ol ref={list} className="phone-legs" aria-label={strings.legsPanelLabel}>
       {summary.legs.map((leg, i) => {
         const route = legs[i]?.route;
         const legAccess = access?.legs[i];

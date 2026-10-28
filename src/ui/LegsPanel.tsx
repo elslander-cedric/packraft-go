@@ -2,9 +2,11 @@ import type { AireWarning } from "@/core/aire";
 import type { TripSummary } from "@/core/summarise";
 import type { TripAccess } from "@/core/tripAccess";
 import type { Leg, LegMode } from "@/core/trip";
+import { useRef } from "react";
 import { Button } from "./components/Button";
 import { ToggleGroup, type ToggleOption } from "./components/ToggleGroup";
 import { formatDistance, formatElevation, formatTimeEstimate } from "./format";
+import { useScrollToShownLeg, type ShownLeg } from "./shownLeg";
 import { strings } from "./strings";
 import { AireWarnings, LegAccessView } from "./TripAccessView";
 
@@ -24,6 +26,8 @@ export type LegsPanelProps = {
   onRetry: (legIndex: number) => void;
   /** The planner switched a leg to another mode. */
   onSetMode: (legIndex: number, mode: LegMode) => void;
+  /** The leg a day row's warning chip asked to show: scrolled to and briefly highlighted. */
+  shownLeg?: ShownLeg | null;
 };
 
 type ModeSwitchProps = { legIndex: number; mode: LegMode; onSetMode: (mode: LegMode) => void };
@@ -42,18 +46,22 @@ function ModeSwitch({ legIndex, mode, onSetMode }: ModeSwitchProps) {
 }
 
 /** Lists each leg's figures and the trip totals. Renders a summary; no domain logic. */
-export default function LegsPanel({ summary, legs, access, aire = [], onRetry, onSetMode }: LegsPanelProps) {
+export default function LegsPanel({ summary, legs, access, aire = [], onRetry, onSetMode, shownLeg = null }: LegsPanelProps) {
+  const list = useRef<HTMLOListElement>(null);
+  useScrollToShownLeg(list, shownLeg);
   return (
     <aside className="legs-panel" aria-label={strings.legsPanelLabel}>
       <h2>{strings.legsPanelLabel}</h2>
       {summary.legs.length === 0 ? (
         <p className="legs-panel-empty">{strings.legsPanelEmpty}</p>
       ) : (
-        <ol className="legs">
+        <ol ref={list} className="legs">
           {summary.legs.map((leg, i) => {
             const route = legs[i]?.route;
+            const shown = shownLeg?.leg === i;
             return (
-              <li key={i} className={`leg-row leg-row-${leg.mode}`}>
+              // A new key per request replays the highlight when the same leg is shown again.
+              <li key={shown ? `${i}:${shownLeg.seq}` : i} className={`leg-row leg-row-${leg.mode}${shown ? " leg-row-shown" : ""}`}>
                 <div className="leg-row-heading">
                   <span className="leg-name">{strings.legLabel(i + 1)}</span>
                   <ModeSwitch legIndex={i} mode={leg.mode} onSetMode={(mode) => onSetMode(i, mode)} />

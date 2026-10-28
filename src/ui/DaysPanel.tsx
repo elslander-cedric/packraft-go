@@ -1,16 +1,19 @@
 import type { AireWarning } from "@/core/aire";
+import { dayWarnings } from "@/core/dayWarnings";
 import type { DaySummary } from "@/core/summarise";
 import type { DayAccess } from "@/core/tripAccess";
+import type { ReactNode } from "react";
 import { dayDateParts, formatDayDate, formatDistance, formatElevation, formatTimeEstimate } from "./format";
 import { strings } from "./strings";
-import { AireWarnings, DayAccessView } from "./TripAccessView";
+import { DayWarningChips } from "./TripAccessView";
 
 /**
  * Totals for each day (ADR 0008): the trip is split into days at camps.
  * Renders the core's day summaries; no domain logic. A dated trip's days show
- * their calendar dates (#52), and each day its access status and warnings (#58).
- * Where cards take taps (the phone), only the selected card shows the warnings, and
- * each card is titled by a calendar tile with its date instead of "Day n".
+ * their calendar dates (#52). A day with access, lock or aire warnings shows one chip
+ * per leg that has any; the warnings themselves are on the leg, which a chip shows (#58).
+ * Where cards take taps (the phone), each card is titled by a calendar tile with its
+ * date instead of "Day n".
  */
 export default function DaysPanel({
   days,
@@ -19,16 +22,19 @@ export default function DaysPanel({
   onSelectDay,
   selectedDay,
   heading = true,
+  onShowLeg,
 }: {
   days: readonly DaySummary[];
   access?: readonly DayAccess[];
   aire?: readonly AireWarning[];
   /** A day card was tapped (the phone zooms the map to that day, #123); desktop rows take no taps. */
   onSelectDay?: (day: number) => void;
-  /** The tapped card, which alone shows its access warnings; none when undefined. */
+  /** The tapped card; none when undefined. */
   selectedDay?: number;
   /** False where a tab already names the panel (the phone's Days tab). */
   heading?: boolean;
+  /** A warning chip was tapped: show that leg with its warnings. */
+  onShowLeg: (leg: number) => void;
 }) {
   if (days.length === 0) return null;
   return (
@@ -41,8 +47,7 @@ export default function DaysPanel({
               key={i}
               day={day}
               index={i}
-              access={access?.[i]}
-              aire={aire}
+              warnings={<DayWarningChips legs={dayWarnings(i, access?.[i], aire)} onShowLeg={onShowLeg} />}
               selected={i === selectedDay}
               onSelect={() => onSelectDay(i)}
             />
@@ -60,8 +65,7 @@ export default function DaysPanel({
                 <span className="day-legs">{strings.dayLegs(day.firstLeg + 1, day.lastLeg + 1)}</span>
               </span>
               <DayFigures day={day} />
-              {access?.[i] && <DayAccessView access={access[i]} details />}
-              <AireWarnings warnings={aire.filter((warning) => warning.day === i)} showPlace />
+              <DayWarningChips legs={dayWarnings(i, access?.[i], aire)} onShowLeg={onShowLeg} />
             </li>
           ),
         )}
@@ -85,20 +89,18 @@ function DayFigures({ day }: { day: DaySummary }) {
 /**
  * A phone day card: a calendar tile (weekday, day, month) is its title; an undated
  * trip's tile shows "Day" and the day's number. The card takes the tap and zooms the
- * map to that day (#123); only the selected card shows its warnings.
+ * map to that day (#123); its warning chips take taps of their own.
  */
 function PhoneDayCard({
   day,
   index,
-  access,
-  aire,
+  warnings,
   selected,
   onSelect,
 }: {
   day: DaySummary;
   index: number;
-  access?: DayAccess;
-  aire: readonly AireWarning[];
+  warnings: ReactNode;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -130,8 +132,7 @@ function PhoneDayCard({
         <div className="day-figures">
           <DayFigures day={day} />
         </div>
-        {access && <DayAccessView access={access} details={selected} />}
-        {selected && <AireWarnings warnings={aire.filter((warning) => warning.day === index)} showPlace />}
+        {warnings}
       </div>
     </li>
   );

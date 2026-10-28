@@ -195,7 +195,7 @@ test("a failing flow service still ends in unknown after checking (#85)", async 
   );
 });
 
-test("a day with one held flow-dependent leg and one open leg never reads open while held (#85)", async ({ page }) => {
+test("a day with one held flow-dependent leg and one open leg claims nothing about the flow while held (#85)", async ({ page }) => {
   await page.clock.setFixedTime(RECORDED_AT);
   const held = delayedKiwis(RECORDED);
   await serveOffline(page, { kiwis: held.kiwis });
@@ -225,12 +225,15 @@ test("a day with one held flow-dependent leg and one open leg never reads open w
   await page.goto("/");
 
   const day = page.getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem").first();
-  const dayStatus = day.locator(".day-access-status");
-  // The open leg settles at once; the day must still read checking while the flow is held.
+  // The day's chips (ADR 0029): none says Closed while the flow is held, and the open leg has none.
+  const chips = day.locator(".day-warning-chip");
+  const closed = strings.tripAccess.chip(1, strings.tripAccess.chipKind.closed);
+  // The open leg settles at once; the Semois leg still reads checking.
   await expect(page.locator(".leg-row").nth(1).locator(".leg-access-status")).toContainText(strings.accessState.open);
-  await expect(dayStatus).toHaveText(strings.tripAccess.dayStatus(strings.accessChecking));
-  await expect(page.getByRole("region", { name: strings.tripAccess.summaryLabel })).toContainText(strings.accessChecking);
+  await expect(page.locator(".leg-row").first().locator(".leg-access-status")).toContainText(strings.accessChecking);
+  await expect(chips.filter({ hasText: closed })).toHaveCount(0);
+  await expect(chips.filter({ hasText: "Leg 2" })).toHaveCount(0);
 
   held.release();
-  await expect(dayStatus).toHaveText(strings.tripAccess.dayStatus(strings.accessState["closed-today"]));
+  await expect(chips.filter({ hasText: closed })).toHaveCount(1);
 });

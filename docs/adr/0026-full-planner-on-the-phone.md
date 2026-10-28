@@ -16,7 +16,8 @@ ADR 0023 gave phones a read-only view: the map, your position, your access point
   - **Peek:** the trip name, the totals and the tabs.
   - **Tabs:** Legs, Days, Trip, Access points, Settings. The tab row scrolls sideways when it doesn't fit.
     - **Legs:** compact rows; a tap zooms the map to the leg and opens the row.
-    - **Trip:** name, start date and the access summary.
+    - **Days:** a card per day; a day's access warnings are chips that open their leg (ADR 0029).
+    - **Trip:** name and start date (the access summary went in #123; ADR 0029).
     - **Settings:** pace factor and paddling speed.
 - **Layout (sideways):** a full-height side panel on the right with the same tabs, collapsible to a strip with the totals. Rotating keeps the open tab, the open leg row and any selection (#109).
 - **Floating buttons over the map:**
@@ -39,7 +40,7 @@ ADR 0023 gave phones a read-only view: the map, your position, your access point
   - holding a water opens its details, and a tap opens a lock's;
   - details show in the sheet.
 
-  The "Indicative only" disclaimer (ADR 0024) lives in that popover and at the top of the Trip tab's access summary, not as a permanent line.
+  The "Indicative only" disclaimer (ADR 0024) lives in that popover and under the day cards, not as a permanent line.
 - **Names and dates:** saving or exporting asks for the trip name in a dialog. A new trip on the phone gets today as its start date. The start date stays trip data (#106).
 - **No how-to text** in the phone UI: gestures are found by use. Short state lines ("Placing an access point · Cancel") are fine.
 - **Planning needs a signal,** as on desktop (ADR 0023). There's no offline mode or banner: legs that can't be routed show their failure with Retry, while access points and your position keep working offline (#108).

@@ -72,7 +72,7 @@ test("declining the snap offer changes nothing", async ({ page }) => {
   await expect.poll(() => storedFirstPoint(page)).toEqual(putIn);
 });
 
-test("a Walloon put-in without an official aire nearby shows the warning on the leg, the day and the summary", async ({
+test("a Walloon put-in without an official aire nearby shows the warning on the leg and a chip on its day", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -82,11 +82,10 @@ test("a Walloon put-in without an official aire nearby shows the warning on the 
 
   const legs = page.getByRole("complementary", { name: strings.legsPanelLabel });
   const days = page.getByRole("complementary", { name: strings.daysPanelLabel });
-  const summary = page.getByRole("region", { name: strings.tripAccess.summaryLabel });
-  for (const where of [legs, days, summary]) {
-    await expect(where.locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
-  }
-  await expect(summary).toContainText(strings.tripAccess.neverBlocks);
+  await expect(legs.locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
+  // The day only points at the leg (ADR 0029); the paddle leg is also forbidden here or not, but it has a chip.
+  await expect(days.locator(".day-warning-chip")).toHaveCount(1);
+  await expect(days.locator(".access-warning-aire")).toHaveCount(0);
 
   // It never blocks: the trip can still be saved.
   const [save] = await Promise.all([

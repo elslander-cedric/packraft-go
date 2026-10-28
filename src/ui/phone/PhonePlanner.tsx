@@ -22,6 +22,7 @@ import PhoneAccessChip from "./PhoneAccessChip";
 import PhoneAccessDetails from "./PhoneAccessDetails";
 import PhoneAccessPoints from "./PhoneAccessPoints";
 import SnapOffers from "../SnapOffers";
+import type { ShownLeg } from "../shownLeg";
 import PhoneLegsList from "./PhoneLegsList";
 import PhoneMenu from "./PhoneMenu";
 import PhoneTripTab from "./PhoneTripTab";
@@ -168,6 +169,13 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     raise();
     setFocus({ area, ...covered() });
   };
+  // A day card's warning chip opens its leg in the Legs tab, scrolled to the top, with its warnings (#58).
+  const [shownLeg, setShownLeg] = useState<ShownLeg | null>(null);
+  const showLeg = (index: number) => {
+    setTab("legs");
+    if (index !== openLeg) openLegRow(index);
+    setShownLeg({ leg: index, seq: (shownLeg?.seq ?? 0) + 1 });
+  };
   // With a route point selected, the access-point button saves that point as an access point (#120).
   const markSelectedPoint = () => {
     if (selectedPoint === null) return;
@@ -203,7 +211,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   };
 
   // A day card tap shows the whole day on the map, above the half-raised sheet (#123).
-  // The selected card shows its access warnings; tapping it again unselects it.
+  // Tapping the selected card again unselects it.
   const [selectedDay, setSelectedDay] = useState<number | undefined>(undefined);
   const openDay = (index: number) => {
     const day = summary.days[index];
@@ -251,6 +259,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             aire={aire}
             openLeg={openLeg}
             onOpen={openLegRow}
+            shownLeg={shownLeg}
             onRetry={(index) => dispatch({ type: "retryLeg", index })}
           />
         </TabPanel>
@@ -262,8 +271,9 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             onSelectDay={openDay}
             selectedDay={selectedDay}
             heading={false}
+            onShowLeg={showLeg}
           />
-          {/* Each day's access is on its card; the disclaimer follows them (#123). */}
+          {/* The disclaimer follows the day cards and their warning chips (#123). */}
           {waterAccess && summary.days.length > 0 && <p className="phone-disclaimer">{strings.navigationRulesNotice}</p>}
         </TabPanel>
         <TabPanel value="trip">
