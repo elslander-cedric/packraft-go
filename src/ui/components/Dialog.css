@@ -93,6 +93,21 @@
   height: var(--control-height);
 }
 
+/* Our own arrow instead of the browser's small one: a chevron drawn in the text colour as two
+   strokes, inset like the fields' text. The text starts where an input's does. */
+.dialog select {
+  appearance: none;
+  padding-right: calc(var(--space-3) + 1rem + var(--space-2));
+  background-image:
+    linear-gradient(45deg, transparent calc(50% - 1px), currentColor calc(50% - 1px), currentColor calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(135deg, transparent calc(50% - 1px), currentColor calc(50% - 1px), currentColor calc(50% + 1px), transparent calc(50% + 1px));
+  background-position:
+    right calc(var(--space-3) + 0.5rem - 1px) center,
+    right var(--space-3) center;
+  background-size: 0.5rem 0.5rem;
+  background-repeat: no-repeat;
+}
+
 .dialog textarea {
   padding-block: var(--space-2);
 }

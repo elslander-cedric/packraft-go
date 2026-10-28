@@ -35,12 +35,12 @@ ADR 0023 gave phones a read-only view: the map, your position, your access point
 
   Access points move with the same press-and-drag (#108).
 - **Access layer** (#110):
-  - a chip with a popover holds the date, the legend and the note;
+  - a chip with a dialog (a popover until #163) holds the date, the legend and the note;
   - a tap always edits the route, even on water;
   - holding a water opens its details, and a tap opens a lock's;
   - details show in the sheet.
 
-  The "Indicative only" disclaimer (ADR 0024) lives in that popover, not as a permanent line or under the day cards.
+  The "Indicative only" disclaimer (ADR 0024) lives in that dialog, not as a permanent line or under the day cards.
 - **Names and dates:** saving or exporting asks for the trip name in a dialog. A new trip on the phone gets today as its start date. The start date stays trip data (#106).
 - **No how-to text** in the phone UI: gestures are found by use. Short state lines ("Placing an access point · Cancel") are fine.
 - **Planning needs a signal,** as on desktop (ADR 0023). There's no offline mode or banner: legs that can't be routed show their failure with Retry, while access points and your position keep working offline (#108).

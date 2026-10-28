@@ -52,7 +52,7 @@ export const icons = {
   camp: faTent,
   accessLayer: faLayerGroup,
   menu: faBars,
-  openPopover: faChevronDown,
+  openAccessDialog: faChevronDown,
   // The side panel is on the right: it opens leftwards and collapses rightwards.
   expandPanel: faChevronLeft,
   collapsePanel: faChevronRight,

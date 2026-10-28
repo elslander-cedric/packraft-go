@@ -304,7 +304,7 @@ test("the Days tab carries the access: a day card's chip opens its leg's details
   await expect(select).toHaveAttribute("aria-expanded", "true");
   await expect(dayCards(page).nth(1).locator(".access-warning")).toHaveCount(0);
   await expect(panel(page)).not.toContainText(strings.accessState.unknown);
-  // The disclaimer is in the access chip's popover only.
+  // The disclaimer is in the access chip's dialog only.
   await expect(panel(page).getByText(strings.navigationRulesNotice)).toHaveCount(0);
 
   // The chip opens its leg's details dialog over the Days tab (#158), with the warning, and
