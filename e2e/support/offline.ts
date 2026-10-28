@@ -26,20 +26,31 @@ export type OfflineOptions = {
    */
   kiwis?: (url: URL) => BRouterReply | Promise<BRouterReply>;
   /**
-   * Answers Nominatim's reverse geocoding (default names of access points,
-   * #136). Defaults to "service unavailable" (503): points stay unnamed.
-   * Replay `src/geocoding/fixtures` with `nominatimFixture`.
+   * Answers Nominatim: reverse geocoding (default names of access points,
+   * #136) and search (place search, #172). Defaults to "service unavailable"
+   * (503): points stay unnamed and searches fail. Replay `src/geocoding/fixtures`
+   * with `nominatimFixture` (one answer for every request) or
+   * `nominatimFixtures` (one per path).
    */
   nominatim?: (url: URL) => BRouterReply | Promise<BRouterReply>;
 };
 
 const GEOCODING_FIXTURES = path.join(__dirname, "../../src/geocoding/fixtures");
 
-/** Answers every reverse geocode with a recorded Nominatim response from `src/geocoding/fixtures`. */
+/** Answers every Nominatim request with a recorded Nominatim response from `src/geocoding/fixtures`. */
 export const nominatimFixture = (name: string) => {
   const body = readFileSync(path.join(GEOCODING_FIXTURES, name), "utf8");
   return (): BRouterReply => ({ status: 200, body });
 };
+
+/** Answers `/reverse` and `/search` each with their own recorded response; a path left out is a 503. */
+export function nominatimFixtures(files: { reverse?: string; search?: string }): (url: URL) => BRouterReply {
+  const byPath: Record<string, string | undefined> = { "/reverse": files.reverse, "/search": files.search };
+  return (url) => {
+    const file = byPath[url.pathname];
+    return file ? nominatimFixture(file)() : { status: 503, body: "" };
+  };
+}
 
 const HYDROMETRY_FIXTURES = path.join(__dirname, "../../src/hydrometry/fixtures");
 
@@ -117,7 +128,7 @@ export async function serveOffline(page: Page, options: OfflineOptions = {}) {
           contentType: reply.status === 200 ? "application/json;charset=UTF-8" : "text/plain",
           body: reply.body,
         });
-      } else if (url.hostname === "nominatim.openstreetmap.org" && url.pathname === "/reverse") {
+      } else if (url.hostname === "nominatim.openstreetmap.org" && ["/reverse", "/search"].includes(url.pathname)) {
         nominatim.push(url);
         const reply = await answerNominatim(url);
         await route.fulfill({
