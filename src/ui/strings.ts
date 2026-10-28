@@ -54,6 +54,11 @@ export const strings = {
   undoButton: "Undo",
   undoShortcut: "Undo the last edit (Ctrl+Z / Cmd+Z)",
   undoDisabledReason: "Nothing to undo yet.",
+  // Back to start (GLOSSARY "Loop"): a leg from the last point back to the start point.
+  backToStartButton: "Back to start",
+  backToStartHint: "Add a leg from the last point back to the start point.",
+  backToStartNeedsTwoPoints: "Add at least two points first.",
+  backToStartAlreadyThere: "The trip already ends at its start.",
   deletePointButton: "Delete point",
   deletePointShortcut: "Delete the selected point (Delete key)",
   deletePointDisabledReason: "Select a point on the map to delete it.",
@@ -228,6 +233,8 @@ export const strings = {
     // Its toggles are icon-only; their names are `legModeHike` and `legModePaddle`.
     // The position and undo buttons are icon-only too; their names are `showPositionButton` and `undoButton`.
     showPositionButton: "Show my position",
+    // The icon-only floating button above the access-point button (GLOSSARY "Loop").
+    backToStartButton: "Route back to the start",
     positionLocating: "Finding your position…",
     positionMarker: "Your position",
     positionDenied:

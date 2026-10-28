@@ -108,6 +108,16 @@ function applyStep(trip: Trip, edit: Exclude<Edit, { type: "undo" }>): Trip {
   return { ...trip, points: [...trip.points, edit.at], legs };
 }
 
+/**
+ * Back to start (GLOSSARY "Loop") needs a leg to come back from, and is not
+ * offered while the last point is already exactly on the start point.
+ */
+export function canGoBackToStart(trip: Trip): boolean {
+  const start = trip.points[0];
+  const end = trip.points[trip.points.length - 1];
+  return trip.points.length >= 2 && (end.lat !== start.lat || end.lng !== start.lng);
+}
+
 /** True when the point at `index` is marked as a camp. */
 export function isCamp(trip: Trip, index: number): boolean {
   return trip.camps?.includes(index) ?? false;

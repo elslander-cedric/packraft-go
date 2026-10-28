@@ -261,6 +261,11 @@ test.describe("#31: controls by keyboard alone", () => {
     await page.keyboard.press("Space");
     await expect(pointMarkers(page)).toHaveCount(0);
     await page.keyboard.press("ArrowRight");
+    await expect(button(page, strings.backToStartButton)).toBeFocused();
+    await expect(button(page, strings.backToStartButton)).toHaveAccessibleDescription(strings.backToStartNeedsTwoPoints);
+    await page.keyboard.press("Enter");
+    await expect(pointMarkers(page)).toHaveCount(0);
+    await page.keyboard.press("ArrowRight");
     await expect(button(page, strings.deletePointButton)).toBeFocused();
     await expect(button(page, strings.deletePointButton)).toHaveAccessibleDescription(strings.deletePointDisabledReason);
     await page.keyboard.press("ArrowRight");

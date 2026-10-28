@@ -6,6 +6,7 @@ Shared language for packraft-go. One term per entry: what it means *in this proj
 - **Packraft**: A lightweight inflatable boat that folds small enough to carry in a backpack.
 - **Trip**: A planned packrafting journey, usually multi-day, made of one or more legs.
 - **Leg**: A continuous stretch of a trip done in one mode: a *hike leg* (on foot, boat carried) or a *paddle leg* (on water).
+- **Loop**: A trip that ends where it starts: its last point is on its start point. *Back to start* makes a trip a loop by adding a leg from the last point to the start. After that the start and the end are separate points; moving one doesn't move the other.
 - **Put-in**: The point where a hike leg ends and a paddle leg begins; you inflate and launch.
 - **Take-out**: The point where a paddle leg ends and a hike leg begins; you get off the water and pack up.
 - **Day**: The part of a trip between the start (or a camp) and the next camp (or the end). A one-day trip has a single day and no camps.

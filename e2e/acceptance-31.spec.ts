@@ -238,6 +238,8 @@ test.describe("keyboard alone", () => {
     await page.keyboard.press("Space");
     await expect(pointMarkers(page)).toHaveCount(1);
     await page.keyboard.press("ArrowRight");
+    await expect(button(page, strings.backToStartButton)).toBeFocused();
+    await page.keyboard.press("ArrowRight");
     await expect(button(page, strings.deletePointButton)).toBeFocused();
     await page.keyboard.press("ArrowRight");
     await expect(button(page, strings.campButton)).toBeFocused();

@@ -48,6 +48,7 @@ const actions: [name: string, make: Make][] = [
   ["add point", { type: "addPoint", at: { lat: 50.4, lng: 5.5 }, accessPoints: [] }],
   ["move point", { type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 } }],
   ["delete selected point", { type: "deleteSelectedPoint" }],
+  ["back to start", { type: "backToStart" }],
   ["insert point", { type: "insertPoint", index: 0, near: { lat: 50.3577, lng: 5.4563 } }],
   ["set leg mode", { type: "setLegMode", index: 1, mode: "paddle", accessPoints: [] }],
   ["access points changed", { type: "accessPointsChanged", accessPoints: access }],
@@ -94,6 +95,7 @@ table(
     "add point": cleared(null),
     "move point": cleared(null),
     "delete selected point": cleared(null),
+    "back to start": cleared(null),
     "insert point": set(2), // follows point 1, which is now point 2
     "set leg mode": cleared(null),
     "access points changed": kept(1),
@@ -120,6 +122,7 @@ table(
     "add point": cleared([]), // replaced by its own offers, none here
     "move point": cleared([]),
     "delete selected point": cleared([]),
+    "back to start": cleared([]), // the closing point gets no offer of its own
     "insert point": cleared([]),
     undo: cleared([]),
     "access points changed": kept(1),
@@ -144,6 +147,7 @@ table(
     "add point": cleared(null),
     "move point": cleared(null),
     "delete selected point": cleared(null),
+    "back to start": cleared(null),
     "insert point": cleared(null),
     "set leg mode": cleared(null),
     "access points changed": cleared(null),
