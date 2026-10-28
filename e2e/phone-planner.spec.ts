@@ -219,7 +219,10 @@ test("a pinch zooms the map and adds no point", async ({ page }) => {
   const box = (await map.boundingBox())!;
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 3;
-  const tilePixels = async () => (await map.locator("img.leaflet-tile-loaded").first().boundingBox())!.width;
+  // A tile can be swapped out mid-zoom between finding and measuring it; read that as 0 so the
+  // poll below tries again instead of throwing.
+  const tilePixels = async () => (await map.locator("img.leaflet-tile-loaded").first().boundingBox())?.width ?? 0;
+  await expect.poll(tilePixels).toBeGreaterThan(0);
   const before = await tilePixels();
 
   const cdp = await page.context().newCDPSession(page);
