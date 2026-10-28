@@ -1,7 +1,7 @@
 "use client";
 
 import type { SearchOutcome, SearchResult } from "@/core/placeSearch";
-import { SearchBox, type SearchBoxMessage } from "./components/SearchBox";
+import { SearchBox, type SearchBoxMessage, type SearchBoxProps } from "./components/SearchBox";
 import { Icon } from "./icons/Icon";
 import { icons } from "./icons/icons";
 import { strings } from "./strings";
@@ -30,14 +30,19 @@ function messageFor(outcome: SearchOutcome, asked: string, retry: () => void): S
   }
 }
 
+type PlaceSearchBarProps = { search: PlaceSearch } & Pick<
+  SearchBoxProps<SearchResult>,
+  "className" | "inline" | "leading" | "autoFocus"
+>;
+
 /** Place search over the map (#173): the bar, its results and messages. The map draws the shown result. */
-export default function PlaceSearchBar({ search, className }: { search: PlaceSearch; className?: string }) {
+export default function PlaceSearchBar({ search, ...box }: PlaceSearchBarProps) {
   const { state } = search;
   const results = state.outcome.kind === "results" ? state.outcome.results : [];
 
   return (
     <SearchBox<SearchResult>
-      className={className}
+      {...box}
       label={text.label}
       placeholder={text.placeholder}
       searchLabel={text.search}

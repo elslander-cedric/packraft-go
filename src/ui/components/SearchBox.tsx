@@ -37,6 +37,15 @@ export type SearchBoxProps<Item> = {
   message: SearchBoxMessage | null;
   /** Escape or a click elsewhere: close the dropdown. */
   onDismiss: () => void;
+  /**
+   * The results and messages show under the field in the page's flow, not in a popup: for a
+   * screen that places and sizes them itself (the phone's, above the on-screen keyboard; #174).
+   */
+  inline?: boolean;
+  /** A control at the field's start, inside its frame (the phone's Back). */
+  leading?: ReactNode;
+  /** Focus the field when it appears. */
+  autoFocus?: boolean;
   className?: string;
 };
 
@@ -45,6 +54,7 @@ export type SearchBoxProps<Item> = {
  * UI Autocomplete, ADR 0020). It never suggests as you type: its own filtering
  * is off, and it is open only while there are results or a message, which the
  * screen decides. Enter searches unless a result is highlighted, which it picks.
+ * Inline, the answer sits under the field and `className` goes on the box around both.
  */
 export function SearchBox<Item>({
   label,
@@ -64,11 +74,85 @@ export function SearchBox<Item>({
   itemsLabel,
   message,
   onDismiss,
+  inline = false,
+  leading,
+  autoFocus,
   className,
 }: SearchBoxProps<Item>) {
   const open = items.length > 0 || message !== null;
   const highlighted = useRef<Item | undefined>(undefined);
   const input = useRef<HTMLInputElement>(null);
+
+  const form = (
+    <form
+      role="search"
+      className={className && !inline ? `search-box ${className}` : "search-box"}
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <Autocomplete.InputGroup className="search-box-group">
+        {leading}
+        <Autocomplete.Input
+          ref={input}
+          className="search-box-input"
+          aria-label={label}
+          placeholder={placeholder}
+          enterKeyHint="search"
+          autoComplete="off"
+          autoFocus={autoFocus}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !(open && highlighted.current !== undefined)) {
+              event.preventDefault();
+              onSubmit();
+            }
+          }}
+        />
+        {value !== "" && (
+          <button
+            type="button"
+            className="search-box-icon-button"
+            aria-label={clearLabel}
+            onClick={() => {
+              onClear();
+              input.current?.focus();
+            }}
+          >
+            {clearIcon}
+          </button>
+        )}
+        <button type="submit" className="search-box-icon-button" aria-label={searchLabel}>
+          {searchIcon}
+        </button>
+      </Autocomplete.InputGroup>
+    </form>
+  );
+  const answer = (
+    <>
+      {message && (
+        <div role={message.role} className={`search-box-message search-box-message-${message.role}`}>
+          <span>{message.text}</span>
+          {message.action && <Button onClick={message.action.onAction}>{message.action.label}</Button>}
+        </div>
+      )}
+      {items.length > 0 && (
+        <Autocomplete.List className="search-box-list" aria-label={itemsLabel}>
+          {items.map((item, index) => (
+            <Autocomplete.Item
+              key={itemKey(item, index)}
+              value={item}
+              index={index}
+              className="search-box-item"
+              onClick={() => onPick(item)}
+            >
+              {renderItem(item)}
+            </Autocomplete.Item>
+          ))}
+        </Autocomplete.List>
+      )}
+    </>
+  );
 
   return (
     <Autocomplete.Root
@@ -79,7 +163,9 @@ export function SearchBox<Item>({
         // Only typing changes the text; picking, Escape and the like are ours to handle.
         if (details.reason === "input-change" || details.reason === "input-clear") onValueChange(next);
       }}
-      open={open}
+      // Base UI wants an inline list always open; whether anything shows is ours to decide.
+      inline={inline}
+      open={inline || open}
       onOpenChange={(next) => {
         if (!next) onDismiss();
       }}
@@ -87,74 +173,21 @@ export function SearchBox<Item>({
         highlighted.current = item;
       }}
     >
-      <form
-        role="search"
-        className={className ? `search-box ${className}` : "search-box"}
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit();
-        }}
-      >
-        <Autocomplete.InputGroup className="search-box-group">
-          <Autocomplete.Input
-            ref={input}
-            className="search-box-input"
-            aria-label={label}
-            placeholder={placeholder}
-            enterKeyHint="search"
-            autoComplete="off"
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !(open && highlighted.current !== undefined)) {
-                event.preventDefault();
-                onSubmit();
-              }
-            }}
-          />
-          {value !== "" && (
-            <button
-              type="button"
-              className="search-box-icon-button"
-              aria-label={clearLabel}
-              onClick={() => {
-                onClear();
-                input.current?.focus();
-              }}
-            >
-              {clearIcon}
-            </button>
-          )}
-          <button type="submit" className="search-box-icon-button" aria-label={searchLabel}>
-            {searchIcon}
-          </button>
-        </Autocomplete.InputGroup>
-      </form>
-      <Autocomplete.Portal>
-        <Autocomplete.Positioner className="search-box-positioner" sideOffset={4} align="start">
-          <Autocomplete.Popup className="search-box-popup">
-            {message && (
-              <div role={message.role} className={`search-box-message search-box-message-${message.role}`}>
-                <span>{message.text}</span>
-                {message.action && <Button onClick={message.action.onAction}>{message.action.label}</Button>}
-              </div>
-            )}
-            {items.length > 0 && (
-              <Autocomplete.List className="search-box-list" aria-label={itemsLabel}>
-                {items.map((item, index) => (
-                  <Autocomplete.Item
-                    key={itemKey(item, index)}
-                    value={item}
-                    index={index}
-                    className="search-box-item"
-                    onClick={() => onPick(item)}
-                  >
-                    {renderItem(item)}
-                  </Autocomplete.Item>
-                ))}
-              </Autocomplete.List>
-            )}
-          </Autocomplete.Popup>
-        </Autocomplete.Positioner>
-      </Autocomplete.Portal>
+      {inline ? (
+        <div className={className}>
+          {form}
+          {open && <div className="search-box-answer">{answer}</div>}
+        </div>
+      ) : (
+        <>
+          {form}
+          <Autocomplete.Portal>
+            <Autocomplete.Positioner className="search-box-positioner" sideOffset={4} align="start">
+              <Autocomplete.Popup className="search-box-popup">{answer}</Autocomplete.Popup>
+            </Autocomplete.Positioner>
+          </Autocomplete.Portal>
+        </>
+      )}
     </Autocomplete.Root>
   );
 }

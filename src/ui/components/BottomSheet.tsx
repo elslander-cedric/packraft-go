@@ -8,6 +8,8 @@ export type SheetStop = "peek" | "half" | "full";
 /** The peek's least height; it grows when its content needs more, e.g. a wrapped header. */
 const MIN_PEEK_PX = 128;
 const stops: readonly SheetStop[] = ["peek", "half", "full"];
+/** The share of the screen's height the sheet covers at the stops above the peek. */
+export const sheetStopShare: Record<Exclude<SheetStop, "peek">, number> = { half: 0.5, full: 0.9 };
 
 export type BottomSheetProps = {
   /** Accessible name of the sheet. */
@@ -45,7 +47,7 @@ export function BottomSheet({ label, stop, onStopChange, peek, children, onPeekH
     },
     [onPeekHeightChange],
   );
-  const snapPoints = [`${peekPx}px`, 0.5, 0.9];
+  const snapPoints = [`${peekPx}px`, sheetStopShare.half, sheetStopShare.full];
   return (
     <Drawer.Root
       open

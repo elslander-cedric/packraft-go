@@ -1,6 +1,7 @@
 // The app's UI icons (#143, ADR 0028): Font Awesome Free Solid, imported only here,
 // so switching to another set only touches src/ui/icons/. Their names stay in strings.ts.
 import {
+  faArrowLeft,
   faArrowsSpin,
   faArrowTrendDown,
   faArrowTrendUp,
@@ -86,4 +87,6 @@ export const icons = {
   search: faMagnifyingGlass,
   clearSearch: faXmark,
   searchResult: faLocationDot,
+  // The phone's open search field closes back to its pill (#174).
+  closeSearch: faArrowLeft,
 };

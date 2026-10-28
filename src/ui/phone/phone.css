@@ -770,28 +770,123 @@
   font-size: 1rem;
 }
 
-/* The access layer's chip (#125): top centre of the map, between the menu and the position button. */
-.phone-access-chip-slot {
+/* Place search (#174): a pill on the top row, between the menu and the right-hand buttons;
+   sideways it stops short of the side panel, as those buttons do. */
+.phone-place-search {
   position: absolute;
   top: var(--space-3);
-  left: 50%;
+  left: calc(var(--space-3) + 2.75rem + var(--space-2));
+  right: calc(var(--panel-cover, 0px) + var(--space-3) + 2.75rem + var(--space-2));
   z-index: var(--phone-z-floating);
-  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 2.75rem;
+  border-radius: 1.375rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
 }
 
-/* Sideways, the chip is centred on the map beside the panel (#126). */
+/* The pill follows the side panel as the buttons beside it do; opening the field doesn't animate. */
+.phone-sideways .phone-place-search:not(.phone-place-search-open),
 .phone-sideways .phone-access-chip-slot {
-  left: calc((100% - var(--panel-cover)) / 2);
-  transition: left 250ms;
+  transition: right 250ms;
 }
 
-.phone-access-chip {
+.button.phone-search-pill {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
   min-height: 2.75rem;
   padding: 0 var(--space-3);
   border: none;
   border-radius: 1.375rem;
+  background: transparent;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.phone-search-pill-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.phone-search-pill-placeholder {
+  color: var(--color-muted);
+}
+
+.button.phone-search-pill-clear {
+  flex: none;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+}
+
+/* Open, it widens over the buttons beside it into a field with its results under it, kept in the
+   area above the on-screen keyboard (--visible-*, set while open; #163). It goes over the sheet
+   (z-index 1000), however high that is, but never over the side panel, which it stops short of. */
+.phone-place-search-open {
+  top: calc(var(--visible-top, 0px) + var(--space-3));
+  left: var(--space-3);
+  right: calc(var(--panel-cover, 0px) + var(--space-3));
+  z-index: 1001;
+  flex-direction: column;
+  align-items: stretch;
+  max-height: calc(var(--visible-height, 100dvh) - 2 * var(--space-3));
+  border-radius: var(--radius-large);
+}
+
+.phone-place-search-box {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: inherit;
+}
+
+.phone-place-search-box .search-box-group {
+  padding-left: 0;
+  border-radius: var(--radius-large);
+}
+
+/* Only the results scroll; the field stays put. */
+.phone-place-search-box .search-box-answer {
+  min-height: 0;
+  overflow-y: auto;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* The access layer's chip (#125): on the second row, under the pill (#174), at the right beside the
+   access layer's own button. A long trip day shortens it rather than push it off the map. */
+.phone-access-chip-slot {
+  position: absolute;
+  top: calc(var(--space-3) + 2.75rem + var(--space-2));
+  left: var(--space-3);
+  right: calc(var(--panel-cover, 0px) + var(--space-3) + 2.75rem + var(--space-2));
+  z-index: var(--phone-z-floating);
+  display: flex;
+  justify-content: flex-end;
+  /* The slot spans the row; only the chip takes taps. */
+  pointer-events: none;
+}
+
+.phone-access-chip {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  overflow: hidden;
+  border: none;
+  border-radius: 1.375rem;
   background: var(--color-surface);
   white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: auto;
 }
 
 /* The access layer's dialog (#163): the dialogs' text size; the date row's fields take
