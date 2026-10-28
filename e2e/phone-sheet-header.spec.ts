@@ -166,14 +166,16 @@ test("the leg and day lists sit right under the tab row; every other tab's conte
   for (const name of Object.values(text.tabs)) {
     await tab(page, name).click();
     await settled(page);
-    // Measured in one go: the panel's content re-renders as the tab opens.
-    const gap = await sheet(page).evaluate((el) => {
-      const tabs = el.querySelector('[role="tablist"]')!.getBoundingClientRect();
-      const first = el.querySelector('[role="tabpanel"]:not([hidden]) > *')!.getBoundingClientRect();
-      return first.top - tabs.bottom;
-    });
-    if (flush.includes(name)) expect(Math.round(gap), name).toBe(0);
-    else expect(gap, name).toBeGreaterThanOrEqual(12);
+    // Measured in one go, polled: the panel's content re-renders as the tab opens, and right
+    // after Days the flush Days panel may still be the one shown.
+    const gap = () =>
+      sheet(page).evaluate((el) => {
+        const tabs = el.querySelector('[role="tablist"]')!.getBoundingClientRect();
+        const first = el.querySelector('[role="tabpanel"]:not([hidden]) > *')!.getBoundingClientRect();
+        return Math.round(first.top - tabs.bottom);
+      });
+    if (flush.includes(name)) await expect.poll(gap, { message: name }).toBe(0);
+    else await expect.poll(gap, { message: name }).toBeGreaterThanOrEqual(12);
   }
 });
 
