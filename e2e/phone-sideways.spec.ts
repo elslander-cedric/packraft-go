@@ -67,9 +67,8 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
   expect(box.width).toBeLessThanOrEqual(380);
   expect(box.width).toBeGreaterThan(SIDEWAYS.width * 0.3);
   for (const name of Object.values(text.tabs)) await expect(panelTab(page, name)).toBeAttached();
-  await panelTab(page, text.tabs.trip).click();
-  await expect(panelTab(page, text.tabs.trip)).toHaveAttribute("aria-selected", "true");
-  await expect(panel(page).getByLabel(strings.tripNameLabel)).toBeVisible();
+  await panelTab(page, text.tabs.days).click();
+  await expect(panelTab(page, text.tabs.days)).toHaveAttribute("aria-selected", "true");
 
   // The map beside the open panel takes taps.
   await tapMap(page, -80, 0);

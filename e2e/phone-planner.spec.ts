@@ -121,25 +121,19 @@ test("the peek shows the five tabs (an empty, unnamed trip has no name or totals
   expect(await sheetHeight(page)).toBeLessThan(page.viewportSize()!.height * 0.55);
 });
 
-test("on a narrow phone the tab row scrolls sideways and every tab keeps its full name", async ({ page }) => {
+test("on a narrow phone every tab keeps its full name and the whole tab row fits on screen", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await serveOffline(page);
   await openPhone(page);
   await dataFonts(page);
 
-  const list = sheet(page).getByRole("tablist", { name: strings.phone.tabsLabel });
-  const { scrollWidth, clientWidth } = await list.evaluate((el) => ({
-    scrollWidth: el.scrollWidth,
-    clientWidth: el.clientWidth,
-  }));
-  expect(scrollWidth).toBeGreaterThan(clientWidth);
-  // Each tab is as wide as its text: nothing is squeezed or wrapped.
+  // Each tab is as wide as its text: nothing is squeezed or wrapped. With three tabs (#154) none is
+  // scrolled out of view.
   for (const name of Object.values(strings.phone.tabs)) {
     const fits = await tab(page, name).evaluate((el) => el.scrollWidth <= el.clientWidth && el.clientHeight < 60);
     expect(fits).toBe(true);
+    await expect(tab(page, name)).toBeInViewport({ ratio: 1 });
   }
-  await tab(page, strings.phone.tabs.accessPoints).scrollIntoViewIfNeeded();
-  await expect(tab(page, strings.phone.tabs.accessPoints)).toBeInViewport();
 });
 
 test("the sheet settles at peek, half or 90% by drag distance, never closes, and the map stays usable", async ({
@@ -312,7 +306,7 @@ test("offline, the planner opens from the app cache with the stored trip; an unr
   await context.setOffline(true);
   await page.reload();
 
-  await expect(sheet(page).getByRole("heading", { name: "Ourthe weekend" })).toBeVisible();
+  // The stored trip's one leg is back on the map.
   await expect(legLines(page)).toHaveCount(1);
   await expect(legLines(page)).toHaveAttribute("stroke-dasharray", "8 8");
   await tab(page, strings.phone.tabs.legs).click();

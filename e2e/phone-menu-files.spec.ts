@@ -18,8 +18,6 @@ test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
 const text = strings.phone.menu;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const sheet = (page: Page) => page.getByRole("dialog", { name: strings.phone.sheetLabel });
-const tripHeading = (page: Page, name: string) => sheet(page).getByRole("heading", { name, exact: true });
 const menuButton = (page: Page) => page.getByRole("button", { name: text.button });
 const menuItem = (page: Page, name: string) => page.getByRole("menuitem", { name, exact: true });
 const nameDialog = (page: Page, title: string) => page.getByRole("dialog", { name: title });
@@ -72,6 +70,15 @@ async function choose(page: Page, name: string) {
   await menuItem(page, name).click();
 }
 
+/** The trip's name as Trip details… shows it (#154); the dialog is closed again without changes. */
+async function expectTripName(page: Page, name: string) {
+  await choose(page, text.tripDetails);
+  const dialog = nameDialog(page, text.tripDetailsTitle);
+  await expect(dialog.getByRole("textbox", { name: strings.tripNameLabel })).toHaveValue(name);
+  await dialog.getByRole("button", { name: strings.confirmCancel }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
 async function openFile(page: Page, content: string) {
   const [chooser] = await Promise.all([page.waitForEvent("filechooser"), choose(page, text.openFile)]);
   await chooser.setFiles({ name: "trip.json", mimeType: "application/json", buffer: Buffer.from(content) });
@@ -88,6 +95,7 @@ test("the menu sits top left with New trip, Save…, Open…, Export GPX… and 
   await menuButton(page).click();
   await expect(page.getByRole("menuitem")).toHaveText([
     text.newTrip,
+    text.tripDetails,
     text.saveFile,
     text.openFile,
     text.exportGpx,
@@ -114,17 +122,17 @@ test("New trip asks first when there are points, then starts with today in Bruss
   await serveOffline(page);
   await seed(page, OURTHE);
   await openPhone(page);
-  await expect(tripHeading(page, "Ourthe weekend")).toBeVisible();
+  await expectTripName(page, "Ourthe weekend");
 
   await choose(page, text.newTrip);
   await answerConfirmation(page, "newTrip", "cancel");
-  await expect(tripHeading(page, "Ourthe weekend")).toBeVisible();
+  await expectTripName(page, "Ourthe weekend");
   expect((await storedTrip(page)).points).toHaveLength(2);
 
   await choose(page, text.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
-  // A new, unnamed trip shows no name in the sheet.
-  await expect(sheet(page).getByRole("heading")).toHaveCount(0);
+  // A new trip is unnamed.
+  await expectTripName(page, "");
   await expect(mapRegion(page).locator("path.point")).toHaveCount(0);
   await expect.poll(async () => (await storedTrip(page)).startDate).toBe("2026-10-26");
   expect((await storedTrip(page)).points).toEqual([]);
@@ -143,15 +151,15 @@ test("Open… replaces the trip after the same question as on desktop, and it su
 
   await openFile(page, serialiseTrip(LESSE));
   await answerConfirmation(page, "openFile", "cancel");
-  await expect(tripHeading(page, "Ourthe weekend")).toBeVisible();
+  await expectTripName(page, "Ourthe weekend");
 
   await openFile(page, serialiseTrip(LESSE));
   await answerConfirmation(page, "openFile", "confirm");
-  await expect(tripHeading(page, "Lesse day")).toBeVisible();
+  await expectTripName(page, "Lesse day");
   await expect(mapRegion(page).locator(".leaflet-overlay-pane path.leg")).toHaveCount(1);
 
   await page.reload();
-  await expect(tripHeading(page, "Lesse day")).toBeVisible();
+  await expectTripName(page, "Lesse day");
   // The opened trip keeps its routes: nothing is routed again.
   expect(network.brouter).toEqual([]);
 });
@@ -179,7 +187,7 @@ test("Save… asks for the name, prefilled; the file and the trip take the name 
   await expect(dialog.getByRole("textbox", { name: strings.tripNameLabel })).toHaveValue("Ourthe weekend");
   await dialog.getByRole("button", { name: strings.confirmCancel }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(tripHeading(page, "Ourthe weekend")).toBeVisible();
+  await expectTripName(page, "Ourthe weekend");
 
   const name = "Lesse / day: 1 & <2>\u0007";
   await choose(page, text.saveFile);
@@ -193,11 +201,11 @@ test("Save… asks for the name, prefilled; the file and the trip take the name 
   expect(download.suggestedFilename()).toBe("Lesse - day- 1 & -2-.packraft.json");
   const saved = JSON.parse(await readFile((await download.path())!, "utf8"));
   expect(saved.trip.name).toBe(name);
-  await expect(tripHeading(page, name)).toBeVisible();
+  await expectTripName(page, name);
 
   // The renamed trip is autosaved on the device.
   await page.reload();
-  await expect(tripHeading(page, name)).toBeVisible();
+  await expectTripName(page, name);
 });
 
 test("Export GPX… asks for the name; the GPX files are well-formed, named from it, and stay below 180°", async ({
@@ -221,6 +229,6 @@ test("Export GPX… asks for the name; the GPX files are well-formed, named from
   expect(gpx.metadataName).toBe("Tom & Jerry: <Semois>/ trip – 1 – hike");
   expect(gpx.tracks[0].name).toBe(gpx.metadataName);
   for (const point of gpx.tracks[0].points) expect(point.lon).toBeLessThan(180);
-  await expect(tripHeading(page, "Tom & Jerry: <Semois>/\u0001 trip")).toBeVisible();
+  await expectTripName(page, "Tom & Jerry: <Semois>/\u0001 trip");
   expect((await storedTrip(page)).name).toBe("Tom & Jerry: <Semois>/\u0001 trip");
 });
