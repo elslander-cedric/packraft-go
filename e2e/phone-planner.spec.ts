@@ -258,7 +258,8 @@ test("the position button shows the position dot, also with the network blocked"
   await showPosition(page).click();
 
   await expect(positionMarker(page)).toHaveCount(1);
-  await expect(page.getByRole("status").filter({ hasText: strings.phone.positionAccuracy("12 m") })).toBeVisible();
+  // The dot says where you are; no status line once it is shown.
+  await expect(page.getByRole("status").filter({ hasText: strings.phone.positionLocating })).toHaveCount(0);
 });
 
 test("a denied location permission says so", async ({ page, context }) => {

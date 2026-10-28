@@ -19,6 +19,7 @@ import { useAccessLayer } from "../useAccessLayer";
 import { usePlanner } from "../usePlanner";
 import PhoneAccessChip from "./PhoneAccessChip";
 import PhoneAccessDetails from "./PhoneAccessDetails";
+import PhoneAccessPointDialog from "./PhoneAccessPointDialog";
 import PhoneAccessPoints from "./PhoneAccessPoints";
 import SnapOffers from "../SnapOffers";
 import type { ShownLeg } from "../shownLeg";
@@ -116,13 +117,22 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   // How much of the map the raised sheet or the open panel covers, for a map focus.
   const covered = () =>
     sideways ? { coveredBelow: 0, coveredRight: sidePanelCover(window.innerWidth) } : { coveredBelow: 0.5 };
-  const marking = useMarkAccessPoint(access, position, showPosition);
+  // The access point open in the edit dialog, if any.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = editingId === null ? null : (access.points.find((p) => p.id === editingId) ?? null);
+  // A new access point opens its edit dialog, over its row in the Access points tab.
+  const placed = (id: string) => {
+    setEditingId(id);
+    setTab("accessPoints");
+    raiseFromPeek();
+  };
+  const marking = useMarkAccessPoint(access, position, showPosition, placed);
   // The access layer (#125): on or off, its date, and the water or lock whose details are open.
   const layer = useAccessLayer(trip);
   const detailsOpen = layer.selectedWater !== undefined || layer.selectedLock !== undefined;
   // Where the map last zoomed to, for an access point row (#119).
   const [focus, setFocus] = useState<MapFocus | null>(null);
-  // Your access points changed since opening, for "Saved on this device" (the hook saves every change).
+  // Your access points changed since opening, for "Saved on this device" (the hook saves every Save at once).
   // Kept here, not in the tab, which is unmounted while another tab is open.
   const [seenPoints, setSeenPoints] = useState(access.points);
   const [pointsChanged, setPointsChanged] = useState(false);
@@ -149,7 +159,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   // While an access point is being placed, the tap places it; while a point is selected, it only
   // clears the selection (#120); otherwise it adds a trip point with the next leg's mode.
   const onMapTap = (at: LatLng) => {
-    if (access.placing) access.placeAt(at);
+    if (access.placing) placed(access.placeAt(at));
     else if (selectedPoint !== null) dispatch({ type: "deselect" });
     else {
       if (held !== null && trip.points.length === 0) setPick({ ...held, carry: true });
@@ -178,18 +188,19 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   // With a route point selected, the access-point button saves that point as an access point (#120).
   const markSelectedPoint = () => {
     if (selectedPoint === null) return;
-    access.placeAt(trip.points[selectedPoint]);
+    const id = access.placeAt(trip.points[selectedPoint]);
     dispatch({ type: "deselect" });
+    placed(id);
   };
 
-  // A marker tap opens the point's details in the sheet, raised to half from the peek.
+  // A marker tap shows the point's row in the Access points tab, raised to half from the peek.
   const onSelectAccessPoint = (id: string) => {
     layer.select(null);
     access.select(id);
     setTab("accessPoints");
     raiseFromPeek();
   };
-  // A row tap shows the point on the map, above the half-raised sheet, with its details.
+  // A row tap shows the point on the map, above the half-raised sheet.
   const openAccessPoint = (id: string) => {
     const point = access.points.find((p) => p.id === id);
     if (!point) return;
@@ -284,7 +295,15 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           />
         </TabPanel>
         <TabPanel value="accessPoints">
-          <PhoneAccessPoints access={access} marking={marking} changed={pointsChanged} onOpen={openAccessPoint} />
+          <PhoneAccessPoints
+            access={access}
+            changed={pointsChanged}
+            onOpen={openAccessPoint}
+            onEdit={(id) => {
+              access.select(id);
+              setEditingId(id);
+            }}
+          />
         </TabPanel>
       </div>
     </>
@@ -452,6 +471,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           </BottomSheet>
         )}
       </Tabs>
+      <PhoneAccessPointDialog point={editing} onSave={access.update} onClose={() => setEditingId(null)} />
     </div>
   );
 }

@@ -14,10 +14,12 @@ import {
   faGaugeHigh,
   faLayerGroup,
   faLocationCrosshairs,
+  faPen,
   faRotateLeft,
   faShoePrints,
   faStairs,
   faTent,
+  faTrashCan,
   faWater,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -35,6 +37,9 @@ export const icons = {
   undo: faRotateLeft,
   accessPoint: faFlag,
   deletePoint: faXmark,
+  // An access point row's edit and delete buttons (phone).
+  editAccessPoint: faPen,
+  deleteAccessPoint: faTrashCan,
   camp: faTent,
   accessLayer: faLayerGroup,
   menu: faBars,

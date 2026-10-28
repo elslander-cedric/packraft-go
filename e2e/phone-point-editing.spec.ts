@@ -30,6 +30,7 @@ const deleteButton = (page: Page) => page.getByRole("button", { name: strings.de
 const campButton = (page: Page) => page.getByRole("button", { name: strings.campButton });
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const markButton = (page: Page) => page.getByRole("button", { name: text.markAccessPointButton });
+const editDialog = (page: Page) => page.getByRole("dialog", { name: text.accessPointDialogTitle });
 const pointToAccessButton = (page: Page) => page.getByRole("button", { name: text.selectedPointToAccessPointButton });
 
 /** Your access points as saved on the device. */
@@ -210,6 +211,9 @@ test("with a point selected, the access-point button makes it an access point", 
   await tapAt(page, at);
   await expect(pointToAccessButton(page)).toBeVisible();
   await pointToAccessButton(page).click();
+  // Its details open; Cancel keeps the new point.
+  await expect(editDialog(page)).toBeVisible();
+  await editDialog(page).getByRole("button", { name: strings.confirmCancel }).click();
 
   await expect(markers(page)).toHaveCount(1);
   const marker = await centreOf(markers(page).first());
@@ -228,6 +232,7 @@ test("a route point under an access point can still be selected and dragged", as
   const at = await centreOf(points(page).nth(0));
   await tapAt(page, at);
   await pointToAccessButton(page).click();
+  await editDialog(page).getByRole("button", { name: strings.confirmCancel }).click();
   await expect(markers(page)).toHaveCount(1);
 
   // A tap there selects the route point, not the access point on top of it.
@@ -274,6 +279,7 @@ test("a finger drags an access point: it moves, is saved on the device, and the 
     .getByRole("listitem")
     .first()
     .getByRole("button")
+    .first()
     .click();
   let last = "";
   await expect

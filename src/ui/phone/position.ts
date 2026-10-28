@@ -29,18 +29,16 @@ const failureText: Record<PositionFailure, string> = {
   unsupported: strings.phone.positionUnsupported,
 };
 
-/** What to show about your position: a status line, an alert for failures, or nothing. */
+/** What to show about your position: a status line while finding it, an alert for failures, or nothing. */
 export function positionMessage(position: MyPosition): { kind: "status" | "alert"; text: string } | null {
   switch (position.state) {
     case "off":
       return null;
     case "locating":
       return { kind: "status", text: strings.phone.positionLocating };
+    // The dot and its accuracy circle on the map say where you are.
     case "shown":
-      return {
-        kind: "status",
-        text: strings.phone.positionAccuracy(`${Math.round(position.accuracyM)} ${strings.metreUnit}`),
-      };
+      return null;
     case "failed":
       return { kind: "alert", text: failureText[position.reason] };
   }

@@ -1,6 +1,7 @@
 // Your access points in the phone planner (#119, ADR 0026; first #63, ADR 0023): the
-// Access points tab, the floating button bottom left, place mode without a fix, and
-// everything saved on the device at once, with or without signal. Dragging a marker is
+// Access points tab with its edit and delete buttons, the edit dialog, the floating
+// button bottom left, place mode without a fix, and every Save stored on the device at
+// once, with or without signal. Dragging a marker is
 // checked in phone-point-editing.spec.ts (#120).
 import { devices, expect, test, type Page } from "@playwright/test";
 import { serialiseAccessPoints, type AccessPoint } from "../src/core/accessPoints";
@@ -16,8 +17,9 @@ const text = strings.accessPoints;
 const phoneText = strings.phone;
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const markers = (page: Page) => mapRegion(page).locator(".access-point-marker");
-const routePoints = (page: Page) => mapRegion(page).locator("path.point");
+// Not through the map region, which the edit dialog hides from the accessibility tree while open.
+const markers = (page: Page) => page.locator(".leaflet-container .access-point-marker");
+const routePoints = (page: Page) => page.locator(".leaflet-container path.point");
 const sheet = (page: Page) => page.getByRole("dialog", { name: phoneText.sheetLabel });
 const accessTab = (page: Page) => sheet(page).getByRole("tab", { name: phoneText.tabs.accessPoints });
 const section = (page: Page) =>
@@ -25,10 +27,17 @@ const section = (page: Page) =>
     name: phoneText.accessPointsLabel,
     exact: true,
   });
-const details = (page: Page) => sheet(page).getByRole("region", { name: text.detailsLabel, exact: true });
-const markHere = (page: Page) => section(page).getByRole("button", { name: phoneText.markHereButton });
+const details = (page: Page) => page.getByRole("dialog", { name: phoneText.accessPointDialogTitle });
+const save = (page: Page) => details(page).getByRole("button", { name: phoneText.accessPointSave });
+const cancel = (page: Page) => details(page).getByRole("button", { name: strings.confirmCancel });
 const markButton = (page: Page) => page.getByRole("button", { name: phoneText.markAccessPointButton });
 const rows = (page: Page) => section(page).getByRole("list").getByRole("listitem");
+/** A row's own button, which shows the point on the map (its edit and delete buttons follow it). */
+const rowButton = (page: Page, n: number) => rows(page).nth(n).getByRole("button").first();
+const editButton = (page: Page, heading: string) =>
+  section(page).getByRole("button", { name: phoneText.editAccessPoint(heading), exact: true });
+const deleteButton = (page: Page, heading: string) =>
+  section(page).getByRole("button", { name: phoneText.deleteAccessPoint(heading), exact: true });
 const placingLine = (page: Page) => page.getByRole("status").filter({ hasText: phoneText.placingState });
 const cancelPlacing = (page: Page) => page.getByRole("button", { name: phoneText.placingCancel });
 const savedNote = (page: Page) => section(page).getByRole("status").filter({ hasText: phoneText.savedOnDevice });
@@ -107,7 +116,8 @@ async function denyLocation(page: Page) {
   });
 }
 
-test("Mark here in the Access points tab marks one at my GPS position, saved at once, selected, nothing pops up", async ({
+
+test("the floating button marks one at my GPS position, saved at once, and opens its details; Save stores the edits, Cancel drops them", async ({
   page,
   context,
 }) => {
@@ -118,40 +128,65 @@ test("Mark here in the Access points tab marks one at my GPS position, saved at 
 
   await accessTab(page).click();
   await expect(section(page)).toContainText(phoneText.noAccessPoints);
-  await expect.poll(() => sheetHeight(page)).toBeGreaterThan(page.viewportSize()!.height * 0.45);
-  const half = await settledSheetHeight(page);
-  await markHere(page).click();
+  // No Mark here in the tab: the floating button marks.
+  await expect(section(page).getByRole("button")).toHaveCount(0);
+  await markButton(page).click();
 
-  // Saved at once with the default use and kind, shown selected, and nothing pops up.
+  // Saved at once with the default use and kind, shown selected, and its details open in the dialog.
   await expect(markers(page)).toHaveCount(1);
   await expect(markers(page)).toHaveClass(/access-point-selected/);
   await expect(details(page)).toBeVisible();
   await expect(details(page)).not.toContainText(text.moveHint);
-  await expect(section(page)).toContainText(phoneText.markedAccuracy("12 m"));
-  await expect(savedNote(page)).toBeVisible();
-  await expect(page.getByRole("alertdialog")).toHaveCount(0);
-  expect(Math.abs((await settledSheetHeight(page)) - half)).toBeLessThan(2);
+  // No GPS accuracy anywhere.
+  await expect(page.getByText(/accurate to about/)).toHaveCount(0);
+  await expect(details(page).getByRole("button", { name: text.deleteButton })).toHaveCount(0);
+  await expect.poll(async () => (await stored(page))?.accessPoints.length).toBe(1);
   const [point] = (await stored(page)).accessPoints;
   expect(point).toMatchObject({ use: "both", kind: "informal-bank" });
   expect(point.position.lat).toBeCloseTo(AT_HOTTON.latitude, 4);
   expect(point.position.lng).toBeCloseTo(AT_HOTTON.longitude, 4);
   // No route point was added.
   await expect(routePoints(page)).toHaveCount(0);
+  expect((await toggle(page, text.kindLabel, text.kinds.jetty).boundingBox())!.height).toBeGreaterThanOrEqual(44);
 
-  // Edit use, kind, note and the checked date.
+  // Edit use, kind, note and the checked date: nothing is stored until Save.
   await toggle(page, text.useLabel, text.uses["put-in"]).click();
   await toggle(page, text.kindLabel, text.kinds.slipway).click();
   await details(page).getByLabel(text.noteLabel).fill("Slipway by the bridge");
   await details(page).getByRole("button", { name: text.checkedTodayButton }).click();
   await expect(details(page).getByLabel(text.checkedOnSiteLabel)).not.toHaveValue("");
+  expect((await stored(page)).accessPoints[0]).toMatchObject({ use: "both", note: "" });
+  await save(page).click();
+  await expect(details(page)).toHaveCount(0);
   await expect.poll(async () => (await stored(page)).accessPoints[0].note).toBe("Slipway by the bridge");
   const edited = (await stored(page)).accessPoints[0];
   expect(edited).toMatchObject({ use: "put-in", kind: "slipway" });
   expect(edited.checkedOnSite).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  // Under the dialog: the Access points tab, with the new point's row selected.
+  await expect(accessTab(page)).toHaveAttribute("aria-selected", "true");
+  await expect(rowButton(page, 0)).toHaveAttribute("aria-current", "true");
+  await expect(savedNote(page)).toBeVisible();
+
+  // The edit button opens the details again; Cancel drops the changes and keeps the point selected.
+  await editButton(page, "Slipway by the bridge").click();
+  await expect(details(page).getByLabel(text.noteLabel)).toHaveValue("Slipway by the bridge");
+  await details(page).getByLabel(text.noteLabel).fill("Changed my mind");
+  await cancel(page).click();
+  await expect(details(page)).toHaveCount(0);
+  await expect(rows(page).first()).toContainText("Slipway by the bridge");
+  expect((await stored(page)).accessPoints[0].note).toBe("Slipway by the bridge");
+  await expect(rowButton(page, 0)).toHaveAttribute("aria-current", "true");
+
   // Large tap targets (at least 44 px).
-  expect((await markHere(page).boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  expect((await markButton(page).boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  expect((await toggle(page, text.kindLabel, text.kinds.jetty).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  for (const button of [
+    markButton(page),
+    editButton(page, "Slipway by the bridge"),
+    deleteButton(page, "Slipway by the bridge"),
+  ]) {
+    const box = (await button.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+  }
 
   // It survives a reload, and shows on the desktop too.
   await page.reload();
@@ -165,7 +200,7 @@ test("Mark here in the Access points tab marks one at my GPS position, saved at 
   await expect(page.getByRole("complementary", { name: text.panelLabel })).toContainText(text.count(1));
 });
 
-test("the floating button marks one at my GPS position from the peek, and the sheet stays where it is", async ({
+test("from the peek, the floating button marks one, opens the Access points tab at half and its details over it", async ({
   page,
   context,
 }) => {
@@ -182,11 +217,18 @@ test("the floating button marks one at my GPS position from the peek, and the sh
 
   await markButton(page).click();
   await expect(markers(page)).toHaveCount(1);
-  await expect(markers(page)).toHaveClass(/access-point-selected/);
+  await expect(details(page)).toBeVisible();
   await expect.poll(async () => (await stored(page))?.accessPoints.length).toBe(1);
-  expect(Math.abs((await settledSheetHeight(page)) - peek)).toBeLessThan(2);
   await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await expect(routePoints(page)).toHaveCount(0);
+
+  // Cancel keeps the new point, with its defaults.
+  await cancel(page).click();
+  await expect(accessTab(page)).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => sheetHeight(page)).toBeGreaterThan(page.viewportSize()!.height * 0.45);
+  await expect(rows(page)).toHaveCount(1);
+  await expect(rowButton(page, 0)).toHaveAttribute("aria-current", "true");
+  expect((await stored(page)).accessPoints).toHaveLength(1);
 });
 
 test("with the network blocked, marking, editing and deleting keep working and are saved on the device", async ({
@@ -201,32 +243,33 @@ test("with the network blocked, marking, editing and deleting keep working and a
 
   await context.setOffline(true);
   await markButton(page).click();
-  await expect(markers(page)).toHaveCount(1);
-  await markHere(page).click();
+  await details(page).getByLabel(text.noteLabel).fill("First");
+  await save(page).click();
+  await markButton(page).click();
+  await details(page).getByLabel(text.noteLabel).fill("Second");
+  await save(page).click();
   await expect(markers(page)).toHaveCount(2);
   await expect(savedNote(page)).toBeVisible();
   await expect.poll(async () => (await stored(page)).accessPoints.length).toBe(2);
 
-  // Done closes the details; the row opens them again to edit.
-  await details(page).getByRole("button", { name: text.closeButton }).click();
-  await expect(details(page)).toHaveCount(0);
-  await rows(page).first().getByRole("button").click();
+  // The edit button opens the details to edit; Save stores them.
+  await editButton(page, "First").click();
   await toggle(page, text.useLabel, text.uses["take-out"]).click();
+  await save(page).click();
   await expect(rows(page).first()).toContainText(text.uses["take-out"]);
   await expect.poll(async () => (await stored(page)).accessPoints[0].use).toBe("take-out");
 
-  // Delete it, after confirming (Cancel keeps it).
-  await details(page).getByRole("button", { name: text.deleteButton }).click();
+  // Delete it with its delete button, after confirming (Cancel keeps it).
+  await deleteButton(page, "First").click();
   await expect(confirmDialog(page)).toHaveAccessibleName(text.deleteConfirm.title);
   await confirmDialog(page).getByRole("button", { name: strings.confirmCancel }).click();
   await expect(rows(page)).toHaveCount(2);
-  await details(page).getByRole("button", { name: text.deleteButton }).click();
+  await deleteButton(page, "First").click();
   await confirmDialog(page).getByRole("button", { name: text.deleteConfirm.confirm }).click();
   await expect(rows(page)).toHaveCount(1);
   await expect(markers(page)).toHaveCount(1);
-  await expect(details(page)).toHaveCount(0);
   await expect.poll(async () => (await stored(page)).accessPoints.length).toBe(1);
-  expect((await stored(page)).accessPoints[0].use).toBe("both");
+  expect((await stored(page)).accessPoints[0]).toMatchObject({ note: "Second", use: "both" });
 
   await context.setOffline(false);
   await page.reload();
@@ -255,24 +298,20 @@ test("without a fix the button enters place mode; Cancel leaves it; the next tap
   await expect(routePoints(page)).toHaveCount(1);
   await expect(markers(page)).toHaveCount(0);
 
-  // Place mode again: the tap places an access point and adds no route point.
+  // Place mode again: the tap places an access point, adds no route point, and opens its details.
   await markButton(page).click();
   await expect(placingLine(page)).toBeVisible();
   await tapMap(80);
   await expect(markers(page)).toHaveCount(1);
   await expect(markers(page)).toHaveClass(/access-point-selected/);
+  await expect(details(page)).toBeVisible();
   await expect(routePoints(page)).toHaveCount(1);
   await expect(placingLine(page)).toHaveCount(0);
   expect((await stored(page)).accessPoints).toHaveLength(1);
-  // Its details are in the Access points tab, and it is saved on the device.
-  await accessTab(page).click();
-  await expect(details(page)).toBeVisible();
+  // Under the details, the Access points tab; the point is saved on the device.
+  await cancel(page).click();
+  await expect(accessTab(page)).toHaveAttribute("aria-selected", "true");
   await expect(savedNote(page)).toBeVisible();
-
-  // Mark here in the tab does the same without a fix.
-  await markHere(page).click();
-  await expect(placingLine(page)).toBeVisible();
-  await cancelPlacing(page).click();
 
   // The point placed by tapping survives a reload.
   await page.reload();
@@ -293,18 +332,20 @@ test("while the floating button waits for a fix it says so over the map", async 
   await expect(markers(page)).toHaveCount(0);
 });
 
-test("tapping a row zooms the map to that access point and opens its details", async ({ page }) => {
+
+test("tapping a row zooms the map to that access point and selects it, without opening its details", async ({
+  page,
+}) => {
   await storePoints(page, [saved("a", 50.268, 5.446, "Hotton bridge"), saved("b", 51.05, 3.72, "Ghent quay")]);
   const network = await serveOffline(page);
   await openPhone(page);
   await accessTab(page).click();
   await expect(rows(page)).toHaveCount(2);
-  await expect(details(page)).toHaveCount(0);
 
-  await rows(page).nth(1).getByRole("button").click();
-  await expect(details(page)).toBeVisible();
-  await expect(details(page).getByLabel(text.noteLabel)).toHaveValue("Ghent quay");
+  await rowButton(page, 1).click();
+  await expect(rowButton(page, 1)).toHaveAttribute("aria-current", "true");
   await expect(markers(page).nth(1)).toHaveClass(/access-point-selected/);
+  await expect(details(page)).toHaveCount(0);
 
   // Zoomed in, with the marker on the part of the map above the sheet.
   await expect.poll(() => network.tiles.some((tile) => tile.z >= 15)).toBe(true);
@@ -317,7 +358,9 @@ test("tapping a row zooms the map to that access point and opens its details", a
     .toBe(true);
 });
 
-test("tapping an access point's marker opens its details and raises the sheet to half", async ({ page }) => {
+test("tapping an access point's marker selects its row in the Access points tab and raises the sheet to half", async ({
+  page,
+}) => {
   await storePoints(page, [saved("a", 50.5, 4.47, "Meuse slipway")]);
   await serveOffline(page);
   await openPhone(page);
@@ -327,8 +370,9 @@ test("tapping an access point's marker opens its details and raises the sheet to
   await page.touchscreen.tap(marker.x + marker.width / 2, marker.y + marker.height / 2);
 
   await expect(accessTab(page)).toHaveAttribute("aria-selected", "true");
-  await expect(details(page)).toBeVisible();
-  await expect(details(page).getByLabel(text.noteLabel)).toHaveValue("Meuse slipway");
+  await expect(rowButton(page, 0)).toHaveAttribute("aria-current", "true");
+  await expect(rowButton(page, 0)).toBeInViewport();
+  await expect(details(page)).toHaveCount(0);
   await expect.poll(() => sheetHeight(page)).toBeGreaterThan(page.viewportSize()!.height * 0.45);
   expect(await sheetHeight(page)).toBeLessThan(page.viewportSize()!.height * 0.55);
   await expect(routePoints(page)).toHaveCount(0);

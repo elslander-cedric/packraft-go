@@ -3,38 +3,39 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/Button";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { AccessPointDetails } from "../AccessPointsPanel";
+import { Icon } from "../icons/Icon";
+import { icons } from "../icons/icons";
 import { accessPointText } from "../accessPointText";
 import { strings } from "../strings";
 import type { AccessPointsState } from "../useAccessPoints";
-import type { MarkAccessPoint } from "./useMarkAccessPoint";
 
 const text = strings.phone;
 const pointText = strings.accessPoints;
 
 type Props = {
   access: AccessPointsState;
-  marking: MarkAccessPoint;
-  /** Your access points changed since the planner opened (each change is saved at once). */
+  /** Your access points changed since the planner opened (each Save is stored at once). */
   changed: boolean;
-  /** A row was tapped: show that access point on the map and open its details. */
+  /** A row was tapped: show that access point on the map. */
   onOpen: (id: string) => void;
+  /** A row's edit button: open that point's details in the edit dialog. */
+  onEdit: (id: string) => void;
 };
 
 /**
- * The phone planner's Access points tab (#119, ADR 0026): "Mark here" at the
- * top, the selected point's details, and your list. Every change is saved on
- * the device at once by `useAccessPoints`, with or without signal.
+ * The phone planner's Access points tab (#119, ADR 0026): your list, each row
+ * with edit and delete buttons. Marking is the floating button on the map; the
+ * details are a dialog. Every change is saved on the device at once by
+ * `useAccessPoints`, with or without signal.
  */
-export default function PhoneAccessPoints({ access, marking, changed, onOpen }: Props) {
+export default function PhoneAccessPoints({ access, changed, onOpen, onEdit }: Props) {
   const { points, selected } = access;
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
-  const markButton = useRef<HTMLButtonElement>(null);
-  const details = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLUListElement>(null);
 
-  // Bring the details into view when a point is selected.
+  // Bring the selected row into view, e.g. after a marker tap.
   useEffect(() => {
-    if (selected) details.current?.scrollIntoView?.({ block: "nearest" });
+    if (selected) list.current?.querySelector("[aria-current]")?.scrollIntoView?.({ block: "nearest" });
   }, [selected]);
 
   const savedNote =
@@ -49,40 +50,18 @@ export default function PhoneAccessPoints({ access, marking, changed, onOpen }: 
         {access.savingPaused === "unknown-version" ? pointText.autosaveUnknownVersion : pointText.damagedNotBackedUp}
       </p>
     );
-  const accuracy = selected ? marking.accuracyOf(selected.id) : null;
 
   return (
     <section className="phone-access-points" aria-label={text.accessPointsLabel}>
-      <div className="phone-position">
-        <Button ref={markButton} className="phone-button" onClick={marking.mark} disabled={marking.locating}>
-          {text.markHereButton}
-        </Button>
-      </div>
       {savedNote}
-      {selected && (
-        <div ref={details} className="phone-access-point-form">
-          {accuracy !== null && (
-            <p className="phone-position-explanation">
-              {text.markedAccuracy(`${Math.round(accuracy)} ${strings.metreUnit}`)}
-            </p>
-          )}
-          <AccessPointDetails
-            key={selected.id}
-            point={selected}
-            access={access}
-            onDelete={() => setPendingDelete(selected.id)}
-            withHints={false}
-          />
-        </div>
-      )}
       {points.length === 0 ? (
         <p className="phone-empty">{text.noAccessPoints}</p>
       ) : (
-        <ul className="phone-access-point-list" aria-label={text.accessPointsLabel}>
+        <ul ref={list} className="phone-access-point-list" aria-label={text.accessPointsLabel}>
           {points.map((point) => {
             const { heading, note, detail } = accessPointText(point);
             return (
-              <li key={point.id}>
+              <li key={point.id} className="phone-access-point-item">
                 <Button
                   className="phone-row phone-access-point-row"
                   aria-current={point.id === selected?.id || undefined}
@@ -91,6 +70,20 @@ export default function PhoneAccessPoints({ access, marking, changed, onOpen }: 
                   <span className="phone-row-heading">{heading}</span>
                   {note && <span className="phone-access-point-note">{note}</span>}
                   {detail && <span className="phone-access-point-detail">{detail}</span>}
+                </Button>
+                <Button
+                  className="phone-access-point-action"
+                  aria-label={text.editAccessPoint(heading)}
+                  onClick={() => onEdit(point.id)}
+                >
+                  <Icon icon={icons.editAccessPoint} />
+                </Button>
+                <Button
+                  className="phone-access-point-action"
+                  aria-label={text.deleteAccessPoint(heading)}
+                  onClick={() => setPendingDelete(point.id)}
+                >
+                  <Icon icon={icons.deleteAccessPoint} />
                 </Button>
               </li>
             );
@@ -108,7 +101,6 @@ export default function PhoneAccessPoints({ access, marking, changed, onOpen }: 
           setPendingDelete(null);
         }}
         onCancel={() => setPendingDelete(null)}
-        returnFocusTo={markButton}
       />
     </section>
   );

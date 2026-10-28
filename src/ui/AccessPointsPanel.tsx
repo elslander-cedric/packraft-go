@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { accessPointKinds, accessPointUses, type AccessPoint } from "@/core/accessPoints";
+import { accessPointKinds, accessPointUses, type AccessPoint, type AccessPointChanges } from "@/core/accessPoints";
 import { Button } from "./components/Button";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { ToggleGroup } from "./components/ToggleGroup";
@@ -85,8 +85,9 @@ export default function AccessPointsPanel({ access }: { access: AccessPointsStat
         <AccessPointDetails
           key={selected.id}
           point={selected}
-          access={access}
+          onChange={(changes) => access.update(selected.id, changes)}
           onDelete={() => setPendingDelete(selected.id)}
+          onClose={() => access.select(null)}
         />
       )}
       <ConfirmDialog
@@ -106,17 +107,19 @@ export default function AccessPointsPanel({ access }: { access: AccessPointsStat
   );
 }
 
-/** The selected access point's details, editable (also used on the phone, #63). */
+/** The selected access point's details, editable (also used in the phone's edit dialog, #63). */
 type AccessPointDetailsProps = {
   point: AccessPoint;
-  access: AccessPointsState;
-  onDelete: () => void;
+  /** A field changed: the desktop saves it at once, the phone's dialog keeps it in a draft. */
+  onChange: (changes: AccessPointChanges) => void;
+  /** With both, Delete and Close buttons; the phone's dialog has its own. */
+  onDelete?: () => void;
+  onClose?: () => void;
   /** Says how to move the point and name it; the phone has no how-to text (ADR 0026). */
   withHints?: boolean;
 };
 
-export function AccessPointDetails({ point, access, onDelete, withHints = true }: AccessPointDetailsProps) {
-  const update = (changes: Parameters<AccessPointsState["update"]>[1]) => access.update(point.id, changes);
+export function AccessPointDetails({ point, onChange: update, onDelete, onClose, withHints = true }: AccessPointDetailsProps) {
   const headingId = `access-point-${point.id}`;
   return (
     <section className="access-point-details" aria-labelledby={headingId}>
@@ -182,12 +185,14 @@ export function AccessPointDetails({ point, access, onDelete, withHints = true }
       <p className="access-point-dates">
         {`${text.added(formatDayDate(point.createdAt.slice(0, 10)))}, ${text.changed(formatDayDate(point.updatedAt.slice(0, 10)))}`}
       </p>
-      <div className="access-point-actions">
-        <Button className="button-danger" onClick={onDelete}>
-          {text.deleteButton}
-        </Button>
-        <Button onClick={() => access.select(null)}>{text.closeButton}</Button>
-      </div>
+      {onDelete && onClose && (
+        <div className="access-point-actions">
+          <Button className="button-danger" onClick={onDelete}>
+            {text.deleteButton}
+          </Button>
+          <Button onClick={onClose}>{text.closeButton}</Button>
+        </div>
+      )}
     </section>
   );
 }

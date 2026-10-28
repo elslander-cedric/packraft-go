@@ -272,16 +272,17 @@
   color: var(--color-muted);
 }
 
-.phone-access-point-form {
-  margin-bottom: var(--space-3);
-}
-
 .phone-access-point-form .toggle,
 .phone-access-point-form .button,
 .phone-access-point-form input,
 .phone-access-point-form textarea {
   min-height: 2.75rem;
   font-size: 1rem;
+}
+
+/* The dialog's title names it; the details' own heading only labels them. */
+.phone-access-point-form .access-point-details h3 {
+  display: none;
 }
 
 .phone-access-point-form .toggle {
@@ -294,13 +295,33 @@
   list-style: none;
 }
 
-/* A whole row is the button: it opens that point. */
+/* A row: the button that opens that point, then its edit and delete buttons. */
+.phone-access-point-item {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+}
+
 .button.phone-access-point-row {
-  width: 100%;
-  border-width: 0 0 1px 4px;
-  border-color: transparent transparent var(--color-border);
+  flex: 1;
+  min-width: 0;
+  border-width: 0 0 0 4px;
+  border-color: transparent;
   border-radius: 0;
   text-align: left;
+}
+
+.button.phone-access-point-action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  font-size: 1.1rem;
 }
 
 .button.phone-access-point-row[aria-current] {
