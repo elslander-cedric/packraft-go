@@ -9,6 +9,7 @@ import {
   faChevronDown,
   faChevronLeft,
   faChevronRight,
+  faCircleInfo,
   faClock,
   faFlag,
   faGaugeHigh,
@@ -47,6 +48,8 @@ export const icons = {
   // The side panel is on the right: it opens leftwards and collapses rightwards.
   expandPanel: faChevronLeft,
   collapsePanel: faChevronRight,
+  // A leg row's button that opens its access details (phone, #158).
+  legDetails: faCircleInfo,
   // A day card's warning chips, by the leg's most serious kind.
   warningForbidden: faBan,
   warningClosed: faCalendarXmark,

@@ -2,14 +2,17 @@ import type { AireWarning } from "@/core/aire";
 import type { LegSummary, TripSummary } from "@/core/summarise";
 import type { TripAccess } from "@/core/tripAccess";
 import type { Leg } from "@/core/trip";
-import { useRef } from "react";
 import { Button } from "../components/Button";
 import { formatDistance, formatElevation, formatTimeEstimate } from "../format";
 import { Icon } from "../icons/Icon";
 import { icons, type IconDefinition } from "../icons/icons";
-import { useScrollToShownLeg, type ShownLeg } from "../shownLeg";
 import { strings } from "../strings";
-import { AccessStatusLine, AireWarnings, LegAccessView } from "../TripAccessView";
+import { AccessStatusLine } from "../TripAccessView";
+
+/** True when a leg has access details or aire warnings to show in its dialog. */
+export function hasLegDetails(access: TripAccess | null, aire: readonly AireWarning[], legIndex: number): boolean {
+  return access?.legs[legIndex] !== undefined || aire.some((warning) => warning.leg === legIndex);
+}
 
 type Figure = { key: string; icon: IconDefinition; label: string; value: string };
 
@@ -50,48 +53,42 @@ export type PhoneLegsListProps = {
   access: TripAccess | null;
   /** Walloon aire warnings for the trip's put-ins and take-outs. */
   aire: readonly AireWarning[];
-  /** The open row's leg, if any: only one is open at a time. */
-  openLeg: number | null;
   /** A row was tapped. */
-  onOpen: (legIndex: number) => void;
-  /** The leg a day card's warning chip asked to show; its row is scrolled to the top. */
-  shownLeg: ShownLeg | null;
+  onSelect: (legIndex: number) => void;
+  /** A row's details button was tapped. */
+  onShowDetails: (legIndex: number) => void;
   onRetry: (legIndex: number) => void;
 };
 
 /**
  * The Legs tab (#121): one row per leg, its mode icon and distance as a headline with the
  * time on the right, and under it the climb and descent (drop on a paddle leg), each after
- * its icon, then the access. The leg's number is only read out. A tapped row opens and
- * its access details, flow figures and aire warnings follow; a leg's mode is not changed
- * here. A leg whose routing failed shows the failure with Retry, open or not.
+ * its icon, then the access. The leg's number is only read out. Rows don't open (#158): a
+ * row with access details or aire warnings has an info button beside its access line,
+ * which shows them in a dialog. A leg's mode is not changed here. A leg whose routing
+ * failed shows the failure with Retry.
  */
 export default function PhoneLegsList({
   summary,
   legs,
   access,
   aire,
-  openLeg,
-  onOpen,
-  shownLeg,
+  onSelect,
+  onShowDetails,
   onRetry,
 }: PhoneLegsListProps) {
-  const list = useRef<HTMLOListElement>(null);
-  useScrollToShownLeg(list, shownLeg);
   if (summary.legs.length === 0) return <p className="phone-empty">{strings.legsPanelEmpty}</p>;
   return (
-    <ol ref={list} className="phone-legs" aria-label={strings.legsPanelLabel}>
+    <ol className="phone-legs" aria-label={strings.legsPanelLabel}>
       {summary.legs.map((leg, i) => {
         const route = legs[i]?.route;
         const legAccess = access?.legs[i];
         const status = legAccess?.status.state;
-        const open = i === openLeg;
-        const warnings = aire.filter((warning) => warning.leg === i);
         const [time, ...elevation] = figures(leg);
         return (
-          <li key={i} className={`phone-row phone-row-${leg.mode}${open ? " phone-row-open" : ""}`}>
+          <li key={i} className={`phone-row phone-row-${leg.mode}`}>
             <div className="phone-row-head">
-              <Button className="phone-row-toggle" aria-expanded={open} onClick={() => onOpen(i)}>
+              <Button className="phone-row-toggle" onClick={() => onSelect(i)}>
                 <span className="visually-hidden">{`${strings.legLabel(i + 1)} `}</span>
                 <span className="phone-row-headline">
                   <FigureView
@@ -114,6 +111,15 @@ export default function PhoneLegsList({
                 )}
                 {status && <AccessStatusLine state={status} className="phone-row-access" />}
               </Button>
+              {hasLegDetails(access, aire, i) && (
+                <Button
+                  className="phone-row-details-button"
+                  aria-label={strings.phone.legDetailsButton(i + 1)}
+                  onClick={() => onShowDetails(i)}
+                >
+                  <Icon icon={icons.legDetails} />
+                </Button>
+              )}
             </div>
             {(!route || route.status === "pending") && (
               <span role="status" className="phone-row-routing">
@@ -131,16 +137,6 @@ export default function PhoneLegsList({
                   {strings.retryRouting}
                 </Button>
               </span>
-            )}
-            {open && (legAccess || warnings.length > 0) && (
-              <div className="phone-row-details">
-                {legAccess && <LegAccessView access={legAccess} />}
-                {warnings.length > 0 && (
-                  <div className="leg-access">
-                    <AireWarnings warnings={warnings} />
-                  </div>
-                )}
-              </div>
             )}
           </li>
         );

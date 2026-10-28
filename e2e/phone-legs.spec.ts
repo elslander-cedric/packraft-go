@@ -1,6 +1,7 @@
-// The phone Legs tab (#121, ADR 0026): leg rows open one at a time and zoom the map to their
-// leg, an open row shows flow figures, aire warnings and Retry but no mode switch; the
-// floating next leg's mode toggle; snap offers from a drawn paddle leg float above the sheet.
+// The phone Legs tab (#121, ADR 0026): a leg row tap zooms the map to its leg; rows don't open
+// (#158), an info button shows a leg's access details, flow figures and aire warnings in a
+// dialog; a failed row shows Retry; no mode switch on a row; the floating next leg's mode
+// toggle; snap offers from a drawn paddle leg float above the sheet.
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { addAccessPoint, serialiseAccessPoints, updateAccessPoint } from "../src/core/accessPoints";
 import { serialiseTrip } from "../src/core/saveFile";
@@ -28,6 +29,11 @@ const rowButton = (page: Page, n: number) =>
     .nth(n - 1)
     .getByRole("button", { name: strings.legLabel(n), exact: false })
     .first();
+const detailsButton = (page: Page, n: number) =>
+  legRows(page)
+    .nth(n - 1)
+    .getByRole("button", { name: text.legDetailsButton(n) });
+const detailsDialog = (page: Page) => page.getByRole("dialog", { name: /^Leg \d+ · / });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const modeSwitch = (page: Page, n: number) =>
   legRows(page)
@@ -109,7 +115,7 @@ const P0 = { lat: 50.3, lng: 5.45 };
 const P1 = { lat: 50.31, lng: 5.45 };
 const P2 = { lat: 50.45, lng: 5.65 };
 
-test("tapping a row zooms the map to its leg and opens it; opening another closes the first", async ({ page }) => {
+test("tapping a row zooms the map to its leg and doesn't open the row (#158)", async ({ page }) => {
   await serveOffline(page);
   await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "hike", geometry: [P1, P2] }] });
   await openPhone(page);
@@ -117,42 +123,49 @@ test("tapping a row zooms the map to its leg and opens it; opening another close
 
   const first = legLines(page).nth(0);
   const widthBefore = (await first.boundingBox())!.height;
-  await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "false");
+  await expect(rowButton(page, 1)).not.toHaveAttribute("aria-expanded");
+  const rowHeight = (await legRows(page).nth(0).boundingBox())!.height;
   await rowButton(page, 1).click();
-  await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "true");
   // Zoomed in on the short leg, which now shows above the sheet.
   await expect.poll(async () => (await first.boundingBox())!.height).toBeGreaterThan(widthBefore * 2);
   await expect.poll(async () => isInside(first, await freeMap(page))).toBe(true);
+  await expect(rowButton(page, 1)).not.toHaveAttribute("aria-expanded");
+  expect((await legRows(page).nth(0).boundingBox())!.height).toBeCloseTo(rowHeight, 0);
 
   await rowButton(page, 2).click();
-  await expect(rowButton(page, 2)).toHaveAttribute("aria-expanded", "true");
-  await expect(rowButton(page, 1)).toHaveAttribute("aria-expanded", "false");
   await expect.poll(async () => isInside(legLines(page).nth(1), await freeMap(page))).toBe(true);
 });
 
-test("a paddle row has no tint of its own; only the open row's background changes, as a selected day card's does", async ({
-  page,
-}) => {
+test("rows have no tint of their own and keep their background when tapped", async ({ page }) => {
   await serveOffline(page);
   await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "paddle", geometry: [P1, P2] }] });
   await openPhone(page);
   await openLegsTab(page);
   const background = (n: number) => legRows(page).nth(n).evaluate((el) => getComputedStyle(el).backgroundColor);
 
-  const closed = await background(0);
-  expect(await background(1)).toBe(closed);
-
+  const plain = await background(0);
+  expect(await background(1)).toBe(plain);
   await rowButton(page, 2).click();
-  await expect(rowButton(page, 2)).toHaveAttribute("aria-expanded", "true");
-  await expect.poll(() => background(1)).not.toBe(closed);
-  expect(await background(0)).toBe(closed);
-
-  await rowButton(page, 1).click();
-  await expect.poll(() => background(1)).toBe(closed);
-  await expect.poll(() => background(0)).not.toBe(closed);
+  await sheetSettled(page);
+  expect(await background(1)).toBe(plain);
 });
 
-test("a row shows its figures after their icons, without a visible leg number; open, it has no mode switch and keeps its headline", async ({
+test("only a row with access details or aire warnings has the info button", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, { points: [start, putIn, end], legs: [{ mode: "hike", geometry: [start, putIn] }, { mode: "paddle", geometry: [putIn, end] }] });
+  await openPhone(page);
+  await openLegsTab(page);
+  await expect(detailsButton(page, 2)).toBeVisible();
+  await expect(iconIn(detailsButton(page, 2), icons.legDetails)).toBeVisible();
+  await expect(detailsButton(page, 1)).toHaveCount(0);
+  await expect(legRows(page).nth(0).getByRole("button")).toHaveCount(1);
+  // A big enough target, level with the access line.
+  const box = (await detailsButton(page, 2).boundingBox())!;
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+});
+
+test("a row shows its figures after their icons, without a visible leg number; tapped, it has no mode switch and keeps its headline", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -174,11 +187,10 @@ test("a row shows its figures after their icons, without a visible leg number; o
   await expect(paddle).toContainText(`${labels.drop} 0 m`);
   await expect(paddle).not.toContainText(labels.climb);
 
-  // Open: no mode switch; the time stays on the headline and the figures under it don't change.
+  // Tapped: no mode switch; the time stays on the headline and the figures under it don't change.
   const time = hike.locator(".phone-row-headline .phone-row-time");
   const figures = await hike.locator(".phone-row-figures").textContent();
   await hike.click();
-  await expect(hike).toHaveAttribute("aria-expanded", "true");
   await expect(modeSwitch(page, 1)).toHaveCount(0);
   await expect(legRows(page).nth(0).getByRole("button", { name: strings.legModePaddle })).toHaveCount(0);
   await expect(time).toBeVisible();
@@ -249,15 +261,38 @@ test("a floating snap offer can be declined, which changes nothing", async ({ pa
   await expect.poll(() => storedPutIn(page)).toEqual(putIn);
 });
 
-test("an open paddle row shows the aire warning", async ({ page }) => {
+test("a paddle row's info button opens its details dialog with the access and the aire warning; Close goes back to the button", async ({
+  page,
+}) => {
   await serveOffline(page);
   await seed(page, { points: [putIn, end], legs: [{ mode: "paddle", geometry: [putIn, end] }] }, slipwayNearby());
   await openPhone(page);
   await openLegsTab(page);
   await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
   await rowButton(page, 1).click();
-  await expect(legRows(page).nth(0).locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
-  await expect(legRows(page).nth(0).locator(".access-warning-aire .access-swatch").first()).toBeVisible();
+  await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
+  await expect(detailsDialog(page)).toHaveCount(0);
+
+  await detailsButton(page, 1).click();
+  const dialog = detailsDialog(page);
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAccessibleName(new RegExp(`^${strings.legLabel(1)} · ${strings.legModePaddle} · \\S`));
+  await expect(dialog.locator(".leg-access-status")).toBeVisible();
+  await expect(dialog.locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
+  await expect(dialog.locator(".access-warning-aire .access-swatch").first()).toBeVisible();
+  // The row still doesn't open behind it.
+  await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
+
+  await dialog.getByRole("button", { name: text.legDetailsClose }).click();
+  await expect(detailsDialog(page)).toHaveCount(0);
+  await expect(detailsButton(page, 1)).toBeFocused();
+
+  // Escape closes it too.
+  await detailsButton(page, 1).click();
+  await expect(detailsDialog(page)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(detailsDialog(page)).toHaveCount(0);
+  await expect(detailsButton(page, 1)).toBeFocused();
 });
 
 test("a paddle row shows its access on a line of its own under the figures, as a day row does", async ({ page }) => {
@@ -282,7 +317,7 @@ const semois = [
   { lat: 49.74665, lng: 5.24897 },
 ];
 
-test("an open paddle row dated today shows the live flow figures", async ({ page }) => {
+test("a paddle leg's details dialog dated today shows the live flow figures", async ({ page }) => {
   await page.clock.setFixedTime(new Date("2026-10-14T09:00:00+02:00"));
   const network = await serveOffline(page, { kiwis: kiwisFixtures("timeseries-list.json", "timeseries-values.json") });
   await seed(page, {
@@ -292,11 +327,11 @@ test("an open paddle row dated today shows the live flow figures", async ({ page
   });
   await openPhone(page);
   await openLegsTab(page);
-  await rowButton(page, 1).click();
-  const row = legRows(page).nth(0);
-  await expect(row).toContainText("Closed today: low flow");
-  await expect(row).toContainText(strings.flow.gaugeAssumed("Membre"));
-  await expect(row.getByRole("link", { name: strings.flow.credit })).toBeVisible();
+  await detailsButton(page, 1).click();
+  const dialog = detailsDialog(page);
+  await expect(dialog).toContainText("Closed today: low flow");
+  await expect(dialog).toContainText(strings.flow.gaugeAssumed("Membre"));
+  await expect(dialog.getByRole("link", { name: strings.flow.credit })).toBeVisible();
   expect(network.blocked).toEqual([]);
 });
 
@@ -423,7 +458,7 @@ const lineCount = (el: Locator) =>
 test.describe("at a narrow phone width", () => {
   test.use({ viewport: { width: 320, height: 640 } });
 
-  test("an open row's figures stay on one line and Retry is fully visible (#70)", async ({ page }) => {
+  test("a tapped row's figures stay on one line and Retry is fully visible (#70)", async ({ page }) => {
     await serveOffline(page);
     await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "paddle" }] });
     await openPhone(page);
@@ -445,5 +480,29 @@ test.describe("at a narrow phone width", () => {
     await retry.scrollIntoViewIfNeeded();
     await expect(retry).toBeInViewport({ ratio: 1 });
     expect(await isInside(retry, failed)).toBe(true);
+  });
+});
+
+test.describe("held sideways", () => {
+  test.use({ viewport: { width: viewport.height, height: viewport.width } });
+
+  test("a leg's details dialog fits the short screen with Close in reach", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-10-14T09:00:00+02:00"));
+    await serveOffline(page, { kiwis: kiwisFixtures("timeseries-list.json", "timeseries-values.json") });
+    await seed(page, {
+      points: [semois[0], semois[semois.length - 1]],
+      legs: [{ mode: "paddle", geometry: semois }],
+      startDate: "2026-10-14",
+    });
+    await openPhone(page);
+    const panel = page.getByRole("complementary", { name: text.sheetLabel });
+    await panel.getByRole("button", { name: text.expandPanelButton }).click();
+    await panel.getByRole("tab", { name: text.tabs.legs }).click();
+    const row = page.getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem").first();
+    await row.getByRole("button", { name: text.legDetailsButton(1) }).click();
+    const dialog = detailsDialog(page);
+    await expect(dialog).toContainText("Closed today: low flow");
+    await expect(dialog).toBeInViewport({ ratio: 1 });
+    await expect(dialog.getByRole("button", { name: text.legDetailsClose })).toBeInViewport({ ratio: 1 });
   });
 });
