@@ -154,6 +154,27 @@ test("a two-day trip shows two day cards with their figures; tapping a card zoom
   await expect.poll(() => inView(page, points(page).nth(1))).toBe(true);
 });
 
+test("an empty trip's Days tab says how days come about, like the Legs tab; the hint goes once there are days", async ({
+  page,
+}) => {
+  await serveOffline(page);
+  await page.goto("/");
+  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await expect(panel(page)).toContainText(strings.legsPanelEmpty);
+
+  await tab(page, text.tabs.days).click();
+  await expect(panel(page)).toContainText(strings.daysPanelEmpty);
+  await expect(dayCards(page)).toHaveCount(0);
+});
+
+test("a trip with days shows no empty-trip hint in the Days tab", async ({ page }) => {
+  await serveOffline(page);
+  await openWithTrip(page);
+  await tab(page, text.tabs.days).click();
+  await expect(dayCards(page)).toHaveCount(2);
+  await expect(panel(page)).not.toContainText(strings.daysPanelEmpty);
+});
+
 test("the Days tab has no heading or rule of its own; the cards run edge to edge right under the tab row", async ({
   page,
 }) => {

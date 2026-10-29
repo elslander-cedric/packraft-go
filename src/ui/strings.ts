@@ -69,6 +69,7 @@ export const strings = {
   campDisabledReason: "Select a point on the map to mark it as a camp.",
   campMarker: "Camp",
   daysPanelLabel: "Days",
+  daysPanelEmpty: "Add legs to see the trip's days. Mark a point as a camp to split it into days.",
   dayLabel: (n: number) => `Day ${n}`,
   // An undated day's calendar tile on the phone: "Day" above its number.
   dayTileWord: "Day",
