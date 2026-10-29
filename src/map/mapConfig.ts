@@ -183,6 +183,8 @@ export const paneZIndex = {
   overlays: 250,
   /** The access layer's waters, below the trip. */
   access: 350,
+  /** The legs and their casings: above the access layer's waters, so a water never covers a leg. */
+  tripLegs: 360,
   /** Put-ins and take-outs, above the legs (desktop). */
   tripModeChanges: 400,
   /** The trip's points, above the legs, so a leg never covers a point. */
