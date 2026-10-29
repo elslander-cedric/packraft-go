@@ -3,7 +3,7 @@
 Date: 2026-10-26
 
 ## Status
-Accepted. Replaces the "phone scope" decision of ADR 0023 ("planning stays desktop"; the rest of ADR 0023 stands). Amends ADR 0005: the app is designed for desktop and phone, and the desktop layout doesn't change. ADR 0001 is unchanged: the primary user still plans at home; the phone adds planning on the go.
+Accepted. Replaces the "phone scope" decision of ADR 0023 ("planning stays desktop"; the rest of ADR 0023 stands). Amends ADR 0005: the app is designed for desktop and phone, and the desktop layout doesn't change. ADR 0001 is unchanged: the primary user still plans at home; the phone adds planning on the go. Amended by ADR 0034: this layout becomes the only one, on every screen, and the screen rule below is replaced.
 
 ## Context
 ADR 0023 gave phones a read-only view: the map, your position, your access points and the trip, with no planning. Paddlers on a bank, or away from a computer, still want to change a route. The planner session lives in the core (ADR 0025), so the phone can reuse the desktop's planning rules, routing and storage unchanged. The layout and the gestures were chosen from throwaway prototypes tried on a real phone (wayfinder map #103, branch `prototype/mobile-layouts`, never merged). The judging criteria, in order: the map stays visible while editing, one-thumb use on a riverbank, figures reachable in one tap.
