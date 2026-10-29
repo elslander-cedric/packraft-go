@@ -3,6 +3,7 @@ import {
   defaultSettings,
   withBaseMap,
   withOverlay,
+  withSidePanel,
   type BaseMapId,
   type OverlayId,
   type Settings,
@@ -61,6 +62,23 @@ export function useOverlays(): [readonly OverlayId[], (id: OverlayId, on: boolea
     settings?.overlays ?? defaultSettings.overlays,
     (id, on) => {
       if (settings) saveSettings(withOverlay(settings, id, on));
+    },
+  ];
+}
+
+/**
+ * The side panel's chosen width and whether it is open (ADR 0034), and a way to change either.
+ * Settings on this device; the defaults until the settings are read in the browser.
+ */
+export function useSidePanel(): [{ width: number; open: boolean }, (change: { width?: number; open?: boolean }) => void] {
+  const [settings, saveSettings] = useSettings();
+  const { sidePanelWidth: width, sidePanelOpen: open } = settings ?? defaultSettings;
+  return [
+    { width, open },
+    (change) => {
+      if (!settings) return;
+      const changed = withSidePanel(settings, change);
+      if (changed !== settings) saveSettings(changed);
     },
   ];
 }

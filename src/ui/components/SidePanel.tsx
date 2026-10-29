@@ -1,14 +1,35 @@
-import type { ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { Button } from "./Button";
+import { sidePanelWidthLimits, sidePanelWidthWithin } from "./sidePanelWidth";
 import "./SidePanel.css";
 
-/** The open panel takes this share of the screen's width, up to `PANEL_MAX_PX`. Matches `--side-panel-width` in globals.css. */
-const PANEL_SHARE = 0.45;
-const PANEL_MAX_PX = 380;
+/** How far one arrow key press moves the panel's edge, in pixels. */
+const KEY_STEP_PX = 20;
 
-/** The share of a screen `screenWidth` px wide that the open panel covers. */
-export function sidePanelCover(screenWidth: number): number {
-  return Math.min(PANEL_SHARE, PANEL_MAX_PX / screenWidth);
+/** The window's width, kept up to date; null on the server and while hydrating. */
+function useWindowWidth(): number | null {
+  return useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener("resize", onChange);
+      return () => window.removeEventListener("resize", onChange);
+    },
+    () => window.innerWidth,
+    () => null,
+  );
+}
+
+/** The width the open panel is drawn at for a chosen `width`: kept within the window's limits. */
+export function useSidePanelWidth(width: number): number {
+  const windowWidth = useWindowWidth();
+  return windowWidth === null ? Math.round(width) : sidePanelWidthWithin(width, windowWidth);
 }
 
 export type SidePanelProps = {
@@ -16,6 +37,12 @@ export type SidePanelProps = {
   label: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** The open panel's chosen width in pixels; drawn within the window's limits. */
+  width: number;
+  /** Called when a drag of the edge ends, or a key moves it, with the new width in whole pixels. */
+  onWidthChange: (width: number) => void;
+  /** Accessible name of the left edge, the splitter that resizes the open panel. */
+  resizeLabel: string;
   /** Names and icons of the collapse and expand buttons. */
   collapseLabel: string;
   collapseIcon: ReactNode;
@@ -31,13 +58,17 @@ export type SidePanelProps = {
 
 /**
  * A full-height panel on the right of the screen, beside the page (non-modal). Open, it shows
- * the summary, the header and the body; collapsed, a thin strip with the summary only. The
- * sheet's counterpart when a phone is held sideways (#126); it holds the same content.
+ * the summary, the header and the body, and its left edge resizes it (drag it, or the arrow
+ * keys on it; ADR 0034); collapsed, a thin strip with the summary only. The sheet's
+ * counterpart when a phone is held sideways (#126); it holds the same content.
  */
 export function SidePanel({
   label,
   open,
   onOpenChange,
+  width,
+  onWidthChange,
+  resizeLabel,
   collapseLabel,
   collapseIcon,
   expandLabel,
@@ -46,8 +77,76 @@ export function SidePanel({
   header,
   children,
 }: SidePanelProps) {
+  const windowWidth = useWindowWidth() ?? 0;
+  const chosen = useSidePanelWidth(width);
+  const { min, max } = sidePanelWidthLimits(windowWidth);
+  // While the edge is dragged: where the pointer went down, and the width then.
+  const drag = useRef<{ pointerId: number; x: number; width: number } | null>(null);
+  // The width while dragging, drawn at once and stored only when the drag ends.
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const shown = dragWidth ?? chosen;
+
+  const resize = (to: number) => {
+    const within = sidePanelWidthWithin(to, windowWidth);
+    if (within !== chosen) onWidthChange(within);
+  };
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = { pointerId: event.pointerId, x: event.clientX, width: shown };
+    setDragWidth(shown);
+  };
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const start = drag.current;
+    if (start?.pointerId !== event.pointerId) return;
+    // The edge is on the left: moving it left widens the panel.
+    setDragWidth(sidePanelWidthWithin(start.width + start.x - event.clientX, windowWidth));
+  };
+  const endDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.pointerId !== event.pointerId) return;
+    drag.current = null;
+    if (dragWidth !== null) resize(dragWidth);
+    setDragWidth(null);
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const to = {
+      ArrowLeft: shown + KEY_STEP_PX,
+      ArrowRight: shown - KEY_STEP_PX,
+      Home: min,
+      End: max,
+    }[event.key];
+    if (to === undefined) return;
+    event.preventDefault();
+    resize(to);
+  };
+
   return (
-    <aside className="side-panel" aria-label={label} data-open={open ? "" : undefined}>
+    <aside
+      className="side-panel"
+      aria-label={label}
+      data-open={open ? "" : undefined}
+      data-resizing={dragWidth === null ? undefined : ""}
+      style={{ "--side-panel-width": `${shown}px` } as CSSProperties}
+    >
+      {open && (
+        <div
+          className="side-panel-resize"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={resizeLabel}
+          aria-valuenow={shown}
+          aria-valuemin={min}
+          aria-valuemax={max}
+          tabIndex={0}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onLostPointerCapture={endDrag}
+          onKeyDown={onKeyDown}
+        />
+      )}
       <div className="side-panel-top">
         <Button
           className="side-panel-toggle"

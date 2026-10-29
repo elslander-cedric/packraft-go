@@ -61,9 +61,9 @@
   --color-map-background: #ddd;
   /* Above Leaflet's panes and controls (z-index up to 1000). */
   --z-overlay: 2000;
-  /* The side panel's open and collapsed widths (SidePanel); the open width matches
-     PANEL_SHARE and PANEL_MAX_PX in SidePanel.tsx. */
-  --side-panel-width: min(45vw, 380px);
+  /* The side panel's open and collapsed widths (SidePanel). The open width is the default's,
+     380 px; the page using the panel sets it from the chosen width (ADR 0034). */
+  --side-panel-width: 380px;
   --side-panel-strip-width: 5.5rem;
   /* Native inputs (date picker, number fields) and scrollbars follow the theme. */
   color-scheme: light dark;

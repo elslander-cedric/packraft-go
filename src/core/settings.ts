@@ -17,12 +17,18 @@ export type OverlayId = (typeof overlayIds)[number];
  *   never part of the trip, its file or the GPX.
  * - `overlays`: the overlays switched on (ADR 0032), each once, in the order of `overlayIds`.
  *   A viewing preference like the base map.
+ * - `sidePanelWidth`: the side panel's open width in whole pixels, as last dragged (ADR 0034).
+ *   The panel keeps it within the screen's limits when it draws it.
+ * - `sidePanelOpen`: whether the side panel is open rather than collapsed to its strip.
+ *   Both are viewing preferences like the base map.
  */
 export type Settings = {
   readonly paceFactor: number;
   readonly paddleSpeedKmh: number;
   readonly baseMap: BaseMapId;
   readonly overlays: readonly OverlayId[];
+  readonly sidePanelWidth: number;
+  readonly sidePanelOpen: boolean;
 };
 
 /** The settings that are numbers: the planner's pace. */
@@ -31,7 +37,14 @@ export type PaceSetting = "paceFactor" | "paddleSpeedKmh";
 /** The settings time estimates use. */
 export type Pace = Pick<Settings, PaceSetting>;
 
-export const defaultSettings: Settings = { paceFactor: 1, paddleSpeedKmh: 5, baseMap: baseMapIds[0], overlays: [] };
+export const defaultSettings: Settings = {
+  paceFactor: 1,
+  paddleSpeedKmh: 5,
+  baseMap: baseMapIds[0],
+  overlays: [],
+  sidePanelWidth: 380,
+  sidePanelOpen: true,
+};
 
 /** True for a value a setting can take: a positive, finite number. */
 export const isUsableSetting = (value: unknown): value is number =>
@@ -56,6 +69,18 @@ export function withOverlay(settings: Settings, overlay: OverlayId, on: boolean)
   return { ...settings, overlays: overlayIds.filter((id) => (id === overlay ? on : settings.overlays.includes(id))) };
 }
 
+/**
+ * Settings with the side panel's width or state changed; the same settings when nothing changes.
+ * The width is rounded to whole pixels; one that is not a positive number is ignored.
+ */
+export function withSidePanel(settings: Settings, change: { width?: number; open?: boolean }): Settings {
+  const width = change.width === undefined ? settings.sidePanelWidth : Math.round(change.width);
+  const sidePanelWidth = isUsableSetting(width) ? width : settings.sidePanelWidth;
+  const sidePanelOpen = change.open ?? settings.sidePanelOpen;
+  if (sidePanelWidth === settings.sidePanelWidth && sidePanelOpen === settings.sidePanelOpen) return settings;
+  return { ...settings, sidePanelWidth, sidePanelOpen };
+}
+
 /** Settings in their stored form (JSON). */
 export function serialiseSettings(settings: Settings): string {
   return JSON.stringify(settings);
@@ -73,12 +98,18 @@ export function restoreSettings(stored: string | null): Settings {
     // Unreadable: use the defaults.
   }
   if (typeof parsed !== "object" || parsed === null) return defaultSettings;
-  const { paceFactor, paddleSpeedKmh, baseMap, overlays } = parsed as Record<string, unknown>;
+  const { paceFactor, paddleSpeedKmh, baseMap, overlays, sidePanelWidth, sidePanelOpen } = parsed as Record<
+    string,
+    unknown
+  >;
   return {
     paceFactor: isUsableSetting(paceFactor) ? paceFactor : defaultSettings.paceFactor,
     paddleSpeedKmh: isUsableSetting(paddleSpeedKmh) ? paddleSpeedKmh : defaultSettings.paddleSpeedKmh,
     baseMap: isBaseMapId(baseMap) ? baseMap : defaultSettings.baseMap,
     // Unknown ids are dropped, so an overlay that is gone never comes back as another.
     overlays: Array.isArray(overlays) ? overlayIds.filter((id) => overlays.includes(id)) : defaultSettings.overlays,
+    // Settings stored before the panel was resizable have neither: it opens at its default width.
+    sidePanelWidth: isUsableSetting(sidePanelWidth) ? Math.round(sidePanelWidth) : defaultSettings.sidePanelWidth,
+    sidePanelOpen: typeof sidePanelOpen === "boolean" ? sidePanelOpen : defaultSettings.sidePanelOpen,
   };
 }

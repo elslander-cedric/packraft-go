@@ -9,7 +9,8 @@ import type { MapFocus } from "@/map/PhoneMap";
 import type { MapCover } from "@/map/SearchResultLayer";
 import { BottomSheet, sheetStopShare, type SheetStop } from "../components/BottomSheet";
 import { Button } from "../components/Button";
-import { SidePanel, sidePanelCover } from "../components/SidePanel";
+import { SidePanel, useSidePanelWidth } from "../components/SidePanel";
+import { sidePanelCover } from "../components/sidePanelWidth";
 import { Tab, TabList, TabPanel, Tabs } from "../components/Tabs";
 import { ToggleGroup, type ToggleOption } from "../components/ToggleGroup";
 import DaysPanel from "../DaysPanel";
@@ -17,7 +18,7 @@ import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
 import { strings } from "../strings";
 import { useAccessLayer } from "../useAccessLayer";
-import { useBaseMap, useOverlays } from "../useSettings";
+import { useBaseMap, useOverlays, useSidePanel } from "../useSettings";
 import { usePlaceSearch } from "../usePlaceSearch";
 import { usePlanner } from "../usePlanner";
 import PhoneAccessChip from "./PhoneAccessChip";
@@ -103,14 +104,12 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const [stop, setStop] = useState<SheetStop>("peek");
   // The peek's height, so the bottom buttons sit just above it.
   const [peekPx, setPeekPx] = useState<number | null>(null);
-  // Held sideways, the side panel replaces the sheet: open when the sheet was above its peek.
+  // Held sideways, the side panel replaces the sheet. Its width and whether it is open are
+  // settings on this device (ADR 0034), kept as they were whatever the sheet's stop.
   const sideways = useSideways();
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [wasSideways, setWasSideways] = useState(sideways);
-  if (sideways !== wasSideways) {
-    setWasSideways(sideways);
-    if (sideways) setPanelOpen(stop !== "peek");
-  }
+  const [{ width: panelWidth, open: panelOpen }, changePanel] = useSidePanel();
+  const setPanelOpen = (open: boolean) => changePanel({ open });
+  const shownPanelWidth = useSidePanelWidth(panelWidth);
   // Shows the content: the sheet raised to half, or the panel opened.
   const raise = () => (sideways ? setPanelOpen(true) : setStop("half"));
   // The same, but a sheet above the peek stays where it is.
@@ -120,7 +119,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   };
   // How much of the map the raised sheet or the open panel covers, for a map focus.
   const covered = () =>
-    sideways ? { coveredBelow: 0, coveredRight: sidePanelCover(window.innerWidth) } : { coveredBelow: 0.5 };
+    sideways ? { coveredBelow: 0, coveredRight: sidePanelCover(panelWidth, window.innerWidth) } : { coveredBelow: 0.5 };
   // The access point open in the edit dialog, if any.
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = editingId === null ? null : (access.points.find((p) => p.id === editingId) ?? null);
@@ -310,7 +309,12 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           ? `phone phone-sideways ${panelOpen ? "phone-panel-open" : "phone-panel-collapsed"}`
           : `phone phone-stop-${stop}`
       }
-      style={peekPx === null ? undefined : ({ "--sheet-peek": `${peekPx}px` } as CSSProperties)}
+      style={
+        {
+          "--side-panel-width": `${shownPanelWidth}px`,
+          ...(peekPx === null ? {} : { "--sheet-peek": `${peekPx}px` }),
+        } as CSSProperties
+      }
     >
       <ClientPhoneMap
         baseMap={baseMap}
@@ -461,6 +465,9 @@ export default function PhonePlanner({ router }: { router?: Router }) {
             label={strings.phone.sheetLabel}
             open={panelOpen}
             onOpenChange={setPanelOpen}
+            width={panelWidth}
+            onWidthChange={(width) => changePanel({ width })}
+            resizeLabel={strings.phone.resizePanelHandle}
             collapseLabel={strings.phone.collapsePanelButton}
             collapseIcon={<Icon icon={icons.collapsePanel} />}
             expandLabel={strings.phone.expandPanelButton}

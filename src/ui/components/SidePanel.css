@@ -1,5 +1,6 @@
 /* A full-height panel on the right, over the page; the page beside it stays usable (non-modal).
-   Its widths are tokens in globals.css, so the page can keep its own controls clear of it. */
+   Its widths are tokens in globals.css, so the page can keep its own controls clear of it; the
+   open width is set on the panel from the chosen width (ADR 0034). */
 
 .side-panel {
   box-sizing: border-box;
@@ -21,6 +22,45 @@
 
 .side-panel[data-open] {
   width: var(--side-panel-width);
+}
+
+/* No easing while the edge is dragged, so the panel keeps up with the finger. */
+.side-panel[data-resizing] {
+  transition: none;
+}
+
+/* The left edge, a splitter: a 16 px strip straddling the border, with a grip in the middle. */
+.side-panel-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.5rem;
+  z-index: 1;
+  width: 1rem;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.side-panel-resize::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 2.5rem;
+  border-radius: 2px;
+  background: var(--color-border-strong);
+  transform: translateY(-50%);
+}
+
+.side-panel-resize:hover::after,
+.side-panel[data-resizing] .side-panel-resize::after {
+  background: var(--color-focus);
+}
+
+.side-panel-resize:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
 .side-panel-top {

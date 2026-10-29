@@ -2,7 +2,10 @@
 // sheet, with the same tabs; it collapses to a strip with the totals. Rotating keeps your place.
 import { devices, expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
+import { SETTINGS_KEY } from "../src/persistence/settingsStorage";
+import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { brouterFixture, serveOffline } from "./support/offline";
+import { touch } from "./support/touch";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
@@ -20,6 +23,8 @@ const panelTab = (page: Page, name: string) => panel(page).getByRole("tab", { na
 const collapse = (page: Page) => panel(page).getByRole("button", { name: text.collapsePanelButton });
 const expand = (page: Page) => panel(page).getByRole("button", { name: text.expandPanelButton });
 const points = (page: Page) => mapRegion(page).locator("path.point");
+const splitter = (page: Page) => panel(page).getByRole("separator", { name: text.resizePanelHandle });
+const panelWidth = async (page: Page) => (await panel(page).boundingBox())!.width;
 
 async function openPhone(page: Page) {
   await page.goto("/");
@@ -52,20 +57,14 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
 
   await expect(sheet(page)).toHaveCount(0);
   await expect(panel(page)).toBeVisible();
-  // The panel starts like the sheet's peek: collapsed to the strip (an empty trip has no totals yet).
-  await expect(expand(page)).toBeVisible();
-  await expect(panel(page).locator(".phone-totals")).toHaveCount(0);
-  await expect(panelTab(page, text.tabs.legs)).toHaveCount(0);
-
-  await expand(page).click();
-  await settled(page);
+  // On first load the panel is open, 380 px wide (ADR 0034).
+  await expect(collapse(page)).toBeVisible();
   const box = (await panel(page).boundingBox())!;
-  // Full height, on the right, about 45% of the width and at most 380 px.
+  // Full height, on the right.
   expect(box.y).toBe(0);
   expect(box.height).toBe(SIDEWAYS.height);
   expect(box.x + box.width).toBe(SIDEWAYS.width);
-  expect(box.width).toBeLessThanOrEqual(380);
-  expect(box.width).toBeGreaterThan(SIDEWAYS.width * 0.3);
+  expect(box.width).toBe(380);
   for (const name of Object.values(text.tabs)) await expect(panelTab(page, name)).toBeAttached();
   await panelTab(page, text.tabs.days).click();
   await expect(panelTab(page, text.tabs.days)).toHaveAttribute("aria-selected", "true");
@@ -126,7 +125,7 @@ async function centreOf(page: Page, n: number) {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-test("rotating keeps the open tab, the tapped leg row and the selected point; the sheet's stop maps to the panel and back", async ({
+test("rotating keeps the open tab, the tapped leg row and the selected point; the panel keeps its own state and the sheet its stop", async ({
   page,
 }) => {
   await serveOffline(page, routed);
@@ -149,7 +148,7 @@ test("rotating keeps the open tab, the tapped leg row and the selected point; th
   await rowButton(page, 2).click();
   await expect.poll(() => sheetHeight(page)).toBeGreaterThan(screen * 0.45);
 
-  // Sideways: the sheet at half becomes the open panel, with the same place kept.
+  // Sideways: the panel is open, as on first load (ADR 0034), with the same place kept.
   await page.setViewportSize(SIDEWAYS);
   await expect(sheet(page)).toHaveCount(0);
   await expect(collapse(page)).toBeVisible();
@@ -168,27 +167,31 @@ test("rotating keeps the open tab, the tapped leg row and the selected point; th
   await expect(rowButton(page, 2)).toBeVisible();
   await expect(points(page).nth(1)).toHaveClass(/point-selected/);
 
-  // At 90% the sheet also becomes the open panel, and comes back at 90%.
+  // With the sheet at 90% the panel stays collapsed, as it was left; the sheet comes back at 90%.
   await dragSheet(page, -(screen * 0.4));
   await expect.poll(() => sheetHeight(page)).toBeGreaterThan(screen * 0.85);
   await page.setViewportSize(SIDEWAYS);
-  await expect(collapse(page)).toBeVisible();
+  await expect(expand(page)).toBeVisible();
   await page.setViewportSize(PORTRAIT);
   await settled(page);
   await expect.poll(() => sheetHeight(page)).toBeGreaterThan(screen * 0.85);
 
-  // At its peek the sheet becomes the collapsed panel, and comes back at its peek.
+  // With the sheet at its peek the panel is still collapsed; opening it shows the tab that was open.
   await dragSheet(page, screen);
   await expect.poll(() => sheetHeight(page)).toBeLessThan(140);
   await page.setViewportSize(SIDEWAYS);
   await expect(expand(page)).toBeVisible();
   await expect(panel(page).locator(".phone-totals")).toBeVisible();
-  // Opening the panel shows the tab that was open.
   await expand(page).click();
   await expect(panelTab(page, text.tabs.legs)).toHaveAttribute("aria-selected", "true");
+  // Opening the panel doesn't raise the sheet: back in portrait it is at its peek.
   await page.setViewportSize(PORTRAIT);
   await settled(page);
   await expect.poll(() => sheetHeight(page)).toBeLessThan(140);
+
+  // The panel left open stays open, though the sheet is at its peek.
+  await page.setViewportSize(SIDEWAYS);
+  await expect(collapse(page)).toBeVisible();
 });
 
 test("sideways, the floating buttons stay in their corners over the map, beside the panel, fully visible", async ({
@@ -219,6 +222,7 @@ test("sideways, the floating buttons stay in their corners over the map, beside 
     page.getByRole("group", { name: text.nextLegModeLabel }),
     page.getByRole("button", { name: strings.undoButton }),
   ];
+  await collapse(page).click();
   for (const open of [false, true]) {
     if (open) await expand(page).click();
     await settled(page);
@@ -269,4 +273,103 @@ test("sideways, the Settings dialog from the menu fits the short screen with Sav
     await button.scrollIntoViewIfNeeded();
     await expect(button).toBeInViewport({ ratio: 1 });
   }
+});
+
+test("sideways, dragging the panel's left edge resizes it, between 320 px and half the screen (ADR 0034)", async ({
+  page,
+}) => {
+  await page.setViewportSize(SIDEWAYS);
+  await serveOffline(page);
+  await openPhone(page);
+  await settled(page);
+  expect(await panelWidth(page)).toBe(380);
+  const fingers = await touch(page);
+  const edge = async () => {
+    const box = (await splitter(page).boundingBox())!;
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+
+  // Wider by 30 px.
+  let from = await edge();
+  await fingers.drag(from, { x: from.x - 30, y: from.y + 20 });
+  await settled(page);
+  expect(await panelWidth(page)).toBe(410);
+  await expect(splitter(page)).toHaveAttribute("aria-valuenow", "410");
+
+  // No wider than half the screen.
+  from = await edge();
+  await fingers.drag(from, { x: from.x - 300, y: from.y });
+  await settled(page);
+  expect(await panelWidth(page)).toBe(Math.floor(SIDEWAYS.width / 2));
+
+  // No narrower than 320 px, with the mouse too.
+  from = await edge();
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 250, from.y, { steps: 5 });
+  await page.mouse.move(from.x + 600, from.y, { steps: 5 });
+  await page.mouse.up();
+  await settled(page);
+  expect(await panelWidth(page)).toBe(320);
+
+  // Dragging the edge adds no point to the map.
+  await expect(points(page)).toHaveCount(0);
+});
+
+test("sideways, the arrow keys on the panel's edge resize it, within its limits (ADR 0034)", async ({ page }) => {
+  await page.setViewportSize(SIDEWAYS);
+  await serveOffline(page);
+  await openPhone(page);
+  await settled(page);
+  const max = Math.floor(SIDEWAYS.width / 2);
+  await expect(splitter(page)).toHaveAttribute("aria-valuemin", "320");
+  await expect(splitter(page)).toHaveAttribute("aria-valuemax", String(max));
+
+  await splitter(page).focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(splitter(page)).toHaveAttribute("aria-valuenow", "400");
+  await settled(page);
+  expect(await panelWidth(page)).toBe(400);
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(splitter(page)).toHaveAttribute("aria-valuenow", "360");
+
+  for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
+  await expect(splitter(page)).toHaveAttribute("aria-valuenow", "320");
+  await page.keyboard.press("End");
+  await expect(splitter(page)).toHaveAttribute("aria-valuenow", String(max));
+  await page.keyboard.press("Home");
+  await expect(splitter(page)).toHaveAttribute("aria-valuenow", "320");
+  await settled(page);
+  expect(await panelWidth(page)).toBe(320);
+});
+
+test("sideways, the panel's width and whether it is open survive a reload, in the settings and not the trip", async ({
+  page,
+}) => {
+  await page.setViewportSize(SIDEWAYS);
+  await serveOffline(page);
+  await openPhone(page);
+  await splitter(page).focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(splitter(page)).toHaveAttribute("aria-valuenow", "400");
+  await collapse(page).click();
+  await expect
+    .poll(async () => JSON.parse((await page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY)) ?? "{}"))
+    .toMatchObject({ sidePanelWidth: 400, sidePanelOpen: false });
+  expect((await page.evaluate((key) => localStorage.getItem(key), TRIP_KEY)) ?? "").not.toMatch(/sidePanel/);
+
+  await page.reload();
+  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await expect(expand(page)).toBeVisible();
+  await expect(splitter(page)).toHaveCount(0);
+  await expand(page).click();
+  await settled(page);
+  expect(await panelWidth(page)).toBe(400);
+
+  // Open survives a reload too.
+  await page.reload();
+  await expect(collapse(page)).toBeVisible();
+  await settled(page);
+  expect(await panelWidth(page)).toBe(400);
 });
