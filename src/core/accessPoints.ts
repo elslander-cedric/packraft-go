@@ -162,7 +162,7 @@ export type AccessPointsParseResult =
   | { readonly ok: true; readonly accessPoints: AccessPoints }
   | { readonly ok: false; readonly reason?: "unknown-version" };
 
-/** The access points as text, for browser storage and for the export file. */
+/** The access points as text, for browser storage. */
 export function serialiseAccessPoints(points: AccessPoints): string {
   return JSON.stringify({ format: ACCESS_POINTS_FORMAT, version: ACCESS_POINTS_VERSION, accessPoints: points });
 }

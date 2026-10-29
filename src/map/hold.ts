@@ -9,6 +9,9 @@ export const HOLD_MS = 400;
 // A finger or mouse that moves more than this (in screen pixels) while held is panning, not holding.
 const HOLD_SLOP_PX = 8;
 
+/** A press that can start a hold or a tap: a finger, a pen, or the left mouse button. */
+export const isPrimaryPress = (event: PointerEvent) => event.pointerType !== "mouse" || event.button === 0;
+
 /**
  * Hold on a map shape's element (ADR 0026): a finger, pen or the left mouse
  * button held still for `HOLD_MS` calls `onHold` with where it was pressed
@@ -35,7 +38,7 @@ export function listenForHold(element: Element, map: LeafletMap, onHold: (at: La
 
   const down = (event: PointerEvent) => {
     lastPointerType = event.pointerType;
-    if ((event.pointerType === "mouse" && event.button !== 0) || pressed) return;
+    if (!isPrimaryPress(event) || pressed) return;
     const where = at(event);
     pressed = {
       id: event.pointerId,

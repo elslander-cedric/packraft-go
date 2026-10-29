@@ -485,6 +485,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         ) : (
           <BottomSheet
             label={strings.phone.sheetLabel}
+            handleLabel={strings.phone.resizeSheetHandle}
+            stopLabels={strings.phone.sheetStops}
             stop={stop}
             onStopChange={setStop}
             onPeekHeightChange={setPeekPx}

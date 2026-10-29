@@ -1,9 +1,10 @@
 // The phone planner on a wide screen with a mouse and a keyboard (#189, stage 2 of ADR 0034):
 // the unknown-version autosave warning, the mouse gestures (a 0.4 s hold on a leg inserts a
-// point, the wheel zooms, a double-click doesn't) and keyboard-only use. Until the screen rule
-// switches (stage 3), `?planner=phone` gives this desktop-sized window the phone planner.
+// point, the wheel zooms, a double-click doesn't) and keyboard-only use, also of the portrait
+// sheet. Until the screen rule switches (stage 3), `?planner=phone` gives this desktop-sized
+// window the phone planner.
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { serialiseTrip } from "../src/core/saveFile";
+import { SAVE_FORMAT, serialiseTrip } from "../src/core/saveFile";
 import type { Trip } from "../src/core/trip";
 import { SETTINGS_KEY } from "../src/persistence/settingsStorage";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
@@ -94,7 +95,7 @@ async function mouseHold(page: Page, at: { x: number; y: number }, ms: number) {
 
 test("an unknown-version autosave shows the warning, and edits don't overwrite the kept save", async ({ page }) => {
   await serveOffline(page);
-  const newer = JSON.stringify({ format: "packraft-go-trip", version: 3, trip: { name: "From the future" } });
+  const newer = JSON.stringify({ format: SAVE_FORMAT, version: 3, trip: { name: "From the future" } });
   await openPlanner(page, newer);
 
   await expect(page.getByRole("alert").filter({ hasText: strings.autosaveUnknownVersion })).toBeVisible();
@@ -279,10 +280,23 @@ test.describe("keyboard alone", () => {
     await page.keyboard.press("Space");
     await expect(modes.getByRole("button", { name: strings.legModePaddle })).toHaveAttribute("aria-pressed", "true");
 
-    // Edit trip: the name field has focus; Enter saves; focus returns to the menu button.
+    // A leg row: Enter marks it and shows its leg.
+    const row = panel(page).getByRole("button", { name: new RegExp(`^${strings.legLabel(1)} `) });
+    await tabTo(page, row);
+    await page.keyboard.press("Enter");
+    await expect(row).toHaveAttribute("aria-current", "true");
+
+    // Edit trip: the name field has focus, Tab stays in the dialog; Enter saves; focus returns to
+    // the menu button.
     await pickFromMenu(page, strings.phone.menu.tripDetails);
-    const nameField = page.getByRole("dialog").getByRole("textbox", { name: strings.tripNameLabel });
+    const dialog = page.getByRole("dialog");
+    const nameField = dialog.getByRole("textbox", { name: strings.tripNameLabel });
     await expect(nameField).toBeFocused();
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press("Tab");
+      expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    }
+    await nameField.focus();
     await page.keyboard.type("Ourthe");
     await page.keyboard.press("Enter");
     await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -302,7 +316,10 @@ test.describe("keyboard alone", () => {
     // The Map menu: a base map picked with the arrows and Enter.
     await tabTo(page, button(page, strings.mapMenuButton));
     await page.keyboard.press("Enter");
+    // Keys go to the menu once it has focused its first item.
+    await expect(page.getByRole("menuitemradio", { name: strings.baseMaps.opentopomap })).toBeFocused();
     await page.keyboard.press("ArrowDown");
+    await expect(page.getByRole("menuitemradio", { name: strings.baseMaps["aerial-be"] })).toBeFocused();
     await page.keyboard.press("Enter");
     await expect.poll(async () => (await storedSettings(page))?.baseMap).toBe("aerial-be");
     await page.keyboard.press("Escape");
@@ -343,5 +360,74 @@ test.describe("keyboard alone", () => {
     await page.keyboard.press("Enter");
     await expect(points(page)).toHaveCount(0);
     expect(network.blocked).toEqual([]);
+  });
+});
+
+test.describe("keyboard alone on a portrait phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  const sheet = (page: Page) => page.getByRole("dialog", { name: strings.phone.sheetLabel });
+
+  test("the sheet's handle moves it between its stops; at the peek Tab skips its hidden body", async ({ page }) => {
+    await serveOffline(page, routed);
+    await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, serialiseTrip(trip)]);
+    await page.goto("/");
+    await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+    await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
+    const row = sheet(page).getByRole("button", { name: new RegExp(`^${strings.legLabel(1)} `) });
+
+    // At the peek the leg rows are off screen, and Tab never lands on them.
+    for (let i = 0; i < 30; i++) {
+      await page.keyboard.press("Tab");
+      expect(await page.evaluate(() => document.activeElement?.classList.contains("phone-row-toggle"))).toBe(false);
+    }
+
+    // Enter on a tab raises the sheet to half; then the rows are reachable and usable.
+    const legsTab = sheet(page).getByRole("tab", { name: strings.phone.tabs.legs });
+    await legsTab.focus();
+    await page.keyboard.press("Enter");
+    await expect(sheet(page)).toHaveAttribute("data-stop", "half");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await expect(row).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(row).toHaveAttribute("aria-current", "true");
+
+    // The handle, a slider over the stops: arrow up and down go one stop, Home and End to the ends.
+    const handle = sheet(page).getByRole("slider", { name: strings.phone.resizeSheetHandle });
+    await handle.focus();
+    await page.keyboard.press("ArrowUp");
+    await expect(sheet(page)).toHaveAttribute("data-stop", "full");
+    await page.keyboard.press("ArrowUp");
+    await expect(sheet(page)).toHaveAttribute("data-stop", "full");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
+    await expect(handle).toHaveAttribute("aria-valuetext", strings.phone.sheetStops.peek);
+    await page.keyboard.press("End");
+    await expect(sheet(page)).toHaveAttribute("data-stop", "full");
+    await page.keyboard.press("Home");
+    await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
+    await expect(handle).toBeFocused();
+  });
+
+  test("the autosave warning sits under the menu, clear of the search pill and the right-hand buttons", async ({
+    page,
+  }) => {
+    await serveOffline(page);
+    const newer = JSON.stringify({ format: SAVE_FORMAT, version: 3, trip: { name: "From the future" } });
+    await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, newer]);
+    await page.goto("/");
+    await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const warning = page.getByRole("alert").filter({ hasText: strings.autosaveUnknownVersion });
+    await expect(warning).toBeVisible();
+    await expect(warning).toBeInViewport({ ratio: 1 });
+    const box = (await warning.boundingBox())!;
+    for (const name of [strings.placeSearch.pill(undefined), strings.phone.showPositionButton, strings.mapMenuButton]) {
+      const other = (await page.getByRole("button", { name, exact: true }).boundingBox())!;
+      const overlaps =
+        box.x < other.x + other.width && other.x < box.x + box.width && box.y < other.y + other.height && other.y < box.y + box.height;
+      expect(overlaps, name).toBe(false);
+    }
   });
 });

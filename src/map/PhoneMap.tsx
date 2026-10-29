@@ -23,7 +23,7 @@ import SearchResultLayer, { type MapCover } from "./SearchResultLayer";
 import { campIcon, legCasingStyle, legStyle, modeChangeStyle, MapAreaReporter } from "./TripMap";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
-import { HOLD_MS, useHold } from "./hold";
+import { HOLD_MS, isPrimaryPress, useHold } from "./hold";
 import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
 
 /**
@@ -175,7 +175,7 @@ function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
       pinched.current = event.touches.length > 1;
     };
     const down = (event: PointerEvent) => {
-      pressedAt.current = event.pointerType === "mouse" && event.button !== 0 ? null : event.timeStamp;
+      pressedAt.current = isPrimaryPress(event) ? event.timeStamp : null;
     };
     container.addEventListener("touchstart", touch, true);
     container.addEventListener("pointerdown", down, true);

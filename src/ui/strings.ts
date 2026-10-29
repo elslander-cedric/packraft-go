@@ -213,6 +213,9 @@ export const strings = {
     expandPanelButton: "Open the trip panel",
     // Its left edge, a splitter: drag it or use the arrow keys to resize the panel (ADR 0034).
     resizePanelHandle: "Resize the trip panel",
+    // The sheet's handle (#189): a slider over its stops; arrow up and down move the sheet one stop.
+    resizeSheetHandle: "Resize the trip sheet",
+    sheetStops: { peek: "Header only", half: "Half the screen", full: "Full screen" },
     // The floating hike / paddle toggle for the leg the next map tap adds (#121).
     nextLegModeLabel: "Next leg's mode",
     // Its toggles are icon-only; their names are `legModeHike` and `legModePaddle`.

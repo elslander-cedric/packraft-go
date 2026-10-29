@@ -21,7 +21,7 @@ Since ADR 0026 the app has two planners over the same `usePlanner`: the desktop 
   - place search as the pill on the top row;
   - ◎ and "mark an access point" on every screen (without a position fix, marking places the point on the map).
 - **The same gestures for touch and mouse** (ADR 0026): click or tap adds a point, press and drag moves one, holding a leg about 0.4 s inserts a point, double-click zoom stays off; the mouse wheel zooms. Floating buttons keep their 44 px size everywhere.
-- **No access points file** (#189): export and import of your access points go away on every screen. A leg's mode is set when it is drawn, with the next leg's mode toggle; there is no switch on a drawn leg.
+- **No access points file** (#189): export and import of your access points go away on every screen. A leg's mode is set when it is drawn, with the next leg's mode toggle; the desktop's switch on a drawn leg goes with the desktop tree in stage 4.
 - **Full keyboard use on every screen:** every control reachable with Tab, and the shortcuts (undo, delete the selected point, Escape) as today.
 - **Rollout in four stages,** each leaving `main` working:
   1. the resizable side panel and its settings;
