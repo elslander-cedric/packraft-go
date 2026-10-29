@@ -231,6 +231,8 @@ export const strings = {
     // The side panel that replaces the sheet when the phone is held sideways (#126).
     collapsePanelButton: "Collapse the trip panel",
     expandPanelButton: "Open the trip panel",
+    // Its left edge, a splitter: drag it or use the arrow keys to resize the panel (ADR 0034).
+    resizePanelHandle: "Resize the trip panel",
     // The floating hike / paddle toggle for the leg the next map tap adds (#121).
     nextLegModeLabel: "Next leg's mode",
     // Its toggles are icon-only; their names are `legModeHike` and `legModePaddle`.

@@ -549,8 +549,8 @@ test.describe("held sideways", () => {
       startDate: "2026-10-14",
     });
     await openPhone(page);
+    // The panel opens on first load (ADR 0034).
     const panel = page.getByRole("complementary", { name: text.sheetLabel });
-    await panel.getByRole("button", { name: text.expandPanelButton }).click();
     await panel.getByRole("tab", { name: text.tabs.legs }).click();
     const row = page.getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem").first();
     await row.getByRole("button", { name: text.legDetailsButton(1) }).click();

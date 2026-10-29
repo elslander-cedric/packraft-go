@@ -261,6 +261,8 @@ test("sideways, a tap on a lock opens the side panel with its details above the 
   await page.setViewportSize({ width: viewport.height, height: viewport.width });
   await openWith(page, nearLock);
   const panel = page.getByRole("complementary", { name: phoneText.sheetLabel });
+  // The panel opens on first load (ADR 0034); collapsed, the tap opens it.
+  await panel.getByRole("button", { name: phoneText.collapsePanelButton }).click();
   await expect(panel.getByRole("button", { name: phoneText.expandPanelButton })).toBeVisible();
   await toggleAccessLayer(page);
   await expect(lock(page, ANDERLECHT_LOCK)).toBeVisible();

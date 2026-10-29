@@ -7,15 +7,30 @@ import {
   withBaseMap,
   withOverlay,
   withSetting,
+  withSidePanel,
 } from "./settings";
 
 describe("settings", () => {
-  it("default to pace factor 1.0, paddling speed 5 km/h, OpenTopoMap and no overlays", () => {
-    expect(defaultSettings).toEqual({ paceFactor: 1, paddleSpeedKmh: 5, baseMap: "opentopomap", overlays: [] });
+  it("default to pace factor 1.0, paddling speed 5 km/h, OpenTopoMap, no overlays and the side panel open at 380 px", () => {
+    expect(defaultSettings).toEqual({
+      paceFactor: 1,
+      paddleSpeedKmh: 5,
+      baseMap: "opentopomap",
+      overlays: [],
+      sidePanelWidth: 380,
+      sidePanelOpen: true,
+    });
   });
 
   it.each(baseMapIds)("round-trip through their stored form (base map %s)", (baseMap) => {
-    const settings = { paceFactor: 1.3, paddleSpeedKmh: 3.5, baseMap, overlays: ["hiking-trails"] as const };
+    const settings = {
+      paceFactor: 1.3,
+      paddleSpeedKmh: 3.5,
+      baseMap,
+      overlays: ["hiking-trails"] as const,
+      sidePanelWidth: 452,
+      sidePanelOpen: false,
+    };
     expect(restoreSettings(serialiseSettings(settings))).toEqual(settings);
   });
 
@@ -43,6 +58,8 @@ describe("settings", () => {
       paddleSpeedKmh: 4,
       baseMap: "ngi-topo",
       overlays: [],
+      sidePanelWidth: 380,
+      sidePanelOpen: true,
     });
     expect(restoreSettings(JSON.stringify({ paceFactor: 0, paddleSpeedKmh: null }))).toEqual(defaultSettings);
   });
@@ -54,19 +71,38 @@ describe("settings", () => {
     ["an inherited name", "toString"],
   ])("an unreadable base map (%s) falls back to OpenTopoMap, keeping the rest", (_, baseMap) => {
     expect(restoreSettings(JSON.stringify({ paceFactor: 1.2, paddleSpeedKmh: 4, baseMap }))).toEqual({
+      ...defaultSettings,
       paceFactor: 1.2,
       paddleSpeedKmh: 4,
-      baseMap: "opentopomap",
-      overlays: [],
     });
   });
 
   it("settings stored before overlays existed restore with none switched on", () => {
     expect(restoreSettings(JSON.stringify({ paceFactor: 1.2, paddleSpeedKmh: 4, baseMap: "aerial-be" }))).toEqual({
+      ...defaultSettings,
       paceFactor: 1.2,
       paddleSpeedKmh: 4,
       baseMap: "aerial-be",
-      overlays: [],
+    });
+  });
+
+  it("settings stored before the side panel was resizable restore with it open at 380 px", () => {
+    const stored = { paceFactor: 1.2, paddleSpeedKmh: 4, baseMap: "aerial-be", overlays: ["hiking-trails"] };
+    expect(restoreSettings(JSON.stringify(stored))).toEqual({ ...stored, sidePanelWidth: 380, sidePanelOpen: true });
+  });
+
+  it.each([
+    ["a string", "wide", "yes"],
+    ["zero and a number", 0, 1],
+    ["negative and null", -300, null],
+    ["not finite", null, undefined],
+  ])("an unreadable side panel width or state (%s) falls back to its default, keeping the rest", (_, width, open) => {
+    const stored = { paceFactor: 1.2, paddleSpeedKmh: 4, baseMap: "ngi-topo", sidePanelWidth: width, sidePanelOpen: open };
+    expect(restoreSettings(JSON.stringify(stored))).toEqual({
+      ...defaultSettings,
+      paceFactor: 1.2,
+      paddleSpeedKmh: 4,
+      baseMap: "ngi-topo",
     });
   });
 
@@ -99,6 +135,26 @@ describe("settings", () => {
 
     it("keeps the settings as they were for the base map already chosen", () => {
       expect(withBaseMap(defaultSettings, "opentopomap")).toBe(defaultSettings);
+    });
+  });
+
+  describe("withSidePanel", () => {
+    it("changes the side panel's width or state, keeping the other settings", () => {
+      const settings = { ...defaultSettings, paceFactor: 1.2, baseMap: "aerial-be" } as const;
+      expect(withSidePanel(settings, { width: 450 })).toEqual({ ...settings, sidePanelWidth: 450 });
+      expect(withSidePanel(settings, { open: false })).toEqual({ ...settings, sidePanelOpen: false });
+    });
+
+    it("rounds the width to whole pixels", () => {
+      expect(withSidePanel(defaultSettings, { width: 412.6 }).sidePanelWidth).toBe(413);
+    });
+
+    it.each([0, -20, Number.NaN, Number.POSITIVE_INFINITY])("ignores a width of %s", (width) => {
+      expect(withSidePanel(defaultSettings, { width })).toBe(defaultSettings);
+    });
+
+    it("keeps the settings as they were when nothing changes", () => {
+      expect(withSidePanel(defaultSettings, { width: 380, open: true })).toBe(defaultSettings);
     });
   });
 

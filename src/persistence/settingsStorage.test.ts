@@ -24,9 +24,17 @@ const blockedStorage = {
 describe("settings storage", () => {
   it("stores settings under their own key and loads them back", () => {
     const storage = memoryStorage();
-    storeSettings({ paceFactor: 1.25, paddleSpeedKmh: 4, baseMap: "aerial-be", overlays: ["hiking-trails"] }, storage);
+    const settings = {
+      paceFactor: 1.25,
+      paddleSpeedKmh: 4,
+      baseMap: "aerial-be",
+      overlays: ["hiking-trails"],
+      sidePanelWidth: 420,
+      sidePanelOpen: false,
+    } as const;
+    storeSettings(settings, storage);
     expect([...storage.items.keys()]).toEqual([SETTINGS_KEY]);
-    expect(loadStoredSettings(storage)).toEqual({ paceFactor: 1.25, paddleSpeedKmh: 4, baseMap: "aerial-be", overlays: ["hiking-trails"] });
+    expect(loadStoredSettings(storage)).toEqual(settings);
   });
 
   it("loads the defaults when nothing is stored", () => {

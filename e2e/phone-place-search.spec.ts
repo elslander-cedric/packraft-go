@@ -308,6 +308,9 @@ for (const size of [
 test("sideways, the pill and the open field stop short of the side panel, collapsed or open", async ({ page }) => {
   await page.setViewportSize({ width: 812, height: 375 });
   await withTripDayChip(page);
+  // The panel opens on first load (ADR 0034); start from the strip.
+  await panel(page).getByRole("button", { name: strings.phone.collapsePanelButton }).click();
+  await settled(page);
 
   for (const state of ["collapsed", "open"]) {
     if (state === "open") {
