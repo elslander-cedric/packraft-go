@@ -18,7 +18,7 @@ async function twoPoints(page: Page) {
   const box = (await map.boundingBox())!;
   await page.mouse.click(box.x + box.width / 2 - 150, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2 + 150, box.y + box.height / 2);
-  return page.getByRole("complementary", { name: strings.legsPanelLabel }).getByRole("listitem").first();
+  return page.getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem").first();
 }
 
 /** Lines the text `wanted` is laid out on inside `row`. */
@@ -48,11 +48,12 @@ test("the app's own font is loaded and used, not an operating system font", asyn
 test("seeded: a figure squeezed until it wraps inside itself is caught by the measurement", async ({ page }) => {
   await serveOffline(page, { brouter: () => TRAIL });
   const row = await twoPoints(page);
-  const figure = `${strings.climbLabel} 100 m`;
-  await expect(row).toContainText(figure);
+  // The climb's shown value (its label is only read out).
+  const figure = "100 m";
+  await expect(row).toContainText(`${strings.climbLabel} ${figure}`);
   expect(await lines(row, figure)).toBe(1);
   await page.addStyleTag({
-    content: ".leg-figure { white-space: normal !important; display: inline-block !important; width: 1ch !important; }",
+    content: ".phone-row-figure { white-space: normal !important; display: inline-block !important; width: 1ch !important; }",
   });
   expect(await lines(row, figure)).toBeGreaterThan(1);
 });

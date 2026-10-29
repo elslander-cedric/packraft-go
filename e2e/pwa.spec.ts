@@ -4,6 +4,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline } from "./support/offline";
+import { freeMapBox } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 
@@ -57,8 +58,8 @@ test("the service worker is registered and the app shell opens offline", async (
   await page.reload();
 
   await expect(mapRegion(page)).toBeVisible();
-  await expect(page.getByRole("button", { name: strings.newTripButton })).toBeVisible();
-  await expect(page.getByRole("complementary", { name: strings.legsPanelLabel })).toBeVisible();
+  await expect(page.getByRole("button", { name: strings.phone.menu.button, exact: true })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: strings.phone.sheetLabel })).toBeVisible();
 });
 
 test("map tiles and routing answers are never cached", async ({ page }) => {
@@ -70,7 +71,7 @@ test("map tiles and routing answers are never cached", async ({ page }) => {
   // Load the page again under the service worker, then route a leg.
   await page.reload();
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  const box = (await freeMapBox(page));
   await page.mouse.click(box.x + box.width / 2 - 50, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2 + 50, box.y + box.height / 2);
   await expect(mapRegion(page).locator("path.leg-routed")).toHaveCount(1);

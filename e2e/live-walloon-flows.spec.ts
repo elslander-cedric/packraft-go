@@ -4,6 +4,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { delayedKiwis, kiwisFixtures, serveOffline } from "./support/offline";
+import { toggleAccessLayer } from "./support/mapMenu";
+import { accessWater, closeLegDetails, holdWater, openLegDetails, openPlanner, showTab } from "./support/planner";
 
 /** Just after the recording (see src/hydrometry/fixtures/README.md), in Belgian time. */
 const RECORDED_AT = new Date("2026-10-14T09:00:00+02:00");
@@ -21,25 +23,25 @@ const AMBLEVE = "walloon-1B1a";
 
 test.use({ viewport: { width: 1400, height: 900 }, timezoneId: "Europe/Brussels" });
 
-const water = (page: Page, id: string) => page.locator(`path.access-record-${id}`);
+const water = accessWater;
 
-/** Clicks a water's line where it is drawn: halfway along its path. */
-async function clickWater(page: Page, id: string) {
-  const at = await water(page, id).evaluate((path: SVGPathElement) => {
-    const p = path.getPointAtLength(path.getTotalLength() / 2);
-    const m = path.getScreenCTM()!;
-    return { x: p.x * m.a + p.y * m.c + m.e, y: p.x * m.b + p.y * m.d + m.f };
-  });
-  await page.mouse.click(at.x, at.y);
-}
 
 async function openAccessLayer(page: Page) {
-  await page.goto("/");
-  await expect(page.getByRole("region", { name: strings.mapLabel }).locator(".leaflet-container")).toBeVisible();
-  await page.getByRole("switch", { name: strings.accessLayerToggle }).click();
+  await openPlanner(page);
+  await toggleAccessLayer(page);
 }
 
 const detail = (page: Page) => page.getByRole("region", { name: strings.accessDetailLabel });
+
+/** Sets the access layer's date in the access chip's dialog (ADR 0034). */
+async function setLayerDate(page: Page, date: string) {
+  await page.getByRole("button", { name: /^Access · / }).click();
+  const dialog = page.getByRole("dialog", { name: strings.phone.accessDialogTitle });
+  await dialog.getByLabel(strings.accessDateLabel, { exact: true }).fill(date);
+  await dialog.getByRole("button", { name: strings.phone.accessDialogClose }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
 
 test("a stretch closes on low flow today, with flow figures, freshness, the assumed gauge and the SPW credit", async ({
   page,
@@ -50,7 +52,7 @@ test("a stretch closes on low flow today, with flow figures, freshness, the assu
 
   await expect(water(page, SEMOIS)).toHaveClass(/access-closed-today/);
   await expect(water(page, AMBLEVE)).toHaveClass(/access-open/);
-  await clickWater(page, SEMOIS);
+  await holdWater(page, SEMOIS);
   const panel = detail(page);
   await expect(panel).toContainText("Closed today: low flow");
   await expect(panel).toContainText(strings.flow.heading);
@@ -66,7 +68,7 @@ test("a stretch closes on low flow today, with flow figures, freshness, the assu
   );
 
   // Another date has no live flow: the rules alone decide, without figures.
-  await page.getByLabel(strings.accessDateLabel, { exact: true }).fill("2026-10-20");
+  await setLayerDate(page, "2026-10-20");
   await expect(panel).toContainText(strings.accessStatusOn("2026-10-20"));
   await expect(water(page, SEMOIS)).toHaveClass(/access-open/);
   await expect(panel.getByText(strings.flow.heading)).toHaveCount(0);
@@ -82,7 +84,7 @@ test("a flow-dependent stretch shows unknown today when the service fails, with 
   await openAccessLayer(page);
 
   await expect(water(page, SEMOIS)).toHaveClass(/access-unknown/);
-  await clickWater(page, SEMOIS);
+  await holdWater(page, SEMOIS);
   await expect(detail(page)).toContainText("Flow unknown: the live flow service is unavailable");
   await expect(detail(page).getByRole("link", { name: "SPW: kayak status today" })).toHaveAttribute(
     "href",
@@ -115,9 +117,9 @@ test("a paddle leg dated today uses the live flow: closed on low flow, with the 
     },
   };
   await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
-  await page.goto("/");
+  await openPlanner(page);
 
-  const leg = page.getByRole("complementary", { name: strings.legsPanelLabel }).locator(".leg-row").first();
+  const leg = await openLegDetails(page, 1);
   await expect(leg.locator(".leg-access-status")).toHaveText(
     strings.tripAccess.legStatusOn("Wed 14 Oct 2026", strings.accessState["closed-today"]),
   );
@@ -146,9 +148,9 @@ test("a leg dated today shows Checking flow first, then closed; never open in be
   const held = delayedKiwis(RECORDED);
   const network = await serveOffline(page, { kiwis: held.kiwis });
   await seedSemoisToday(page);
-  await page.goto("/");
+  await openPlanner(page);
 
-  const leg = page.getByRole("complementary", { name: strings.legsPanelLabel }).locator(".leg-row").first();
+  const leg = await openLegDetails(page, 1);
   const status = leg.locator(".leg-access-status");
   // The answer is held: the leg must be checking, and the request must really be in flight.
   await expect(status).toHaveText(
@@ -171,7 +173,7 @@ test("the map's stretch detail shows Checking flow while the flows load, then cl
 
   await expect(water(page, SEMOIS)).toHaveClass(/access-checking/);
   await expect.poll(() => network.kiwis.length).toBeGreaterThan(0);
-  await clickWater(page, SEMOIS);
+  await holdWater(page, SEMOIS);
   await expect(detail(page)).toContainText(strings.accessChecking);
   await expect(detail(page).getByText(strings.accessState.open, { exact: true })).toHaveCount(0);
 
@@ -185,9 +187,9 @@ test("a failing flow service still ends in unknown after checking (#85)", async 
   const held = delayedKiwis(FAILING);
   await serveOffline(page, { kiwis: held.kiwis });
   await seedSemoisToday(page);
-  await page.goto("/");
+  await openPlanner(page);
 
-  const leg = page.getByRole("complementary", { name: strings.legsPanelLabel }).locator(".leg-row").first();
+  const leg = await openLegDetails(page, 1);
   await expect(leg.locator(".leg-access-status")).toContainText(strings.accessChecking);
   held.release();
   await expect(leg.locator(".leg-access-status")).toHaveText(
@@ -222,15 +224,19 @@ test("a day with one held flow-dependent leg and one open leg claims nothing abo
     },
   };
   await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
-  await page.goto("/");
+  await openPlanner(page);
 
+  // The open leg settles at once; the Semois leg still reads checking.
+  await expect((await openLegDetails(page, 2)).locator(".leg-access-status")).toContainText(strings.accessState.open);
+  await closeLegDetails(page);
+  await expect((await openLegDetails(page, 1)).locator(".leg-access-status")).toContainText(strings.accessChecking);
+  await closeLegDetails(page);
+
+  await showTab(page, strings.phone.tabs.days);
   const day = page.getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem").first();
   // The day's chips (ADR 0029): none says Closed while the flow is held, and the open leg has none.
   const chips = day.locator(".day-warning-chip");
   const closed = strings.tripAccess.chip(1, strings.tripAccess.chipKind.closed);
-  // The open leg settles at once; the Semois leg still reads checking.
-  await expect(page.locator(".leg-row").nth(1).locator(".leg-access-status")).toContainText(strings.accessState.open);
-  await expect(page.locator(".leg-row").first().locator(".leg-access-status")).toContainText(strings.accessChecking);
   await expect(chips.filter({ hasText: closed })).toHaveCount(0);
   await expect(chips.filter({ hasText: "Leg 2" })).toHaveCount(0);
 

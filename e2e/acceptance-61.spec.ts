@@ -3,6 +3,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { kiwisFixture, kiwisFixtures, serveOffline } from "./support/offline";
+import { toggleAccessLayer } from "./support/mapMenu";
+import { accessWater, holdWater } from "./support/planner";
 
 const RECORDED_AT = new Date("2026-10-14T09:00:00+02:00");
 const SEMOIS = "walloon-1B4c";
@@ -10,22 +12,14 @@ const AMBLEVE = "walloon-1B1a";
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
-const water = (page: Page, id: string) => page.locator(`path.access-record-${id}`);
+const water = accessWater;
 const detail = (page: Page) => page.getByRole("region", { name: strings.accessDetailLabel });
 
-async function clickWater(page: Page, id: string) {
-  const at = await water(page, id).evaluate((path: SVGPathElement) => {
-    const p = path.getPointAtLength(path.getTotalLength() / 2);
-    const m = path.getScreenCTM()!;
-    return { x: p.x * m.a + p.y * m.c + m.e, y: p.x * m.b + p.y * m.d + m.f };
-  });
-  await page.mouse.click(at.x, at.y);
-}
 
 async function openAccessLayer(page: Page) {
   await page.goto("/");
   await expect(page.getByRole("region", { name: strings.mapLabel }).locator(".leaflet-container")).toBeVisible();
-  await page.getByRole("switch", { name: strings.accessLayerToggle }).click();
+  await toggleAccessLayer(page);
 }
 
 /** The recorded values with every 08:00 reading raised far above any maximum. */
@@ -47,7 +41,7 @@ for (const timezoneId of ["Europe/Brussels", "UTC", "Pacific/Auckland"]) {
       const network = await serveOffline(page, { kiwis: highAt8 });
       await openAccessLayer(page);
       await expect(water(page, AMBLEVE)).toHaveClass(/access-closed-today/);
-      await clickWater(page, AMBLEVE);
+      await holdWater(page, AMBLEVE);
       await expect(detail(page)).toContainText("Closed today: high flow");
       await expect(detail(page)).toContainText("based on measured flow; the official status may differ");
       expect(network.kiwis.length).toBeLessThanOrEqual(2);
@@ -68,7 +62,7 @@ test("stale data (recording replayed a day later) shows unknown with the kayak l
   await serveOffline(page, { kiwis: kiwisFixtures("timeseries-list.json", "timeseries-values.json") });
   await openAccessLayer(page);
   await expect(water(page, SEMOIS)).toHaveClass(/access-unknown/);
-  await clickWater(page, SEMOIS);
+  await holdWater(page, SEMOIS);
   await expect(detail(page)).toContainText("72-hour mean flow isn't from today");
   await expect(detail(page).getByRole("link", { name: "SPW: kayak status today" })).toBeVisible();
 });
@@ -78,6 +72,6 @@ test("a malformed KiWIS answer is unknown, not a crash", async ({ page }) => {
   await serveOffline(page, { kiwis: () => ({ status: 200, body: "<html>not json</html>" }) });
   await openAccessLayer(page);
   await expect(water(page, SEMOIS)).toHaveClass(/access-unknown/);
-  await clickWater(page, SEMOIS);
+  await holdWater(page, SEMOIS);
   await expect(detail(page)).toContainText("Flow unknown");
 });

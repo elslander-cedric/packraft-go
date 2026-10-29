@@ -3,16 +3,13 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import { expectTripName, freeMapBox, menuItem, openTripFile, renameTrip, tripPanel } from "./support/planner";
 
 const TRIP_KEY = "packraft-go.trip";
 const SNAPPED: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
 const pointMarkers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const tripName = (page: Page) => page.getByRole("textbox", { name: strings.tripNameLabel });
-const newTripButton = (page: Page) => page.getByRole("button", { name: strings.newTripButton });
-const openFileButton = (page: Page) => page.getByRole("button", { name: strings.openFileButton });
 const warning = (page: Page) => page.getByRole("alert").filter({ hasText: strings.autosaveUnknownVersion });
 const storedTrip = (page: Page) => page.evaluate((key) => localStorage.getItem(key), TRIP_KEY);
 
@@ -44,7 +41,7 @@ async function openWithStored(page: Page, stored: string) {
   await page.evaluate(([key, text]) => localStorage.setItem(key, text), [TRIP_KEY, stored]);
   await page.reload();
   await waitForMap(page);
-  const box = (await mapRegion(page).boundingBox())!;
+  const box = (await freeMapBox(page));
   return (dx: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2);
 }
 
@@ -56,11 +53,11 @@ test("a newer-version autosave is kept, with a warning, while the planner edits"
 
   await expect(warning(page)).toBeVisible();
   await expect(pointMarkers(page)).toHaveCount(0);
-  await expect(legsPanel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
   expect(await storedTrip(page)).toBe(NEWER);
 
   // Edits happen in memory but do not overwrite the kept save.
-  await tripName(page).fill("Scratch");
+  await renameTrip(page, "Scratch");
   await clickMap(-100);
   await clickMap(100);
   await expect(pointMarkers(page)).toHaveCount(2);
@@ -92,7 +89,7 @@ test("starting a new trip replaces the kept save and clears the warning", async 
   await clickMap(-100);
   await clickMap(100);
   await expect(pointMarkers(page)).toHaveCount(2);
-  await newTripButton(page).click();
+  await menuItem(page, strings.phone.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
 
   await expect(warning(page)).toHaveCount(0);
@@ -102,11 +99,11 @@ test("starting a new trip replaces the kept save and clears the warning", async 
   expect(JSON.parse((await storedTrip(page))!)).toMatchObject({ version: 1, trip: { points: [] } });
 
   // From now on edits are saved again.
-  await tripName(page).fill("Fresh start");
+  await renameTrip(page, "Fresh start");
   await page.reload();
   await waitForMap(page);
   await expect(warning(page)).toHaveCount(0);
-  await expect(tripName(page)).toHaveValue("Fresh start");
+  await expectTripName(page, "Fresh start");
 });
 
 test("new trip on the empty planner also replaces the kept save, without asking", async ({ page }) => {
@@ -114,7 +111,7 @@ test("new trip on the empty planner also replaces the kept save, without asking"
   await openWithStored(page, NEWER);
   await expect(warning(page)).toBeVisible();
 
-  await newTripButton(page).click();
+  await menuItem(page, strings.phone.menu.newTrip);
 
   await expect(warning(page)).toHaveCount(0);
   await expect.poll(() => storedTrip(page)).not.toBe(NEWER);
@@ -127,15 +124,14 @@ test("opening a trip file replaces the kept save and clears the warning", async 
 
   // Updated: format reset (#52). A valid file is version 1.
   const file = { name: "lesse.packraft.json", mimeType: "application/json", buffer: Buffer.from(saveText(1)) };
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), openFileButton(page).click()]);
-  await chooser.setFiles(file);
+  await openTripFile(page, file);
 
   await expect(pointMarkers(page)).toHaveCount(2);
-  await expect(tripName(page)).toHaveValue("From the future");
+  await expectTripName(page, "From the future");
   await expect(warning(page)).toHaveCount(0);
   await page.reload();
   await waitForMap(page);
-  await expect(tripName(page)).toHaveValue("From the future");
+  await expectTripName(page, "From the future");
   await expect(warning(page)).toHaveCount(0);
 });
 
@@ -144,8 +140,7 @@ test("opening a file that fails keeps the save and the warning", async ({ page }
   await openWithStored(page, NEWER);
 
   const file = { name: "broken.packraft.json", mimeType: "application/json", buffer: Buffer.from("{corrupt") };
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), openFileButton(page).click()]);
-  await chooser.setFiles(file);
+  await openTripFile(page, file);
 
   await expect(page.getByRole("alert").filter({ hasText: strings.openFileInvalid })).toBeVisible();
   await expect(warning(page)).toBeVisible();
@@ -158,7 +153,7 @@ test("corrupt autosave data gives an empty trip, without the version warning", a
   page.on("pageerror", (error) => errors.push(error.message));
   await openWithStored(page, "{corrupt");
 
-  await expect(legsPanel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect(warning(page)).toHaveCount(0);
   expect(errors).toEqual([]);

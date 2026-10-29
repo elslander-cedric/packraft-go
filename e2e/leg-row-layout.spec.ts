@@ -1,13 +1,14 @@
-// Leg row layout at a desktop width (#27, ADR 0005). Each leg row shows its
-// name, mode switch and figures without awkward wrapping, and a failed leg's
-// Retry button is fully visible and usable.
+// Leg row layout at a desktop width (#27), in the one planner's side panel (ADR 0034). Each leg
+// row shows its figures without awkward wrapping, and a failed leg's Retry button is fully
+// visible and usable.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import { mapClicker, openPlanner, totals, tripPanel } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const rows = (page: Page) => legsPanel(page).locator(".leg-row");
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const rows = (page: Page) => legsPanel(page).locator(".phone-row");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
@@ -17,10 +18,8 @@ const byProfile = (url: URL) => (url.searchParams.get("profile") === "river" ? R
 test.use({ viewport: { width: 1280, height: 800 } });
 
 async function openMap(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
-  return (dx: number, dy: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
+  await openPlanner(page);
+  return mapClicker(page);
 }
 
 /** A hike leg then a paddle leg, both routed from the recordings. */
@@ -28,12 +27,7 @@ async function drawHikeThenPaddle(page: Page) {
   const clickMap = await openMap(page);
   await clickMap(-150, 0);
   await clickMap(0, 0);
-  await clickMap(150, 0);
-  await rows(page)
-    .nth(1)
-    .getByRole("group", { name: strings.legModeLabel(2) })
-    .getByRole("button", { name: strings.legModePaddle })
-    .click();
+  await clickMap(150, 0, "paddle");
   await expect(rows(page).nth(1)).toContainText(strings.dropLabel);
   await expect(rows(page).nth(0)).toContainText(strings.climbLabel);
   await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
@@ -58,7 +52,7 @@ const lineCount = (el: Locator) =>
 
 /** Every figure in a row sits on one line and inside the row. */
 async function expectFiguresFit(row: Locator) {
-  const figures = row.locator(".leg-figure");
+  const figures = row.locator(".phone-row-figure");
   expect(await figures.count()).toBeGreaterThanOrEqual(2);
   for (const figure of await figures.all()) {
     expect(await lineCount(figure), `"${await figure.textContent()}" wraps`).toBe(1);
@@ -79,8 +73,8 @@ test("a failed leg's Retry button is fully visible and clickable at 1280×800", 
   await expect(retry).toBeVisible();
   await expect(retry).toBeInViewport({ ratio: 1 });
   expect(await isInside(retry, row), "Retry sticks out of its leg row").toBe(true);
-  expect(await isInside(retry, legsPanel(page)), "Retry is cut off by the legs panel").toBe(true);
-  // Nothing in the panel scrolls sideways.
+  expect(await isInside(retry, tripPanel(page)), "Retry is cut off by the trip panel").toBe(true);
+  // Nothing in the legs list scrolls sideways.
   const overflow = await legsPanel(page).evaluate((el) => el.scrollWidth - el.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 
@@ -102,36 +96,34 @@ test("a failed hike leg's figures and its time without climb data fit on their l
   await click(-120, 0);
   await click(120, 0);
   const row = rows(page).first();
-  await expect(row.locator(".leg-time")).toContainText(strings.timeWithoutClimb(""));
+  await expect(row.locator(".phone-row-time")).toContainText(strings.timeWithoutClimb(""));
   await expectFiguresFit(row);
 });
 
-test("each leg row shows its name, mode switch and figures without wrapping at 1280 px", async ({ page }) => {
+test("each leg row shows its figures without wrapping at 1280 px, the distance and time on one line", async ({
+  page,
+}) => {
   await serveOffline(page, { brouter: byProfile });
   await drawHikeThenPaddle(page);
 
   for (const row of await rows(page).all()) {
-    // The name and the mode switch share the first line of the row.
-    const name = row.locator(".leg-name");
-    const modeSwitch = row.getByRole("group");
-    expect(await lineCount(name)).toBe(1);
-    const nameBox = (await name.boundingBox())!;
-    const switchBox = (await modeSwitch.boundingBox())!;
-    expect(Math.abs(nameBox.y + nameBox.height / 2 - (switchBox.y + switchBox.height / 2))).toBeLessThan(6);
-    expect(await isInside(modeSwitch, row)).toBe(true);
+    // The distance and the time share the first line of the row.
+    const distance = (await row.locator(".phone-row-distance").boundingBox())!;
+    const time = (await row.locator(".phone-row-time").boundingBox())!;
+    expect(Math.abs(distance.y + distance.height / 2 - (time.y + time.height / 2))).toBeLessThan(6);
     await expectFiguresFit(row);
   }
   // The time keeps its label and value together.
-  await expect(rows(page).nth(0).locator(".leg-time")).toHaveText(`${strings.legTimeEstimate} 49 min`);
+  await expect(rows(page).nth(0).locator(".phone-row-time")).toHaveText(`${strings.phone.legFigures.time} 49 min`);
 });
 
 test("hike and paddle rows stay visually distinct", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await drawHikeThenPaddle(page);
+  // A row shows its mode by its distance's icon, in the mode's colour.
   const look = (row: Locator) =>
-    row.evaluate((el) => {
-      const s = getComputedStyle(el);
-      return `${s.borderLeftColor} ${s.backgroundColor}`;
+    row.locator(".phone-row-distance .phone-row-figure-icon").evaluate((el) => {
+      return `${el.getAttribute("data-icon")} ${getComputedStyle(el).color}`;
     });
   expect(await look(rows(page).nth(0))).not.toBe(await look(rows(page).nth(1)));
 });
@@ -139,7 +131,8 @@ test("hike and paddle rows stay visually distinct", async ({ page }) => {
 test("the trip totals sit apart from the leg rows", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await drawHikeThenPaddle(page);
-  const lastRow = (await rows(page).last().boundingBox())!;
-  const total = (await legsPanel(page).locator(".trip-total").boundingBox())!;
-  expect(total.y).toBeGreaterThanOrEqual(lastRow.y + lastRow.height + 8);
+  // The totals are in the panel's header, above the tabs and the rows.
+  const firstRow = (await rows(page).first().boundingBox())!;
+  const total = (await totals(page).boundingBox())!;
+  expect(firstRow.y).toBeGreaterThanOrEqual(total.y + total.height + 8);
 });

@@ -4,6 +4,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { openPlanner } from "./support/planner";
 
 // Rough bounding box of Belgium, independent of the app's config.
 const BELGIUM = { south: 49.49, north: 51.51, west: 2.54, east: 6.41 };
@@ -71,8 +72,7 @@ function collectErrors(page: Page) {
 test.describe("#12 acceptance", () => {
   test("map opens centred on Belgium at a country-wide zoom", async ({ page }) => {
     await serveOffline(page);
-    await page.goto("/");
-    await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+    await openPlanner(page);
 
     const c = await visibleCentre(page);
     expect(c.lat).toBeGreaterThan(BELGIUM.south);
@@ -83,7 +83,7 @@ test.describe("#12 acceptance", () => {
     expect(c.z).toBeLessThanOrEqual(9);
   });
 
-  test("map is pannable and zoomable with mouse and controls", async ({ page }) => {
+  test("map is pannable and zoomable with the mouse", async ({ page }) => {
     // Steps through every zoom level, waiting for each to settle.
     test.setTimeout(120_000);
     const errors = collectErrors(page);
@@ -109,24 +109,25 @@ test.describe("#12 acceptance", () => {
     await expect.poll(async () => (await visibleCentre(page)).z).toBeGreaterThan(start.z);
     await settledZoom(page);
 
-    // Zoom buttons, clicked repeatedly to the limits: no crash. Leaflet drops
-    // clicks during a zoom animation, so wait for each step to land.
-    const stepTo = async (name: "Zoom in" | "Zoom out", dir: 1 | -1) => {
-      const button = page.getByRole("button", { name });
+    // The wheel, turned repeatedly to the limits: no crash. (The one planner has no zoom
+    // buttons, ADR 0034.) Wait for each step to land before the next.
+    const stepTo = async (name: "in" | "out", dir: 1 | -1) => {
       for (let i = 0; i < 25; i++) {
         const before = await settledZoom(page);
-        if (await button.isDisabled()) return;
-        await button.click();
-        await expect
-          .poll(async () => (await visibleCentre(page)).z * dir)
-          .toBeGreaterThan(before * dir);
+        await page.mouse.move(cx, cy);
+        await page.mouse.wheel(0, -500 * dir);
+        const moved = await expect
+          .poll(async () => (await visibleCentre(page)).z * dir, { timeout: 1500 })
+          .toBeGreaterThan(before * dir)
+          .then(() => true, () => false);
+        if (!moved) return;
       }
-      throw new Error(`${name} never reached its limit`);
+      throw new Error(`zooming ${name} never reached its limit`);
     };
-    await stepTo("Zoom out", -1);
+    await stepTo("out", -1);
     expect(await settledZoom(page)).toBeLessThan(start.z);
     await expect(page.getByText(strings.navigationRulesNotice)).toBeVisible();
-    await stepTo("Zoom in", 1);
+    await stepTo("in", 1);
     expect(await settledZoom(page)).toBe(17);
     await expect(page.getByText(strings.navigationRulesNotice)).toBeVisible();
 

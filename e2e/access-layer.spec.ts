@@ -1,21 +1,14 @@
 // #53: the access layer with Flanders rules: toggle, legend, coloured waters,
 // detail panel, disclaimer and OpenStreetMap credit. Uses the built-in data; no
 // live service is called.
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { accessWater, holdWater } from "./support/planner";
+import { accessLayerItem, mapMenuButton, toggleAccessLayer } from "./support/mapMenu";
 
-const water = (page: Page, id: string) => page.locator(`path.access-record-${id}`);
+const water = accessWater;
 
-/** Clicks a water's line where it is drawn: halfway along its path. */
-async function clickWater(page: Page, id: string) {
-  const at = await water(page, id).evaluate((path: SVGPathElement) => {
-    const p = path.getPointAtLength(path.getTotalLength() / 2);
-    const m = path.getScreenCTM()!;
-    return { x: p.x * m.a + p.y * m.c + m.e, y: p.x * m.b + p.y * m.d + m.f };
-  });
-  await page.mouse.click(at.x, at.y);
-}
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
@@ -30,17 +23,27 @@ test("the access layer colours Flemish exceptions and shows why on click", async
   // The disclaimer is always there.
   await expect(page.getByText(strings.navigationRulesNotice)).toBeVisible();
 
-  // Off at first: no waters, no legend.
-  const toggle = page.getByRole("switch", { name: strings.accessLayerToggle });
-  await expect(toggle).not.toBeChecked();
+  // Off at first: no waters, no chip. (The layer is switched in the Map menu, and its legend
+  // is in the chip's dialog, ADR 0034.)
+  await mapMenuButton(page).click();
+  await expect(accessLayerItem(page)).toHaveAttribute("aria-checked", "false");
+  await page.keyboard.press("Escape");
   await expect(map.locator("path.access-feature")).toHaveCount(0);
+  const chip = page.getByRole("button", { name: /^Access · / });
+  await expect(chip).toHaveCount(0);
 
-  await toggle.click();
-  await expect(toggle).toBeChecked();
+  await toggleAccessLayer(page);
+  await mapMenuButton(page).click();
+  await expect(accessLayerItem(page)).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
 
   // The legend names the four states.
-  const legend = page.getByRole("region", { name: strings.accessLegendLabel });
+  await chip.click();
+  const accessDialog = page.getByRole("dialog", { name: strings.phone.accessDialogTitle });
+  const legend = accessDialog.getByRole("region", { name: strings.accessLegendLabel });
   for (const label of Object.values(strings.accessState)) await expect(legend.getByText(label, { exact: true })).toBeVisible();
+  await accessDialog.getByRole("button", { name: strings.phone.accessDialogClose }).click();
+  await expect(accessDialog).toHaveCount(0);
 
   // Exceptions are red, VMM agreement stretches green.
   await expect(water(page, "flanders-lier-nete-diversion")).toHaveAttribute("stroke", "#d0021b");
@@ -55,8 +58,8 @@ test("the access layer colours Flemish exceptions and shows why on click", async
   await expect(page.locator(".leaflet-control-attribution")).toContainText("Access data");
   await expect(page.locator(".leaflet-control-attribution").getByRole("link", { name: "ODbL" })).toBeVisible();
 
-  // Clicking a forbidden water shows its status, reason, source and research date.
-  await clickWater(page, "flanders-lier-nete-diversion");
+  // Holding a forbidden water shows its status, reason, source and research date.
+  await holdWater(page, "flanders-lier-nete-diversion");
   const detail = page.getByRole("region", { name: strings.accessDetailLabel });
   await expect(detail.getByRole("heading", { name: "Afleiding van de Nete, Lier" })).toBeVisible();
   await expect(detail.getByText(strings.accessState.forbidden, { exact: true })).toBeVisible();
@@ -67,11 +70,11 @@ test("the access layer colours Flemish exceptions and shows why on click", async
   );
   await expect(detail).toContainText(strings.accessResearched("2026-10-12"));
 
-  // A click on a water opens its details; it doesn't add a point to the trip.
+  // Holding a water opens its details; it doesn't add a point to the trip.
   await expect(map.locator("path.point")).toHaveCount(0);
 
   // A VMM stretch shows its text rules and a link.
-  await clickWater(page, "flanders-vmm-kleine-nete");
+  await holdWater(page, "flanders-vmm-kleine-nete");
   await expect(detail.getByRole("heading", { name: /Kleine Nete/ })).toBeVisible();
   await expect(detail.getByText(strings.accessState.open, { exact: true })).toBeVisible();
   await expect(detail.getByRole("heading", { name: strings.accessConditionsHeading })).toBeVisible();
@@ -81,10 +84,10 @@ test("the access layer colours Flemish exceptions and shows why on click", async
   await detail.getByRole("button", { name: strings.accessDetailClose }).click();
   await expect(detail).toHaveCount(0);
 
-  // Switching the layer off clears the waters, the legend and the credit.
-  await toggle.click();
+  // Switching the layer off clears the waters, the chip and the credit.
+  await toggleAccessLayer(page);
   await expect(map.locator("path.access-feature")).toHaveCount(0);
-  await expect(legend).toHaveCount(0);
+  await expect(chip).toHaveCount(0);
   await expect(page.locator(".leaflet-control-attribution")).not.toContainText("Access data");
 
   expect(network.blocked).toEqual([]);

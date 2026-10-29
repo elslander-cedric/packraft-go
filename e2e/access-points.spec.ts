@@ -1,34 +1,39 @@
-// Your access points on the desktop (#55, ADR 0023): add, edit and delete them
-// on the map, with markers by use and kind and a detail panel; autosave under
-// their own key.
+// Your access points on a desktop-sized window (#55, ADR 0023): mark them with the floating
+// button, edit them in their dialog (stored on Save, ADR 0034), delete them from their row,
+// with markers by use and kind; autosave under their own key.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import {
+  accessPointDialog,
+  editSelectedAccessPoint,
+  freeMapBox,
+  markAccessPointAt,
+  openPlanner,
+  saveAccessPoint,
+  showTab,
+  tripPanel,
+} from "./support/planner";
 
 const text = strings.accessPoints;
 const ACCESS_POINTS_KEY = "packraft-go.access-points";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const markers = (page: Page) => mapRegion(page).locator(".access-point-marker");
-const panel = (page: Page) => page.getByRole("complementary", { name: text.panelLabel });
-const details = (page: Page) => page.getByRole("region", { name: text.detailsLabel });
-const addButton = (page: Page) => panel(page).getByRole("button", { name: text.addButton });
+// Not through the map region, which the details dialog hides from the accessibility tree while open.
+const markers = (page: Page) => page.locator(".leaflet-container .access-point-marker");
+const details = accessPointDialog;
+const markButton = (page: Page) => page.getByRole("button", { name: strings.phone.markAccessPointButton, exact: true });
+const placingLine = (page: Page) => page.getByRole("status").filter({ hasText: strings.phone.placingState });
 const toggle = (page: Page, group: string, option: string) =>
   details(page).getByRole("group", { name: group }).getByRole("button", { name: option });
 
 async function openMap(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-async function addAccessPoint(page: Page, at: { x: number; y: number }) {
-  await addButton(page).click();
-  await expect(addButton(page)).toHaveAttribute("aria-pressed", "true");
-  await page.mouse.click(at.x, at.y);
-  await expect(details(page)).toBeVisible();
-}
+const addAccessPoint = markAccessPointAt;
 
 const stored = (page: Page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), ACCESS_POINTS_KEY);
@@ -41,8 +46,8 @@ test("add an access point on the map, edit it in the detail panel, and the marke
   await addAccessPoint(page, middle);
 
   // Placing an access point does not add a trip point.
-  await expect(mapRegion(page).locator(".point")).toHaveCount(0);
-  await expect(addButton(page)).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator(".leaflet-container path.point")).toHaveCount(0);
+  await expect(placingLine(page)).toHaveCount(0);
   await expect(markers(page)).toHaveCount(1);
   await expect(markers(page)).toHaveClass(/use-both/);
   await expect(markers(page)).toHaveClass(/kind-informal-bank/);
@@ -51,6 +56,7 @@ test("add an access point on the map, edit it in the detail panel, and the marke
   await toggle(page, text.kindLabel, text.kinds["official-aire"]).click();
   await details(page).getByLabel(text.noteLabel).fill("Steps by the bridge");
   await details(page).getByLabel(text.checkedOnSiteLabel).fill("2026-10-12");
+  await saveAccessPoint(page);
 
   await expect(markers(page)).toHaveClass(/use-put-in/);
   await expect(markers(page)).toHaveClass(/kind-official-aire/);
@@ -63,28 +69,28 @@ test("add an access point on the map, edit it in the detail panel, and the marke
   await addAccessPoint(page, { x: middle.x + 120, y: middle.y });
   await toggle(page, text.useLabel, text.uses["take-out"]).click();
   await toggle(page, text.kindLabel, text.kinds.slipway).click();
+  await saveAccessPoint(page);
   await expect(markers(page).nth(1)).toHaveClass(/use-take-out/);
   await expect(markers(page).nth(1)).toHaveClass(/kind-slipway/);
 
-  // Clicking the first marker shows its details again.
-  await details(page).getByRole("button", { name: text.closeButton }).click();
-  await expect(details(page)).toHaveCount(0);
+  // Clicking the first marker shows its row; its edit button shows its details again.
   await markers(page).nth(0).click();
+  await editSelectedAccessPoint(page);
   await expect(details(page).getByLabel(text.noteLabel)).toHaveValue("Steps by the bridge");
   await expect(details(page).getByLabel(text.checkedOnSiteLabel)).toHaveValue("2026-10-12");
   await expect(toggle(page, text.kindLabel, text.kinds["official-aire"])).toHaveAttribute("aria-pressed", "true");
 
   // Still no trip points.
-  await expect(mapRegion(page).locator(".point")).toHaveCount(0);
+  await expect(page.locator(".leaflet-container path.point")).toHaveCount(0);
 });
 
 test("Escape cancels placing an access point; the next click adds a trip point", async ({ page }) => {
   await serveOffline(page);
   const middle = await openMap(page);
-  await addButton(page).click();
-  await expect(panel(page)).toContainText(text.placingHint);
+  await markButton(page).click();
+  await expect(placingLine(page)).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(addButton(page)).toHaveAttribute("aria-pressed", "false");
+  await expect(placingLine(page)).toHaveCount(0);
   await page.mouse.click(middle.x, middle.y);
   await expect(mapRegion(page).locator(".point")).toHaveCount(1);
   await expect(markers(page)).toHaveCount(0);
@@ -94,6 +100,7 @@ test("drag an access point to move it", async ({ page }) => {
   await serveOffline(page);
   const middle = await openMap(page);
   await addAccessPoint(page, middle);
+  await saveAccessPoint(page);
   const before = (await stored(page)).accessPoints[0].position;
 
   const box = (await markers(page).boundingBox())!;
@@ -113,17 +120,22 @@ test("delete an access point after confirming", async ({ page }) => {
   await serveOffline(page);
   const middle = await openMap(page);
   await addAccessPoint(page, middle);
-  await details(page).getByRole("button", { name: text.deleteButton }).click();
+  await saveAccessPoint(page);
+  // Deleted from its row in the Access points tab.
+  await showTab(page, strings.phone.tabs.accessPoints);
+  const deleteButton = tripPanel(page)
+    .locator(".phone-access-point-item")
+    .getByRole("button", { name: /^Delete / });
+  await deleteButton.click();
 
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toHaveAccessibleName(text.deleteConfirm.title);
   await dialog.getByRole("button", { name: strings.confirmCancel }).click();
   await expect(markers(page)).toHaveCount(1);
 
-  await details(page).getByRole("button", { name: text.deleteButton }).click();
+  await deleteButton.click();
   await dialog.getByRole("button", { name: text.deleteConfirm.confirm }).click();
   await expect(markers(page)).toHaveCount(0);
-  await expect(details(page)).toHaveCount(0);
   expect((await stored(page)).accessPoints).toEqual([]);
 });
 
@@ -134,6 +146,7 @@ test("access points are autosaved under their own key, apart from the trip, and 
   const middle = await openMap(page);
   await addAccessPoint(page, middle);
   await details(page).getByLabel(text.noteLabel).fill("Park at the church");
+  await saveAccessPoint(page);
 
   expect(await stored(page)).toMatchObject({
     format: "packraft-go-access-points",
@@ -146,5 +159,6 @@ test("access points are autosaved under their own key, apart from the trip, and 
   await page.reload();
   await expect(markers(page)).toHaveCount(1);
   await markers(page).click();
+  await editSelectedAccessPoint(page);
   await expect(details(page).getByLabel(text.noteLabel)).toHaveValue("Park at the church");
 });

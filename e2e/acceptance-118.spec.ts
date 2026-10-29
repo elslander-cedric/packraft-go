@@ -1,45 +1,63 @@
 // Acceptance tests for #118: screen-rule cases from the removed
-// phone.spec.ts / acceptance-71.spec.ts, and sheet stops by drag distance.
+// phone.spec.ts / acceptance-71.spec.ts (the rule of ADR 0034 since #190), and sheet stops by drag distance.
 import { devices, expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
 
 const sheet = (page: Page) => page.getByRole("dialog", { name: strings.phone.sheetLabel });
-const newTrip = (page: Page) => page.getByRole("button", { name: strings.newTripButton });
+const panel = (page: Page) => page.getByRole("complementary", { name: strings.phone.sheetLabel });
 
+// Updated for ADR 0034 (#190): every screen gets the one planner. A narrow screen in portrait
+// gets the bottom sheet; every other screen, touch or not, the side panel on the right.
 for (const size of [
   { width: 863, height: 360 },
   { width: 1280, height: 600 },
   { width: 1000, height: 640 },
+  { width: 1280, height: 800 },
 ]) {
   test.describe(`non-touch desktop ${size.width}x${size.height}`, () => {
     test.use({ viewport: size, isMobile: false, hasTouch: false, userAgent: devices["Desktop Chrome"].userAgent });
-    test("keeps the desktop planner", async ({ page }) => {
+    test("gets the planner with the side panel", async ({ page }) => {
       await serveOffline(page);
       await page.goto("/");
-      await expect(newTrip(page)).toBeVisible();
+      await expect(panel(page)).toBeVisible();
       await expect(sheet(page)).toHaveCount(0);
+      // The desktop planner is gone.
+      await expect(page.getByRole("button", { name: strings.newTripButton })).toHaveCount(0);
     });
   });
 }
 
-test("a short wide touch window (1280x600) is the phone planner; a tall touch tablet is the desktop", async ({
+test("a narrow desktop window in portrait gets the sheet; widened, the side panel", async ({ page }) => {
+  await serveOffline(page);
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.goto("/");
+  await expect(sheet(page)).toBeVisible();
+  await expect(panel(page)).toHaveCount(0);
+  await page.setViewportSize({ width: 641, height: 900 });
+  await expect(panel(page)).toBeVisible();
+  await expect(sheet(page)).toHaveCount(0);
+});
+
+test("touch screens: a phone in portrait gets the sheet; held sideways and tablets either way up, the side panel", async ({
   browser,
 }) => {
-  for (const [w, h, phone] of [
-    [1280, 600, true],
+  for (const [w, h, withSheet] of [
+    [412, 915, true],
+    [915, 412, false],
+    [1280, 600, false],
     [1024, 768, false],
+    [768, 1024, false],
   ] as const) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
     const p = await ctx.newPage();
     await serveOffline(p);
     await p.goto("/");
-    if (phone) {
-      // Wider than tall: the side panel stands in for the sheet (#126).
-      await expect(p.getByRole("complementary", { name: strings.phone.sheetLabel })).toBeVisible();
-      await expect(newTrip(p)).toHaveCount(0);
+    if (withSheet) {
+      await expect(sheet(p)).toBeVisible();
+      await expect(panel(p)).toHaveCount(0);
     } else {
-      await expect(newTrip(p)).toBeVisible();
+      await expect(panel(p)).toBeVisible();
       await expect(sheet(p)).toHaveCount(0);
     }
     await ctx.close();

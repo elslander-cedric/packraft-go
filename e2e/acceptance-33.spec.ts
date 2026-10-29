@@ -5,12 +5,11 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { expectTripName, openTripFile, shownTripName } from "./support/planner";
 
 const KEY = "packraft-go.trip";
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const pointMarkers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const tripName = (page: Page) => page.getByRole("textbox", { name: strings.tripNameLabel });
-const openBtn = (page: Page) => page.getByRole("button", { name: strings.openFileButton });
 const alertWith = (page: Page, text: string) => page.getByRole("alert").filter({ hasText: text });
 const storedText = (page: Page) => page.evaluate((key) => localStorage.getItem(key), KEY);
 
@@ -30,8 +29,7 @@ async function waitForMap(page: Page) {
 }
 
 async function openFile(page: Page, text: string) {
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), openBtn(page).click()]);
-  await chooser.setFiles({ name: "trip.packraft.json", mimeType: "application/json", buffer: Buffer.from(text) });
+  await openTripFile(page, { name: "trip.packraft.json", mimeType: "application/json", buffer: Buffer.from(text) });
 }
 
 /** Loads the app with `text` already in the autosave slot; returns what storage holds after load settles. */
@@ -63,7 +61,7 @@ test("#33, #52: an old version 2 autosave is handled exactly like a version 3 au
     const seeded = save(version);
     const stored = await loadWithAutosave(page, seeded);
     const result = {
-      name: await tripName(page).inputValue(),
+      name: await shownTripName(page),
       points: await pointMarkers(page).count(),
       storageKept: stored === seeded,
       alert: await alertWith(page, strings.openFileUnknownVersion).count(),
@@ -95,7 +93,7 @@ test("#33, #52: opening an old version 2 file on an empty planner shows the unkn
     await expect(alertWith(page, strings.openFileUnknownVersion)).toBeVisible();
     await expect(alertWith(page, strings.openFileInvalid)).toHaveCount(0);
     await page.waitForTimeout(300);
-    await expect(tripName(page)).toHaveValue("");
+    await expectTripName(page, "");
     await expect(pointMarkers(page)).toHaveCount(0);
     expect(await storedText(page)).toBe(before);
   }
@@ -104,7 +102,7 @@ test("#33, #52: opening an old version 2 file on an empty planner shows the unkn
 
   // The same content as version 1 opens, and the message goes away.
   await openFile(page, save(1));
-  await expect(tripName(page)).toHaveValue("Old format");
+  await expectTripName(page, "Old format");
   await expect(pointMarkers(page)).toHaveCount(2);
   await expect(alertWith(page, strings.openFileUnknownVersion)).toHaveCount(0);
 });

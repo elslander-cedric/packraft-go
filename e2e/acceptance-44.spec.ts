@@ -6,15 +6,22 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { confirmDialog, expectInitialFocus } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
+import { freeMapBox, menuButton, openPlanner } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const pointMarkers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const newTripButton = (page: Page) => page.getByRole("button", { name: strings.newTripButton, exact: true });
+const newTripItem = (page: Page) => page.getByRole("menuitem", { name: strings.phone.menu.newTrip, exact: true });
+
+/** Opens the menu by keyboard; its first item, New trip, has focus. */
+async function focusNewTrip(page: Page) {
+  await menuButton(page).focus();
+  await page.keyboard.press("Enter");
+  await expect(newTripItem(page)).toBeFocused();
+}
 
 async function drawLeg(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   const click = (dx: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2);
   await click(-100);
   await click(100);
@@ -25,8 +32,7 @@ test.describe("#44: keys pressed the instant a confirmation opens", () => {
   test("Tab straight after opening: focus still ends inside the dialog, trip kept", async ({ page }) => {
     await serveOffline(page);
     await drawLeg(page);
-    const newTrip = newTripButton(page);
-    await newTrip.focus();
+    await focusNewTrip(page);
 
     await page.keyboard.press("Enter");
     await page.keyboard.press("Tab"); // may land in the one-frame gap
@@ -35,15 +41,14 @@ test.describe("#44: keys pressed the instant a confirmation opens", () => {
 
     await page.keyboard.press("Escape");
     await expect(confirmDialog(page)).toHaveCount(0);
-    await expect(newTrip).toBeFocused();
+    await expect(menuButton(page)).toBeFocused();
     await expect(pointMarkers(page)).toHaveCount(2);
   });
 
   test("Enter twice in a row: never confirms, never shows two dialogs", async ({ page }) => {
     await serveOffline(page);
     await drawLeg(page);
-    const newTrip = newTripButton(page);
-    await newTrip.focus();
+    await focusNewTrip(page);
 
     await page.keyboard.press("Enter");
     await page.keyboard.press("Enter"); // gap: New trip again; after: Cancel
@@ -54,7 +59,7 @@ test.describe("#44: keys pressed the instant a confirmation opens", () => {
   test("expectInitialFocus: focus starts on Cancel, so a following Tab reaches Confirm", async ({ page }) => {
     await serveOffline(page);
     await drawLeg(page);
-    await newTripButton(page).focus();
+    await focusNewTrip(page);
     await page.keyboard.press("Enter");
     await expectInitialFocus(page);
     await page.keyboard.press("Tab");

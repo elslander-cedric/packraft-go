@@ -11,19 +11,30 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import {
+  dayCards,
+  expectTripName,
+  freeMapCentre,
+  openPlanner,
+  openTripFile,
+  renameTrip,
+  saveTripFile,
+  showTab,
+  tripPanel,
+} from "./support/planner";
 
 const KEY = "packraft-go.trip";
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const pointMarkers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const campMarkers = (page: Page) => mapRegion(page).getByRole("img", { name: strings.campMarker });
-const daysPanel = (page: Page) => page.getByRole("complementary", { name: strings.daysPanelLabel });
-const dayRows = (page: Page) => daysPanel(page).getByRole("listitem");
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const tripName = (page: Page) => page.getByRole("textbox", { name: strings.tripNameLabel });
+/** The Days tab's cards; shows the tab first. */
+const dayRows = async (page: Page) => {
+  await showTab(page, strings.phone.tabs.days);
+  return dayCards(page);
+};
+const legsPanel = tripPanel;
 const campButton = (page: Page) => page.getByRole("button", { name: strings.campButton, exact: true });
-const saveBtn = (page: Page) => page.getByRole("button", { name: strings.saveFileButton });
-const openBtn = (page: Page) => page.getByRole("button", { name: strings.openFileButton });
 const alertWith = (page: Page, text: string) => page.getByRole("alert").filter({ hasText: text });
 const storedText = (page: Page) => page.evaluate((key) => localStorage.getItem(key), KEY);
 
@@ -49,6 +60,7 @@ const save = (version: unknown, trip: Record<string, unknown>) =>
 
 async function waitForMap(page: Page) {
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await expect(tripPanel(page)).toBeVisible();
 }
 
 /** Puts `text` in the autosave slot before the first load only. */
@@ -65,17 +77,15 @@ async function seedAutosave(page: Page, text: string) {
 }
 
 async function openFile(page: Page, text: string) {
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), openBtn(page).click()]);
-  await chooser.setFiles({ name: "trip.packraft.json", mimeType: "application/json", buffer: Buffer.from(text) });
+  await openTripFile(page, { name: "trip.packraft.json", mimeType: "application/json", buffer: Buffer.from(text) });
 }
 
 /** Two hike legs drawn by clicking, with a camp on the middle point. */
 async function drawTwoDayTrip(page: Page) {
-  await page.goto("/");
-  await waitForMap(page);
-  const box = (await mapRegion(page).boundingBox())!;
-  const click = (dx: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2);
-  await tripName(page).fill("Mine");
+  await openPlanner(page);
+  const centre = await freeMapCentre(page);
+  const click = (dx: number) => page.mouse.click(centre.x + dx, centre.y);
+  await renameTrip(page, "Mine");
   await click(-150);
   await click(0);
   await click(150);
@@ -83,7 +93,7 @@ async function drawTwoDayTrip(page: Page) {
   await click(0);
   await campButton(page).click();
   await expect(campMarkers(page)).toHaveCount(1);
-  await expect(dayRows(page)).toHaveCount(2);
+  await expect(await dayRows(page)).toHaveCount(2);
 }
 
 // Updated: format reset (#52).
@@ -98,7 +108,7 @@ test("autosave of a trip with camps is version 1, and a reload brings the camps 
   await page.reload();
   await waitForMap(page);
   await expect(campMarkers(page)).toHaveCount(1);
-  await expect(dayRows(page)).toHaveCount(2);
+  await expect(await dayRows(page)).toHaveCount(2);
   expect(net.brouter.length).toBe(calls);
 });
 
@@ -106,7 +116,7 @@ test("autosave of a trip with camps is version 1, and a reload brings the camps 
 test("a saved file of a trip with camps is version 1 with the camps, identical to the autosave", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await drawTwoDayTrip(page);
-  const [dl] = await Promise.all([page.waitForEvent("download"), saveBtn(page).click()]);
+  const dl = await saveTripFile(page);
   const text = await readFile((await dl.path())!, "utf8");
   expect(JSON.parse(text)).toMatchObject({ format: "packraft-go-trip", version: 1, trip: { camps: [1] } });
   expect(text).toBe(await storedText(page));
@@ -120,7 +130,7 @@ test("a version 1 autosave with camps loads them", async ({ page }) => {
   await waitForMap(page);
   await expect(pointMarkers(page)).toHaveCount(3);
   await expect(campMarkers(page)).toHaveCount(1);
-  await expect(dayRows(page)).toHaveCount(2);
+  await expect(await dayRows(page)).toHaveCount(2);
 });
 
 // Updated (#28): an autosave of a newer or unknown version is kept, with a warning,
@@ -147,12 +157,12 @@ for (const [label, text, unknownVersion] of [
     await expect(legsPanel(page)).toContainText(strings.legsPanelEmpty);
     await expect(pointMarkers(page)).toHaveCount(0);
     await expect(campMarkers(page)).toHaveCount(0);
-    await expect(tripName(page)).toHaveValue("");
+    await expectTripName(page, "");
     // No file-open error is shown for autosave.
     await expect(page.getByRole("alert").filter({ hasText: strings.openFileUnknownVersion })).toHaveCount(0);
-    const box = (await mapRegion(page).boundingBox())!;
-    await page.mouse.click(box.x + box.width / 2 - 100, box.y + box.height / 2);
-    await page.mouse.click(box.x + box.width / 2 + 100, box.y + box.height / 2);
+    const centre = await freeMapCentre(page);
+    await page.mouse.click(centre.x - 100, centre.y);
+    await page.mouse.click(centre.x + 100, centre.y);
     await expect(legLines(page)).toHaveCount(1);
     if (unknownVersion) {
       // Updated (#28): the save is kept and the planner says so.
@@ -183,10 +193,10 @@ for (const version of [3, 0, 99, 2]) {
     await page.waitForTimeout(300);
     // Updated for Base UI (#31): no in-page confirmation was shown.
     await expect(confirmDialog(page)).toHaveCount(0);
-    await expect(tripName(page)).toHaveValue("Mine");
+    await expectTripName(page, "Mine");
     await expect(pointMarkers(page)).toHaveCount(3);
     await expect(campMarkers(page)).toHaveCount(1);
-    await expect(dayRows(page)).toHaveCount(2);
+    await expect(await dayRows(page)).toHaveCount(2);
     expect(await storedText(page)).toBe(before);
     expect(net.brouter.length).toBe(calls);
   });
@@ -205,10 +215,10 @@ test("opening a version 1 file with camps replaces the trip and shows its camps 
   await openFile(page, save(1, { ...threePoints, name: "Opened v1", camps: [0, 1] }));
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await answerConfirmation(page, "openFile", "confirm");
-  await expect(tripName(page)).toHaveValue("Opened v1");
+  await expectTripName(page, "Opened v1");
   await expect(pointMarkers(page)).toHaveCount(3);
   await expect(campMarkers(page)).toHaveCount(2);
-  await expect(dayRows(page)).toHaveCount(2); // a camp on the start splits nothing
+  await expect(await dayRows(page)).toHaveCount(2); // a camp on the start splits nothing
   expect(net.brouter.length).toBe(calls);
 });
 
@@ -222,7 +232,7 @@ test("after an unknown-version refusal, a valid version 1 file still opens and c
   await openFile(page, save(1, { ...threePoints, name: "Old one" }));
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
   await answerConfirmation(page, "openFile", "confirm");
-  await expect(tripName(page)).toHaveValue("Old one");
+  await expectTripName(page, "Old one");
   await expect(campMarkers(page)).toHaveCount(0);
   await expect(alertWith(page, strings.openFileUnknownVersion)).toHaveCount(0);
 });

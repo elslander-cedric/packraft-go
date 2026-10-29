@@ -4,6 +4,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { accessColours } from "../src/map/accessColours";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { toggleAccessLayer } from "./support/mapMenu";
+import { freeMapCentre, mouseHold, panToPath, pointOnPath } from "./support/planner";
 
 const water = (page: Page, id: string) => page.locator(`path.access-record-${id}`);
 
@@ -12,8 +14,21 @@ const water = (page: Page, id: string) => page.locator(`path.access-record-${id}
  * markers lie close together at the start zoom, so a click by position could
  * hit a neighbour; the event goes to the shape itself instead.
  */
-async function clickWater(page: Page, id: string) {
-  await water(page, id).first().dispatchEvent("click");
+/** Holds a water (0.4 s) to open its details; a click there would plan (ADR 0034). */
+async function holdWater(page: Page, id: string) {
+  // Brussels' waters are a few pixels across and lie on each other at the opening zoom: bring
+  // the water's middle to the centre of the free part of the map, zoom in there (the wheel keeps
+  // the point under the mouse), hold it, and zoom back out for the next one.
+  await panToPath(page, water(page, id));
+  const middle = await freeMapCentre(page);
+  await page.mouse.move(middle.x, middle.y);
+  await page.mouse.wheel(0, -240);
+  await expect(page.locator(".leaflet-map-pane")).not.toHaveClass(/leaflet-zoom-anim/);
+  await page.waitForTimeout(500);
+  await mouseHold(page, await pointOnPath(page, water(page, id)));
+  await page.mouse.wheel(0, 240);
+  await expect(page.locator(".leaflet-map-pane")).not.toHaveClass(/leaflet-zoom-anim/);
+  await page.waitForTimeout(500);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -25,7 +40,7 @@ test("Brussels canal, ponds, Senne and streams are coloured and explained", asyn
   await page.goto("/");
   const map = page.getByRole("region", { name: strings.mapLabel });
   await expect(map.locator(".leaflet-container")).toBeVisible();
-  await page.getByRole("switch", { name: strings.accessLayerToggle }).click();
+  await toggleAccessLayer(page);
 
   // Open canal, forbidden ponds, unknown Senne and streams.
   await expect(water(page, "brussels-canal").first()).toHaveAttribute("stroke", accessColours.open);
@@ -36,7 +51,7 @@ test("Brussels canal, ponds, Senne and streams are coloured and explained", asyn
   const detail = page.getByRole("region", { name: strings.accessDetailLabel });
 
   // The canal: open, with the priority, VHF and Capitainerie notes and its source.
-  await clickWater(page, "brussels-canal");
+  await holdWater(page, "brussels-canal");
   await expect(detail.getByRole("heading", { name: "Canal, Brussels" })).toBeVisible();
   await expect(detail.getByText(strings.accessState.open, { exact: true })).toBeVisible();
   await expect(detail).toContainText("Commercial traffic has priority");
@@ -49,14 +64,14 @@ test("Brussels canal, ponds, Senne and streams are coloured and explained", asyn
   await expect(detail).toContainText(strings.accessResearched("2026-10-12"));
 
   // A pond: forbidden without permission, with its source.
-  await clickWater(page, "brussels-ponds");
+  await holdWater(page, "brussels-ponds");
   await expect(detail.getByRole("heading", { name: "Ponds, Brussels" })).toBeVisible();
   await expect(detail.getByText(strings.accessState.forbidden, { exact: true })).toBeVisible();
   await expect(detail).toContainText("without permission");
   await expect(detail.getByRole("link", { name: /Bruxelles Environnement/ }).first()).toBeVisible();
 
   // The Senne: unknown.
-  await clickWater(page, "brussels-senne");
+  await holdWater(page, "brussels-senne");
   await expect(detail.getByRole("heading", { name: "Senne (Zenne), Brussels" })).toBeVisible();
   await expect(detail.getByText(strings.accessState.unknown, { exact: true })).toBeVisible();
 
@@ -73,7 +88,7 @@ test("locks are marked, including Anderlecht and Molenbeek, and say portage requ
 
   // No lock markers while the layer is off.
   await expect(map.locator("path.access-lock")).toHaveCount(0);
-  await page.getByRole("switch", { name: strings.accessLayerToggle }).click();
+  await toggleAccessLayer(page);
   await expect(water(page, "brussels-canal").first()).toBeVisible();
 
   // At the start zoom the locks would cover the waters around them: they show once zoomed in.
@@ -87,8 +102,12 @@ test("locks are marked, including Anderlecht and Molenbeek, and say portage requ
   }).toPass();
   await expect(map.locator("path.access-lock-lock-way-123494618")).toBeVisible();
 
-  // The legend explains the marker.
-  await expect(page.getByRole("region", { name: strings.accessLegendLabel })).toContainText(strings.lockLegend);
+  // The legend, in the access chip's dialog, explains the marker.
+  await page.getByRole("button", { name: /^Access · / }).click();
+  const accessDialog = page.getByRole("dialog", { name: strings.phone.accessDialogTitle });
+  await expect(accessDialog.getByRole("region", { name: strings.accessLegendLabel })).toContainText(strings.lockLegend);
+  await accessDialog.getByRole("button", { name: strings.phone.accessDialogClose }).click();
+  await expect(accessDialog).toHaveCount(0);
 
   const detail = page.getByRole("region", { name: strings.lockDetailLabel });
   // OpenStreetMap ways of the two Brussels lock chambers.

@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline } from "./support/offline";
 import { touch } from "./support/touch";
+import { freeMapBox, openPlanner } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
@@ -17,9 +18,8 @@ const touchAction = (page: Page) => page.locator(".leaflet-container").first().e
 
 async function open(page: Page) {
   await serveOffline(page, { brouter: () => ({ status: 200, body: brouterFixture("hiking-success.geojson") }) });
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const b = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const b = (await freeMapBox(page));
   return { cx: b.x + b.width / 2, cy: b.y + b.height / 2 };
 }
 

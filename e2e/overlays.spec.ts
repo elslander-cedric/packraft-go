@@ -1,5 +1,5 @@
-// The Hiking trails overlay on the desktop (#180, ADR 0032): the Map button bottom right lists
-// the base maps, then the overlay's switch. Switched on, the trails are drawn over any base map,
+// The Hiking trails overlay on a desktop-sized window (#180, ADR 0032): the layers button lists
+// the base maps, then the access layer's and the overlay's switches (ADR 0034). Switched on, the trails are drawn over any base map,
 // under the access layer and the trip, credited in the attribution, and remembered in the
 // settings (never in the trip). Every tile comes from the fixture; no live service is called.
 import { expect, test, type Page } from "@playwright/test";
@@ -8,18 +8,17 @@ import type { Trip } from "../src/core/trip";
 import { SETTINGS_KEY } from "../src/persistence/settingsStorage";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
-import { baseMapItem, mapMenuButton, overlayItem, toggleOverlay } from "./support/mapMenu";
+import { baseMapItem, mapMenuButton, overlayItem, toggleAccessLayer, toggleOverlay } from "./support/mapMenu";
 import { serveOffline } from "./support/offline";
+import { freeMapCentre, openPlanner } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const attribution = (page: Page) => mapRegion(page).locator(".leaflet-control-attribution");
-const zoomIn = (page: Page) => page.getByRole("button", { name: "Zoom in" });
 const trailTiles = (page: Page) => mapRegion(page).locator("img.leaflet-tile-loaded[src*='waymarkedtrails']");
 
 async function openMap(page: Page) {
   const network = await serveOffline(page);
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await openPlanner(page);
   return network;
 }
 
@@ -30,7 +29,9 @@ const paneZIndex = (page: Page, selector: string) =>
     .first()
     .evaluate((element) => Number(getComputedStyle(element.closest(".leaflet-pane")!).zIndex));
 
-test("the Map button lists the base maps, then the Hiking trails switch, off at first", async ({ page }) => {
+test("the Map button lists the base maps, then the access layer and Hiking trails switches, off at first", async ({
+  page,
+}) => {
   const network = await openMap(page);
   await mapMenuButton(page).click();
   const menu = page.getByRole("menu");
@@ -39,14 +40,16 @@ test("the Map button lists the base maps, then the Hiking trails switch, off at 
     strings.baseMaps["aerial-be"],
     strings.baseMaps["ngi-topo"],
   ]);
-  await expect(menu.getByRole("menuitemcheckbox")).toHaveText([strings.overlays["hiking-trails"]]);
+  await expect(menu.getByRole("menuitemcheckbox")).toHaveText([
+    strings.accessLayerToggle,
+    strings.overlays["hiking-trails"],
+  ]);
   await expect(overlayItem(page, "hiking-trails")).toHaveAttribute("aria-checked", "false");
-  // The switch comes after the base maps, below a divider; the access layer is not in this menu.
+  // The switches come after the base maps, below a divider.
   const lastBaseMap = (await baseMapItem(page, "ngi-topo").boundingBox())!;
   const trails = (await overlayItem(page, "hiking-trails").boundingBox())!;
   expect(trails.y).toBeGreaterThan(lastBaseMap.y + lastBaseMap.height - 1);
   await expect(menu.getByRole("separator")).toHaveCount(1);
-  await expect(menu.getByText(strings.accessLayerToggle)).toHaveCount(0);
   expect(network.tiles.filter((tile) => tile.source === "hiking-trails")).toEqual([]);
   expect(network.blocked).toEqual([]);
 });
@@ -72,7 +75,7 @@ test("switching Hiking trails on draws them under the access layer and the trip,
   await expect(attribution(page)).toContainText("CC BY-SA");
 
   // Above the base map, below the access layer's waters and the trip's legs.
-  await page.getByRole("switch", { name: strings.accessLayerToggle }).click();
+  await toggleAccessLayer(page);
   await expect(mapRegion(page).locator(".leaflet-access-pane path").first()).toBeAttached();
   const trails = await paneZIndex(page, "img[src*='waymarkedtrails']");
   expect(trails).toBeGreaterThan(await paneZIndex(page, "img[src*='opentopomap']"));
@@ -116,13 +119,16 @@ test("on aerial photos at zoom 19 the trails stay drawn, enlarged from their zoo
     ],
   );
   const network = await openMap(page);
-  // Leaflet drops clicks during a zoom animation, so wait for each step's tiles and for the animation to end.
-  for (let zoom = 9; zoom <= 19; zoom++) {
-    await zoomIn(page).click();
-    await expect.poll(() => network.tiles.some((tile) => tile.source === "wallonia" && tile.z === zoom)).toBe(true);
+  // The wheel zooms (no zoom buttons, ADR 0034); wait for each step and for the animation to end.
+  const centre = await freeMapCentre(page);
+  for (let step = 0; step < 30; step++) {
+    if (network.tiles.some((tile) => tile.source === "wallonia" && tile.z === 19)) break;
+    await page.mouse.move(centre.x, centre.y);
+    await page.mouse.wheel(0, -60);
     await expect(mapRegion(page).locator(".leaflet-map-pane")).not.toHaveClass(/leaflet-zoom-anim/);
+    await page.waitForTimeout(300);
   }
-  await expect(zoomIn(page)).toHaveClass(/leaflet-disabled/);
+  await expect.poll(() => network.tiles.some((tile) => tile.source === "wallonia" && tile.z === 19)).toBe(true);
   await expect(trailTiles(page).first()).toBeVisible();
   const widths = await trailTiles(page).evaluateAll((images) =>
     images.map((image) => Math.round(image.getBoundingClientRect().width)),

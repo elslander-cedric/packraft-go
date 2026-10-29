@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type CSSProperties } from "react";
+import { useId, useRef, useState, type CSSProperties } from "react";
 import type { Router } from "@/core/router";
 import type { DaySummary } from "@/core/summarise";
 import { canGoBackToStart, canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
@@ -97,6 +97,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
     openFile,
   } = usePlanner(router);
   const { trip, selectedPoint, offers } = session;
+  const undoReasonId = useId();
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
   const [tab, setTab] = useState<PhoneTab>("legs");
@@ -104,8 +105,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const [stop, setStop] = useState<SheetStop>("peek");
   // The peek's height, so the bottom buttons sit just above it.
   const [peekPx, setPeekPx] = useState<number | null>(null);
-  // Held sideways, the side panel replaces the sheet. Its width and whether it is open are
-  // settings on this device (ADR 0034), kept as they were whatever the sheet's stop.
+  // Except on a narrow screen in portrait, the side panel replaces the sheet (ADR 0034). Its width
+  // and whether it is open are settings on this device, kept as they were whatever the sheet's stop.
   const sideways = useSideways();
   const [{ width: panelWidth, open: panelOpen }, changePanel] = useSidePanel();
   const setPanelOpen = (open: boolean) => changePanel({ open });
@@ -446,9 +447,20 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           onChange={(mode) => setPick({ mode, ...pickedFor(trip) })}
           className="phone-next-mode"
         />
-        <Button className="phone-fab" aria-label={strings.undoButton} onClick={undo} disabled={!canUndo(trip)}>
+        {/* Disabled, it stays a Tab stop and says why (#31). */}
+        <Button
+          className="phone-fab"
+          aria-label={strings.undoButton}
+          aria-describedby={canUndo(trip) ? undefined : undoReasonId}
+          onClick={undo}
+          disabled={!canUndo(trip)}
+          focusableWhenDisabled
+        >
           <Icon icon={icons.undo} />
         </Button>
+        <span id={undoReasonId} hidden>
+          {strings.undoDisabledReason}
+        </span>
       </div>
       <PhoneLegDetailsDialog
         leg={detailsLeg}

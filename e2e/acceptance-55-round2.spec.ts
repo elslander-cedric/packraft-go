@@ -2,12 +2,14 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { showTab, tripPanel } from "./support/planner";
 
 const text = strings.accessPoints;
 const KEY = "packraft-go.access-points";
 const PREFIX = `${KEY}.backup-`;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const panel = (page: Page) => page.getByRole("complementary", { name: text.panelLabel });
+/** The trip panel, showing its Access points tab once `ready`. */
+const panel = (page: Page) => tripPanel(page);
 const backups = (page: Page) =>
   page.evaluate(
     (p) => Object.keys(localStorage).filter((k) => k.startsWith(p)).sort().map((k) => [k, localStorage.getItem(k)]),
@@ -16,6 +18,7 @@ const backups = (page: Page) =>
 
 async function ready(page: Page) {
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await showTab(page, strings.phone.tabs.accessPoints);
 }
 
 test("backup write fails: damaged save kept byte for byte and warned", async ({ page }) => {

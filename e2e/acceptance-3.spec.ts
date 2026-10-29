@@ -1,15 +1,13 @@
 // Acceptance tests for #3 (draw a route as straight lines), written from
 // the issue's acceptance criteria. They observe only what a user
-// sees: SVG shapes on the map, the legs panel text, and network traffic.
+// sees: SVG shapes on the map, the Legs tab's rows and totals, and network traffic.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { figure, freeMapCentre, legLines, legRows, openPlanner, points, totals } from "./support/planner";
 
-const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const panel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const markers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const rows = (page: Page) => panel(page).getByRole("listitem");
+const markers = points;
+const rows = legRows;
 
 const km = async (locator: Locator) => {
   const text = (await locator.textContent()) ?? "";
@@ -17,14 +15,17 @@ const km = async (locator: Locator) => {
   if (!m) throw new Error(`no distance in "${text}"`);
   return Number(m[1].replace(",", ""));
 };
-const totalKm = (page: Page) => km(panel(page).getByText(strings.tripTotalDistance));
+/** The trip's hike distance in the panel's totals; an empty trip shows no totals. */
+const totalKm = async (page: Page) => {
+  if ((await totals(page).count()) === 0) return 0;
+  return Number((await figure(totals(page), strings.phone.totals.labels.hike)).replace(/\s*km$/, ""));
+};
 
 async function openMap(page: Page) {
   const network = await serveOffline(page);
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
-  return { network, cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
+  await openPlanner(page);
+  const { x: cx, y: cy } = await freeMapCentre(page);
+  return { network, cx, cy };
 }
 
 /** Both ends of a straight SVG path ("M x y L x y"), in page pixels. */
@@ -45,10 +46,14 @@ const near = (p: { x: number; y: number }, q: { x: number; y: number }, tol = 2)
 
 test("AC1: the first click places only a start point; no leg, total stays 0", async ({ page }) => {
   const { network, cx, cy } = await openMap(page);
-  await expect(panel(page)).toContainText("0.0 km");
+  await expect(totals(page)).toHaveCount(0);
 
   await page.mouse.click(cx, cy);
   await expect(markers(page)).toHaveCount(1);
+  // The point is where it was clicked: the map doesn't move to it (ADR 0034).
+  await page.waitForTimeout(300);
+  const box = (await markers(page).boundingBox())!;
+  expect(near({ x: box.x + box.width / 2, y: box.y + box.height / 2 }, { x: cx, y: cy })).toBe(true);
   await expect(legLines(page)).toHaveCount(0);
   await expect(rows(page)).toHaveCount(0);
   expect(await totalKm(page)).toBe(0);
@@ -81,12 +86,12 @@ test("AC1/AC2/AC3: each click adds a point and a straight hike leg; panel lists 
     expect(near(end, clicks[i + 1])).toBe(true);
   }
 
-  // Panel: one row per leg, numbered, marked Hike, with a positive distance.
+  // Panel: one row per leg, numbered, a hike distance that is positive.
   const legKm: number[] = [];
   for (let i = 0; i < clicks.length - 1; i++) {
     const row = rows(page).nth(i);
     await expect(row).toContainText(strings.legLabel(i + 1));
-    await expect(row).toContainText(strings.legModeHike);
+    await expect(row).toContainText(strings.phone.legFigures.hike);
     legKm.push(await km(row));
     expect(legKm[i]).toBeGreaterThan(0);
   }
