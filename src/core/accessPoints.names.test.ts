@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import {
   addAccessPoint,
   applyDefaultName,
-  mergeAccessPoints,
   parseAccessPoints,
   serialiseAccessPoints,
   toLookUp,
@@ -142,31 +141,5 @@ describe("names in the access points format (still version 1)", () => {
     ["an unknown name source", { nameSource: "guessed" }],
   ])("refuses an invalid file (%s)", (_, change) => {
     expect(parseAccessPoints(file([{ ...point, ...change }]))).toEqual({ ok: false });
-  });
-});
-
-describe("names when importing", () => {
-  it("a point with another name is not the same point", () => {
-    const other = { ...point, id: "friend-1", name: "R3" };
-    expect(mergeAccessPoints([point], [other], () => "new").accessPoints).toEqual([point, other]);
-  });
-
-  it("a point with the same name is the same point", () => {
-    const copy = { ...point, id: "friend-1" };
-    expect(mergeAccessPoints([point], [copy], () => "new")).toMatchObject({ added: 0, alreadyThere: 1 });
-  });
-
-  it("default names don't count: your own export from before the default name arrived is the same point", () => {
-    const unnamed: AccessPoint = { ...point, name: "", nameSource: "to-look-up" };
-    const named: AccessPoint = { ...point, name: "Rue du Moulin, Hotton", nameSource: "default" };
-    expect(mergeAccessPoints([named], [{ ...unnamed, id: "b" }], () => "new")).toMatchObject({ added: 0 });
-    expect(mergeAccessPoints([unnamed], [{ ...named, id: "b" }], () => "new")).toMatchObject({ added: 0 });
-  });
-
-  it("an imported point without a name gets a default name looked up", () => {
-    const parsed = parseAccessPoints(file([{ ...withoutName(point), id: "friend-1", position: durbuy }]));
-    if (!parsed.ok) throw new Error("should parse");
-    const merged = mergeAccessPoints([point], parsed.accessPoints, () => "new").accessPoints;
-    expect(toLookUp(merged).map(({ id }) => id)).toEqual(["friend-1"]);
   });
 });

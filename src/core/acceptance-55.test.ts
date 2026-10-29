@@ -1,8 +1,6 @@
-// Acceptance tests for #55 (ADR 0023): merge-import
-// de-duplication, invalid-file refusal, borders, special characters.
+// Acceptance tests for #55 (ADR 0023): invalid saves refused, borders, special characters.
 import { describe, expect, it } from "vitest";
 import {
-  mergeAccessPoints,
   parseAccessPoints,
   restoreStoredAccessPoints,
   serialiseAccessPoints,
@@ -23,51 +21,6 @@ const pt = (id: string, lat: number, lng: number, extra: Partial<AccessPoint> = 
   updatedAt: T,
   ...extra,
 });
-// 1 m of latitude in degrees
-const M = 1 / 111_195;
-let n = 0;
-const newId = () => `new-${++n}`;
-
-describe("merge", () => {
-  it("skips identical fields within 5 m, even with other id and timestamps", () => {
-    const yours = [pt("a", 50.5, 5.5)];
-    const r = mergeAccessPoints(yours, [pt("z", 50.5 + 3 * M, 5.5, { createdAt: "2020-01-01T00:00:00Z" })], newId);
-    expect(r.added).toBe(0);
-    expect(r.alreadyThere).toBe(1);
-    expect(r.accessPoints).toEqual(yours);
-  });
-  it("keeps a point farther than 5 m", () => {
-    const r = mergeAccessPoints([pt("a", 50.5, 5.5)], [pt("b", 50.5 + 6 * M, 5.5)], newId);
-    expect(r.added).toBe(1);
-  });
-  it.each([
-    ["use", { use: "put-in" as const }],
-    ["kind", { kind: "slipway" as const }],
-    ["note", { note: "other" }],
-    ["checked", { checkedOnSite: "2026-10-01" }],
-  ])("keeps a near duplicate with a different %s", (_n, change) => {
-    const r = mergeAccessPoints([pt("a", 50.5, 5.5)], [pt("b", 50.5, 5.5, change)], newId);
-    expect(r.added).toBe(1);
-    expect(r.accessPoints).toHaveLength(2);
-  });
-  it("collapses exact duplicates within the imported file against each other", () => {
-    const r = mergeAccessPoints([], [pt("a", 50.5, 5.5), pt("b", 50.5, 5.5)], newId);
-    expect(r.accessPoints).toHaveLength(1);
-    expect(r.added).toBe(1);
-    expect(r.alreadyThere).toBe(1);
-  });
-  it("gives a new id when the imported id is taken by a different point", () => {
-    const r = mergeAccessPoints([pt("a", 50.5, 5.5)], [pt("a", 51, 4)], newId);
-    expect(new Set(r.accessPoints.map((p) => p.id)).size).toBe(2);
-  });
-  it("does not change your points", () => {
-    const yours = [pt("a", 50.5, 5.5, { note: "mine" })];
-    const copy = structuredClone(yours);
-    mergeAccessPoints(yours, [pt("a", 50.5, 5.5, { note: "theirs" })], newId);
-    expect(yours).toEqual(copy);
-  });
-});
-
 describe("format", () => {
   const border = [
     pt("w", 49.5, 5.7), // south Belgium (approx)

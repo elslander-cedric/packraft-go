@@ -22,14 +22,13 @@ function today(): string {
 }
 
 /**
- * Your access points (#55, ADR 0023): add one by clicking the map, export and
- * import them as a file, and edit or delete the one selected on the map.
+ * Your access points (#55, ADR 0023): add one by clicking the map, and edit or
+ * delete the one selected on the map.
  * Renders the state from `useAccessPoints`; the edits live in the core.
  */
 export default function AccessPointsPanel({ access }: { access: AccessPointsState }) {
-  const fileInput = useRef<HTMLInputElement>(null);
   const toolbarAdd = useRef<HTMLButtonElement>(null);
-  const { points, selected, placing, importMessage } = access;
+  const { points, selected, placing } = access;
   // The point waiting to be deleted until the planner answers the confirmation.
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   return (
@@ -49,38 +48,8 @@ export default function AccessPointsPanel({ access }: { access: AccessPointsStat
         <ToolbarButton ref={toolbarAdd} onClick={access.togglePlacing} hint={text.addHint} pressed={placing}>
           {text.addButton}
         </ToolbarButton>
-        <ToolbarButton
-          onClick={access.exportFile}
-          hint={text.exportHint}
-          disabledReason={points.length === 0 ? text.exportDisabledReason : null}
-        >
-          {text.exportButton}
-        </ToolbarButton>
-        <ToolbarButton onClick={() => fileInput.current?.click()} hint={text.importHint}>
-          {text.importButton}
-        </ToolbarButton>
       </Toolbar>
-      <input
-        ref={fileInput}
-        type="file"
-        accept=".json,application/json"
-        hidden
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          // Clear the choice, so choosing the same file again still imports it.
-          event.target.value = "";
-          if (file) void access.importFile(file);
-        }}
-      />
       <p className="access-points-status">{placing ? text.placingHint : text.count(points.length)}</p>
-      {importMessage && (
-        <p
-          className={importMessage.kind === "error" ? "access-points-error" : "access-points-imported"}
-          role={importMessage.kind === "error" ? "alert" : "status"}
-        >
-          {importMessage.text}
-        </p>
-      )}
       {selected && (
         <AccessPointDetails
           key={selected.id}

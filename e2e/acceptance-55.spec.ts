@@ -1,6 +1,5 @@
 // Acceptance tests for #55: access points are separate from trips,
-// refused imports leave points alone, autosave edge cases, special characters.
-import { readFile } from "node:fs/promises";
+// autosave edge cases, special characters.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
@@ -34,14 +33,6 @@ async function openWith(page: Page, initial?: string) {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-async function importContents(page: Page, contents: string) {
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    panel(page).getByRole("button", { name: text.importButton }).click(),
-  ]);
-  await chooser.setFiles({ name: "p.json", mimeType: "application/json", buffer: Buffer.from(contents) });
-}
-
 test("new trip and opening a trip file leave access points untouched", async ({ page }) => {
   const mid = await openWith(page, file(1, [point("a", 50.5, 5.5, "keep me")]));
   await expect(markers(page)).toHaveCount(1);
@@ -69,30 +60,6 @@ test("new trip and opening a trip file leave access points untouched", async ({ 
   await answerConfirmation(page, "openFile", "confirm");
   await expect(markers(page)).toHaveCount(1);
   expect(await stored(page)).toBe(before);
-
-  // Importing an access point file does not touch the trip.
-  await importContents(page, file(1, [point("b", 50.6, 5.6)]));
-  await expect(markers(page)).toHaveCount(2);
-  await expect(page.getByRole("textbox", { name: strings.tripNameLabel })).toHaveValue("T");
-});
-
-test("trip files are refused by access point import, and unknown versions/garbage leave points untouched", async ({ page }) => {
-  await openWith(page, file(1, [point("a", 50.5, 5.5)]));
-  const before = await stored(page);
-  const cases: [string, string, string][] = [
-    ["trip file", JSON.stringify({ format: "packraft-go-trip", version: 1, trip: {} }), text.importInvalid],
-    ["v2", file(2, [point("z", 50, 5)]), text.importUnknownVersion],
-    ["bad coords", file(1, [point("z", 50, 5), point("y", 95, 5)]), text.importInvalid],
-    ["empty file", "", text.importInvalid],
-  ];
-  for (const [, contents, message] of cases) {
-    await importContents(page, contents);
-    await expect(panel(page).getByRole("alert")).toHaveText(message);
-    await expect(markers(page)).toHaveCount(1);
-    expect(await stored(page)).toBe(before);
-  }
-  await page.reload();
-  await expect(markers(page)).toHaveCount(1);
 });
 
 test("damaged autosave: starts empty without crashing, and is overwritten by the next change", async ({ page }) => {
@@ -120,7 +87,7 @@ test("damaged autosave: starts empty without crashing, and is overwritten by the
   expect(errors).toEqual([]);
 });
 
-test("unknown-version autosave: warned, kept byte for byte, edits not saved, import not saved", async ({ page }) => {
+test("unknown-version autosave: warned, kept byte for byte, edits not saved", async ({ page }) => {
   const newer = file(2, [point("a", 50.5, 5.5, "from the future")]);
   const mid = await openWith(page, newer);
   const warning = page.getByRole("alert").filter({ hasText: text.autosaveUnknownVersion });
@@ -128,7 +95,6 @@ test("unknown-version autosave: warned, kept byte for byte, edits not saved, imp
   await panel(page).getByRole("button", { name: text.addButton }).click();
   await page.mouse.click(mid.x, mid.y);
   await expect(markers(page)).toHaveCount(1);
-  await importContents(page, file(1, [point("b", 50.6, 5.6)]));
   await page.waitForTimeout(300);
   expect(await stored(page)).toBe(newer);
   await page.reload();
@@ -136,29 +102,22 @@ test("unknown-version autosave: warned, kept byte for byte, edits not saved, imp
   expect(await stored(page)).toBe(newer);
 });
 
-test("special characters in notes and border positions survive export and import into a fresh profile", async ({ page, browser }) => {
+test("special characters in notes and border positions survive a reload", async ({ page }) => {
   const notes = ['a/b:c&d<e>"f\'', "emoji 🛶 é ü 日本", "</script><!--", "tab\there"];
   const coords: [number, number][] = [[49.5, 5.8], [50.4, 6.4], [51.5, 4.9], [51.09, 2.55]];
   const pts = notes.map((n, i) => point(`p${i}`, coords[i][0], coords[i][1], n));
   await openWith(page, file(1, pts));
   await expect(markers(page)).toHaveCount(4);
-  const [download] = await Promise.all([
-    page.waitForEvent("download"),
-    panel(page).getByRole("button", { name: text.exportButton }).click(),
-  ]);
-  const exported = JSON.parse(await readFile((await download.path())!, "utf8"));
-  expect(exported.accessPoints.map((p: { note: string }) => p.note)).toEqual(notes);
-  expect(exported.accessPoints.map((p: { position: { lat: number; lng: number } }) => [p.position.lat, p.position.lng])).toEqual(coords);
-
-  const ctx = await browser.newContext();
-  const other = await ctx.newPage();
-  await openWith(other);
-  await importContents(other, JSON.stringify(exported));
-  await expect(markers(other)).toHaveCount(4);
-  expect(JSON.parse((await stored(other))!).accessPoints.map((p: { note: string }) => p.note)).toEqual(notes);
-  await markers(other).nth(0).click();
-  await expect(details(other).getByLabel(text.noteLabel)).toHaveValue(notes[0]);
-  await ctx.close();
+  // A change saves them all again, and a reload reads them back.
+  await markers(page).nth(1).click();
+  await details(page).getByLabel(text.noteLabel).fill(notes[1]);
+  await page.reload();
+  await expect(markers(page)).toHaveCount(4);
+  const saved = JSON.parse((await stored(page))!).accessPoints;
+  expect(saved.map((p: { note: string }) => p.note)).toEqual(notes);
+  expect(saved.map((p: { position: { lat: number; lng: number } }) => [p.position.lat, p.position.lng])).toEqual(coords);
+  await markers(page).nth(0).click();
+  await expect(details(page).getByLabel(text.noteLabel)).toHaveValue(notes[0]);
 });
 
 test("a note with special characters typed in the panel is saved and restored", async ({ page }) => {

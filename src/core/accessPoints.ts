@@ -3,7 +3,6 @@
 // separate from trips, so every trip can use them. Pure: ids and times are
 // passed in by the caller.
 import { isCalendarDate, type CalendarDate } from "./calendarDate";
-import { distanceKm } from "./summarise";
 import type { LatLng } from "./trip";
 
 /** Whether you get onto the water here, off it, or both. */
@@ -148,62 +147,12 @@ export function deleteAccessPoint(points: AccessPoints, id: string): AccessPoint
   return points.some((point) => point.id === id) ? points.filter((point) => point.id !== id) : points;
 }
 
-/**
- * Imported points closer than this to one of yours, with all the same fields,
- * are the same point: positions marked by GPS or by hand differ a little.
- */
-export const DUPLICATE_DISTANCE_M = 5;
-
-// Default names come from the position, and change when OpenStreetMap does: only typed names count.
-const typedName = (point: AccessPoint) => (point.nameSource === "typed" ? point.name : "");
-
-const samePoint = (a: AccessPoint, b: AccessPoint) =>
-  typedName(a) === typedName(b) &&
-  a.use === b.use &&
-  a.kind === b.kind &&
-  a.note === b.note &&
-  a.checkedOnSite === b.checkedOnSite &&
-  distanceKm(a.position, b.position) * 1000 <= DUPLICATE_DISTANCE_M;
-
-/** Your access points after an import, and how many imported points were new or already there. */
-export type MergedAccessPoints = {
-  readonly accessPoints: AccessPoints;
-  readonly added: number;
-  readonly alreadyThere: number;
-};
-
-/**
- * Merges imported access points into yours (ADR 0023: a friend's file, or your
- * own from another device). Yours are kept as they are; each imported point is
- * added after them unless an identical one is already there (same fields,
- * within a few metres; ids and timestamps aside). An added point whose id is
- * already taken gets a new one from `newId`.
- */
-export function mergeAccessPoints(
-  yours: AccessPoints,
-  imported: AccessPoints,
-  newId: () => string,
-): MergedAccessPoints {
-  const merged = [...yours];
-  let added = 0;
-  for (const point of imported) {
-    if (merged.some((existing) => samePoint(existing, point))) continue;
-    const idTaken = merged.some((existing) => existing.id === point.id);
-    merged.push(idTaken ? { ...point, id: newId() } : point);
-    added++;
-  }
-  return { accessPoints: merged, added, alreadyThere: imported.length - added };
-}
-
 export const ACCESS_POINTS_FORMAT = "packraft-go-access-points";
 /**
  * The access points format's version: its own, separate from the trip save
  * format (ADR 0023). The only version the app writes and reads.
  */
 export const ACCESS_POINTS_VERSION = 1;
-
-/** The export file's name. The trip save files end in ".packraft.json"; this one is told apart by its name. */
-export const ACCESS_POINTS_FILE_NAME = "packraft-go-access-points.json";
 
 /**
  * Access points that cannot be read are damaged or not access points (no

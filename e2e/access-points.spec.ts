@@ -1,7 +1,6 @@
 // Your access points on the desktop (#55, ADR 0023): add, edit and delete them
 // on the map, with markers by use and kind and a detail panel; autosave under
-// their own key; export, and import into a fresh profile with a merge.
-import { readFile } from "node:fs/promises";
+// their own key.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
@@ -148,101 +147,4 @@ test("access points are autosaved under their own key, apart from the trip, and 
   await expect(markers(page)).toHaveCount(1);
   await markers(page).click();
   await expect(details(page).getByLabel(text.noteLabel)).toHaveValue("Park at the church");
-});
-
-test("export, then import into a fresh profile; importing again adds no duplicates", async ({ page, browser }) => {
-  await serveOffline(page);
-  const middle = await openMap(page);
-  await addAccessPoint(page, middle);
-  await toggle(page, text.useLabel, text.uses["put-in"]).click();
-  await addAccessPoint(page, { x: middle.x + 120, y: middle.y });
-
-  const [download] = await Promise.all([
-    page.waitForEvent("download"),
-    panel(page).getByRole("button", { name: text.exportButton }).click(),
-  ]);
-  expect(download.suggestedFilename()).toBe("packraft-go-access-points.json");
-  const exported = await readFile((await download.path())!, "utf8");
-  expect(JSON.parse(exported)).toMatchObject({ format: "packraft-go-access-points", version: 1 });
-
-  const fresh = await browser.newContext();
-  const other = await fresh.newPage();
-  await serveOffline(other);
-  await openMap(other);
-  await expect(markers(other)).toHaveCount(0);
-
-  const importFile = async (contents: string) => {
-    const [chooser] = await Promise.all([
-      other.waitForEvent("filechooser"),
-      panel(other).getByRole("button", { name: text.importButton }).click(),
-    ]);
-    await chooser.setFiles({ name: "points.json", mimeType: "application/json", buffer: Buffer.from(contents) });
-  };
-
-  await importFile(exported);
-  await expect(markers(other)).toHaveCount(2);
-  await expect(panel(other)).toContainText(text.imported(2, 0));
-
-  await importFile(exported);
-  await expect(panel(other)).toContainText(text.imported(0, 2));
-  await expect(markers(other)).toHaveCount(2);
-  expect((await stored(other)).accessPoints).toHaveLength(2);
-
-  await other.reload();
-  await expect(markers(other)).toHaveCount(2);
-  await fresh.close();
-});
-
-test("while saving is paused for an unknown-version save, an import says it was not saved", async ({ page }) => {
-  // Round 2 of #55: messages must not claim success while changes aren't saved.
-  const newer = JSON.stringify({ format: "packraft-go-access-points", version: 2, accessPoints: [] });
-  await serveOffline(page);
-  await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [ACCESS_POINTS_KEY, newer]);
-  await openMap(page);
-  await expect(panel(page).getByRole("alert").filter({ hasText: text.autosaveUnknownVersion })).toBeVisible();
-
-  const imported = JSON.stringify({
-    format: "packraft-go-access-points",
-    version: 1,
-    accessPoints: [
-      {
-        id: "b",
-        position: { lat: 50.6, lng: 5.6 },
-        use: "both",
-        kind: "jetty",
-        note: "",
-        checkedOnSite: null,
-        createdAt: "2026-10-12T08:00:00.000Z",
-        updatedAt: "2026-10-12T08:00:00.000Z",
-      },
-    ],
-  });
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    panel(page).getByRole("button", { name: text.importButton }).click(),
-  ]);
-  await chooser.setFiles({ name: "points.json", mimeType: "application/json", buffer: Buffer.from(imported) });
-
-  const message = text.importedNotSaved(text.notSaved["unknown-version"], 1);
-  await expect(panel(page).getByRole("alert").filter({ hasText: message })).toBeVisible();
-  await expect(panel(page)).not.toContainText(text.imported(1, 0));
-  await expect(markers(page)).toHaveCount(1);
-  expect(await page.evaluate((key) => localStorage.getItem(key), ACCESS_POINTS_KEY)).toBe(newer);
-});
-
-test("an invalid access points file is refused and leaves your points untouched", async ({ page }) => {
-  await serveOffline(page);
-  const middle = await openMap(page);
-  await addAccessPoint(page, middle);
-  const before = await stored(page);
-
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    panel(page).getByRole("button", { name: text.importButton }).click(),
-  ]);
-  await chooser.setFiles({ name: "broken.json", mimeType: "application/json", buffer: Buffer.from("{not json") });
-
-  await expect(panel(page).getByRole("alert")).toHaveText(text.importInvalid);
-  await expect(markers(page)).toHaveCount(1);
-  expect(await stored(page)).toEqual(before);
 });
