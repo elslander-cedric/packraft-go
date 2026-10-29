@@ -8,6 +8,9 @@ import {
   faBan,
   faBars,
   faCalendarXmark,
+  faCheck,
+  faEye,
+  faEyeSlash,
   faCircleCheck,
   faChevronDown,
   faChevronLeft,
@@ -40,6 +43,10 @@ import {
 export type { IconDefinition } from "@fortawesome/free-solid-svg-icons";
 
 export const icons = {
+  // PROTOTYPE (menu toggle variants): throw away.
+  protoCheck: faCheck,
+  protoEye: faEye,
+  protoEyeOff: faEyeSlash,
   // No kayak in Font Awesome Free: hike is footprints, paddle is water.
   hike: faShoePrints,
   paddle: faWater,

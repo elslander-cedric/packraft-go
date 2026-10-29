@@ -1,6 +1,8 @@
 import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { Fragment, type ReactNode } from "react";
 import "./Menu.css";
+import "./toggleVariants.prototype.css";
+import { toggleParts, useToggleVariant } from "./toggleVariants.prototype";
 
 type Grouped = {
   /** Starts a new group: a divider above the item. */
@@ -47,6 +49,19 @@ export type MenuProps = {
   align?: "start" | "end";
 };
 
+// PROTOTYPE: the toggle row per ?toggle= variant.
+function ProtoToggle({ checked, label }: { checked: boolean; label: string }) {
+  const variant = useToggleVariant();
+  const { lead, trail } = toggleParts(variant, checked);
+  return (
+    <span className={`proto-row proto-${variant.toLowerCase()}`}>
+      {lead}
+      <span className="proto-label">{label}</span>
+      {trail}
+    </span>
+  );
+}
+
 function Entry({ item }: { item: MenuEntry }) {
   if ("choices" in item)
     return (
@@ -64,15 +79,12 @@ function Entry({ item }: { item: MenuEntry }) {
   if ("checked" in item)
     return (
       <BaseMenu.CheckboxItem
-        className="menu-item menu-toggle"
+        className="menu-item menu-toggle proto-toggle"
         checked={item.checked}
         onCheckedChange={(checked) => item.onChange(checked)}
         closeOnClick
       >
-        {item.label}
-        <span className="menu-toggle-track" aria-hidden>
-          <span className="menu-toggle-thumb" />
-        </span>
+        <ProtoToggle checked={item.checked} label={item.label} />
       </BaseMenu.CheckboxItem>
     );
   return (

@@ -1,5 +1,6 @@
 import ClientTripPlanner from "@/ui/ClientTripPlanner";
 import { strings } from "@/ui/strings";
+import { ToggleVariantSwitcher } from "@/ui/components/toggleVariants.prototype";
 
 export default function Home() {
   return (
@@ -8,6 +9,7 @@ export default function Home() {
         {strings.navigationRulesNotice}
       </p>
       <ClientTripPlanner />
+      <ToggleVariantSwitcher />
     </main>
   );
 }
