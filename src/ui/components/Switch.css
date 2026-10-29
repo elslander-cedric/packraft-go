@@ -5,17 +5,20 @@
   cursor: pointer;
 }
 
+/* The same switch as the Map menu's toggles (Menu.css). */
 .switch-root {
   position: relative;
   display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
-  width: 2rem;
-  height: 1.1rem;
+  width: 2.75rem;
+  height: 1.625rem;
   padding: 2px;
-  border: 1px solid var(--color-border-strong);
+  border: 0;
   border-radius: 1rem;
   background: var(--color-border);
   cursor: pointer;
+  transition: background 0.15s;
 }
 
 .switch-root:focus-visible {
@@ -24,18 +27,18 @@
 }
 
 .switch-root[data-checked] {
-  border-color: var(--color-focus);
   background: var(--color-focus);
 }
 
 .switch-thumb {
-  width: calc(1.1rem - 6px);
-  height: calc(1.1rem - 6px);
+  width: calc(1.625rem - 4px);
+  height: calc(1.625rem - 4px);
   border-radius: 50%;
-  background: var(--color-surface);
+  background: var(--color-switch-thumb);
+  box-shadow: var(--shadow-switch-thumb);
   transition: transform 0.15s;
 }
 
 .switch-thumb[data-checked] {
-  transform: translateX(0.9rem);
+  transform: translateX(1.125rem);
 }
