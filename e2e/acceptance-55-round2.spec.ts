@@ -18,7 +18,7 @@ async function ready(page: Page) {
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
 }
 
-test("backup write fails: damaged save kept byte for byte, warned, edits and imports say not saved", async ({ page }) => {
+test("backup write fails: damaged save kept byte for byte and warned", async ({ page }) => {
   await serveOffline(page);
   await page.addInitScript(
     ([key, prefix]) => {
@@ -38,20 +38,6 @@ test("backup write fails: damaged save kept byte for byte, warned, edits and imp
   await ready(page);
   await expect(panel(page).getByRole("alert").filter({ hasText: text.damagedNotBackedUp })).toBeVisible();
   expect(await backups(page)).toEqual([]);
-  const imported = JSON.stringify({
-    format: "packraft-go-access-points",
-    version: 1,
-    accessPoints: [
-      { id: "b", position: { lat: 50.6, lng: 5.6 }, use: "both", kind: "jetty", note: "", checkedOnSite: null,
-        createdAt: "2026-10-12T08:00:00.000Z", updatedAt: "2026-10-12T08:00:00.000Z" },
-    ],
-  });
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    panel(page).getByRole("button", { name: text.importButton }).click(),
-  ]);
-  await chooser.setFiles({ name: "p.json", mimeType: "application/json", buffer: Buffer.from(imported) });
-  await expect(panel(page).getByRole("alert").filter({ hasText: text.importedNotSaved(text.notSaved.damaged, 1) })).toBeVisible();
   expect(await page.evaluate((k) => localStorage.getItem(k), KEY)).toBe("{corrupt");
   // Still damaged and still unwritable after a reload: still kept, still no duplicates.
   await page.reload();

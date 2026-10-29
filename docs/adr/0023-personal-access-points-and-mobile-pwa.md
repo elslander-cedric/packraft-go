@@ -3,13 +3,13 @@
 Date: 2026-10-12
 
 ## Status
-Accepted. Makes one exception to ADR 0001 (planning at home) and ADR 0005 (desktop-first). Its phone scope ("Planning stays desktop") is replaced by ADR 0026 (the full planner on the phone); the rest stands.
+Accepted. Makes one exception to ADR 0001 (planning at home) and ADR 0005 (desktop-first). Its phone scope ("Planning stays desktop") is replaced by ADR 0026 (the full planner on the phone), and its access points file by ADR 0034 (no export or import); the rest stands.
 
 ## Context
 There's no open dataset of access points in Belgium. The Walloon aire dataset is restricted, OSM coverage is sparse, and Flemish route put-ins aren't openly licensed (`docs/research/data-sources.md`). The person who knows where you can actually get on the water is the paddler standing on the bank, often without signal.
 
 ## Decision
-- **Access points are a personal collection**, separate from trips and usable by every trip. They're stored in the browser, with their own export and import file. Sharing means sending that file. There's no server and no accounts (ADRs 0002, 0011 and 0012 unchanged).
+- **Access points are a personal collection**, separate from trips and usable by every trip. They're stored in the browser. (Their export and import file was removed in #189: ADR 0034.) There's no server and no accounts (ADRs 0002, 0011 and 0012 unchanged).
 - **Fields:** position (GPS or dragged), use (put-in, take-out or both), kind (official aire, slipway, jetty or informal bank), a short note, and "checked on site" with a date. No photos.
 - **Phone scope:** the map, your GPS position, "mark access point here", your access points, and a read-only view of trips. Planning stays desktop.
 - **Marking works offline.** Points are saved on the device. Offline map tiles are out of scope.

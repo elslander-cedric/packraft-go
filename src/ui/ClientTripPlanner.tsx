@@ -12,8 +12,12 @@ const TripPlanner = dynamic(() => import("./TripPlanner"), { ssr: false, loading
 // Phones get the same planner with a phone layout (ADR 0026).
 const PhonePlanner = dynamic(() => import("./phone/PhonePlanner"), { ssr: false, loading });
 
+// `?planner=phone` gives a wide screen the phone planner too, so tests can drive it there
+// until the screen rule switches (#189, stage 3 of ADR 0034).
+const phoneForced = () => new URLSearchParams(window.location.search).get("planner") === "phone";
+
 export default function ClientTripPlanner() {
   const phone = usePhoneLayout();
   if (phone === null) return loading();
-  return phone ? <PhonePlanner /> : <TripPlanner />;
+  return phone || phoneForced() ? <PhonePlanner /> : <TripPlanner />;
 }

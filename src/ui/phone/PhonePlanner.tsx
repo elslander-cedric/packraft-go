@@ -356,6 +356,11 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           settings={settings}
           saveSettings={saveSettings}
         />
+        {session.keepStoredSave && (
+          <p role="alert" className="phone-message phone-message-alert">
+            {strings.autosaveUnknownVersion}
+          </p>
+        )}
       </div>
       <PhonePlaceSearch search={search} />
       <div className="phone-buttons phone-buttons-top">
@@ -480,6 +485,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         ) : (
           <BottomSheet
             label={strings.phone.sheetLabel}
+            handleLabel={strings.phone.resizeSheetHandle}
+            stopLabels={strings.phone.sheetStops}
             stop={stop}
             onStopChange={setStop}
             onPeekHeightChange={setPeekPx}

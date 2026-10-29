@@ -5,18 +5,15 @@ import {
   addAccessPoint,
   applyDefaultName,
   deleteAccessPoint,
-  mergeAccessPoints,
   updateAccessPoint,
   type AccessPointChanges,
   type AccessPoints,
   type DefaultNameSource,
 } from "@/core/accessPoints";
 import type { LatLng } from "@/core/trip";
-import { downloadAccessPointsFile, readAccessPointsFile } from "@/persistence/accessPointFile";
 import { loadStoredAccessPoints, storeAccessPoints } from "@/persistence/accessPointStorage";
 import { startDefaultNames, type DefaultNames } from "./defaultNames";
 import { sharedNominatim } from "./sharedNominatim";
-import { strings } from "./strings";
 
 /** The page's one default name source, so its one-request-a-second limit holds for all (ADRs 0027, 0030). */
 function defaultNameSource(): Promise<DefaultNameSource> {
@@ -31,9 +28,6 @@ function newId(): string {
 }
 
 const now = () => new Date().toISOString();
-
-/** What the last import said: how it went, or why the file was refused. */
-export type ImportMessage = { readonly kind: "done" | "error"; readonly text: string };
 
 /** Why autosave is paused: the stored save is kept as it is. */
 export type SavingPaused = "unknown-version" | "damaged";
@@ -60,7 +54,6 @@ export function useAccessPoints() {
   const keepStoredSave = savingPaused !== null;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
-  const [importMessage, setImportMessage] = useState<ImportMessage | null>(null);
 
   useEffect(() => {
     if (!keepStoredSave) storeAccessPoints(points);
@@ -112,15 +105,11 @@ export function useAccessPoints() {
     points,
     selected,
     placing,
-    importMessage,
     /** Why changes are not being saved, or null while they are. */
     savingPaused,
     /** Where a damaged save was backed up on load, or null. */
     backupKey: stored.backupKey,
-    togglePlacing: () => {
-      setPlacing((current) => !current);
-      setImportMessage(null);
-    },
+    togglePlacing: () => setPlacing((current) => !current),
     /** Adds a point at `at`, ends placing and selects the new point. Returns its id. */
     placeAt: (at: LatLng): string => {
       const id = newId();
@@ -130,42 +119,13 @@ export function useAccessPoints() {
       return id;
     },
     /** Makes the next map tap place a new point (without toggling it off). */
-    startPlacing: () => {
-      setPlacing(true);
-      setImportMessage(null);
-    },
-    select: (id: string | null) => {
-      setSelectedId(id);
-      setImportMessage(null);
-    },
+    startPlacing: () => setPlacing(true),
+    select: (id: string | null) => setSelectedId(id),
     update: (id: string, changes: AccessPointChanges) =>
       setPoints((current) => updateAccessPoint(current, id, changes, now())),
     remove: (id: string) => {
       setPoints((current) => deleteAccessPoint(current, id));
       setSelectedId((current) => (current === id ? null : current));
-    },
-    exportFile: () => {
-      setImportMessage(null);
-      downloadAccessPointsFile(points);
-    },
-    importFile: async (file: File) => {
-      const read = await readAccessPointsFile(file);
-      if (!read.ok) {
-        const text = read.reason === "unknown-version" ? strings.accessPoints.importUnknownVersion : strings.accessPoints.importInvalid;
-        setImportMessage({ kind: "error", text });
-        return;
-      }
-      const merged = mergeAccessPoints(points, read.accessPoints, newId);
-      setPoints(merged.accessPoints);
-      // Never claim an import worked while it can't be saved (round 2 of #55).
-      setImportMessage(
-        savingPaused
-          ? {
-              kind: "error",
-              text: strings.accessPoints.importedNotSaved(strings.accessPoints.notSaved[savingPaused], merged.added),
-            }
-          : { kind: "done", text: strings.accessPoints.imported(merged.added, merged.alreadyThere) },
-      );
     },
   };
 }

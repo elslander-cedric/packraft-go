@@ -113,18 +113,6 @@ export const strings = {
     addButton: "Add access point",
     addHint: "Then click the map where you can get onto or off the water.",
     placingHint: "Click the map to place the access point. Press Escape to cancel.",
-    exportButton: "Export points",
-    exportHint: "Download your access points as a file: a backup, or to move or share them.",
-    exportDisabledReason: "No access points to export yet.",
-    importButton: "Import points",
-    importHint: "Add the access points from a file to yours. Points you already have are not added twice.",
-    imported: (added: number, alreadyThere: number) =>
-      `Imported ${added === 1 ? "1 access point" : `${added} access points`}` +
-      (alreadyThere === 0 ? "." : `; ${alreadyThere} ${alreadyThere === 1 ? "was" : "were"} already there.`),
-    importInvalid: "This is not a packraft-go access points file, or it is damaged. Your access points are unchanged.",
-    importUnknownVersion:
-      "This access points file is from a newer or unknown version of packraft-go and can't be imported here. " +
-      "Your access points are unchanged.",
     autosaveUnknownVersion:
       "Your saved access points are from a newer or unknown version of packraft-go. Reload the page to update. " +
       "They are kept; access point changes made here are not saved.",
@@ -135,14 +123,6 @@ export const strings = {
     damagedNotBackedUp:
       "Your saved access points are damaged and couldn't be read or backed up. " +
       "They are kept; access point changes made here are not saved.",
-    // While saving is paused, an import says it was not saved, never that it was.
-    notSaved: {
-      "unknown-version": "Not saved: your saved access points are from a newer or unknown version of packraft-go.",
-      damaged: "Not saved: your saved access points are damaged and are kept as they are.",
-    },
-    importedNotSaved: (notSaved: string, added: number) =>
-      `${notSaved} ${added === 1 ? "1 access point was" : `${added} access points were`} ` +
-      "added on this page only and will be lost when you reload.",
     // The marker's accessible name and tooltip, led by its heading (#136), e.g.
     // "Access point: Hotton bridge (Put-in, Slipway)" or "Access point: Put-in, Official aire".
     marker: (heading: string, detail: string | null) =>
@@ -233,6 +213,9 @@ export const strings = {
     expandPanelButton: "Open the trip panel",
     // Its left edge, a splitter: drag it or use the arrow keys to resize the panel (ADR 0034).
     resizePanelHandle: "Resize the trip panel",
+    // The sheet's handle (#189): a slider over its stops; arrow up and down move the sheet one stop.
+    resizeSheetHandle: "Resize the trip sheet",
+    sheetStops: { peek: "Header only", half: "Half the screen", full: "Full screen" },
     // The floating hike / paddle toggle for the leg the next map tap adds (#121).
     nextLegModeLabel: "Next leg's mode",
     // Its toggles are icon-only; their names are `legModeHike` and `legModePaddle`.

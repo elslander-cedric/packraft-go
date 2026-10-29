@@ -23,7 +23,7 @@ import SearchResultLayer, { type MapCover } from "./SearchResultLayer";
 import { campIcon, legCasingStyle, legStyle, modeChangeStyle, MapAreaReporter } from "./TripMap";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
-import { HOLD_MS, useHold } from "./hold";
+import { HOLD_MS, isPrimaryPress, useHold } from "./hold";
 import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
 
 /**
@@ -159,14 +159,15 @@ function Focus({ focus }: { focus: MapFocus }) {
 /**
  * Turns taps into `onMapTap`. A double tap gives one tap (its second tap is
  * ignored), and the click that can follow a pinch is ignored. So is the click
- * that ends a finger held for 0.4 s or more: holding the map does nothing, and
- * holding a leg inserts a point instead (#122).
+ * that ends a finger or the mouse held for 0.4 s or more: holding the map does
+ * nothing, and holding a leg inserts a point instead (#122, ADR 0034); a tap
+ * right after a hold is a tap.
  */
 function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
   const map = useMap();
   const lastTap = useRef<{ at: number; point: Point } | null>(null);
   const pinched = useRef(false);
-  const fingerDownAt = useRef<number | null>(null);
+  const pressedAt = useRef<number | null>(null);
   useEffect(() => {
     const container = map.getContainer();
     // Capture phase, before Leaflet's own handlers.
@@ -174,7 +175,7 @@ function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
       pinched.current = event.touches.length > 1;
     };
     const down = (event: PointerEvent) => {
-      fingerDownAt.current = event.pointerType === "mouse" ? null : event.timeStamp;
+      pressedAt.current = isPrimaryPress(event) ? event.timeStamp : null;
     };
     container.addEventListener("touchstart", touch, true);
     container.addEventListener("pointerdown", down, true);
@@ -189,9 +190,13 @@ function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
       const previous = lastTap.current;
       lastTap.current = { at: now, point: event.containerPoint };
       if (pinched.current) return;
-      const downAt = fingerDownAt.current;
-      fingerDownAt.current = null;
-      if (downAt !== null && now - downAt >= HOLD_MS) return;
+      const downAt = pressedAt.current;
+      pressedAt.current = null;
+      // A hold is not a tap, so it doesn't start a double tap either.
+      if (downAt !== null && now - downAt >= HOLD_MS) {
+        lastTap.current = previous;
+        return;
+      }
       if (previous && now - previous.at < DOUBLE_TAP_MS && previous.point.distanceTo(event.containerPoint) < DOUBLE_TAP_PX) {
         return;
       }

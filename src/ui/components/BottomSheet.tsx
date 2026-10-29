@@ -1,5 +1,5 @@
 import { Drawer } from "@base-ui/react/drawer";
-import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import "./BottomSheet.css";
 
 /** Where the sheet rests: just the header, half the screen, or nearly all of it. */
@@ -14,6 +14,10 @@ export const sheetStopShare: Record<Exclude<SheetStop, "peek">, number> = { half
 export type BottomSheetProps = {
   /** Accessible name of the sheet. */
   label: string;
+  /** Accessible name of the handle, which the keys move between the stops. */
+  handleLabel: string;
+  /** How the handle reads out each stop. */
+  stopLabels: Record<SheetStop, string>;
   stop: SheetStop;
   onStopChange: (stop: SheetStop) => void;
   /** Always visible, and the part you drag. */
@@ -27,9 +31,21 @@ export type BottomSheetProps = {
 /**
  * A sheet over the bottom of the screen (Base UI Drawer, ADR 0020). It never
  * closes and doesn't block the page behind it (non-modal), and settles at one of
- * three stops, picked by how far it is dragged.
+ * three stops, picked by how far it is dragged. From the keyboard, the handle
+ * is a slider over the stops: arrow up and down go one stop, Home and End to
+ * the peek and the top (#189). It isn't a button, so a drag can start on it.
+ * At the peek the sheet's body is off screen and inert, so Tab doesn't land there.
  */
-export function BottomSheet({ label, stop, onStopChange, peek, children, onPeekHeightChange }: BottomSheetProps) {
+export function BottomSheet({
+  label,
+  handleLabel,
+  stopLabels,
+  stop,
+  onStopChange,
+  peek,
+  children,
+  onPeekHeightChange,
+}: BottomSheetProps) {
   // Snap points: the peek fits its content (at least MIN_PEEK_PX), the others are fractions of the screen.
   const [peekPx, setPeekPx] = useState(MIN_PEEK_PX);
   const measurePeek = useCallback(
@@ -48,6 +64,20 @@ export function BottomSheet({ label, stop, onStopChange, peek, children, onPeekH
     [onPeekHeightChange],
   );
   const snapPoints = [`${peekPx}px`, sheetStopShare.half, sheetStopShare.full];
+  const at = stops.indexOf(stop);
+  const onHandleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const to = {
+      ArrowUp: Math.min(at + 1, stops.length - 1),
+      ArrowRight: Math.min(at + 1, stops.length - 1),
+      ArrowDown: Math.max(at - 1, 0),
+      ArrowLeft: Math.max(at - 1, 0),
+      Home: 0,
+      End: stops.length - 1,
+    }[event.key];
+    if (to === undefined) return;
+    event.preventDefault();
+    if (to !== at) onStopChange(stops[to]);
+  };
   return (
     <Drawer.Root
       open
@@ -87,10 +117,23 @@ export function BottomSheet({ label, stop, onStopChange, peek, children, onPeekH
             style={{ "--bottom-sheet-peek": `${peekPx}px` } as CSSProperties}
           >
             <div className="bottom-sheet-peek" ref={measurePeek}>
-              <div className="bottom-sheet-handle" aria-hidden />
+              <div
+                className="bottom-sheet-handle"
+                role="slider"
+                tabIndex={0}
+                aria-label={handleLabel}
+                aria-orientation="vertical"
+                aria-valuemin={0}
+                aria-valuemax={stops.length - 1}
+                aria-valuenow={at}
+                aria-valuetext={stopLabels[stop]}
+                onKeyDown={onHandleKeyDown}
+              />
               {peek}
             </div>
-            <Drawer.Content className="bottom-sheet-body">{children}</Drawer.Content>
+            <Drawer.Content className="bottom-sheet-body" inert={stop === "peek"}>
+              {children}
+            </Drawer.Content>
           </Drawer.Popup>
         </Drawer.Viewport>
       </Drawer.Portal>

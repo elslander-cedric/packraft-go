@@ -61,6 +61,12 @@ export default function PhoneAccessPoints({ access, trip, position, onOpen, onEd
       {access.savingPaused === "unknown-version" ? pointText.autosaveUnknownVersion : pointText.damagedNotBackedUp}
     </p>
   );
+  // A damaged save was backed up on load, before it was replaced (round 2 of #55).
+  const backedUpNote = access.backupKey !== null && (
+    <p role="status" className="phone-position-alert">
+      {pointText.damagedBackedUp(access.backupKey)}
+    </p>
+  );
 
   const row = (point: AccessPoint, figure: string | null): ReactNode => {
     const { heading, note, detail } = accessPointText(point);
@@ -100,6 +106,7 @@ export default function PhoneAccessPoints({ access, trip, position, onOpen, onEd
   return (
     <section className="phone-access-points" aria-label={text.accessPointsLabel}>
       {savingPausedAlert}
+      {backedUpNote}
       {points.length === 0 ? (
         <p className="phone-empty">{text.noAccessPoints}</p>
       ) : (

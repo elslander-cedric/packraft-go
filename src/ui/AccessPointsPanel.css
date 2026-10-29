@@ -19,15 +19,9 @@
   font-size: 0.8rem;
 }
 
-.access-points-error,
 .access-points-warning {
   margin: var(--space-1) 0;
   color: var(--color-danger);
-  font-size: 0.8rem;
-}
-
-.access-points-imported {
-  margin: var(--space-1) 0;
   font-size: 0.8rem;
 }
 

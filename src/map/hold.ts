@@ -3,20 +3,24 @@ import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import type { LatLng } from "@/core/trip";
 
-/** How long a finger holds a map shape (a leg to insert a point, #122; a water for its details, #125). */
+/** How long a finger or the mouse holds a map shape (a leg to insert a point, #122; a water for its details, #125). */
 export const HOLD_MS = 400;
 
-// A finger that moves more than this (in screen pixels) while held is panning, not holding.
+// A finger or mouse that moves more than this (in screen pixels) while held is panning, not holding.
 const HOLD_SLOP_PX = 8;
 
+/** A press that can start a hold or a tap: a finger, a pen, or the left mouse button. */
+export const isPrimaryPress = (event: PointerEvent) => event.pointerType !== "mouse" || event.button === 0;
+
 /**
- * Hold on a map shape's element (ADR 0026): a finger or pen held still for
- * `HOLD_MS` calls `onHold` with where it was pressed, timed by our own timer:
- * Leaflet's `contextmenu` is not reliable for touch (#112). With a mouse, a
- * right-click calls it. The shape's own `contextmenu` never opens the browser's
- * menu, and the one a long touch press can give is ignored (the timer already
- * handled it). Nothing is stopped: a tap on the shape is still a tap on the map,
- * and a finger that moves still pans it. The click that ends a hold is ignored
+ * Hold on a map shape's element (ADR 0026): a finger, pen or the left mouse
+ * button held still for `HOLD_MS` calls `onHold` with where it was pressed
+ * (the same gesture for touch and mouse, ADR 0034), timed by our own timer:
+ * Leaflet's `contextmenu` is not reliable for touch (#112). A right-click calls
+ * it at once. The shape's own `contextmenu` never opens the browser's menu, and
+ * the one a long touch press can give is ignored (the timer already handled
+ * it). Nothing is stopped: a tap on the shape is still a tap on the map, and a
+ * finger or mouse that moves still pans it. The click that ends a hold is ignored
  * by the map's tap handling (see `PhoneMap`). Returns a function that stops
  * listening.
  */
@@ -34,7 +38,7 @@ export function listenForHold(element: Element, map: LeafletMap, onHold: (at: La
 
   const down = (event: PointerEvent) => {
     lastPointerType = event.pointerType;
-    if (event.pointerType === "mouse" || pressed) return;
+    if (!isPrimaryPress(event) || pressed) return;
     const where = at(event);
     pressed = {
       id: event.pointerId,
