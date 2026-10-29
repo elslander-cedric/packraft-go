@@ -36,6 +36,9 @@
   /* The lock marker's swatch, drawn like the marker on the map in both themes. */
   --color-lock-ring: #1a1a1a;
   --color-lock-fill: #fff;
+  /* A switch's thumb: white with a shadow in both themes, on the grey or accent track. */
+  --color-switch-thumb: #fff;
+  --shadow-switch-thumb: 0 1px 3px rgb(0 0 0 / 35%);
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 1rem;

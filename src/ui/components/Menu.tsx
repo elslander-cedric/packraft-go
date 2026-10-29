@@ -69,7 +69,9 @@ function Entry({ item }: { item: MenuEntry }) {
         onCheckedChange={(checked) => item.onChange(checked)}
         closeOnClick
       >
-        {item.label}
+        {/* An empty icon slot, so the label lines up with the choices' labels. */}
+        <span className="menu-item-icon" />
+        <span className="menu-toggle-label">{item.label}</span>
         <span className="menu-toggle-track" aria-hidden>
           <span className="menu-toggle-thumb" />
         </span>
