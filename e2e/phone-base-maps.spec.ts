@@ -3,7 +3,7 @@
 // setting as on the desktop. Every tile comes from the fixture; no live service is called.
 import { devices, expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
-import { accessLayerItem, baseMapItem, chooseBaseMap, mapLayersButton } from "./support/mapMenu";
+import { accessLayerItem, baseMapItem, chooseBaseMap, mapMenuButton } from "./support/mapMenu";
 import { serveOffline, tileSourceOf } from "./support/offline";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
@@ -29,7 +29,7 @@ async function openPhone(page: Page) {
 
 test("the Map menu lists the base maps, the current one marked, then the access layer switch", async ({ page }) => {
   const network = await openPhone(page);
-  await mapLayersButton(page).click();
+  await mapMenuButton(page).click();
   const menu = page.getByRole("menu");
   await expect(menu.getByRole("menuitemradio")).toHaveText([
     strings.baseMaps.opentopomap,
@@ -51,18 +51,18 @@ test("the Map menu lists the base maps, the current one marked, then the access 
 test("choosing a base map in the Map menu loads it, and the choice survives a reload", async ({ page }) => {
   const network = await openPhone(page);
 
-  await chooseBaseMap(page, mapLayersButton(page), "aerial-be");
+  await chooseBaseMap(page, "aerial-be");
   await expect.poll(() => drawnSources(page)).toEqual(["brussels", "flanders", "opentopomap", "wallonia"]);
   await expect(attribution(page)).toContainText("Digitaal Vlaanderen");
 
   await page.reload();
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
   await expect.poll(() => drawnSources(page)).toEqual(["brussels", "flanders", "opentopomap", "wallonia"]);
-  await mapLayersButton(page).click();
+  await mapMenuButton(page).click();
   await expect(baseMapItem(page, "aerial-be")).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("Escape");
 
-  await chooseBaseMap(page, mapLayersButton(page), "ngi-topo");
+  await chooseBaseMap(page, "ngi-topo");
   await expect.poll(() => drawnSources(page)).toEqual(["ngi", "opentopomap"]);
   await expect(attribution(page)).toContainText("NGI/IGN");
   await expect(attribution(page)).not.toContainText("Digitaal Vlaanderen");

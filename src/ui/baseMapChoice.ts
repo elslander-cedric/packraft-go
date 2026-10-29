@@ -5,7 +5,7 @@ import { strings } from "./strings";
 /** The base maps as a menu choice (ADR 0031), the current one marked; desktop and phone alike. */
 export function baseMapChoice(value: BaseMapId, onChange: (id: BaseMapId) => void): MenuChoice {
   return {
-    label: strings.baseMapButton,
+    label: strings.baseMapChoice,
     choices: baseMapIds.map((id) => ({
       value: id,
       label: strings.baseMaps[id],

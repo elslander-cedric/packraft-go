@@ -1,4 +1,4 @@
-import type { BaseMapId } from "@/core/settings";
+import type { BaseMapId, OverlayId } from "@/core/settings";
 import { strings } from "@/ui/strings";
 
 export type LatLng = readonly [lat: number, lng: number];
@@ -145,6 +145,28 @@ export const baseMaps: readonly BaseMap[] = [
 /** The base map with this id. */
 export const baseMap = (id: BaseMapId): BaseMap => baseMaps.find((map) => map.id === id) ?? baseMaps[0];
 
+/** An overlay (GLOSSARY) drawn from tiles over any base map, under the access layer and the trip. */
+export type Overlay = {
+  id: OverlayId;
+  name: string;
+  source: TileSource;
+};
+
+/** The overlays (ADR 0032), in the order the Map menus list them. */
+export const overlays: readonly Overlay[] = [
+  {
+    id: "hiking-trails",
+    name: strings.overlays["hiking-trails"],
+    // Transparent and world-wide; it draws trails up to zoom 18 and answers 404 at 19.
+    source: {
+      kind: "tiles",
+      url: "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png",
+      maxNativeZoom: 18,
+      attribution: strings.overlayAttribution["hiking-trails"],
+    },
+  },
+];
+
 /**
  * Lock markers (#57) show from this zoom on. Further out a marker covers a few
  * kilometres of the waters around it, so a click on a river would open a lock.
@@ -157,6 +179,8 @@ export const lockMarkersMinZoom = 11;
  * points), tooltips 650, popups 700.
  */
 export const paneZIndex = {
+  /** The overlays' tiles: above the base map (Leaflet's tile pane), below the access layer. */
+  overlays: 250,
   /** The access layer's waters, below the trip. */
   access: 350,
   /** Put-ins and take-outs, above the legs (desktop). */

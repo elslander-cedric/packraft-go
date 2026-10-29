@@ -10,7 +10,7 @@ import { SETTINGS_KEY } from "../src/persistence/settingsStorage";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { downloadGpxZip } from "./support/gpxZip";
-import { baseMapButton, baseMapItem, chooseBaseMap } from "./support/mapMenu";
+import { baseMapItem, chooseBaseMap, mapMenuButton, toggleOverlay } from "./support/mapMenu";
 import { serveOffline, tileSourceOf, type TileSource } from "./support/offline";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
@@ -49,13 +49,13 @@ test("the base map button bottom right switches to aerial photos, NGI topo and b
 
   // It sits in the map's bottom-right corner, above the attribution.
   const map = await box(mapRegion(page));
-  const button = await box(baseMapButton(page));
+  const button = await box(mapMenuButton(page));
   const credits = await box(attribution(page));
   expect(map.x + map.width - (button.x + button.width)).toBeLessThan(20);
   expect(button.y + button.height).toBeLessThanOrEqual(credits.y + 1);
 
   // OpenTopoMap is marked as the current one.
-  await baseMapButton(page).click();
+  await mapMenuButton(page).click();
   await expect(page.getByRole("menuitemradio")).toHaveText([
     strings.baseMaps.opentopomap,
     strings.baseMaps["aerial-be"],
@@ -65,7 +65,7 @@ test("the base map button bottom right switches to aerial photos, NGI topo and b
   await page.keyboard.press("Escape");
 
   // Aerial photos: the three regions over OpenTopoMap, each credited.
-  await chooseBaseMap(page, baseMapButton(page), "aerial-be");
+  await chooseBaseMap(page, "aerial-be");
   await expect
     .poll(async () => sorted(await drawnSources(page)))
     .toEqual(["brussels", "flanders", "opentopomap", "wallonia"]);
@@ -75,14 +75,14 @@ test("the base map button bottom right switches to aerial photos, NGI topo and b
   await expect(attribution(page)).toContainText("paradigm.brussels");
 
   // NGI topo: CartoWeb.be over OpenTopoMap; the aerial credits are gone.
-  await chooseBaseMap(page, baseMapButton(page), "ngi-topo");
+  await chooseBaseMap(page, "ngi-topo");
   await expect.poll(async () => sorted(await drawnSources(page))).toEqual(["ngi", "opentopomap"]);
   await expect(attribution(page)).toContainText("NGI/IGN");
   await expect(attribution(page)).toContainText("TomTom");
   await expect(attribution(page)).not.toContainText("Digitaal Vlaanderen");
 
   // Back to OpenTopoMap alone.
-  await chooseBaseMap(page, baseMapButton(page), "opentopomap");
+  await chooseBaseMap(page, "opentopomap");
   await expect.poll(async () => sorted(await drawnSources(page))).toEqual(["opentopomap"]);
   await expect(attribution(page)).not.toContainText("NGI/IGN");
   await expect(attribution(page)).toContainText("OpenTopoMap");
@@ -101,7 +101,7 @@ test("the base map button bottom right switches to aerial photos, NGI topo and b
 
 test("the chosen base map survives a reload", async ({ page }) => {
   const network = await openMap(page);
-  await chooseBaseMap(page, baseMapButton(page), "aerial-be");
+  await chooseBaseMap(page, "aerial-be");
   await expect.poll(async () => (await drawnSources(page)).has("flanders")).toBe(true);
 
   await page.reload();
@@ -110,7 +110,7 @@ test("the chosen base map survives a reload", async ({ page }) => {
     .poll(async () => sorted(await drawnSources(page)))
     .toEqual(["brussels", "flanders", "opentopomap", "wallonia"]);
   await expect(attribution(page)).toContainText("Digitaal Vlaanderen");
-  await baseMapButton(page).click();
+  await mapMenuButton(page).click();
   await expect(baseMapItem(page, "aerial-be")).toHaveAttribute("aria-checked", "true");
   expect(network.blocked).toEqual([]);
 });
@@ -119,7 +119,7 @@ test("aerial photos go to zoom 18 and further; switching to OpenTopoMap there zo
   // Steps through ten zoom levels, waiting for each to land.
   test.setTimeout(90_000);
   const network = await openMap(page);
-  await chooseBaseMap(page, baseMapButton(page), "aerial-be");
+  await chooseBaseMap(page, "aerial-be");
   // The map opens on Wallonia: the Walloon WMS shows each zoom. Leaflet drops clicks during
   // a zoom animation, so wait for each step's tiles and for the animation to end.
   for (let zoom = 9; zoom <= 18; zoom++) {
@@ -139,7 +139,7 @@ test("aerial photos go to zoom 18 and further; switching to OpenTopoMap there zo
 
   // OpenTopoMap goes to 17: the map zooms out, its tiles at their own size, and no further zoom in.
   const from = network.tiles.length;
-  await chooseBaseMap(page, baseMapButton(page), "opentopomap");
+  await chooseBaseMap(page, "opentopomap");
   await expect.poll(async () => new Set(await openTopoMapTileWidths())).toEqual(new Set([256]));
   await expect(zoomIn(page)).toHaveClass(/leaflet-disabled/);
   expect(network.tiles.slice(from).filter((tile) => tile.z > 17)).toEqual([]);
@@ -158,10 +158,10 @@ for (const viewport of [
     await page.getByRole("switch", { name: strings.accessLayerToggle }).click();
     await expect(page.locator(".access-overlay .access-legend")).toBeVisible();
     // Aerial photos have the longest attribution, so the button sits highest.
-    await chooseBaseMap(page, baseMapButton(page), "aerial-be");
+    await chooseBaseMap(page, "aerial-be");
     await page.evaluate(() => document.fonts.ready);
 
-    const button = await box(baseMapButton(page));
+    const button = await box(mapMenuButton(page));
     expect(overlaps(button, await box(page.locator(".place-search-map-bar")))).toBe(false);
     expect(overlaps(button, await box(page.locator(".access-overlay")))).toBe(false);
     // The button is fully inside the map.
@@ -172,7 +172,7 @@ for (const viewport of [
   });
 }
 
-test("the trip, its file and its GPX never hold the base map; the settings do", async ({ page }) => {
+test("the trip, its file and its GPX never hold the base map or the overlays; the settings do", async ({ page }) => {
   const trip: Trip = {
     name: "Ourthe",
     points: [
@@ -183,13 +183,14 @@ test("the trip, its file and its GPX never hold the base map; the settings do", 
   };
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, serialiseTrip(trip)]);
   const network = await openMap(page);
-  await chooseBaseMap(page, baseMapButton(page), "aerial-be");
+  await chooseBaseMap(page, "aerial-be");
+  await toggleOverlay(page, "hiking-trails");
 
   const stored = await page.evaluate(
     ([trip, settings]) => [localStorage.getItem(trip), localStorage.getItem(settings)],
     [TRIP_KEY, SETTINGS_KEY],
   );
-  expect(JSON.parse(stored[1] ?? "{}")).toMatchObject({ baseMap: "aerial-be" });
+  expect(JSON.parse(stored[1] ?? "{}")).toMatchObject({ baseMap: "aerial-be", overlays: ["hiking-trails"] });
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -200,7 +201,7 @@ test("the trip, its file and its GPX never hold the base map; the settings do", 
 
   for (const text of [stored[0] ?? "", file, ...gpx.files.map((entry) => entry.text)]) {
     expect(text).not.toBe("");
-    expect(text).not.toMatch(/baseMap|aerial-be|opentopomap|ngi-topo/i);
+    expect(text).not.toMatch(/baseMap|aerial-be|opentopomap|ngi-topo|overlays|hiking-trails/i);
   }
   expect(network.blocked).toEqual([]);
 });

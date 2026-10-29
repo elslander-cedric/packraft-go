@@ -1,5 +1,5 @@
-/* The desktop's base map button (#179): a Leaflet control above the attribution, sized like the zoom buttons. */
-.base-map-button {
+/* The desktop's Map button (#179, ADR 0032): a Leaflet control above the attribution, sized like the zoom buttons. */
+.map-menu-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;

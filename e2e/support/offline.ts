@@ -6,21 +6,26 @@ import type { BaseMapId } from "../../src/core/settings";
 const TILE_FIXTURE = readFileSync(path.join(__dirname, "../fixtures/tile.png"));
 const BROUTER_FIXTURES = path.join(__dirname, "../../src/routing/fixtures");
 
-/** Where a map tile comes from: OpenTopoMap, one region's aerial photos or the NGI's topo map. */
-export type TileSource = "opentopomap" | "wallonia" | "flanders" | "brussels" | "ngi";
+/**
+ * Where a map tile comes from: OpenTopoMap, one region's aerial photos, the NGI's topo map
+ * or the Hiking trails overlay (Waymarked Trails).
+ */
+export type TileSource = "opentopomap" | "wallonia" | "flanders" | "brussels" | "ngi" | "hiking-trails";
 
 /**
  * One map tile the page asked for, with its source and the base map that source belongs to
- * (OpenTopoMap tiles are OpenTopoMap's, even when drawn under a Belgian base map).
+ * (OpenTopoMap tiles are OpenTopoMap's, even when drawn under a Belgian base map); null for
+ * an overlay's tile, which belongs to no base map.
  */
-export type TileRequest = { z: number; x: number; y: number; source: TileSource; baseMap: BaseMapId };
+export type TileRequest = { z: number; x: number; y: number; source: TileSource; baseMap: BaseMapId | null };
 
-const baseMapOf: Record<TileSource, BaseMapId> = {
+const baseMapOf: Record<TileSource, BaseMapId | null> = {
   opentopomap: "opentopomap",
   wallonia: "aerial-be",
   flanders: "aerial-be",
   brussels: "aerial-be",
   ngi: "ngi-topo",
+  "hiking-trails": null,
 };
 
 // Half the width of the Web Mercator world, in metres.
@@ -42,7 +47,7 @@ function wmsTile(url: URL): Omit<TileRequest, "source" | "baseMap"> | null {
 /** The source of a map tile drawn on the page (an image's `src`), or null for anything else. */
 export const tileSourceOf = (src: string): TileSource | null => tileRequest(new URL(src))?.source ?? null;
 
-/** The map tile this URL asks for, or null when it isn't one of the base maps' tile requests. */
+/** The map tile this URL asks for, or null when it isn't one of the base maps' or overlays' tile requests. */
 function tileRequest(url: URL): TileRequest | null {
   const tile = (source: TileSource, z: string, x: string, y: string): TileRequest => ({
     z: Number(z),
@@ -77,6 +82,8 @@ function tileRequest(url: URL): TileRequest | null {
     (match = url.pathname.match(/^\/1\.0\.0\/topo\/default\/3857\/(\d+)\/(\d+)\/(\d+)\.png$/))
   )
     return tile("ngi", match[1], match[3], match[2]);
+  if (url.hostname === "tile.waymarkedtrails.org" && (match = url.pathname.match(/^\/hiking\/(\d+)\/(\d+)\/(\d+)\.png$/)))
+    return tile("hiking-trails", match[1], match[2], match[3]);
   return null;
 }
 
@@ -158,7 +165,7 @@ export function delayedKiwis(answer: (url: URL) => BRouterReply | Promise<BRoute
 
 /**
  * Serves every base map's tiles (OpenTopoMap, the Walloon WMS, the Flemish and Brussels WMTS,
- * the NGI's CartoWeb.be; ADR 0031) from one fixture, answers BRouter, KiWIS and Nominatim from recorded
+ * the NGI's CartoWeb.be; ADR 0031) and the Hiking trails overlay's (ADR 0032) from one fixture, answers BRouter, KiWIS and Nominatim from recorded
  * responses, and blocks every other external request, so e2e tests never
  * touch live services (ADR 0019).
  * Returns the tiles (with the base map each was for), BRouter routes, KiWIS and Nominatim requests the page asked for, and any other

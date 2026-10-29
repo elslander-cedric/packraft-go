@@ -1,7 +1,7 @@
-// Live base map check (#179, ADR 0031): asks every base map source for one tile, so we
-// notice when a government service moves its URL or ends keyless access. Run by hand with
+// Live base map check (#179, ADR 0031): asks every base map and overlay (ADR 0032) source for one
+// tile, so we notice when a service moves its URL or ends keyless access. Run by hand with
 // `npm run check:basemaps`; never part of `npm test`, `npm run e2e` or CI (ADR 0019).
-import { baseMaps, initialMapView, type Bounds, type LatLng, type TileSource } from "./mapConfig";
+import { baseMaps, initialMapView, overlays, type Bounds, type LatLng, type TileSource } from "./mapConfig";
 
 export type Tile = { z: number; x: number; y: number };
 
@@ -59,26 +59,32 @@ export function wmsTileUrl(url: string, params: Extract<TileSource, { kind: "wms
 
 const centre = ([[south, west], [north, east]]: Bounds): LatLng => [(south + north) / 2, (west + east) / 2];
 
-/** The one request per source: a tile in the middle of its bounds, or under the map's initial centre. */
+/**
+ * The one request per source, the base maps' then the overlays': a tile in the middle of
+ * its bounds, or under the map's initial centre.
+ */
 export function baseMapCheckRequests(): { label: string; url: string }[] {
   const seen = new Set<TileSource>();
   const requests: { label: string; url: string }[] = [];
-  for (const map of baseMaps)
-    for (const source of map.sources) {
-      if (seen.has(source)) continue;
-      seen.add(source);
-      const [lat, lng] = source.bounds ? centre(source.bounds) : initialMapView.center;
-      const tile = tileAt(lat, lng, source.bounds ? 15 : 12);
-      const url =
-        source.kind === "wms"
-          ? wmsTileUrl(source.url, source.params, tile)
-          : source.url
-              .replace("{s}", source.subdomains?.[0] ?? "")
-              .replace("{z}", String(tile.z))
-              .replace("{x}", String(tile.x))
-              .replace("{y}", String(tile.y));
-      requests.push({ label: `${map.name}: ${new URL(url).hostname}`, url });
-    }
+  const named = [
+    ...baseMaps.flatMap((map) => map.sources.map((source) => ({ name: map.name, source }))),
+    ...overlays.map(({ name, source }) => ({ name, source })),
+  ];
+  for (const { name, source } of named) {
+    if (seen.has(source)) continue;
+    seen.add(source);
+    const [lat, lng] = source.bounds ? centre(source.bounds) : initialMapView.center;
+    const tile = tileAt(lat, lng, source.bounds ? 15 : 12);
+    const url =
+      source.kind === "wms"
+        ? wmsTileUrl(source.url, source.params, tile)
+        : source.url
+            .replace("{s}", source.subdomains?.[0] ?? "")
+            .replace("{z}", String(tile.z))
+            .replace("{x}", String(tile.x))
+            .replace("{y}", String(tile.y));
+    requests.push({ label: `${name}: ${new URL(url).hostname}`, url });
+  }
   return requests;
 }
 

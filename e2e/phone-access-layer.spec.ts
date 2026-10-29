@@ -8,7 +8,7 @@ import { serialiseTrip } from "../src/core/saveFile";
 import type { Trip } from "../src/core/trip";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
-import { accessLayerItem, mapLayersButton, toggleAccessLayer } from "./support/mapMenu";
+import { accessLayerItem, mapMenuButton, toggleAccessLayer } from "./support/mapMenu";
 import { serveOffline } from "./support/offline";
 import { touch, type Pixel } from "./support/touch";
 
@@ -118,17 +118,17 @@ test("the layers button under the position button opens the Map menu; its switch
 
   // It sits under the position button, top right.
   const position = (await page.getByRole("button", { name: phoneText.showPositionButton }).boundingBox())!;
-  const layers = (await mapLayersButton(page).boundingBox())!;
+  const layers = (await mapMenuButton(page).boundingBox())!;
   expect(layers.y).toBeGreaterThan(position.y + position.height - 1);
   expect(Math.abs(layers.x + layers.width - (position.x + position.width))).toBeLessThan(2);
 
-  await mapLayersButton(page).click();
+  await mapMenuButton(page).click();
   await expect(accessLayerItem(page)).toHaveAttribute("aria-checked", "false");
   await accessLayerItem(page).click();
   await expect(water(page, LESSE)).toBeVisible();
   await expect(chip(page)).toBeVisible();
 
-  await mapLayersButton(page).click();
+  await mapMenuButton(page).click();
   await expect(accessLayerItem(page)).toHaveAttribute("aria-checked", "true");
   await accessLayerItem(page).click();
   await expect(waters(page)).toHaveCount(0);

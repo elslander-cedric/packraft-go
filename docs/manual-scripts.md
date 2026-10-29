@@ -12,7 +12,7 @@ These scripts are manual only: never part of `npm test`, `npm run e2e` or CI. Th
 
 ## Live base map check
 
-`npm run check:basemaps` (#179, ADR 0031). Asks every base map source for one tile: OpenTopoMap, the Walloon SPW orthophoto WMS, the Flemish orthophoto WMTS, Brussels' UrbIS and the NGI's CartoWeb.be topo. One request at a time with a 1.5 s pause, no retries, identifying itself with the project URL only. Prints OK / FAILED per source (FAILED with the HTTP status, a non-image answer or the network error, and the URL asked for); exit code 1 means a source failed and that base map is probably broken in the live app. Run it now and then, or when a base map shows blank tiles. Logic: `src/map/baseMapCheck.ts` (unit-tested offline); entry point: `scripts/check-basemaps.mts`.
+`npm run check:basemaps` (#179, ADR 0031; overlays #180, ADR 0032). Asks every base map and overlay source for one tile: OpenTopoMap, the Walloon SPW orthophoto WMS, the Flemish orthophoto WMTS, Brussels' UrbIS, the NGI's CartoWeb.be topo, then Waymarked Trails' hiking overlay. One request at a time with a 1.5 s pause, no retries, identifying itself with the project URL only. Prints OK / FAILED per source (FAILED with the HTTP status, a non-image answer or the network error, and the URL asked for); exit code 1 means a source failed and that base map or overlay is probably broken in the live app. Run it now and then, or when a base map shows blank tiles. Logic: `src/map/baseMapCheck.ts` (unit-tested offline); entry point: `scripts/check-basemaps.mts`.
 
 ## Walloon stretch geometry
 
