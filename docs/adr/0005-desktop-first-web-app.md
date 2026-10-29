@@ -3,7 +3,7 @@
 Date: 2026-10-10
 
 ## Status
-Accepted. Amended by ADR 0026: phones get the full planner in a phone layout; the desktop layout is unchanged.
+Superseded by ADR 0034 (mobile first: one planner layout). Amended earlier by ADR 0026: phones get the full planner in a phone layout.
 
 ## Context
 Planning happens at home on a big screen (ADR 0001). A web app needs no install and runs on any computer.
