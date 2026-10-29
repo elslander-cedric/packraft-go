@@ -274,6 +274,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           />
         </TabPanel>
         <TabPanel value="days">
+          {summary.days.length === 0 && <p className="phone-empty">{strings.daysPanelEmpty}</p>}
           <DaysPanel
             days={summary.days}
             access={waterAccess?.days}
