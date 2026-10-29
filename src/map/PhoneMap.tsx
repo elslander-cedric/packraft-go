@@ -20,7 +20,7 @@ import BaseMapTiles from "./BaseMapTiles";
 import { initialMapView, paneZIndex } from "./mapConfig";
 import OverlayTiles from "./OverlayTiles";
 import SearchResultLayer, { type MapCover } from "./SearchResultLayer";
-import { campIcon, legStyle, modeChangeStyle, MapAreaReporter } from "./TripMap";
+import { campIcon, legCasingStyle, legStyle, modeChangeStyle, MapAreaReporter } from "./TripMap";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 import { HOLD_MS, useHold } from "./hold";
@@ -229,7 +229,7 @@ function useClass(path: { current: { getElement(): Element | undefined } | null 
 
 type LegStatus = "pending" | "routed" | "failed";
 
-/** One leg's line; while one of its points is dragged it is a dashed straight line. */
+/** One leg's line on its casing; while one of its points is dragged it is a dashed straight line. */
 function PhoneLeg({
   mode,
   status,
@@ -250,13 +250,16 @@ function PhoneLeg({
   useClass(line, "leg-failed", status === "failed");
   const dashed = dragged || status === "failed";
   return (
-    <Polyline
-      ref={line}
-      positions={positions}
-      className={`leg leg-${mode}`}
-      interactive={false}
-      pathOptions={{ ...legStyle[mode], dashArray: dashed ? "8 8" : undefined }}
-    />
+    <>
+      <Polyline positions={positions} interactive={false} className="leg-casing" pathOptions={legCasingStyle[mode]} />
+      <Polyline
+        ref={line}
+        positions={positions}
+        className={`leg leg-${mode}`}
+        interactive={false}
+        pathOptions={{ ...legStyle[mode], dashArray: dashed ? "8 8" : undefined }}
+      />
+    </>
   );
 }
 
@@ -323,15 +326,18 @@ function TripLayers({
   });
   return (
     <>
-      {legs.map(({ leg, dragged, positions }, i) => (
-        <PhoneLeg
-          key={`leg-${i}`}
-          mode={leg.mode}
-          status={leg.route?.status ?? "pending"}
-          dragged={dragged}
-          positions={positions}
-        />
-      ))}
+      {/* The legs, above the access layer's waters. */}
+      <Pane name="trip-legs" pane="overlayPane" style={{ zIndex: paneZIndex.tripLegs }}>
+        {legs.map(({ leg, dragged, positions }, i) => (
+          <PhoneLeg
+            key={`leg-${i}`}
+            mode={leg.mode}
+            status={leg.route?.status ?? "pending"}
+            dragged={dragged}
+            positions={positions}
+          />
+        ))}
+      </Pane>
       {/* Leg hit lines sit above the drawn trip but under the access-point markers and the
           points' hit areas, so a point or an access point on a leg is still grabbed first. */}
       <Pane name="trip-leg-hits" style={{ zIndex: paneZIndex.tripLegHits }}>

@@ -55,6 +55,13 @@ export const legStyle: Record<LegMode, { color: string; weight: number }> = {
   paddle: { color: "#1b6fb5", weight: 6 },
 };
 
+// A white casing under each leg sets it apart from the overlays' trails and the access
+// layer's waters, which use colours close to the legs' own (prototype/layer-colours).
+export const legCasingStyle: Record<LegMode, { color: string; weight: number; opacity: number }> = {
+  hike: { color: "#fff", weight: legStyle.hike.weight + 5, opacity: 1 },
+  paddle: { color: "#fff", weight: legStyle.paddle.weight + 5, opacity: 1 },
+};
+
 export const modeChangeStyle: Record<ModeChange["kind"], { color: string }> = {
   "put-in": { color: "#1a8f3a" },
   "take-out": { color: "#7a3fb5" },
@@ -137,7 +144,7 @@ type LegStatus = "pending" | "routed" | "failed";
 const legStatuses: readonly LegStatus[] = ["pending", "routed", "failed"];
 const legModes: readonly LegMode[] = ["hike", "paddle"];
 
-/** One leg's line, styled by mode; failed legs are dashed. */
+/** One leg's line on its casing, styled by mode; failed legs are dashed. */
 function LegLine({ mode, status, positions }: { mode: LegMode; status: LegStatus; positions: LatLng[] }) {
   const line = useRef<LeafletPolyline>(null);
   // Leaflet only reads className when the path is created, and re-creating it
@@ -149,13 +156,16 @@ function LegLine({ mode, status, positions }: { mode: LegMode; status: LegStatus
     for (const m of legModes) element?.classList.toggle(`leg-${m}`, m === mode);
   }, [status, mode]);
   return (
-    <Polyline
-      ref={line}
-      positions={positions}
-      // className must be a prop: react-leaflet applies pathOptions via setStyle, which ignores it.
-      className={`leg leg-${mode} leg-${status}`}
-      pathOptions={{ ...legStyle[mode], dashArray: status === "failed" ? "8 8" : undefined }}
-    />
+    <>
+      <Polyline positions={positions} interactive={false} className="leg-casing" pathOptions={legCasingStyle[mode]} />
+      <Polyline
+        ref={line}
+        positions={positions}
+        // className must be a prop: react-leaflet applies pathOptions via setStyle, which ignores it.
+        className={`leg leg-${mode} leg-${status}`}
+        pathOptions={{ ...legStyle[mode], dashArray: status === "failed" ? "8 8" : undefined }}
+      />
+    </>
   );
 }
 
@@ -252,15 +262,18 @@ function TripLayers({
 
   return (
     <>
-      {trip.legs.map((leg, i) => {
-        const status = leg.route?.status ?? "pending";
-        const dragged = preview !== null && (preview.index === i || preview.index === i + 1);
-        // A routed leg follows its geometry; others (and legs touching a dragged
-        // point) are a straight line, dashed if routing failed.
-        const positions =
-          leg.route?.status === "routed" && !dragged ? [...leg.route.geometry] : [points[i], points[i + 1]];
-        return <LegLine key={`leg-${i}`} mode={leg.mode} status={status} positions={positions} />;
-      })}
+      {/* The legs, above the access layer's waters. */}
+      <Pane name="trip-legs" pane="overlayPane" style={{ zIndex: paneZIndex.tripLegs }}>
+        {trip.legs.map((leg, i) => {
+          const status = leg.route?.status ?? "pending";
+          const dragged = preview !== null && (preview.index === i || preview.index === i + 1);
+          // A routed leg follows its geometry; others (and legs touching a dragged
+          // point) are a straight line, dashed if routing failed.
+          const positions =
+            leg.route?.status === "routed" && !dragged ? [...leg.route.geometry] : [points[i], points[i + 1]];
+          return <LegLine key={`leg-${i}`} mode={leg.mode} status={status} positions={positions} />;
+        })}
+      </Pane>
       {/* Put-ins and take-outs: rings around the points where the mode changes, above the legs, below the points. */}
       <Pane name="trip-mode-changes" pane="overlayPane" style={{ zIndex: paneZIndex.tripModeChanges }}>
         {putInsAndTakeOuts(trip).map(({ kind, point }) => (
