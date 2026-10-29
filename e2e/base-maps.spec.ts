@@ -132,14 +132,17 @@ test("aerial photos go to zoom 18 and further; switching to OpenTopoMap there zo
     await page.waitForTimeout(300);
   }
   await expect.poll(() => network.tiles.some((tile) => tile.source === "wallonia" && tile.z === 18)).toBe(true);
-  // At 18 OpenTopoMap, underneath, shows its zoom 17 tiles enlarged to twice their size.
+  // From 18 OpenTopoMap, underneath, shows its zoom 17 tiles enlarged (twice their size at 18;
+  // a wheel turn may have gone a level further).
+  const zoom = Math.max(...network.tiles.filter((tile) => tile.source === "wallonia").map((tile) => tile.z));
   const openTopoMapTileWidths = () =>
     tiles(page).evaluateAll((images) =>
       images
         .filter((image) => image.closest(".leaflet-layer")?.querySelector("img[src*='opentopomap']"))
         .map((image) => Math.round(image.getBoundingClientRect().width)),
     );
-  expect(new Set(await openTopoMapTileWidths())).toEqual(new Set([512]));
+  await expect.poll(async () => new Set(await openTopoMapTileWidths())).toEqual(new Set([256 * 2 ** (zoom - 17)]));
+  expect(zoom).toBeGreaterThanOrEqual(18);
 
   // OpenTopoMap goes to 17: the map zooms out, its tiles at their own size, and no further zoom in.
   const from = network.tiles.length;

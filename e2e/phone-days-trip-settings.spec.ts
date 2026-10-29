@@ -129,7 +129,8 @@ test("a two-day trip shows two day cards with their figures; tapping a card zoom
   await expect(dayCards(page).nth(0)).toContainText(names.time);
   await expect(dayCards(page).nth(0)).not.toContainText(names.paddle);
   await expect(dayCards(page).nth(1)).toContainText(names.paddle);
-  // The figures start level with the top of the calendar tile.
+  // The figures start level with the top of the calendar tile (measured once the sheet has stopped).
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   const [body, tile] = await Promise.all([
     dayCards(page).nth(1).locator(".day-card-body").boundingBox(),
     dayTile(dayCards(page).nth(1)).boundingBox(),

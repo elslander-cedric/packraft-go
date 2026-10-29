@@ -242,11 +242,11 @@ const start = { lat: 50.3427, lng: 5.4563 };
 const storedPutIn = (page: Page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem("packraft-go.trip") ?? "null")?.trip?.points?.[1]);
 
-/** Taps the map in paddle mode: a paddle leg from the trip's end. */
+/** Taps the map in paddle mode: a paddle leg from the trip's end (left of the trip, clear of its points). */
 async function drawPaddleLeg(page: Page) {
   await nextMode(page, strings.legModePaddle).click();
   const map = (await mapRegion(page).boundingBox())!;
-  await page.touchscreen.tap(map.x + map.width / 2, map.y + map.height / 4);
+  await page.touchscreen.tap(map.x + map.width / 4, map.y + map.height / 3);
 }
 
 test("a paddle leg drawn from a hike leg's end near your slipway offers to snap the put-in; the offer floats and can be accepted", async ({
@@ -417,7 +417,7 @@ test("the next leg's mode starts at the last leg's mode; switching it makes the 
 
   await nextMode(page, strings.legModeHike).click();
   const map = (await mapRegion(page).boundingBox())!;
-  await page.touchscreen.tap(map.x + map.width / 2, map.y + map.height / 4);
+  await page.touchscreen.tap(map.x + map.width / 4, map.y + map.height / 3);
   await expect(legLines(page)).toHaveCount(2);
   await expect(legLines(page).nth(1)).toHaveClass(/leg-hike/);
   await expect(nextMode(page, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
