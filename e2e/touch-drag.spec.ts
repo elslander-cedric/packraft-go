@@ -1,10 +1,11 @@
-// #117: a finger can drag a point on the desktop layout (a tablet), and the touch helper works.
+// #117: a finger can drag a point on a tablet (the side panel layout, ADR 0034), and the touch helper works.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline } from "./support/offline";
 import { touch } from "./support/touch";
+import { freeMapBox, openPlanner } from "./support/planner";
 
-// A tall touch tablet keeps the desktop layout (see acceptance-71).
+// A tall touch tablet gets the side panel (see acceptance-118).
 test.use({ viewport: { width: 820, height: 1180 }, hasTouch: true, isMobile: true });
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
@@ -33,9 +34,8 @@ const zoomLevel = (page: Page) =>
 
 async function openMap(page: Page, options: Parameters<typeof serveOffline>[1] = {}) {
   const network = await serveOffline(page, options);
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   return { network, cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
 }
 

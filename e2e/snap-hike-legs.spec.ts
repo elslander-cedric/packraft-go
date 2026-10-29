@@ -2,9 +2,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import { freeMapBox, openPlanner } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const rows = (page: Page) => legsPanel(page).getByRole("listitem");
 
@@ -13,9 +14,8 @@ const NO_ROUTE: BRouterReply = { status: 400, body: brouterFixture("hiking-no-ro
 
 /** Opens the app and returns a function that clicks the map `dx`, `dy` pixels from its centre. */
 async function openMap(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   return (dx: number, dy: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
 }
 

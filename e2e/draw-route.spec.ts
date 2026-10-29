@@ -2,9 +2,10 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { initialMapView } from "../src/map/mapConfig";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { totals, tripPanel } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
 
 /** Ground distance per screen pixel for Web Mercator tiles at a latitude and zoom. */
 const kmPerPixel = (lat: number, zoom: number) =>
@@ -37,7 +38,7 @@ test("clicking three points draws two straight hike legs and shows their distanc
   await expect(map.locator("img.leaflet-tile-loaded").first()).toBeVisible();
 
   // Before any click: the panel is there but lists no legs.
-  await expect(legsPanel(page)).toBeVisible();
+  await expect(tripPanel(page)).toBeVisible();
   await expect(legsPanel(page).getByRole("listitem")).toHaveCount(0);
 
   const box = (await map.boundingBox())!;
@@ -79,12 +80,12 @@ test("clicking three points draws two straight hike legs and shows their distanc
 
   const legs = legsPanel(page).getByRole("listitem");
   await expect(legs).toHaveCount(2);
-  await expect(legs.nth(0)).toContainText(strings.legModeHike);
-  await expect(legs.nth(1)).toContainText(strings.legModeHike);
+  await expect(legs.nth(0)).toContainText(strings.phone.legFigures.hike);
+  await expect(legs.nth(1)).toContainText(strings.phone.legFigures.hike);
   expectWithinOneKm(await kmShown(legs.nth(0)), expectedFirst);
   expectWithinOneKm(await kmShown(legs.nth(1)), expectedSecond);
 
-  const total = legsPanel(page).getByText(strings.tripTotalDistance);
+  const total = totals(page);
   expectWithinOneKm(await kmShown(total), expectedFirst + expectedSecond);
 
   expect(network.blocked).toEqual([]);

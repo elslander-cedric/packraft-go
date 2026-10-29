@@ -5,11 +5,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import { freeMapBox, openPlanner } from "./support/planner";
 
 type Px = { x: number; y: number };
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const panel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
+const panel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const rows = (page: Page) => panel(page).getByRole("listitem");
 const undoBtn = (page: Page) => page.getByRole("button", { name: strings.undoButton });
@@ -18,9 +19,8 @@ const deleteBtn = (page: Page) => page.getByRole("button", { name: strings.delet
 const SNAPPED: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 
 async function openMap(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 

@@ -8,6 +8,14 @@ import { ACCESS_POINTS_KEY } from "../src/persistence/accessPointStorage";
 import { strings } from "../src/ui/strings";
 import { nominatimFixture, serveOffline } from "./support/offline";
 import { touch } from "./support/touch";
+import {
+  accessPointDialog,
+  editSelectedAccessPoint,
+  freeMapCentre,
+  markAccessPointAt,
+  openPlanner,
+  saveAccessPoint,
+} from "./support/planner";
 
 const text = strings.accessPoints;
 const phoneText = strings.phone;
@@ -27,19 +35,29 @@ async function centreOf(shape: Locator) {
 }
 
 async function openMap(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await openPlanner(page);
 }
 
-test.describe("on the desktop", () => {
-  const panel = (page: Page) => page.getByRole("complementary", { name: text.panelLabel });
+// Updated for ADR 0034: a desktop-sized window gets the one planner; the name is typed in the
+// access point's dialog and stored on Save.
+test.describe("on a desktop-sized window", () => {
+  const dialog = accessPointDialog;
+  const dialogName = (page: Page) => dialog(page).getByLabel(text.nameLabel, { exact: true });
+  // Not through the map region, which the dialog hides from the accessibility tree while open.
+  const marker = (page: Page) => page.locator(".leaflet-container .access-point-marker");
 
   async function drag(page: Page, dx: number, dy: number) {
-    const from = await centreOf(markers(page).first());
+    const from = await centreOf(marker(page).first());
     await page.mouse.move(from.x, from.y);
     await page.mouse.down();
     await page.mouse.move(from.x + dx, from.y + dy, { steps: 5 });
     await page.mouse.up();
+  }
+
+  /** Opens the point's dialog from its marker and its row. */
+  async function editPoint(page: Page) {
+    await marker(page).first().click();
+    await editSelectedAccessPoint(page);
   }
 
   test("a point added offline gets its default name back online; a typed name survives a drag", async ({
@@ -51,19 +69,18 @@ test.describe("on the desktop", () => {
 
     // Offline: the point is added and saved at once, without a name, and nothing is asked.
     await context.setOffline(true);
-    await panel(page).getByRole("button", { name: text.addButton }).click();
-    const centre = await centreOf(mapRegion(page));
-    await page.mouse.click(centre.x, centre.y);
-    await expect(nameField(page)).toHaveValue("");
-    await expect(nameField(page)).toHaveAttribute("placeholder", text.namePlaceholder);
+    await markAccessPointAt(page, await freeMapCentre(page));
+    await expect(dialogName(page)).toHaveValue("");
+    await expect(dialogName(page)).toHaveAttribute("placeholder", text.namePlaceholder);
     await expect.poll(async () => (await stored(page))?.[0]?.nameSource).toBe("to-look-up");
     expect((await stored(page))[0].name).toBe("");
     expect(network.nominatim).toHaveLength(0);
 
     // Back online: the default name shows in the field, greyed, leads the marker's name, and is saved.
     await context.setOffline(false);
-    await expect(nameField(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
-    await expect(nameField(page)).toHaveValue("");
+    await expect(dialogName(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
+    await expect(dialogName(page)).toHaveValue("");
+    await saveAccessPoint(page);
     await expect(markers(page).getByRole("img")).toHaveAccessibleName(
       text.marker(DEFAULT_NAME, text.useAndKind(text.uses.both, text.kinds["informal-bank"])),
     );
@@ -78,29 +95,38 @@ test.describe("on the desktop", () => {
     expect(Number(network.nominatim[1].searchParams.get("lat"))).toBeCloseTo(moved.lat, 6);
 
     // A name you type is kept: a drag doesn't look it up again.
-    await expect(nameField(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
-    await nameField(page).fill("Hotton bridge");
+    await expect.poll(async () => (await stored(page))[0]).toMatchObject({ name: DEFAULT_NAME, nameSource: "default" });
+    await editPoint(page);
+    await dialogName(page).fill("Hotton bridge");
+    await saveAccessPoint(page);
     await expect.poll(async () => (await stored(page))[0]).toMatchObject({ name: "Hotton bridge", nameSource: "typed" });
     await drag(page, -60, -40);
     await expect.poll(async () => (await stored(page))[0].position).not.toEqual(moved);
     await page.waitForTimeout(1500);
     expect(network.nominatim).toHaveLength(2);
-    await expect(nameField(page)).toHaveValue("Hotton bridge");
     await expect(markers(page).getByRole("img")).toHaveAccessibleName(
       text.marker("Hotton bridge", text.useAndKind(text.uses.both, text.kinds["informal-bank"])),
     );
 
     // Markup characters in a name stay text in the marker (CLAUDE.md: names with / : & <).
     const awkward = 'A & <b>B</b> "C" / D: E';
-    await nameField(page).fill(awkward);
+    await editPoint(page);
+    await expect(dialogName(page)).toHaveValue("Hotton bridge");
+    await dialogName(page).fill(awkward);
+    await saveAccessPoint(page);
     await expect(markers(page).getByRole("img")).toHaveAccessibleName(
       text.marker(awkward, text.useAndKind(text.uses.both, text.kinds["informal-bank"])),
     );
-    await expect(markers(page).locator("b")).toHaveCount(0);
+    await expect(marker(page).locator("b")).toHaveCount(0);
 
-    // Clearing it brings the default name back.
-    await nameField(page).fill("");
-    await expect(nameField(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
+    // Clearing it (and saving) brings the default name back.
+    await editPoint(page);
+    await dialogName(page).fill("");
+    await saveAccessPoint(page);
+    await expect.poll(async () => (await stored(page))[0]).toMatchObject({ name: DEFAULT_NAME, nameSource: "default" });
+    await expect(markers(page).getByRole("img")).toHaveAccessibleName(
+      text.marker(DEFAULT_NAME, text.useAndKind(text.uses.both, text.kinds["informal-bank"])),
+    );
     expect(network.blocked).toEqual([]);
   });
 });

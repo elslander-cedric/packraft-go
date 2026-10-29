@@ -60,6 +60,7 @@ export type PhoneMapProps = {
   access?: Omit<AccessLayerProps, "touch"> | null;
   /** The shown place search result (#174): the map moves to it, into the part `searchCover` leaves free, and pins it. */
   searchResult?: SearchResult | null;
+  /** What hides the map (the top row, the sheet or the side panel); a fitted trip and a search result stay clear of it. */
   searchCover?: () => MapCover;
   /** The visible map, when it loads and after every move (place search ranks places in it). */
   onAreaChange?: (area: SearchArea) => void;
@@ -80,14 +81,24 @@ const selectedPointStyle = { ...pointStyle, color: "#000", weight: 3, fillColor:
 const hitStyle = { stroke: false, fillColor: "#000", fillOpacity: 0 };
 
 /** Fits the trip on screen when the map opens, and centres on your position when it is first shown. */
-function MapView({ trip, position }: Pick<PhoneMapProps, "trip" | "position">) {
+function MapView({ trip, position, cover }: Pick<PhoneMapProps, "trip" | "position"> & { cover?: () => MapCover }) {
   const map = useMap();
-  const fitted = useRef(false);
+  // The number of points the map last saw; null until it opens.
+  const shown = useRef<number | null>(null);
   useEffect(() => {
-    // Once: after that the map is the user's to move, however the trip changes.
-    if (fitted.current || trip.points.length === 0) return;
-    fitted.current = true;
-    map.fitBounds(latLngBounds(trip.points.map((p) => [p.lat, p.lng])), { padding: [24, 24] });
+    // Fits the trip the map opens with, and a trip opened over an empty one (it arrives with
+    // several points at once). Otherwise the map is the user's to move: the first point drawn
+    // on an empty trip doesn't move it.
+    const before = shown.current;
+    shown.current = trip.points.length;
+    const opened = before === null ? trip.points.length > 0 : before === 0 && trip.points.length > 1;
+    if (!opened) return;
+    // Into the part of the map the top row, the sheet or the side panel leave free.
+    const { top, right, bottom } = cover?.() ?? { top: 0, right: 0, bottom: 0 };
+    map.fitBounds(latLngBounds(trip.points.map((p) => [p.lat, p.lng])), {
+      paddingTopLeft: [24, top + 24],
+      paddingBottomRight: [right + 24, bottom + 24],
+    });
   }, [map, trip]);
   const centred = useRef(false);
   useEffect(() => {
@@ -418,7 +429,7 @@ export default function PhoneMap({
       <BaseMapTiles id={baseMap} />
       <OverlayTiles ids={overlays} />
       {access && <AccessLayer {...access} touch />}
-      <MapView trip={trip} position={position} />
+      <MapView trip={trip} position={position} cover={searchCover} />
       {focus && <Focus focus={focus} />}
       <Taps onTap={onMapTap} />
       <TripLayers

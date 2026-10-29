@@ -1,9 +1,10 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { freeMapBox, openPlanner, totals } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const legRows = (page: Page) => legsPanel(page).getByRole("listitem");
@@ -25,9 +26,8 @@ const expectNear = (actual: Pixel, expected: Pixel, tolerance = 3) => {
 
 async function openMap(page: Page) {
   const network = await serveOffline(page);
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   return { network, cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
 }
 
@@ -72,7 +72,7 @@ test("draw, drag a point, delete a point, then undo everything back to an empty 
   for (const p of [a, b, c]) await page.mouse.click(p.x, p.y);
   await expect(points(page)).toHaveCount(3);
   await expect(legRows(page)).toHaveCount(2);
-  const totalBefore = await legsPanel(page).getByText(strings.tripTotalDistance).textContent();
+  const totalBefore = await totals(page).textContent();
 
   // Drag the middle point: it moves, both legs follow, no point is added.
   await drag(page, b, moved);
@@ -82,11 +82,13 @@ test("draw, drag a point, delete a point, then undo everything back to an empty 
   // The other points stay put (the map did not pan).
   expectNear(await centreOf(points(page).nth(0)), a);
   expectNear(await centreOf(points(page).nth(2)), c);
-  const firstLeg = (await legLines(page).nth(0).boundingBox())!;  expect(Math.abs(firstLeg.y + firstLeg.height - moved.y)).toBeLessThan(6);
-  await expect(legsPanel(page).getByText(strings.tripTotalDistance)).not.toHaveText(totalBefore!);
+  const firstLeg = (await legLines(page).nth(0).boundingBox())!;
+  expect(Math.abs(firstLeg.y + firstLeg.height - moved.y)).toBeLessThan(6);
+  await expect(totals(page)).not.toHaveText(totalBefore!);
 
-  // Clicking an existing point selects it instead of adding a point.
-  await expect(deleteButton(page)).toBeDisabled();
+  // Clicking an existing point selects it instead of adding a point. (The delete button
+  // is only shown while a point is selected.)
+  await expect(deleteButton(page)).toHaveCount(0);
   await page.mouse.click(moved.x, moved.y);
   await expect(points(page)).toHaveCount(3);
   await expect(mapRegion(page).locator("path.point.point-selected")).toHaveCount(1);
@@ -95,7 +97,7 @@ test("draw, drag a point, delete a point, then undo everything back to an empty 
   await deleteButton(page).click();
   await expect(points(page)).toHaveCount(2);
   await expect(legRows(page)).toHaveCount(1);
-  await expect(legRows(page).nth(0)).toContainText(strings.legModeHike);
+  await expect(legRows(page).nth(0)).toContainText(strings.phone.legFigures.hike);
   const merged = (await legLines(page).nth(0).boundingBox())!;
   expect(Math.abs(merged.x - a.x)).toBeLessThan(6);
   expect(Math.abs(merged.x + merged.width - c.x)).toBeLessThan(6);
@@ -108,7 +110,7 @@ test("draw, drag a point, delete a point, then undo everything back to an empty 
   // Undo the drag: the point is back where it was drawn.
   await undoButton(page).click();
   expectNear(await centreOf(points(page).nth(1)), b);
-  await expect(legsPanel(page).getByText(strings.tripTotalDistance)).toHaveText(totalBefore!);
+  await expect(totals(page)).toHaveText(totalBefore!);
 
   // Undo the three adds, the last one with the keyboard shortcut.
   await undoButton(page).click();

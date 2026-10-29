@@ -1,16 +1,34 @@
 // Camps and per-day totals (#8). BRouter is answered from recorded responses:
 // the hiking profile gets the recorded trail (3.2 km, 100 m climb, 49 min),
 // the river profile the recorded Lesse track (5.9 km, about 1 h 11 min at 5 km/h).
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import {
+  dayCards,
+  freeMapBox,
+  legRows as legCards,
+  menuItem,
+  openPlanner,
+  openTripFile,
+  pickNextMode,
+  saveTripFile,
+  showTab,
+} from "./support/planner";
 
+// The trip panel shows one tab at a time (ADR 0034): each list shows its tab first.
+const legRows = async (page: Page) => {
+  await showTab(page, strings.phone.tabs.legs);
+  return legCards(page);
+};
+const dayRows = async (page: Page) => {
+  await showTab(page, strings.phone.tabs.days);
+  return dayCards(page);
+};
+const dayLabels = strings.phone.dayFigures;
+const dayTime = (day: Locator) => day.locator(".day-figure-time");
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const legRows = (page: Page) => legsPanel(page).getByRole("listitem");
-const daysPanel = (page: Page) => page.getByRole("complementary", { name: strings.daysPanelLabel });
-const dayRows = (page: Page) => daysPanel(page).getByRole("listitem");
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const campMarkers = (page: Page) => mapRegion(page).locator(".camp-marker");
 const campButton = (page: Page) => page.getByRole("button", { name: strings.campButton });
@@ -29,18 +47,15 @@ function minutes(text: string): number {
 
 /** Draws a hike leg then a paddle leg, both routed; returns the middle point's position on screen. */
 async function drawHikeThenPaddle(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  for (const dx of [-150, 0, 150]) await page.mouse.click(middle.x + dx, middle.y);
-  await legRows(page)
-    .nth(1)
-    .getByRole("group", { name: strings.legModeLabel(2) })
-    .getByRole("button", { name: strings.legModePaddle })
-    .click();
-  await expect(legRows(page).nth(1)).toContainText(strings.dropLabel);
-  await expect(legRows(page).nth(0)).toContainText(strings.climbLabel);
+  await page.mouse.click(middle.x - 150, middle.y);
+  await page.mouse.click(middle.x, middle.y);
+  await pickNextMode(page, "paddle");
+  await page.mouse.click(middle.x + 150, middle.y);
+  await expect((await legRows(page)).nth(1)).toContainText(strings.dropLabel);
+  await expect((await legRows(page)).nth(0)).toContainText(strings.climbLabel);
   return middle;
 }
 
@@ -53,51 +68,55 @@ async function campAtMiddle(page: Page, middle: { x: number; y: number }) {
 test("a trip without camps is one day with the trip's totals", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await drawHikeThenPaddle(page);
-  await expect(dayRows(page)).toHaveCount(1);
-  await expect(dayRows(page).nth(0)).toContainText(strings.dayLabel(1));
-  await expect(dayRows(page).nth(0)).toContainText(`${strings.dayHikeDistance} 3.2 km`);
-  await expect(dayRows(page).nth(0)).toContainText(`${strings.dayPaddleDistance} 5.9 km`);
-  await expect(campButton(page)).toBeDisabled(); // no point selected
+  const days = await dayRows(page);
+  await expect(days).toHaveCount(1);
+  await expect(days.nth(0).locator(".day-tile")).toHaveAccessibleName(strings.dayLabel(1));
+  await expect(days.nth(0)).toContainText(`${dayLabels.hike} 3.2 km`);
+  await expect(days.nth(0)).toContainText(`${dayLabels.paddle} 5.9 km`);
+  // The camp button is only shown while a point is selected.
+  await expect(campButton(page)).toHaveCount(0);
 });
 
 test("a camp splits the trip into two days with correct per-day totals, and undo removes it", async ({ page }) => {
   const network = await serveOffline(page, { brouter: byProfile });
   const middle = await drawHikeThenPaddle(page);
   const routedSoFar = network.brouter.length;
+  const legs = await legRows(page);
+  const legDescent = (await legs.nth(0).textContent())!.match(/Descent (\d+) m/)![1];
+  const paddleMin = minutes((await legs.nth(1).locator(".phone-row-time").textContent()) ?? "");
 
   await campAtMiddle(page, middle);
   await expect(campMarkers(page)).toHaveCount(1);
   await expect(campButton(page)).toHaveAttribute("aria-pressed", "true");
-  await expect(dayRows(page)).toHaveCount(2);
+  const days = await dayRows(page);
+  await expect(days).toHaveCount(2);
 
-  // Day 1: the hike leg only.
-  const day1 = dayRows(page).nth(0);
-  await expect(day1).toContainText(strings.dayLabel(1));
-  await expect(day1).toContainText(`${strings.dayHikeDistance} 3.2 km`);
-  await expect(day1).toContainText(`${strings.dayPaddleDistance} 0.0 km`);
-  await expect(day1).toContainText(`${strings.climbLabel} 100 m`);
-  const legDescent = (await legRows(page).nth(0).textContent())!.match(/Descent (\d+) m/)![1];
-  await expect(day1).toContainText(`${strings.descentLabel} ${legDescent} m`);
-  await expect(day1.locator(".day-time")).toHaveText(`${strings.dayTimeEstimate} 49 min`);
+  // Day 1: the hike leg only. (A day card leaves out a figure that is zero.)
+  const day1 = days.nth(0);
+  await expect(day1.locator(".day-tile")).toHaveAccessibleName(strings.dayLabel(1));
+  await expect(day1).toContainText(`${dayLabels.hike} 3.2 km`);
+  await expect(day1).not.toContainText(dayLabels.paddle);
+  await expect(day1).toContainText(`${dayLabels.climb} 100 m`);
+  await expect(day1).toContainText(`${dayLabels.descent} ${legDescent} m`);
+  await expect(dayTime(day1)).toHaveText(`${dayLabels.time} 49 min`);
 
   // Day 2: the paddle leg only; paddle legs add no climb or descent.
-  const day2 = dayRows(page).nth(1);
-  await expect(day2).toContainText(strings.dayLabel(2));
-  await expect(day2).toContainText(`${strings.dayHikeDistance} 0.0 km`);
-  await expect(day2).toContainText(`${strings.dayPaddleDistance} 5.9 km`);
-  await expect(day2).toContainText(`${strings.climbLabel} 0 m`);
-  const paddleMin = minutes((await legRows(page).nth(1).locator(".leg-time").textContent()) ?? "");
-  expect(minutes((await day2.locator(".day-time").textContent()) ?? "")).toBe(paddleMin);
+  const day2 = days.nth(1);
+  await expect(day2.locator(".day-tile")).toHaveAccessibleName(strings.dayLabel(2));
+  await expect(day2).not.toContainText(dayLabels.hike);
+  await expect(day2).toContainText(`${dayLabels.paddle} 5.9 km`);
+  await expect(day2).not.toContainText(dayLabels.climb);
+  expect(minutes((await dayTime(day2).textContent()) ?? "")).toBe(paddleMin);
 
   // Marking a camp changes no leg, so nothing is snapped again.
   expect(network.brouter.length).toBe(routedSoFar);
-  await expect(legRows(page).nth(0)).toContainText(strings.climbLabel);
+  await expect((await legRows(page)).nth(0)).toContainText(strings.climbLabel);
 
   // Undo takes the camp away and the trip is one day again, still routed.
   await undoButton(page).click();
   await expect(campMarkers(page)).toHaveCount(0);
-  await expect(dayRows(page)).toHaveCount(1);
-  await expect(legRows(page).nth(0)).toContainText(strings.climbLabel);
+  await expect(await dayRows(page)).toHaveCount(1);
+  await expect((await legRows(page)).nth(0)).toContainText(strings.climbLabel);
   expect(network.brouter.length).toBe(routedSoFar);
 });
 
@@ -105,26 +124,27 @@ test("unmarking a camp joins the days again", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   const middle = await drawHikeThenPaddle(page);
   await campAtMiddle(page, middle);
-  await expect(dayRows(page)).toHaveCount(2);
+  await expect(await dayRows(page)).toHaveCount(2);
 
   await campButton(page).click(); // the point is still selected
   await expect(campButton(page)).toHaveAttribute("aria-pressed", "false");
   await expect(campMarkers(page)).toHaveCount(0);
-  await expect(dayRows(page)).toHaveCount(1);
+  await expect(await dayRows(page)).toHaveCount(1);
 });
 
 test("camps are kept across a reload", async ({ page }) => {
   const network = await serveOffline(page, { brouter: byProfile });
   const middle = await drawHikeThenPaddle(page);
   await campAtMiddle(page, middle);
-  await expect(dayRows(page)).toHaveCount(2);
+  await expect(await dayRows(page)).toHaveCount(2);
   const routedBefore = network.brouter.length;
 
   await page.reload();
   await expect(points(page)).toHaveCount(3);
   await expect(campMarkers(page)).toHaveCount(1);
-  await expect(dayRows(page)).toHaveCount(2);
-  await expect(dayRows(page).nth(0).locator(".day-time")).toHaveText(`${strings.dayTimeEstimate} 49 min`);
+  const days = await dayRows(page);
+  await expect(days).toHaveCount(2);
+  await expect(dayTime(days.nth(0))).toHaveText(`${dayLabels.time} 49 min`);
   expect(network.brouter.length).toBe(routedBefore);
 });
 
@@ -132,43 +152,35 @@ test("camps are kept through save to file and open file", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   const middle = await drawHikeThenPaddle(page);
   await campAtMiddle(page, middle);
-  await expect(dayRows(page)).toHaveCount(2);
+  await expect(await dayRows(page)).toHaveCount(2);
 
-  const [download] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByRole("button", { name: strings.saveFileButton }).click(),
-  ]);
+  const download = await saveTripFile(page);
   const saved = await download.path();
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
-  await page.getByRole("button", { name: strings.newTripButton }).click();
+  await menuItem(page, strings.phone.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await expect(points(page)).toHaveCount(0);
   await expect(campMarkers(page)).toHaveCount(0);
 
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    page.getByRole("button", { name: strings.openFileButton }).click(),
-  ]);
-  await chooser.setFiles(saved);
+  await openTripFile(page, saved);
   await expect(points(page)).toHaveCount(3);
   await expect(campMarkers(page)).toHaveCount(1);
-  await expect(dayRows(page)).toHaveCount(2);
-  await expect(dayRows(page).nth(1)).toContainText(`${strings.dayPaddleDistance} 5.9 km`);
+  const days = await dayRows(page);
+  await expect(days).toHaveCount(2);
+  await expect(days.nth(1)).toContainText(`${dayLabels.paddle} 5.9 km`);
 });
 
 test("a day waits for its legs to be snapped before showing its time", async ({ page }) => {
   let answer: (reply: BRouterReply) => void = () => {};
   const held = new Promise<BRouterReply>((resolve) => (answer = resolve));
   await serveOffline(page, { brouter: () => held });
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   await page.mouse.click(box.x + box.width / 2 - 100, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2 + 100, box.y + box.height / 2);
 
-  await expect(dayRows(page).nth(0).locator(".day-time")).toHaveText(
-    `${strings.dayTimeEstimate} ${strings.timePending}`,
-  );
+  const days = await dayRows(page);
+  await expect(dayTime(days.nth(0))).toHaveText(`${dayLabels.time} ${strings.timePending}`);
   answer(TRAIL);
-  await expect(dayRows(page).nth(0).locator(".day-time")).toHaveText(`${strings.dayTimeEstimate} 49 min`);
+  await expect(dayTime(days.nth(0))).toHaveText(`${dayLabels.time} 49 min`);
 });

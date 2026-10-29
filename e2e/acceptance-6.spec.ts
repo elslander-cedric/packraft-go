@@ -1,27 +1,26 @@
 // Acceptance tests for #6 (edit the route: drag, delete, undo), written from
 // the issue's acceptance criteria. They observe only what a user
-// sees: SVG shapes on the map, the legs panel, toolbar buttons, network traffic.
+// sees: SVG shapes on the map, the Legs tab, the floating buttons, network traffic.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { freeMapBox, openPlanner, tripPanel } from "./support/planner";
 
 type Px = { x: number; y: number };
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const panel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
+const panel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const markers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const rows = (page: Page) => panel(page).getByRole("listitem");
 const undoBtn = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const deleteBtn = (page: Page) => page.getByRole("button", { name: strings.deletePointButton });
-const total = async (page: Page) =>
-  (await panel(page).getByText(strings.tripTotalDistance).textContent()) ?? "";
+const total = async (page: Page) => (await tripPanel(page).locator(".phone-totals").textContent()) ?? "";
 
 async function openMap(page: Page) {
   const network = await serveOffline(page);
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = await freeMapBox(page);
   return { network, cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
 }
 
@@ -92,7 +91,8 @@ test("clicking an existing point selects it instead of adding a point", async ({
   const { cx, cy } = await openMap(page);
   const a = { x: cx - 150, y: cy }, b = { x: cx + 150, y: cy };
   for (const p of [a, b]) await page.mouse.click(p.x, p.y);
-  await expect(deleteBtn(page)).toBeDisabled();
+  // The delete button is only shown while a point is selected.
+  await expect(deleteBtn(page)).toHaveCount(0);
   await page.mouse.click(b.x, b.y);
   await expect(markers(page)).toHaveCount(2);
   await expect(rows(page)).toHaveCount(1);
@@ -121,7 +121,7 @@ test("AC2: deleting a middle point merges its legs; deleting an end point remove
   await deleteBtn(page).click();
   await expect(markers(page)).toHaveCount(3);
   await expect(rows(page)).toHaveCount(2);
-  await expect(rows(page).first()).toContainText(strings.legModeHike);
+  await expect(rows(page).first()).toContainText(strings.phone.legFigures.hike);
   const merged = await ends(legLines(page).nth(0));
   expect(near(merged[0], p[0]) && near(merged[1], p[2])).toBe(true);
 
@@ -172,7 +172,7 @@ test("AC3/AC6: draw, drag, delete, then undo repeatedly back to an empty trip", 
   await expect(markers(page)).toHaveCount(0);
   await expect(legLines(page)).toHaveCount(0);
   await expect(undoBtn(page)).toBeDisabled();
-  await expect(panel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
 
   // The map still works after all that: a click adds a point again.
   await page.mouse.click(cx, cy);

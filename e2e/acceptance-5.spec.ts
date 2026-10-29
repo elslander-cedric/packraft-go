@@ -5,13 +5,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import { freeMapCentre, legLines, legRows as rows, mapClicker, mapRegion, nextLegMode, openPlanner } from "./support/planner";
 
-const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const rows = (page: Page) => legsPanel(page).getByRole("listitem");
-const modeGroup = (page: Page, leg: number) => legsPanel(page).getByRole("group", { name: strings.legModeLabel(leg + 1) });
-const modeButton = (page: Page, leg: number, label: string) => modeGroup(page, leg).getByRole("button", { name: label });
 const profiles = (urls: URL[]) => urls.map((u) => u.searchParams.get("profile"));
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
@@ -19,27 +14,26 @@ const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.g
 const RIVER_NO_ROUTE: BRouterReply = { status: 400, body: "target island detected for section 0" };
 
 async function openMap(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
-  return (dx: number, dy: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
+  await openPlanner(page);
+  return mapClicker(page);
 }
 
-test("AC1/AC3: every leg row has a Hike/Paddle switch; paddle legs look different in the panel and on the map", async ({
+/** The map's free centre's x, for markers placed at offsets from it. */
+const centreX = async (page: Page) => (await freeMapCentre(page)).x;
+
+// Updated for ADR 0034: a leg's mode is picked with the next leg's mode toggle when it is drawn.
+test("AC1/AC3: a leg is drawn with the next leg's mode; paddle legs look different in the panel and on the map", async ({
   page,
 }) => {
   const network = await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
   const clickMap = await openMap(page);
+  await expect(nextLegMode(page, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
   await clickMap(-100, 0);
-  await clickMap(0, 0);
-  await clickMap(100, 0);
+  await clickMap(0, 0, "paddle");
+  await clickMap(100, 0, "hike");
   await expect(rows(page)).toHaveCount(2);
-  for (const i of [0, 1]) {
-    await expect(modeButton(page, i, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
-    await expect(modeButton(page, i, strings.legModePaddle)).toHaveAttribute("aria-pressed", "false");
-  }
-
-  await modeButton(page, 0, strings.legModePaddle).click();
+  await expect(rows(page).nth(0)).toHaveClass(/phone-row-paddle/);
+  await expect(rows(page).nth(1)).toHaveClass(/phone-row-hike/);
   await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
 
   const [paddleStyle, hikeStyle] = await Promise.all(
@@ -50,52 +44,55 @@ test("AC1/AC3: every leg row has a Hike/Paddle switch; paddle legs look differen
     ),
   );
   expect(paddleStyle.stroke).not.toBe(hikeStyle.stroke);
-  const [paddleRowBg, hikeRowBg] = await Promise.all(
-    [0, 1].map((i) => rows(page).nth(i).evaluate((el) => getComputedStyle(el).backgroundColor)),
+  // In the panel, the row's distance icon has the mode's colour.
+  const [paddleIcon, hikeIcon] = await Promise.all(
+    [0, 1].map((i) =>
+      rows(page)
+        .nth(i)
+        .locator(".phone-row-distance .phone-row-figure-icon")
+        .evaluate((el) => getComputedStyle(el).color),
+    ),
   );
-  expect(paddleRowBg).not.toBe(hikeRowBg);
-  expect(profiles(network.brouter)).toEqual(["hiking-mountain", "hiking-mountain", "river"]);
+  expect(paddleIcon).not.toBe(hikeIcon);
+  expect(profiles(network.brouter)).toEqual(["river", "hiking-mountain"]);
   expect(network.blocked).toEqual([]);
 });
 
-test("clicking the mode a leg already has sends no request and adds no undo step", async ({ page }) => {
+test("picking the next leg's mode sends no request and adds no undo step", async ({ page }) => {
   const network = await serveOffline(page, { brouter: () => TRAIL });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
   await clickMap(100, 0);
   await expect(legLines(page)).toHaveClass(/leg-routed/);
 
-  for (let i = 0; i < 3; i++) await modeButton(page, 0, strings.legModeHike).click();
+  for (const mode of ["paddle", "hike", "paddle", "paddle"] as const) {
+    await nextLegMode(page, mode === "hike" ? strings.legModeHike : strings.legModePaddle).click();
+  }
   await expect(legLines(page)).toHaveClass(/leg-routed/);
+  await expect(rows(page).nth(0)).toHaveClass(/phone-row-hike/);
   expect(network.brouter).toHaveLength(1);
 
-  // One undo removes the last point (the most recent real edit), not a no-op switch.
+  // One undo removes the last point (the most recent real edit), not a pick.
   await page.getByRole("button", { name: strings.undoButton }).click();
   await expect(rows(page)).toHaveCount(0);
 });
 
-test("Ctrl+Z undoes a mode switch; repeated switches never re-ask BRouter for a leg it already answered", async ({
+test("a paddle leg is routed on the river once; Ctrl+Z removes it and drawing it as a hike asks the trail profile", async ({
   page,
 }) => {
   const network = await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
-  await clickMap(100, 0);
-  await expect(legLines(page)).toHaveClass(/leg-routed/);
-
-  await modeButton(page, 0, strings.legModePaddle).click();
+  await clickMap(100, 0, "paddle");
   await expect(rows(page).nth(0)).toContainText(`${strings.dropLabel} 7 m`);
-  await modeButton(page, 0, strings.legModeHike).click();
-  await expect(rows(page).nth(0)).toContainText(`${strings.climbLabel} 100 m`);
-  await modeButton(page, 0, strings.legModePaddle).click();
-  await expect(rows(page).nth(0)).toContainText(`${strings.dropLabel} 7 m`);
-  expect(profiles(network.brouter)).toEqual(["hiking-mountain", "river"]);
+  expect(profiles(network.brouter)).toEqual(["river"]);
 
   await page.keyboard.press("ControlOrMeta+z");
-  await expect(modeButton(page, 0, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
+  await expect(rows(page)).toHaveCount(0);
+  await clickMap(100, 0, "hike");
   await expect(rows(page).nth(0)).toContainText(`${strings.climbLabel} 100 m`);
   await expect(rows(page).nth(0)).not.toContainText(strings.dropLabel);
-  expect(profiles(network.brouter)).toEqual(["hiking-mountain", "river"]);
+  expect(profiles(network.brouter)).toEqual(["river", "hiking-mountain"]);
 });
 
 test("a paddle leg that can't be snapped stays as a dashed straight paddle leg with a message, and retry asks the river profile again", async ({
@@ -108,10 +105,8 @@ test("a paddle leg that can't be snapped stays as a dashed straight paddle leg w
   const clickMap = await openMap(page);
   await clickMap(-150, 0);
   await clickMap(0, 0);
-  await clickMap(150, 0);
-  await expect(legLines(page).nth(1)).toHaveClass(/leg-routed/);
-
-  await modeButton(page, 1, strings.legModePaddle).click();
+  await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
+  await clickMap(150, 0, "paddle");
 
   const row = rows(page).nth(1);
   // Updated in round 2: a paddle leg that fails says no river route was found.
@@ -121,7 +116,7 @@ test("a paddle leg that can't be snapped stays as a dashed straight paddle leg w
   await expect(line).toHaveClass(/leg-paddle/);
   expect(((await line.getAttribute("d")) ?? "").match(/[ML]/g)).toEqual(["M", "L"]);
   expect(await line.getAttribute("stroke-dasharray")).toBeTruthy();
-  await expect(modeButton(page, 1, strings.legModePaddle)).toHaveAttribute("aria-pressed", "true");
+  await expect(row).toHaveClass(/phone-row-paddle/);
   await expect(row).not.toContainText(strings.dropLabel);
   await expect(row).not.toContainText(strings.climbLabel);
   await expect(rows(page)).toHaveCount(2);
@@ -132,17 +127,18 @@ test("a paddle leg that can't be snapped stays as a dashed straight paddle leg w
   await row.getByRole("button", { name: strings.retryRouting }).click();
   await expect(line).toHaveClass(/leg-routed/);
   await expect(row).toContainText(`${strings.dropLabel} 7 m`);
-  expect(profiles(network.brouter)).toEqual(["hiking-mountain", "hiking-mountain", "river", "river"]);
+  expect(profiles(network.brouter)).toEqual(["hiking-mountain", "river", "river"]);
   expect(network.blocked).toEqual([]);
 });
 
 test("a portage (paddle, hike, paddle) shows a take-out then a put-in", async ({ page }) => {
   await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
   const clickMap = await openMap(page);
-  for (const dx of [-150, -50, 50, 150]) await clickMap(dx, 0);
+  await clickMap(-150, 0);
+  await clickMap(-50, 0, "paddle");
+  await clickMap(50, 0, "hike");
+  await clickMap(150, 0, "paddle");
   await expect(rows(page)).toHaveCount(3);
-  await modeButton(page, 0, strings.legModePaddle).click();
-  await modeButton(page, 2, strings.legModePaddle).click();
 
   // Updated in round 2: the trip starts and ends on the water, so besides the
   // portage's take-out and put-in, its start is a put-in and its end a take-out.
@@ -150,16 +146,15 @@ test("a portage (paddle, hike, paddle) shows a take-out then a put-in", async ({
   const putIn = mapRegion(page).locator("path.put-in");
   await expect(takeOut).toHaveCount(2);
   await expect(putIn).toHaveCount(2);
-  const mapBox = (await mapRegion(page).boundingBox())!;
-  const centreX = mapBox.x + mapBox.width / 2;
+  const centre = await centreX(page);
   const cx = async (l: typeof putIn) => {
     const b = (await l.boundingBox())!;
     return b.x + b.width / 2;
   };
-  expect(Math.abs((await cx(putIn.nth(0))) - (centreX - 150))).toBeLessThan(3);
-  expect(Math.abs((await cx(takeOut.nth(0))) - (centreX - 50))).toBeLessThan(3);
-  expect(Math.abs((await cx(putIn.nth(1))) - (centreX + 50))).toBeLessThan(3);
-  expect(Math.abs((await cx(takeOut.nth(1))) - (centreX + 150))).toBeLessThan(3);
+  expect(Math.abs((await cx(putIn.nth(0))) - (centre - 150))).toBeLessThan(3);
+  expect(Math.abs((await cx(takeOut.nth(0))) - (centre - 50))).toBeLessThan(3);
+  expect(Math.abs((await cx(putIn.nth(1))) - (centre + 50))).toBeLessThan(3);
+  expect(Math.abs((await cx(takeOut.nth(1))) - (centre + 150))).toBeLessThan(3);
 });
 
 // Round 2 acceptance tests written from the three rules Cedric approved.
@@ -177,16 +172,15 @@ test("round 2, rule 2: a paddle leg ending 1.5 m higher shows Drop 0 m and no up
   await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RISE : TRAIL) });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
-  await clickMap(100, 0);
-  await modeButton(page, 0, strings.legModePaddle).click();
+  await clickMap(100, 0, "paddle");
   const row = rows(page).nth(0);
   await expect(row).toContainText(`${strings.dropLabel} 0 m`);
   // Updated: the row also shows access rule text, which can contain "upstream" and
   // date ranges like "1 Oct - 15 Jun" (#58, #59). Both rules are about the figures, so
   // check the figures only.
-  const figures = row.locator(".leg-figures");
-  await expect(figures).not.toContainText("upstream");
-  await expect(figures).not.toContainText(/-\s*\d/);
+  const figures = (await row.locator(".phone-row-headline, .phone-row-figures").allTextContents()).join(" ");
+  expect(figures).not.toContain("upstream");
+  expect(figures).not.toMatch(/-\s*\d/);
 });
 
 test("round 2, rule 2: a paddle leg ending 5 m higher shows the rise with the upstream hint and no drop", async ({
@@ -196,10 +190,9 @@ test("round 2, rule 2: a paddle leg ending 5 m higher shows the rise with the up
   await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RISE : TRAIL) });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
-  await clickMap(100, 0);
-  await modeButton(page, 0, strings.legModePaddle).click();
+  await clickMap(100, 0, "paddle");
   const row = rows(page).nth(0);
-  await expect(row).toContainText("↑ 5 m (upstream?)");
+  await expect(row).toContainText(`${strings.phone.legFigures.rise} 5 m?`);
   await expect(row).not.toContainText(strings.dropLabel);
 });
 
@@ -216,38 +209,41 @@ test("round 2, rule 3: a paddle leg whose service is down keeps the unavailable 
   const row = rows(page).nth(0);
   await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailed["no-route"]);
 
-  await modeButton(page, 0, strings.legModePaddle).click();
+  // The same leg drawn as a paddle leg: the unavailable message, not the river one.
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(rows(page)).toHaveCount(0);
+  await clickMap(100, 0, "paddle");
   await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailed.unavailable);
   await expect(row).not.toContainText(strings.legRouteFailedNoRiver);
 
-  // Back to hike: the hike message returns, not the river one.
+  // Drawn as a hike again: the hike message returns, not the river one.
   await page.keyboard.press("ControlOrMeta+z");
-  await expect(modeButton(page, 0, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
+  await clickMap(100, 0, "hike");
   await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailed["no-route"]);
 });
 
-test("round 2, rule 1: making the last leg paddle too moves the take-out to the trip's end, with nothing between the paddle legs", async ({
+test("round 2, rule 1: drawing the last leg as paddle too puts the take-out at the trip's end, with nothing between the paddle legs", async ({
   page,
 }) => {
   await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
   const clickMap = await openMap(page);
   await clickMap(-150, 0);
-  await clickMap(0, 0);
-  await clickMap(150, 0);
-  await modeButton(page, 0, strings.legModePaddle).click();
+  await clickMap(0, 0, "paddle");
+  await clickMap(150, 0, "hike");
   const putIn = mapRegion(page).locator("path.put-in");
   const takeOut = mapRegion(page).locator("path.take-out");
   await expect(putIn).toHaveCount(1);
   await expect(takeOut).toHaveCount(1);
 
-  // Switch the last leg to paddle too: one stretch, take-out moves to the trip's end.
-  await modeButton(page, 1, strings.legModePaddle).click();
+  // The last leg drawn as paddle too: one stretch, the take-out is at the trip's end.
+  await page.keyboard.press("ControlOrMeta+z");
+  await clickMap(150, 0, "paddle");
+  await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
   await expect(putIn).toHaveCount(1);
   await expect(takeOut).toHaveCount(1);
-  const mapBox = (await mapRegion(page).boundingBox())!;
-  const centreX = mapBox.x + mapBox.width / 2;
+  const centre = await centreX(page);
   const b = (await takeOut.boundingBox())!;
-  expect(Math.abs(b.x + b.width / 2 - (centreX + 150))).toBeLessThan(3);
+  expect(Math.abs(b.x + b.width / 2 - (centre + 150))).toBeLessThan(3);
   const p = (await putIn.boundingBox())!;
-  expect(Math.abs(p.x + p.width / 2 - (centreX - 150))).toBeLessThan(3);
+  expect(Math.abs(p.x + p.width / 2 - (centre - 150))).toBeLessThan(3);
 });

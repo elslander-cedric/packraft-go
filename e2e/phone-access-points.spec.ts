@@ -193,9 +193,14 @@ test("the floating button marks one at my GPS position, saved at once, and opens
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText(text.useAndKind(text.uses["put-in"], text.kinds.slipway));
   await expect(rows(page).first()).toContainText("Slipway by the bridge");
+  // On a wide screen the same planner shows it in the side panel's tab (ADR 0034).
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.reload();
-  await expect(page.getByRole("complementary", { name: text.panelLabel })).toContainText(text.count(1));
+  const panel = page.getByRole("complementary", { name: phoneText.sheetLabel });
+  await panel.getByRole("tab", { name: phoneText.tabs.accessPoints }).click();
+  await expect(panel.getByRole("region", { name: phoneText.accessPointsLabel, exact: true })).toContainText(
+    "Slipway by the bridge",
+  );
 });
 
 test("from the peek, the floating button marks one, opens the Access points tab at half and its details over it", async ({

@@ -42,9 +42,13 @@ test("opening the app shows a topo map of Belgium with credits and the navigatio
     .poll(() => network.tiles.some((t) => !seen.has(`${t.z}/${t.x}/${t.y}`)))
     .toBe(true);
 
-  // Zoom in: tiles for the next zoom level are requested.
-  await page.getByRole("button", { name: "Zoom in" }).click();
-  await expect.poll(() => network.tiles.some((t) => t.z === 9)).toBe(true);
+  // Zoom in with the wheel (the planner has no zoom buttons, ADR 0034): tiles for the next
+  // zoom level are requested.
+  await page.mouse.move(cx, cy);
+  await expect(async () => {
+    await page.mouse.wheel(0, -100);
+    expect(network.tiles.some((t) => t.z > 8)).toBe(true);
+  }).toPass({ intervals: [500] });
 
   expect(network.blocked).toEqual([]);
 });

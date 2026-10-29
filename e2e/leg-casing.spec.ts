@@ -108,16 +108,17 @@ async function expectCasings(page: Page) {
   }
 }
 
-test.describe("desktop", () => {
+test.describe("desktop-sized window", () => {
   test.use({ viewport: { width: 1400, height: 900 } });
 
   test("legs are cased in white and drawn over the access layer's waters", async ({ page }) => {
     await open(page);
-    await page.getByRole("switch", { name: strings.accessLayerToggle }).click();
+    await toggleAccessLayer(page);
     await expect(canalWater(page)).toHaveCount(1);
     // Zoom in on the canal with a coordinate search (no request), then clear its pin.
+    await page.getByRole("button", { name: strings.placeSearch.label }).click();
     await page.getByRole("combobox", { name: strings.placeSearch.label }).fill("51.0885, 3.7276");
-    await page.getByRole("button", { name: strings.placeSearch.search, exact: true }).click();
+    await page.getByRole("combobox", { name: strings.placeSearch.label }).press("Enter");
     await page.getByRole("button", { name: strings.placeSearch.clear }).click();
     await settled(paddleLeg(page));
 

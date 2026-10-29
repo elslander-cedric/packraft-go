@@ -1,8 +1,7 @@
-// The phone planner on a wide screen with a mouse and a keyboard (#189, stage 2 of ADR 0034):
-// the unknown-version autosave warning, the mouse gestures (a 0.4 s hold on a leg inserts a
+// The planner on a wide screen with a mouse and a keyboard (#189, ADR 0034): the
+// unknown-version autosave warning, the mouse gestures (a 0.4 s hold on a leg inserts a
 // point, the wheel zooms, a double-click doesn't) and keyboard-only use, also of the portrait
-// sheet. Until the screen rule switches (stage 3), `?planner=phone` gives this desktop-sized
-// window the phone planner.
+// sheet.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { SAVE_FORMAT, serialiseTrip } from "../src/core/saveFile";
 import type { Trip } from "../src/core/trip";
@@ -39,7 +38,7 @@ const tileZoom = (page: Page) =>
 /** Opens the phone planner with `stored` as the autosave, if given. */
 async function openPlanner(page: Page, stored?: string) {
   if (stored !== undefined) await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, stored]);
-  await page.goto("/?planner=phone");
+  await page.goto("/");
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
   await expect(panel(page)).toBeVisible();
 }

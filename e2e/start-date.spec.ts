@@ -1,81 +1,87 @@
-// Trip start date (#52): set, change and clear it in the trip toolbar; day rows
-// show their dates; the date survives a reload and a save/open file round-trip.
+// Trip start date (#52): set, change and clear it in the Edit trip dialog (ADR 0034); day
+// cards show their dates; the date survives a reload and a save/open file round-trip.
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
+import { todayInBrussels } from "../src/core/calendarDate";
+import {
+  dayCardDates,
+  dayCards,
+  freeMapBox,
+  menuItem,
+  openPlanner,
+  openTripFile,
+  saveTripFile,
+  setStartDate,
+  showTab,
+  shownStartDate,
+  tripDetailsDialog,
+} from "./support/planner";
 
-const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const daysPanel = (page: Page) => page.getByRole("complementary", { name: strings.daysPanelLabel });
-const dayRows = (page: Page) => daysPanel(page).getByRole("listitem");
-const startDate = (page: Page) => page.getByLabel(strings.startDateLabel);
-const clearDateButton = (page: Page) => page.getByRole("button", { name: strings.clearStartDateButton });
+/** The Days tab's cards; shows the tab first. */
+const dayRows = async (page: Page) => {
+  await showTab(page, strings.phone.tabs.days);
+  return dayCards(page);
+};
 const campButton = (page: Page) => page.getByRole("button", { name: strings.campButton });
-
-async function waitForMap(page: Page) {
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-}
 
 /** Draws three points and makes the middle one a camp: a two-day trip. */
 async function drawTwoDays(page: Page) {
-  await page.goto("/");
-  await waitForMap(page);
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   for (const dx of [-150, 0, 150]) await page.mouse.click(middle.x + dx, middle.y);
   await page.mouse.click(middle.x, middle.y); // select the middle point
   await campButton(page).click();
-  await expect(dayRows(page)).toHaveCount(2);
+  await expect(await dayRows(page)).toHaveCount(2);
 }
 
-test("set, change and clear a start date; day rows show their dates", async ({ page }) => {
+test("set, change and clear a start date; day cards show their dates", async ({ page }) => {
   await serveOffline(page);
   await drawTwoDays(page);
-  await expect(startDate(page)).toHaveValue("");
-  await expect(daysPanel(page).locator(".day-date")).toHaveCount(0);
-  await expect(clearDateButton(page)).toHaveCount(0);
+  expect(await shownStartDate(page)).toBe("");
+  expect(await dayCardDates(page)).toEqual([]);
+  await menuItem(page, strings.phone.menu.tripDetails);
+  await expect(tripDetailsDialog(page).getByRole("button", { name: strings.clearStartDateButton })).toHaveCount(0);
+  await tripDetailsDialog(page).getByRole("button", { name: strings.confirmCancel }).click();
 
-  await startDate(page).fill("2026-10-31");
-  await expect(dayRows(page).nth(0)).toContainText(`${strings.dayLabel(1)} Sat 31 Oct 2026`);
-  await expect(dayRows(page).nth(1)).toContainText(`${strings.dayLabel(2)} Sun 1 Nov 2026`);
+  await setStartDate(page, "2026-10-31");
+  await expect.poll(() => dayCardDates(page)).toEqual(["Sat 31 Oct 2026", "Sun 1 Nov 2026"]);
 
-  await startDate(page).fill("2026-12-31");
-  await expect(dayRows(page).nth(0)).toContainText("Thu 31 Dec 2026");
-  await expect(dayRows(page).nth(1)).toContainText("Fri 1 Jan 2027");
+  await setStartDate(page, "2026-12-31");
+  await expect.poll(() => dayCardDates(page)).toEqual(["Thu 31 Dec 2026", "Fri 1 Jan 2027"]);
 
-  await clearDateButton(page).click();
-  await expect(startDate(page)).toHaveValue("");
-  await expect(daysPanel(page).locator(".day-date")).toHaveCount(0);
-  await expect(dayRows(page)).toHaveCount(2);
+  // The dialog's Clear date button.
+  await setStartDate(page, "");
+  expect(await shownStartDate(page)).toBe("");
+  expect(await dayCardDates(page)).toEqual([]);
+  await expect(await dayRows(page)).toHaveCount(2);
 });
 
 test("the start date survives a reload and is autosaved as version 1", async ({ page }) => {
   const network = await serveOffline(page);
   await drawTwoDays(page);
-  await startDate(page).fill("2026-10-31");
-  await expect(dayRows(page).nth(1)).toContainText("Sun 1 Nov 2026");
+  await setStartDate(page, "2026-10-31");
+  await expect.poll(() => dayCardDates(page)).toEqual(["Sat 31 Oct 2026", "Sun 1 Nov 2026"]);
 
   const stored = await page.evaluate(() => localStorage.getItem("packraft-go.trip"));
   expect(JSON.parse(stored!)).toMatchObject({ version: 1, trip: { startDate: "2026-10-31", camps: [1] } });
 
   await page.reload();
-  await waitForMap(page);
-  await expect(startDate(page)).toHaveValue("2026-10-31");
-  await expect(dayRows(page).nth(0)).toContainText("Sat 31 Oct 2026");
-  await expect(dayRows(page).nth(1)).toContainText("Sun 1 Nov 2026");
+  await openPlanner(page);
+  expect(await shownStartDate(page)).toBe("2026-10-31");
+  expect(await dayCardDates(page)).toEqual(["Sat 31 Oct 2026", "Sun 1 Nov 2026"]);
   expect(network.blocked).toEqual([]);
 });
 
 test("the start date survives save to file and open file", async ({ page }) => {
   await serveOffline(page);
   await drawTwoDays(page);
-  await startDate(page).fill("2026-10-31");
+  await setStartDate(page, "2026-10-31");
 
-  const [download] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByRole("button", { name: strings.saveFileButton }).click(),
-  ]);
+  const download = await saveTripFile(page);
   const path = (await download.path())!;
   expect(JSON.parse(await readFile(path, "utf8"))).toMatchObject({
     format: "packraft-go-trip",
@@ -83,36 +89,28 @@ test("the start date survives save to file and open file", async ({ page }) => {
     trip: { startDate: "2026-10-31" },
   });
 
-  await page.getByRole("button", { name: strings.newTripButton }).click();
+  // Updated for ADR 0034: a new trip starts on today in Brussels.
+  await menuItem(page, strings.phone.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
-  await expect(startDate(page)).toHaveValue("");
-  await expect(dayRows(page)).toHaveCount(0);
+  expect(await shownStartDate(page)).toBe(todayInBrussels(new Date()));
+  await expect(await dayRows(page)).toHaveCount(0);
 
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    page.getByRole("button", { name: strings.openFileButton }).click(),
-  ]);
-  await chooser.setFiles(path);
-  await expect(startDate(page)).toHaveValue("2026-10-31");
-  await expect(dayRows(page).nth(0)).toContainText("Sat 31 Oct 2026");
-  await expect(dayRows(page).nth(1)).toContainText("Sun 1 Nov 2026");
+  await openTripFile(page, path);
+  await expect.poll(() => shownStartDate(page)).toBe("2026-10-31");
+  expect(await dayCardDates(page)).toEqual(["Sat 31 Oct 2026", "Sun 1 Nov 2026"]);
 });
 
 test("an old version 2 trip file is refused as an unknown version", async ({ page }) => {
   await serveOffline(page);
   await drawTwoDays(page);
-  await startDate(page).fill("2026-10-31");
+  await setStartDate(page, "2026-10-31");
   const old = JSON.stringify({
     format: "packraft-go-trip",
     version: 2,
     trip: { name: "Old", points: [{ lat: 50, lng: 5 }], legs: [] },
   });
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    page.getByRole("button", { name: strings.openFileButton }).click(),
-  ]);
-  await chooser.setFiles({ name: "old.packraft.json", mimeType: "application/json", buffer: Buffer.from(old) });
+  await openTripFile(page, { name: "old.packraft.json", mimeType: "application/json", buffer: Buffer.from(old) });
   await expect(page.getByRole("alert").filter({ hasText: strings.openFileUnknownVersion })).toBeVisible();
-  await expect(startDate(page)).toHaveValue("2026-10-31");
-  await expect(dayRows(page)).toHaveCount(2);
+  expect(await shownStartDate(page)).toBe("2026-10-31");
+  await expect(await dayRows(page)).toHaveCount(2);
 });

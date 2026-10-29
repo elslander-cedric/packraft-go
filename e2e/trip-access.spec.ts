@@ -4,6 +4,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { closeLegDetails, exportGpxFile, freeMapCentre, legDetailsDialog, legLines, openLegDetails, openPlanner, saveTripFile, showTab } from "./support/planner";
 
 /** Along the Ghent–Terneuzen canal, from the built-in data's geometry. */
 const canal = [
@@ -43,21 +44,23 @@ async function seed(page: Page, startDate?: string, water = canal) {
   }, JSON.stringify(seededTrip(startDate, water)));
 }
 
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const legRow = (page: Page, n: number) => legsPanel(page).locator(".leg-row").nth(n);
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const legRow = (page: Page, n: number) => legsPanel(page).locator(".phone-row").nth(n);
 const daysPanel = (page: Page) => page.getByRole("complementary", { name: strings.daysPanelLabel });
 const dayChips = (page: Page) =>
   daysPanel(page).getByRole("group", { name: strings.tripAccess.dayWarningsLabel }).getByRole("button");
+const legDetails = legDetailsDialog;
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
 test("a paddle leg on a forbidden Flemish canal shows a warning with its reason; nothing is blocked", async ({ page }) => {
   const network = await serveOffline(page);
   await seed(page, "2027-07-10");
-  await page.goto("/");
+  await openPlanner(page);
 
   // The paddle leg: status for its day's date, and a warning with the reason and source.
-  const paddle = legRow(page, 1);
+  await openLegDetails(page, 2);
+  const paddle = legDetails(page);
   await expect(paddle.locator(".leg-access-status")).toHaveText(
     strings.tripAccess.legStatusOn("Sat 10 Jul 2027", strings.accessState.forbidden),
   );
@@ -65,11 +68,14 @@ test("a paddle leg on a forbidden Flemish canal shows a warning with its reason;
   await expect(warning).toContainText(strings.tripAccess.warningKind.forbidden);
   await expect(warning).toContainText("De Vlaamse Waterweg excludes the Ghent–Terneuzen canal");
   await expect(warning.getByRole("link")).toHaveAttribute("href", /^https:\/\//);
+  await closeLegDetails(page);
 
-  // The hike leg has no access status.
-  await expect(legRow(page, 0).locator(".leg-access-status")).toHaveCount(0);
+  // The hike leg has no access status, and no details to show.
+  await expect(legRow(page, 0).locator(".leg-access-icons")).toHaveCount(0);
+  await expect(legRow(page, 0).getByRole("button", { name: strings.phone.legDetailsButton(1) })).toHaveCount(0);
 
-  // The day row only points at the leg: one chip, no warning text, and no trip summary (ADR 0029).
+  // The day card only points at the leg: one chip, no warning text, and no trip summary (ADR 0029).
+  await showTab(page, strings.phone.tabs.days);
   const day = daysPanel(page).getByRole("listitem").first();
   const forbidden = strings.tripAccess.chipKind.forbidden;
   await expect(dayChips(page)).toHaveCount(1);
@@ -78,38 +84,32 @@ test("a paddle leg on a forbidden Flemish canal shows a warning with its reason;
   await expect(day).not.toContainText("Ghent–Terneuzen canal");
   await expect(page.getByText("Access summary")).toHaveCount(0);
 
-  // The chip shows its leg: the Legs panel scrolls to it and highlights it.
+  // The chip shows its leg's details (#158).
   await dayChips(page).click();
-  await expect(legRow(page, 1)).toHaveClass(/leg-row-shown/);
-  await expect(legRow(page, 1)).toBeInViewport();
+  await expect(legDetails(page)).toHaveAccessibleName(/^Leg 2 · /);
+  await expect(legDetails(page)).toContainText("Ghent–Terneuzen canal");
+  await closeLegDetails(page);
 
   // Warnings never block: saving and exporting still work, and so does editing.
-  const [save] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByRole("button", { name: strings.saveFileButton }).click(),
-  ]);
+  const save = await saveTripFile(page);
   expect(save.suggestedFilename()).toMatch(/\.packraft\.json$/);
-  const [gpx] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByRole("button", { name: strings.exportGpxButton }).click(),
-  ]);
+  const gpx = await exportGpxFile(page);
   expect(gpx.suggestedFilename()).toMatch(/\.zip$/);
-  await legRow(page, 1)
-    .getByRole("group", { name: strings.legModeLabel(2) })
-    .getByRole("button", { name: strings.legModeHike })
-    .click();
-  await expect(dayChips(page)).toHaveCount(0);
+  const centre = await freeMapCentre(page);
+  await page.mouse.click(centre.x, centre.y);
+  await expect(legLines(page)).toHaveCount(3);
   expect(network.blocked).toEqual([]);
 });
 
 test("an undated trip shows the rules in general terms", async ({ page }) => {
   await serveOffline(page);
   await seed(page);
-  await page.goto("/");
-  await expect(legRow(page, 1).locator(".leg-access-status")).toHaveText(
+  await openPlanner(page);
+  await openLegDetails(page, 2);
+  await expect(legDetails(page).locator(".leg-access-status")).toHaveText(
     strings.tripAccess.legStatusInGeneral(strings.accessState.forbidden),
   );
-  await expect(legRow(page, 1)).toContainText("De Vlaamse Waterweg excludes the Ghent–Terneuzen canal");
+  await expect(legDetails(page)).toContainText("De Vlaamse Waterweg excludes the Ghent–Terneuzen canal");
 });
 
 test("a paddle leg on the Meuse at Dinant (unlisted Walloon water) shows a Forbidden warning with the AGW reason (#59)", async ({ page }) => {
@@ -118,8 +118,9 @@ test("a paddle leg on the Meuse at Dinant (unlisted Walloon water) shows a Forbi
     { lat: 50.26, lng: 4.91 },
     { lat: 50.265, lng: 4.915 },
   ]);
-  await page.goto("/");
-  const paddle = legRow(page, 1);
+  await openPlanner(page);
+  await openLegDetails(page, 2);
+  const paddle = legDetails(page);
   await expect(paddle.locator(".leg-access-status")).toHaveText(
     strings.tripAccess.legStatusOn("Sat 10 Jul 2027", strings.accessState.forbidden),
   );

@@ -9,24 +9,23 @@ import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
 import { downloadGpxZip } from "./support/gpxZip";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import {
+  exportGpxDisabled,
+  legRows as rows,
+  mapClicker,
+  menuItem,
+  openPlanner,
+  openTripFile,
+  renameTrip,
+  startGpxExport,
+} from "./support/planner";
 
 const KEY = "packraft-go.trip";
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const panel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const rows = (page: Page) => panel(page).getByRole("listitem");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const pointMarkers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const tripName = (page: Page) => page.getByRole("textbox", { name: strings.tripNameLabel });
-const exportBtn = (page: Page) => page.getByRole("button", { name: "Export GPX" });
 const undoBtn = (page: Page) => page.getByRole("button", { name: strings.undoButton });
-const newTripBtn = (page: Page) => page.getByRole("button", { name: strings.newTripButton });
-const openBtn = (page: Page) => page.getByRole("button", { name: strings.openFileButton });
 const campBtn = (page: Page) => page.getByRole("button", { name: strings.campButton });
-const modeButton = (page: Page, leg: number, mode: string) =>
-  rows(page)
-    .nth(leg)
-    .getByRole("group", { name: strings.legModeLabel(leg + 1) })
-    .getByRole("button", { name: mode });
 
 const TRAIL_TEXT = brouterFixture("hiking-success.geojson");
 const RIVER_TEXT = brouterFixture("river-success.geojson");
@@ -41,14 +40,13 @@ const storedTrip = async (page: Page): Promise<StoredTrip> =>
   JSON.parse((await page.evaluate((key) => localStorage.getItem(key), KEY)) ?? "{}").trip;
 
 async function openMap(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
-  return (dx: number, dy: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
+  await openPlanner(page);
+  return mapClicker(page);
 }
 
 // Updated: ADR 0021 (#41). Export downloads a ZIP with one GPX file per section.
-const exportGpx = (page: Page) => downloadGpxZip(page, exportBtn(page));
+// Updated for ADR 0034: Export GPX is in the menu and asks for the name first.
+const exportGpx = (page: Page) => downloadGpxZip(page, () => startGpxExport(page));
 
 /** Strict XML parse: throws on any well-formedness error. */
 function strictXml(text: string) {
@@ -62,20 +60,19 @@ function strictXml(text: string) {
 async function openSave(page: Page, trip: object) {
   // Updated: format reset (#52). Opened files are version 1.
   const text = JSON.stringify({ format: "packraft-go-trip", version: 1, trip });
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), openBtn(page).click()]);
-  await chooser.setFiles({ name: "t.packraft.json", mimeType: "application/json", buffer: Buffer.from(text, "utf8") });
+  await openTripFile(page, { name: "t.packraft.json", mimeType: "application/json", buffer: Buffer.from(text, "utf8") });
 }
 
 test("#11: hike + paddle legs and a camp export as GPX 1.1 with routed elevations, named after the trip", async ({ page }) => {
   const net = await serveOffline(page, { brouter: byProfile });
   const click = await openMap(page);
   const name = `Lesse & Lomme <"été"> 'n' co`;
-  await tripName(page).fill(name);
+  await renameTrip(page, name);
   await click(-150, 0);
   await click(0, 0);
-  await click(150, 0);
+  await click(150, 0, "paddle");
   await expect(legLines(page)).toHaveCount(2);
-  await modeButton(page, 1, strings.legModePaddle).click();
+  await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
   await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
   await expect(legLines(page).nth(1)).toHaveClass(/leg-routed/);
   await click(0, 0); // select the middle point
@@ -152,29 +149,31 @@ test("#11: an unnamed trip with unrouted legs exports straight lines at the draw
 test("#11: Export GPX is disabled until the trip has a leg, and again when it has none", async ({ page }) => {
   await serveOffline(page);
   const click = await openMap(page);
-  await expect(exportBtn(page)).toBeDisabled();
+  expect(await exportGpxDisabled(page)).toBe(true);
   await click(-80, 0);
   await expect(pointMarkers(page)).toHaveCount(1);
-  await expect(exportBtn(page)).toBeDisabled();
+  expect(await exportGpxDisabled(page)).toBe(true);
   await click(80, 0);
   await expect(legLines(page)).toHaveCount(1);
-  await expect(exportBtn(page)).toBeEnabled();
+  expect(await exportGpxDisabled(page)).toBe(false);
   await undoBtn(page).click();
   await expect(legLines(page)).toHaveCount(0);
-  await expect(exportBtn(page)).toBeDisabled();
+  expect(await exportGpxDisabled(page)).toBe(true);
   await click(80, 0);
-  await expect(exportBtn(page)).toBeEnabled();
+  expect(await exportGpxDisabled(page)).toBe(false);
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
-  await newTripBtn(page).click();
+  await menuItem(page, strings.phone.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await expect(pointMarkers(page)).toHaveCount(0);
-  await expect(exportBtn(page)).toBeDisabled();
-  // A disabled button downloads nothing.
+  expect(await exportGpxDisabled(page)).toBe(true);
+  // A disabled item downloads nothing and asks nothing.
   let downloads = 0;
   page.on("download", () => (downloads += 1));
-  await exportBtn(page).click({ force: true });
+  await page.getByRole("button", { name: strings.phone.menu.button }).click();
+  await page.getByRole("menuitem", { name: strings.phone.menu.exportGpx }).click({ force: true });
   await page.waitForTimeout(300);
   expect(downloads).toBe(0);
+  await expect(page.getByRole("dialog", { name: strings.phone.menu.exportTitle })).toHaveCount(0);
 });
 
 test("#11: the export reflects a reloaded trip and renaming, without re-routing", async ({ page }) => {
@@ -186,7 +185,7 @@ test("#11: the export reflects a reloaded trip and renaming, without re-routing"
   await page.reload();
   await expect(legLines(page)).toHaveCount(1);
   const calls = net.brouter.length;
-  await tripName(page).fill("Semois day");
+  await renameTrip(page, "Semois day");
   // Updated: ADR 0021. A ZIP named after the trip with one file for the one section.
   const zip = await exportGpx(page);
   expect(zip.name).toBe("Semois day.zip");

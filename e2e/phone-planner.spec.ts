@@ -356,38 +356,36 @@ test("the floating buttons are icon-only: an icon each, no glyph text, named for
   }
 });
 
-test.describe("which screens get the phone planner", () => {
-  const isPhonePlanner = async (page: Page) => {
-    await openPhone(page);
-    return sheet(page).isVisible();
-  };
-  const isDesktop = (page: Page) => page.getByRole("button", { name: strings.newTripButton }).isVisible();
+// Updated for ADR 0034 (#190): every screen gets this planner; only a narrow screen in
+// portrait gets the sheet, every other one the side panel.
+test.describe("which screens get the sheet", () => {
+  const panel = (page: Page) => page.getByRole("complementary", { name: strings.phone.sheetLabel });
 
-  test("640 px wide gets the phone planner, 641 px the desktop planner", async ({ page }) => {
+  test("640 px wide in portrait gets the sheet, 641 px the side panel", async ({ page }) => {
     await serveOffline(page);
     await page.setViewportSize({ width: 640, height: 900 });
-    expect(await isPhonePlanner(page)).toBe(true);
+    await openPhone(page);
+    await expect(sheet(page)).toBeVisible();
     await page.setViewportSize({ width: 641, height: 900 });
-    await expect(page.getByRole("button", { name: strings.newTripButton })).toBeVisible();
+    await expect(panel(page)).toBeVisible();
     await expect(sheet(page)).toHaveCount(0);
   });
 
-  test("a sideways phone (touch, 640 px tall or less) keeps the phone layout", async ({ page }) => {
+  test("a sideways phone (touch, 640 px tall or less) gets the side panel", async ({ page }) => {
     await serveOffline(page);
     await page.setViewportSize({ width: 863, height: 360 });
     await openPhone(page);
-    // Sideways the side panel stands in for the sheet (#126).
-    await expect(page.getByRole("complementary", { name: strings.phone.sheetLabel })).toBeVisible();
-    expect(await isDesktop(page)).toBe(false);
+    await expect(panel(page)).toBeVisible();
+    await expect(sheet(page)).toHaveCount(0);
   });
 
-  test("an iPad-sized touch screen gets the desktop layout", async ({ page }) => {
+  test("an iPad-sized touch screen gets the side panel, not the desktop planner", async ({ page }) => {
     await serveOffline(page);
     await page.setViewportSize({ width: 810, height: 1080 });
-    await page.goto("/");
-    await expect(page.getByRole("button", { name: strings.newTripButton })).toBeVisible();
-    expect(await isDesktop(page)).toBe(true);
+    await openPhone(page);
+    await expect(panel(page)).toBeVisible();
     await expect(sheet(page)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: strings.newTripButton })).toHaveCount(0);
   });
 });
 

@@ -5,15 +5,25 @@ import { expect, test, type Page } from "@playwright/test";
 import { SETTINGS_KEY } from "../src/persistence/settingsStorage";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import {
+  changeSettings,
+  legRows as rows,
+  mapClicker,
+  menuItem,
+  openPlanner,
+  settingsDialog,
+  totals,
+} from "./support/planner";
 
-const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const settingsPanel = (page: Page) => page.getByRole("region", { name: strings.settingsPanelLabel });
-const rows = (page: Page) => legsPanel(page).getByRole("listitem");
-const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".leg-time");
-const tripTime = (page: Page) => legsPanel(page).locator(".trip-time");
-const paceFactor = (page: Page) => settingsPanel(page).getByLabel(strings.paceFactorLabel);
-const paddleSpeed = (page: Page) => settingsPanel(page).getByLabel(strings.paddleSpeedLabel);
+const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".phone-row-time");
+const tripTime = (page: Page) =>
+  totals(page).locator(".phone-total").filter({ hasText: strings.phone.totals.labels.time });
+const paceFactor = (page: Page) => settingsDialog(page).getByLabel(strings.paceFactorLabel);
+const paddleSpeed = (page: Page) => settingsDialog(page).getByLabel(strings.paddleSpeedLabel);
+const legTimeLabel = strings.phone.legFigures.time;
+const tripTimeLabel = strings.phone.totals.labels.time;
+/** Menu → Settings, left open. */
+const openSettings = (page: Page) => menuItem(page, strings.phone.menu.settings);
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.geojson") };
@@ -27,10 +37,8 @@ function minutes(text: string): number {
 }
 
 async function openMap(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
-  return (dx: number, dy: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
+  await openPlanner(page);
+  return mapClicker(page);
 }
 
 /** A hike leg then a paddle leg, both routed from the recordings. */
@@ -38,12 +46,7 @@ async function drawHikeThenPaddle(page: Page) {
   const clickMap = await openMap(page);
   await clickMap(-150, 0);
   await clickMap(0, 0);
-  await clickMap(150, 0);
-  await rows(page)
-    .nth(1)
-    .getByRole("group", { name: strings.legModeLabel(2) })
-    .getByRole("button", { name: strings.legModePaddle })
-    .click();
+  await clickMap(150, 0, "paddle");
   await expect(rows(page).nth(1)).toContainText(strings.dropLabel);
   // Updated in round 2: the trip total waits for every leg to be routed.
   await expect(rows(page).nth(0)).toContainText(strings.climbLabel);
@@ -54,44 +57,51 @@ test("each leg and the trip show an estimated time, labelled as an estimate", as
   await drawHikeThenPaddle(page);
 
   // Naismith on the recorded trail: 3.2 km ÷ 5 km/h + 100 m ÷ 600 m/h ≈ 49 min.
-  await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} 49 min`);
+  await expect(legTime(page, 0)).toHaveText(`${legTimeLabel} 49 min`);
   // The Lesse track (5.9 km) at the default 5 km/h: about 1 h 11 min.
-  await expect(legTime(page, 1)).toContainText(strings.legTimeEstimate);
+  await expect(legTime(page, 1)).toContainText(legTimeLabel);
   const paddleMin = minutes((await legTime(page, 1).textContent()) ?? "");
   expect(paddleMin).toBeGreaterThanOrEqual(70);
   expect(paddleMin).toBeLessThanOrEqual(72);
 
-  await expect(tripTime(page)).toContainText(strings.tripTotalTimeEstimate);
+  await expect(tripTime(page)).toContainText(tripTimeLabel);
   // The total is summed before rounding, so it may differ from the shown legs by a minute.
   const totalMin = minutes((await tripTime(page).textContent()) ?? "");
   expect(Math.abs(totalMin - (49 + paddleMin))).toBeLessThanOrEqual(1);
-  await expect(legsPanel(page)).toContainText(strings.timeEstimateNote);
 });
 
 test("changing the pace factor and paddling speed updates the times at once", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await drawHikeThenPaddle(page);
+  await openSettings(page);
   await expect(paceFactor(page)).toHaveValue("1");
   await expect(paddleSpeed(page)).toHaveValue("5");
+  await page.keyboard.press("Escape");
+  await expect(settingsDialog(page)).toHaveCount(0);
   const paddleBefore = minutes((await legTime(page, 1).textContent()) ?? "");
 
-  await paceFactor(page).fill("1.5");
-  await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} 1 h 13 min`);
+  await changeSettings(page, { paceFactor: "1.5" });
+  await expect(legTime(page, 0)).toHaveText(`${legTimeLabel} 1 h 13 min`);
   // The paddle leg does not depend on the pace factor.
   expect(minutes((await legTime(page, 1).textContent()) ?? "")).toBe(paddleBefore);
 
-  await paddleSpeed(page).fill("2.5");
+  await changeSettings(page, { paddleSpeed: "2.5" });
   await expect
     .poll(async () => minutes((await legTime(page, 1).textContent()) ?? ""))
     .toBeGreaterThanOrEqual(2 * paddleBefore - 1);
   expect(minutes((await legTime(page, 1).textContent()) ?? "")).toBeLessThanOrEqual(2 * paddleBefore + 1);
-  await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} 1 h 13 min`);
+  await expect(legTime(page, 0)).toHaveText(`${legTimeLabel} 1 h 13 min`);
 
-  // While a field is cleared or not a positive number, the times keep the last usable value.
+  // While a field is cleared or not a positive number, the settings can't be saved and the
+  // times keep the last usable value.
+  await openSettings(page);
+  const save = settingsDialog(page).getByRole("button", { name: strings.phone.menu.settingsConfirm });
   await paceFactor(page).fill("");
-  await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} 1 h 13 min`);
+  await expect(save).toBeDisabled();
   await paceFactor(page).fill("0");
-  await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} 1 h 13 min`);
+  await expect(save).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(legTime(page, 0)).toHaveText(`${legTimeLabel} 1 h 13 min`);
 });
 
 test("while a hike leg is being snapped its time and the trip total show an ellipsis", async ({ page }) => {
@@ -102,12 +112,12 @@ test("while a hike leg is being snapped its time and the trip total show an elli
   await clickMap(-100, 0);
   await clickMap(100, 0);
 
-  await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} ${strings.timePending}`);
-  await expect(tripTime(page)).toHaveText(`${strings.tripTotalTimeEstimate} ${strings.timePending}`);
+  await expect(legTime(page, 0)).toHaveText(`${legTimeLabel} ${strings.timePending}`);
+  await expect(tripTime(page)).toHaveText(`${tripTimeLabel} ${strings.timePending}`);
 
   answer(TRAIL);
-  await expect(legTime(page, 0)).toHaveText(`${strings.legTimeEstimate} 49 min`);
-  await expect(tripTime(page)).toHaveText(`${strings.tripTotalTimeEstimate} 49 min`);
+  await expect(legTime(page, 0)).toHaveText(`${legTimeLabel} 49 min`);
+  await expect(tripTime(page)).toHaveText(`${tripTimeLabel} 49 min`);
 });
 
 test("a hike leg that failed to snap shows a distance-only time marked as having no climb data, and so does the total", async ({
@@ -128,10 +138,10 @@ test("a hike leg that failed to snap shows a distance-only time marked as having
 test("settings are remembered across reloads", async ({ page }) => {
   await serveOffline(page);
   await openMap(page);
-  await paceFactor(page).fill("1.2");
-  await paddleSpeed(page).fill("4");
+  await changeSettings(page, { paceFactor: "1.2", paddleSpeed: "4" });
 
   await page.reload();
+  await openSettings(page);
   await expect(paceFactor(page)).toHaveValue("1.2");
   await expect(paddleSpeed(page)).toHaveValue("4");
 });
@@ -140,6 +150,7 @@ test("unreadable stored settings fall back to the defaults", async ({ page }) =>
   await serveOffline(page);
   await page.addInitScript((key) => window.localStorage.setItem(key, "{not json"), SETTINGS_KEY);
   await openMap(page);
+  await openSettings(page);
   await expect(paceFactor(page)).toHaveValue("1");
   await expect(paddleSpeed(page)).toHaveValue("5");
 });

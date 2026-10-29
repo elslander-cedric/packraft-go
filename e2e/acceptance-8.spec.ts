@@ -2,6 +2,7 @@
 // the issue, spec #2 (stories 20-24, 30) and ADRs 0008 / 0009 before reading the
 // diff. BRouter and tiles are answered from recorded fixtures (ADR 0019); every
 // BRouter request is counted so "marking a camp routes nothing" can be checked.
+// Ported to the one planner (ADR 0034): legs and days are tabs of the trip panel.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import {
@@ -9,16 +10,22 @@ import {
   serveOffline,
   type BRouterReply,
 } from "./support/offline";
+import {
+  dayCards as dayRows,
+  freeMapCentre,
+  legRows,
+  mapRegion,
+  menuButton,
+  openPlanner,
+  pickNextMode,
+  showTab,
+  totals,
+} from "./support/planner";
 
 const KEY = "packraft-go.trip";
-const mapRegion = (page: Page) =>
-  page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) =>
-  page.getByRole("complementary", { name: strings.legsPanelLabel });
-const legRows = (page: Page) => legsPanel(page).getByRole("listitem");
-const daysPanel = (page: Page) =>
-  page.getByRole("complementary", { name: strings.daysPanelLabel });
-const dayRows = (page: Page) => daysPanel(page).getByRole("listitem");
+const showDays = (page: Page) => showTab(page, strings.phone.tabs.days);
+const showLegs = (page: Page) => showTab(page, strings.phone.tabs.legs);
+const dayLabels = strings.phone.dayFigures;
 const pointMarkers = (page: Page) =>
   mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const legLines = (page: Page) =>
@@ -29,8 +36,13 @@ const campButton = (page: Page) =>
   page.getByRole("button", { name: strings.campButton, exact: true });
 const deleteButton = (page: Page) =>
   page.getByRole("button", { name: strings.deletePointButton });
-const openBtn = (page: Page) =>
-  page.getByRole("button", { name: strings.openFileButton });
+/** Menu → Open trip, which asks for the file. */
+const openBtn = (page: Page) => ({
+  click: async () => {
+    await menuButton(page).click();
+    await page.getByRole("menuitem", { name: strings.phone.menu.openFile, exact: true }).click();
+  },
+});
 
 const TRAIL: BRouterReply = {
   status: 200,
@@ -64,20 +76,16 @@ const legKm = async (page: Page, i: number) =>
     )![1],
   );
 const legMin = async (page: Page, i: number) =>
-  minutesIn(await legRows(page).nth(i).locator(".leg-time").textContent());
+  minutesIn(await legRows(page).nth(i).locator(".phone-row-time").textContent());
 const dayTime = (page: Page, i: number) =>
-  dayRows(page).nth(i).locator(".day-time");
+  dayRows(page).nth(i).locator(".day-figure-time");
 
 type Click = (dx: number) => Promise<void>;
 
 async function openMap(page: Page): Promise<Click> {
-  await page.goto("/");
-  await expect(
-    mapRegion(page).locator("img.leaflet-tile-loaded").first(),
-  ).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
-  return (dx: number) =>
-    page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2);
+  await openPlanner(page);
+  const centre = await freeMapCentre(page);
+  return (dx: number) => page.mouse.click(centre.x + dx, centre.y);
 }
 
 const XS = [-240, -80, 80, 240];
@@ -85,13 +93,13 @@ const XS = [-240, -80, 80, 240];
 /** Hike, paddle, hike: four points, all legs routed. Clicking at XS[i] selects point i afterwards. */
 async function drawThreeLegs(page: Page) {
   const click = await openMap(page);
-  for (const x of XS) await click(x);
+  await click(XS[0]);
+  await click(XS[1]);
+  await pickNextMode(page, "paddle");
+  await click(XS[2]);
+  await pickNextMode(page, "hike");
+  await click(XS[3]);
   await expect(legLines(page)).toHaveCount(3);
-  await legRows(page)
-    .nth(1)
-    .getByRole("group", { name: strings.legModeLabel(2) })
-    .getByRole("button", { name: strings.legModePaddle })
-    .click();
   await expect(legRows(page).nth(1)).toContainText(strings.dropLabel);
   await expect(legRows(page).nth(0)).toContainText(strings.climbLabel);
   await expect(legRows(page).nth(2)).toContainText(strings.climbLabel);
@@ -109,10 +117,11 @@ test("AC1: the Camp action needs a selected point; marking shows a distinct mark
 }) => {
   await serveOffline(page, { brouter: byProfile });
   const click = await openMap(page);
-  await expect(campButton(page)).toBeDisabled();
+  // The camp button is only shown while a point is selected.
+  await expect(campButton(page)).toHaveCount(0);
   await click(XS[0]);
   await click(XS[1]);
-  await expect(campButton(page)).toBeDisabled(); // nothing selected yet
+  await expect(campButton(page)).toHaveCount(0); // nothing selected yet
   await toggleCampAt(page, click, 1);
   await expect(campMarkers(page)).toHaveCount(1);
   await expect(campButton(page)).toHaveAttribute("aria-pressed", "true");
@@ -130,6 +139,7 @@ test("AC2/AC3: camps on the start and end add no day; a middle camp splits the d
   const click = await drawThreeLegs(page);
   const routed = network.brouter.length;
 
+  await showDays(page);
   await expect(dayRows(page)).toHaveCount(1);
   await toggleCampAt(page, click, 0);
   await toggleCampAt(page, click, 3);
@@ -140,37 +150,44 @@ test("AC2/AC3: camps on the start and end add no day; a middle camp splits the d
   await expect(campMarkers(page)).toHaveCount(3);
   await expect(dayRows(page)).toHaveCount(2);
 
+  await showLegs(page);
   const [h0, p1, h2] = [
     await legKm(page, 0),
     await legKm(page, 1),
     await legKm(page, 2),
   ];
+  const legMinutes = [await legMin(page, 0), await legMin(page, 1), await legMin(page, 2)];
+  await showDays(page);
   const day1 = await dayRows(page).nth(0).textContent();
   const day2 = await dayRows(page).nth(1).textContent();
   // Day 1 = legs 1-2 (hike + paddle), day 2 = leg 3 (hike).
   expect(day1).toContain(strings.dayLegs(1, 2));
   expect(day2).toContain(strings.dayLegs(3, 3));
   expect(
-    Math.abs(kmIn(day1, strings.dayHikeDistance) - h0),
+    Math.abs(kmIn(day1, dayLabels.hike) - h0),
   ).toBeLessThanOrEqual(0.1);
   expect(
-    Math.abs(kmIn(day1, strings.dayPaddleDistance) - p1),
+    Math.abs(kmIn(day1, dayLabels.paddle) - p1),
   ).toBeLessThanOrEqual(0.1);
   expect(
-    Math.abs(kmIn(day2, strings.dayHikeDistance) - h2),
+    Math.abs(kmIn(day2, dayLabels.hike) - h2),
   ).toBeLessThanOrEqual(0.1);
-  expect(kmIn(day2, strings.dayPaddleDistance)).toBe(0);
+  // A zero figure is left out of a day card.
+  expect(day2).not.toContain(dayLabels.paddle);
   expect(day1).toContain(`${strings.climbLabel} 100 m`);
   expect(day2).toContain(`${strings.climbLabel} 100 m`);
   expect(day1).toContain(strings.descentLabel);
   const d1 = minutesIn(await dayTime(page, 0).textContent());
   const d2 = minutesIn(await dayTime(page, 1).textContent());
   expect(
-    Math.abs(d1 - ((await legMin(page, 0)) + (await legMin(page, 1)))),
+    Math.abs(d1 - (legMinutes[0] + legMinutes[1])),
   ).toBeLessThanOrEqual(1);
-  expect(d2).toBe(await legMin(page, 2));
+  expect(d2).toBe(legMinutes[2]);
   const tripMin = minutesIn(
-    await legsPanel(page).locator(".trip-time").textContent(),
+    await totals(page)
+      .locator(".phone-total")
+      .filter({ hasText: strings.phone.totals.labels.time })
+      .textContent(),
   );
   expect(Math.abs(d1 + d2 - tripMin)).toBeLessThanOrEqual(1);
 
@@ -187,6 +204,7 @@ test("AC4: Ctrl+Z / Cmd+Z undoes a camp, one toggle at a time, without routing",
   const routed = network.brouter.length;
   await toggleCampAt(page, click, 1);
   await toggleCampAt(page, click, 2);
+  await showDays(page);
   await expect(dayRows(page)).toHaveCount(3);
 
   const mod = process.platform === "darwin" ? "Meta" : "Control";
@@ -196,7 +214,9 @@ test("AC4: Ctrl+Z / Cmd+Z undoes a camp, one toggle at a time, without routing",
   await page.keyboard.press(`${mod}+z`);
   await expect(dayRows(page)).toHaveCount(1);
   await expect(campMarkers(page)).toHaveCount(0);
-  // The next undo goes back to the mode switch, proving camps were separate undo steps.
+  // The legs are untouched, proving camps were separate undo steps.
+  await showLegs(page);
+  await expect(legRows(page)).toHaveCount(3);
   await expect(legRows(page).nth(1)).toContainText(strings.dropLabel);
   expect(network.brouter.length).toBe(routed);
 });
@@ -218,23 +238,21 @@ test("AC3: a day with a hike leg that failed to route shows '(no climb data)'; t
   failHike = true;
   await click(XS[2]);
   await expect(legRows(page).nth(1)).toContainText(strings.retryRouting);
+  const legTime = (await legRows(page).nth(1).locator(".phone-row-time").textContent())!
+    .replace(`${strings.phone.legFigures.time} `, "")
+    .replace(" (no climb data)", "");
 
   await toggleCampAt(page, click, 1);
+  await showDays(page);
   await expect(dayRows(page)).toHaveCount(2);
   await expect(dayTime(page, 0)).toHaveText(
-    `${strings.dayTimeEstimate} 49 min`,
+    `${dayLabels.time} 49 min`,
   );
   await expect(dayTime(page, 1)).toHaveText(
-    new RegExp(`^${strings.dayTimeEstimate} \\d.*min \\(no climb data\\)$`),
+    new RegExp(`^${dayLabels.time} \\d.*min \\(no climb data\\)$`),
   );
   await expect(dayTime(page, 1)).toHaveText(
-    strings.dayTimeEstimate +
-      " " +
-      strings.timeWithoutClimb(
-        (await legRows(page).nth(1).locator(".leg-time").textContent())!
-          .replace(`${strings.legTimeEstimate} `, "")
-          .replace(" (no climb data)", ""),
-      ),
+    dayLabels.time + " " + strings.timeWithoutClimb(legTime),
   );
 });
 
@@ -256,16 +274,17 @@ test("AC3: marking a camp while a leg is still being snapped: the day shows '…
   await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
   await click(XS[2]);
   await toggleCampAt(page, click, 1);
+  await showDays(page);
   await expect(dayRows(page)).toHaveCount(2);
   await expect(dayTime(page, 0)).toHaveText(
-    `${strings.dayTimeEstimate} 49 min`,
+    `${dayLabels.time} 49 min`,
   );
   await expect(dayTime(page, 1)).toHaveText(
-    `${strings.dayTimeEstimate} ${strings.timePending}`,
+    `${dayLabels.time} ${strings.timePending}`,
   );
   release();
   await expect(dayTime(page, 1)).toHaveText(
-    `${strings.dayTimeEstimate} 49 min`,
+    `${dayLabels.time} 49 min`,
   );
   expect(network.brouter.length).toBe(2);
 });
@@ -276,6 +295,7 @@ test("deleting a camp's point removes its camp and joins the days", async ({
   await serveOffline(page, { brouter: byProfile });
   const click = await drawThreeLegs(page);
   await toggleCampAt(page, click, 2);
+  await showDays(page);
   await expect(dayRows(page)).toHaveCount(2);
   await deleteButton(page).click(); // point 2 is still selected
   await expect(pointMarkers(page)).toHaveCount(3);
@@ -302,14 +322,19 @@ test("camps persist through autosave: marking and unmarking are both stored", as
   await page.reload();
   await expect(pointMarkers(page)).toHaveCount(4);
   await expect(campMarkers(page)).toHaveCount(2);
+  await showDays(page);
   await expect(dayRows(page)).toHaveCount(3);
   expect(network.brouter.length).toBe(routed);
 
-  // Unmark one after the reload; the reload after that still has only the other.
-  await toggleCampAt(page, click, 1);
+  // Unmark one after the reload; the reload after that still has only the other. The map
+  // fitted the trip when it opened, so the point is clicked where it is now.
+  const point = (await pointMarkers(page).nth(1).boundingBox())!;
+  await page.mouse.click(point.x + point.width / 2, point.y + point.height / 2);
+  await campButton(page).click();
   await expect(campMarkers(page)).toHaveCount(1);
   await page.reload();
   await expect(campMarkers(page)).toHaveCount(1);
+  await showDays(page);
   await expect(dayRows(page)).toHaveCount(2);
   await expect(dayRows(page).nth(0)).toContainText(strings.dayLegs(1, 2));
 });
@@ -365,6 +390,7 @@ test("an old version 2 save file is refused as an unknown version, keeping the t
   ).toHaveCount(0);
   await expect(pointMarkers(page)).toHaveCount(4);
   await expect(campMarkers(page)).toHaveCount(1);
+  await showDays(page);
   await expect(dayRows(page)).toHaveCount(2);
 });
 
@@ -404,5 +430,6 @@ test("a save file with a camp on a point that does not exist is refused and the 
   ).toBeVisible();
   await expect(pointMarkers(page)).toHaveCount(4);
   await expect(campMarkers(page)).toHaveCount(1);
+  await showDays(page);
   await expect(dayRows(page)).toHaveCount(2);
 });

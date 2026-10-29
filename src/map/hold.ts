@@ -1,4 +1,4 @@
-import type { Map as LeafletMap } from "leaflet";
+import type { Layer, Map as LeafletMap } from "leaflet";
 import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import type { LatLng } from "@/core/trip";
@@ -80,9 +80,13 @@ export function listenForHold(element: Element, map: LeafletMap, onHold: (at: La
   };
 }
 
-/** Hold on a map layer's element (see `listenForHold`), with this render's `onHold`; off unless `on`. */
+/**
+ * Hold on a map layer's element (see `listenForHold`), with this render's `onHold`; off unless `on`.
+ * A layer in a group that joins the map after it (the access layer's waters) has no element yet
+ * when it mounts: then it starts listening once the layer is added to the map.
+ */
 export function useHold(
-  layer: { readonly current: { getElement(): Element | undefined } | null },
+  layer: { readonly current: Pick<Layer, "on" | "off"> & { getElement(): Element | undefined } | null },
   onHold: (at: LatLng) => void,
   on = true,
 ) {
@@ -92,8 +96,19 @@ export function useHold(
     latest.current = onHold;
   });
   useEffect(() => {
-    const element = layer.current?.getElement();
-    if (!on || !element) return;
-    return listenForHold(element, map, (at) => latest.current(at));
+    const current = layer.current;
+    if (!on || !current) return;
+    let stop: (() => void) | undefined;
+    const listen = () => {
+      const element = current.getElement();
+      if (!element || stop) return;
+      stop = listenForHold(element, map, (at) => latest.current(at));
+    };
+    listen();
+    current.on("add", listen);
+    return () => {
+      current.off("add", listen);
+      stop?.();
+    };
   }, [map, layer, on]);
 }

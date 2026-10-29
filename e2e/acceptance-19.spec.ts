@@ -3,6 +3,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { freeMapBox, openPlanner } from "./support/planner";
 
 type Px = { x: number; y: number };
 
@@ -13,9 +14,8 @@ const deleteButton = (page: Page) => page.getByRole("button", { name: strings.de
 
 async function openMap(page: Page) {
   await serveOffline(page);
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   return { cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
 }
 
@@ -83,7 +83,8 @@ for (const busy of [false, true]) {
     await page.waitForTimeout(1000);
     await expect(points(page)).toHaveCount(2);
     await expect(selected(page)).toHaveCount(0);
-    await expect(deleteButton(page)).toBeDisabled();
+    // The delete button is only shown while a point is selected.
+    await expect(deleteButton(page)).toHaveCount(0);
 
     // Released on top of another point: still no point added or selected.
     await drag(page, { x: cx, y: cy + 180 }, a);

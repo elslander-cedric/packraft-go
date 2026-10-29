@@ -1,10 +1,12 @@
-// Place search on the desktop (#173, ADR 0030): the bar over the map searches
-// on submit with the recorded Nominatim answers, moves the map to the picked
-// result and pins it; coordinates jump with no request. Every external request
+// Place search on a desktop-sized window (#173, ADR 0030): the pill on the top row (ADR 0034)
+// opens a field that searches on submit with the recorded Nominatim answers, moves the map to
+// the picked result and pins it; coordinates jump with no request. Every external request
 // goes through serveOffline, and anything else is blocked and checked.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { nominatimFixture, serveOffline } from "./support/offline";
+import { freeMapBox, menuItem, openPlanner, openTripFile, saveTripFile, tripPanel } from "./support/planner";
+import { toggleAccessLayer } from "./support/mapMenu";
 
 const text = strings.placeSearch;
 
@@ -20,6 +22,7 @@ const bySearchText = (url: URL) => {
 };
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
+const pill = (page: Page) => page.getByRole("button", { name: text.label });
 const field = (page: Page) => page.getByRole("combobox", { name: text.label });
 const results = (page: Page) => page.getByRole("listbox", { name: text.resultsLabel }).getByRole("option");
 const pin = (page: Page) => mapRegion(page).locator(".search-result-marker");
@@ -35,11 +38,12 @@ async function offline(page: Page, options: Parameters<typeof serveOffline>[1] =
 test.afterEach(() => expect(blocked).toEqual([]));
 
 async function openMap(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await openPlanner(page);
 }
 
+/** Opens the field from the pill (unless it is open) and searches `what`. */
 async function search(page: Page, what: string) {
+  if ((await field(page).count()) === 0) await pill(page).click();
   await field(page).fill(what);
   await field(page).press("Enter");
 }
@@ -54,11 +58,13 @@ test("search, pick, the map moves and pins the result, × clears it", async ({ p
   await openMap(page);
 
   // Typing alone sends nothing: search is on submit only.
+  await pill(page).click();
+  await expect(field(page)).toBeFocused();
   await field(page).fill("hotton");
   await page.waitForTimeout(300);
   expect(network.nominatim).toHaveLength(0);
 
-  await page.getByRole("button", { name: text.search, exact: true }).click();
+  await field(page).press("Enter");
   await expect(results(page)).toHaveCount(2);
   await expect(results(page).first()).toContainText("Hotton");
   await expect(results(page).first()).toContainText(text.kinds.municipality);
@@ -70,20 +76,27 @@ test("search, pick, the map moves and pins the result, × clears it", async ({ p
   expect(sent.searchParams.get("q")).toBe("hotton");
   expect(sent.searchParams.get("viewbox")).toMatch(/^[-\d.]+,[-\d.]+,[-\d.]+,[-\d.]+$/);
 
+  // Picking one narrows the field back to the pill, which keeps the result's name.
   await results(page).nth(1).click();
   await expect(results(page)).toHaveCount(0);
+  await expect(field(page)).toHaveCount(0);
   await expect(pin(page)).toBeVisible();
   await expect(pinLabel(page)).toHaveText("Hotton");
-  await expect(field(page)).toHaveValue("Hotton");
+  await expect(pill(page)).toContainText("Hotton");
   // The map moved in: the village's box at Hotton, closer than the starting zoom of 8.
   await expect.poll(() => lastZoom(network.tiles)).toBeGreaterThanOrEqual(10);
+  // The result is shown in the part of the map the panel leaves free.
+  const marker = (await pin(page).boundingBox())!;
+  expect(marker.x + marker.width).toBeLessThanOrEqual((await tripPanel(page).boundingBox())!.x);
 
   // Typing doesn't clear the marker; × does, with the text.
+  await pill(page).click();
   await field(page).fill("hot");
   await expect(pin(page)).toBeVisible();
+  await field(page).press("Escape");
   await page.getByRole("button", { name: text.clear }).click();
-  await expect(field(page)).toHaveValue("");
   await expect(pin(page)).toHaveCount(0);
+  await expect(pill(page)).toHaveAccessibleName(text.pill(undefined));
 });
 
 test("the keyboard picks a result: arrow down, Enter", async ({ page }) => {
@@ -94,6 +107,7 @@ test("the keyboard picks a result: arrow down, Enter", async ({ page }) => {
   await field(page).press("ArrowDown");
   await field(page).press("Enter");
   await expect(pinLabel(page)).toHaveText("Hotton");
+  await expect(pill(page)).toBeFocused();
   await expect(results(page)).toHaveCount(0);
 });
 
@@ -128,7 +142,7 @@ test("a failed search offers Retry, which asks the same text and area again", as
   const firstArea = network.nominatim[0].searchParams.get("viewbox");
 
   // The map moves before Retry; the search doesn't.
-  const box = (await mapRegion(page).boundingBox())!;
+  const box = (await freeMapBox(page));
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.wheel(0, -300);
   await expect.poll(() => lastZoom(network.tiles)).toBeGreaterThan(8);
@@ -163,11 +177,14 @@ test("coordinates jump there with no request, even offline", async ({ page, cont
   await search(page, "50.27N 5.44E");
   await expect(pinLabel(page)).toHaveText("50.27N 5.44E");
   await expect.poll(() => lastZoom(network.tiles)).toBe(15);
-  // The pin's point is the map's centre.
-  const map = (await mapRegion(page).locator(".leaflet-container").boundingBox())!;
+  // The pin's point is centred across the part of the map the panel leaves free, and between
+  // the pill's row and the map's bottom.
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  const free = await freeMapBox(page);
+  const pillBox = (await pill(page).boundingBox())!;
   const marker = (await pin(page).boundingBox())!;
-  expect(Math.abs(marker.x + 14 - (map.x + map.width / 2))).toBeLessThan(2);
-  expect(Math.abs(marker.y + 34 - (map.y + map.height / 2))).toBeLessThan(2);
+  expect(Math.abs(marker.x + 14 - (free.x + free.width / 2))).toBeLessThan(2);
+  expect(Math.abs(marker.y + 34 - (pillBox.y + pillBox.height + free.y + free.height) / 2)).toBeLessThan(2);
   expect(network.nominatim).toHaveLength(0);
 });
 
@@ -197,65 +214,64 @@ test("a click on the pin reaches the map and adds a point; trip actions leave th
   await page.keyboard.press("ControlOrMeta+z");
   await expect(mapRegion(page).locator("path.point")).toHaveCount(0);
   await expect(pin(page)).toBeVisible();
-  await page.getByRole("button", { name: strings.newTripButton }).click();
+  await menuItem(page, strings.phone.menu.newTrip);
   await expect(pin(page)).toBeVisible();
 
   // Opening a trip file leaves it too.
-  const [download] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByRole("button", { name: strings.saveFileButton }).click(),
-  ]);
+  const download = await saveTripFile(page);
   const file = testInfo.outputPath("empty.packraft.json");
   await download.saveAs(file);
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    page.getByRole("button", { name: strings.openFileButton }).click(),
-  ]);
-  await chooser.setFiles(file);
+  await openTripFile(page, file);
   await expect(page.getByText(strings.openFileInvalid)).toHaveCount(0);
   await expect(pin(page)).toBeVisible();
-  await expect(field(page)).toHaveValue("50.27, 5.44");
+  await expect(pill(page)).toContainText("50.27, 5.44");
 });
 
 test("Escape closes the dropdown only: the planner's Escape doesn't fire", async ({ page }) => {
   await offline(page, { nominatim: bySearchText });
   await openMap(page);
-  const map = (await mapRegion(page).boundingBox())!;
+  const map = (await freeMapBox(page));
   await page.mouse.click(map.x + map.width / 2, map.y + map.height / 2);
   const point = mapRegion(page).locator("path.point");
-  await point.click();
+  // Select it with a second click on it (later than a double tap).
+  await page.waitForTimeout(450);
+  await page.mouse.click(map.x + map.width / 2, map.y + map.height / 2);
   await expect(point).toHaveAttribute("fill", "#ffd400");
 
   await search(page, "hotton");
   await expect(results(page)).toHaveCount(2);
+  // Escape closes the field and its results; the selected point stays selected.
   await field(page).press("Escape");
   await expect(results(page)).toHaveCount(0);
-  await expect(field(page)).toHaveValue("hotton");
+  await expect(field(page)).toHaveCount(0);
+  await expect(pill(page)).toBeFocused();
   await expect(point).toHaveAttribute("fill", "#ffd400");
 });
 
-test.describe("the bar never covers the access layer's date", () => {
+test.describe("the pill never covers the access chip", () => {
   for (const width of [1024, 1440, 900]) {
     test(`at ${width} px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await offline(page);
       await openMap(page);
       await page.evaluate(() => document.fonts.ready);
-      await page.getByRole("switch", { name: strings.accessLayerToggle }).click();
-      const date = page.locator(".access-overlay input[type=date]");
-      await expect(date).toBeVisible();
+      await toggleAccessLayer(page);
+      const chip = page.getByRole("button", { name: /^Access · / });
+      await expect(chip).toBeVisible();
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
 
-      const bar = (await page.getByRole("search").boundingBox())!;
-      const overlay = (await page.locator(".access-controls").boundingBox())!;
+      const bar = (await pill(page).boundingBox())!;
+      const chipBox = (await chip.boundingBox())!;
       const separate = (a: typeof bar, b: typeof bar) =>
         a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
-      expect(separate(bar, overlay)).toBe(true);
-      // The bar is still usable: wide enough for a place name.
-      expect(bar.width).toBeGreaterThan(200);
-      // Both stay inside the map.
-      const map = (await mapRegion(page).boundingBox())!;
+      expect(separate(bar, chipBox)).toBe(true);
+      // The pill is still usable: wide enough for a place name.
+      expect(bar.width).toBeGreaterThan(150);
+      // Both stay inside the part of the map the panel leaves free.
+      const map = (await freeMapBox(page));
       expect(bar.x + bar.width).toBeLessThanOrEqual(map.x + map.width);
-      expect(overlay.x).toBeGreaterThanOrEqual(map.x);
+      expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(map.x + map.width);
+      expect(chipBox.x).toBeGreaterThanOrEqual(map.x);
     });
   }
 });

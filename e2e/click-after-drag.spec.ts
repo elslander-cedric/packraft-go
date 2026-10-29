@@ -3,6 +3,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { freeMapBox, openPlanner } from "./support/planner";
 
 type Pixel = { x: number; y: number };
 
@@ -13,9 +14,8 @@ const deleteButton = (page: Page) => page.getByRole("button", { name: strings.de
 
 async function openMap(page: Page) {
   await serveOffline(page);
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   return { cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
 }
 

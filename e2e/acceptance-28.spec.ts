@@ -4,13 +4,13 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import { expectTripName, freeMapBox, menuItem, openTripFile, renameTrip, shownTripName } from "./support/planner";
 
 const TRIP_KEY = "packraft-go.trip";
 const SNAPPED: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const pointMarkers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const tripName = (page: Page) => page.getByRole("textbox", { name: strings.tripNameLabel });
 const warning = (page: Page) => page.getByRole("alert").filter({ hasText: strings.autosaveUnknownVersion });
 const storedTrip = (page: Page) => page.evaluate((key) => localStorage.getItem(key), TRIP_KEY);
 
@@ -45,7 +45,7 @@ async function openWithStored(page: Page, stored: string) {
   await page.evaluate(([key, text]) => localStorage.setItem(key, text), [TRIP_KEY, stored]);
   await page.reload();
   await waitForMap(page);
-  const box = (await mapRegion(page).boundingBox())!;
+  const box = (await freeMapBox(page));
   return (dx: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2);
 }
 
@@ -66,7 +66,7 @@ test("AC2 + data loss: work drawn while the warning shows is not saved, and the 
   page.on("pageerror", (error) => errors.push(error.message));
   const clickMap = await openWithStored(page, NEWER);
 
-  await tripName(page).fill("My new work");
+  await renameTrip(page, "My new work");
   await clickMap(-120);
   await clickMap(0);
   await clickMap(120);
@@ -85,7 +85,7 @@ test("AC2 + data loss: work drawn while the warning shows is not saved, and the 
   await waitForMap(page);
   await expect(warning(page)).toBeVisible();
   await expect(pointMarkers(page)).toHaveCount(0);
-  await expect(tripName(page)).not.toHaveValue("My new work");
+  expect(await shownTripName(page)).not.toBe("My new work");
   expect(await storedTrip(page)).toBe(NEWER);
   expect(errors).toEqual([]);
 });
@@ -110,7 +110,7 @@ test("AC2: cancelling New trip keeps the save, the warning and the in-memory tri
   await clickMap(100);
   await expect(pointMarkers(page)).toHaveCount(2);
 
-  await page.getByRole("button", { name: strings.newTripButton }).click();
+  await menuItem(page, strings.phone.menu.newTrip);
   await answerConfirmation(page, "newTrip", "cancel");
 
   await expect(pointMarkers(page)).toHaveCount(2);
@@ -127,11 +127,7 @@ test("AC2: cancelling Open file keeps the save and the warning; confirming repla
   await expect(pointMarkers(page)).toHaveCount(2);
 
   const openFile = async () => {
-    const [chooser] = await Promise.all([
-      page.waitForEvent("filechooser"),
-      page.getByRole("button", { name: strings.openFileButton }).click(),
-    ]);
-    await chooser.setFiles(validFile("lesse.packraft.json"));
+    await openTripFile(page, validFile("lesse.packraft.json"));
   };
 
   await openFile();
@@ -145,7 +141,7 @@ test("AC2: cancelling Open file keeps the save and the warning; confirming repla
   await expect(warning(page)).toHaveCount(0);
   // Updated: format reset (#52).
   await expect.poll(async () => JSON.parse((await storedTrip(page)) ?? "{}").version).toBe(1);
-  await expect(tripName(page)).toHaveValue("Planned in a newer tab");
+  await expectTripName(page, "Planned in a newer tab");
 });
 
 for (const [label, text] of [

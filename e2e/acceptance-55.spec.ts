@@ -4,13 +4,27 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
+import {
+  accessPointDialog,
+  editSelectedAccessPoint,
+  freeMapBox,
+  markAccessPointAt,
+  menuItem,
+  openPlanner,
+  openTripFile,
+  saveAccessPoint,
+  showTab,
+  tripPanel,
+} from "./support/planner";
 
 const text = strings.accessPoints;
 const KEY = "packraft-go.access-points";
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const markers = (page: Page) => mapRegion(page).locator(".access-point-marker");
-const panel = (page: Page) => page.getByRole("complementary", { name: text.panelLabel });
-const details = (page: Page) => page.getByRole("region", { name: text.detailsLabel });
+// Not through the map region, which the details dialog hides from the accessibility tree while open.
+const markers = (page: Page) => page.locator(".leaflet-container .access-point-marker");
+/** The Access points tab of the trip panel. */
+const panel = (page: Page) => tripPanel(page);
+const details = accessPointDialog;
 const stored = (page: Page) => page.evaluate((k) => localStorage.getItem(k), KEY);
 
 const T = "2026-10-12T08:00:00.000Z";
@@ -22,14 +36,14 @@ const file = (version: number, pts: unknown[]) =>
 
 async function openWith(page: Page, initial?: string) {
   await serveOffline(page);
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await openPlanner(page);
   if (initial !== undefined) {
     await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, initial]);
     await page.reload();
     await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
   }
-  const box = (await mapRegion(page).boundingBox())!;
+  await showTab(page, strings.phone.tabs.accessPoints);
+  const box = (await freeMapBox(page));
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
@@ -41,7 +55,7 @@ test("new trip and opening a trip file leave access points untouched", async ({ 
   // Make a trip so the confirmations show.
   await page.mouse.click(mid.x + 200, mid.y + 100);
   await page.mouse.click(mid.x + 250, mid.y + 100);
-  await page.getByRole("button", { name: strings.newTripButton }).click();
+  await menuItem(page, strings.phone.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await expect(markers(page)).toHaveCount(1);
   expect(await stored(page)).toBe(before);
@@ -52,11 +66,7 @@ test("new trip and opening a trip file leave access points untouched", async ({ 
     format: "packraft-go-trip", version: 1,
     trip: { name: "T", points: [{ lat: 50.3, lng: 5.6 }, { lat: 50.31, lng: 5.61 }], legs: [{ mode: "hike" }] },
   });
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    page.getByRole("button", { name: strings.openFileButton }).click(),
-  ]);
-  await chooser.setFiles({ name: "t.packraft.json", mimeType: "application/json", buffer: Buffer.from(trip) });
+  await openTripFile(page, { name: "t.packraft.json", mimeType: "application/json", buffer: Buffer.from(trip) });
   await answerConfirmation(page, "openFile", "confirm");
   await expect(markers(page)).toHaveCount(1);
   expect(await stored(page)).toBe(before);
@@ -80,9 +90,8 @@ test("damaged autosave: starts empty without crashing, and is overwritten by the
   await expect(panel(page)).toContainText(text.damagedBackedUp(backups[0][0]!));
   // Note: the damaged save is replaced by an empty one right on load (not only on the next change), like the trip.
   expect(JSON.parse((await stored(page))!).accessPoints).toEqual([]);
-  await panel(page).getByRole("button", { name: text.addButton }).click();
-  await page.mouse.click(mid.x, mid.y);
-  await expect(details(page)).toBeVisible();
+  await markAccessPointAt(page, mid);
+  await saveAccessPoint(page);
   expect(JSON.parse((await stored(page))!).accessPoints).toHaveLength(1);
   expect(errors).toEqual([]);
 });
@@ -92,8 +101,8 @@ test("unknown-version autosave: warned, kept byte for byte, edits not saved", as
   const mid = await openWith(page, newer);
   const warning = page.getByRole("alert").filter({ hasText: text.autosaveUnknownVersion });
   await expect(warning).toBeVisible();
-  await panel(page).getByRole("button", { name: text.addButton }).click();
-  await page.mouse.click(mid.x, mid.y);
+  await markAccessPointAt(page, mid);
+  await saveAccessPoint(page);
   await expect(markers(page)).toHaveCount(1);
   await page.waitForTimeout(300);
   expect(await stored(page)).toBe(newer);
@@ -109,24 +118,29 @@ test("special characters in notes and border positions survive a reload", async 
   await openWith(page, file(1, pts));
   await expect(markers(page)).toHaveCount(4);
   // A change saves them all again, and a reload reads them back.
-  await markers(page).nth(1).click();
+  // Edited from its row (the markers spread over the country, some behind the panel).
+  const edit = (note: string) => panel(page).getByRole("button", { name: strings.phone.editAccessPoint(note), exact: true });
+  await edit(notes[1]).click();
   await details(page).getByLabel(text.noteLabel).fill(notes[1]);
+  await saveAccessPoint(page);
   await page.reload();
   await expect(markers(page)).toHaveCount(4);
   const saved = JSON.parse((await stored(page))!).accessPoints;
   expect(saved.map((p: { note: string }) => p.note)).toEqual(notes);
   expect(saved.map((p: { position: { lat: number; lng: number } }) => [p.position.lat, p.position.lng])).toEqual(coords);
-  await markers(page).nth(0).click();
+  await showTab(page, strings.phone.tabs.accessPoints);
+  await edit(notes[0]).click();
   await expect(details(page).getByLabel(text.noteLabel)).toHaveValue(notes[0]);
 });
 
-test("a note with special characters typed in the panel is saved and restored", async ({ page }) => {
+test("a note with special characters typed in the dialog is saved and restored", async ({ page }) => {
   const mid = await openWith(page);
-  await panel(page).getByRole("button", { name: text.addButton }).click();
-  await page.mouse.click(mid.x, mid.y);
+  await markAccessPointAt(page, mid);
   const note = 'Bridge & "pub" <b>x</b> / 100% 🛶';
   await details(page).getByLabel(text.noteLabel).fill(note);
+  await saveAccessPoint(page);
   await page.reload();
   await markers(page).first().click();
+  await editSelectedAccessPoint(page);
   await expect(details(page).getByLabel(text.noteLabel)).toHaveValue(note);
 });

@@ -6,14 +6,13 @@ import { parseGpx11 } from "../src/testing/gpx11";
 import { strings } from "../src/ui/strings";
 import { downloadGpxZip } from "./support/gpxZip";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import { exportGpxDisabled, freeMapBox, openPlanner, pickNextMode, renameTrip, startGpxExport } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const legRows = (page: Page) => legsPanel(page).getByRole("listitem");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const tripName = (page: Page) => page.getByRole("textbox", { name: strings.tripNameLabel });
 const campButton = (page: Page) => page.getByRole("button", { name: strings.campButton });
-const exportButton = (page: Page) => page.getByRole("button", { name: strings.exportGpxButton });
+// Updated for ADR 0034: Export GPX is in the menu and asks for the name first.
+const exportButton = (page: Page) => () => startGpxExport(page);
 
 const TRAIL_FILE = brouterFixture("hiking-success.geojson");
 const RIVER_FILE = brouterFixture("river-success.geojson");
@@ -25,31 +24,28 @@ const byProfile = (url: URL) => (url.searchParams.get("profile") === "river" ? R
 const recordedTrack = (geojson: string) =>
   (JSON.parse(geojson).features[0].geometry.coordinates as number[][]).map(([lon, lat, ele]) => ({ lat, lon, ele }));
 
-/** Opens the app and clicks points across the map at the given offsets; returns the map's middle on screen. */
-async function drawPoints(page: Page, offsets: number[]) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+/**
+ * Opens the app and clicks points across the map at the given offsets, the legs listed in
+ * `paddle` drawn as paddle legs; returns the map's middle on screen.
+ */
+async function drawPoints(page: Page, offsets: number[], paddle: number[] = []) {
+  await openPlanner(page);
+  const box = (await freeMapBox(page));
   const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  for (const dx of offsets) await page.mouse.click(middle.x + dx, middle.y);
+  for (const [i, dx] of offsets.entries()) {
+    if (i > 0) await pickNextMode(page, paddle.includes(i - 1) ? "paddle" : "hike");
+    await page.mouse.click(middle.x + dx, middle.y);
+  }
   await expect(legLines(page)).toHaveCount(offsets.length - 1);
   return middle;
 }
-
-const setPaddle = (page: Page, leg: number) =>
-  legRows(page)
-    .nth(leg)
-    .getByRole("group", { name: strings.legModeLabel(leg + 1) })
-    .getByRole("button", { name: strings.legModePaddle })
-    .click();
 
 test("exports a hike leg, a paddle leg and a camp as a ZIP of one GPX 1.1 file per section, named after the trip", async ({
   page,
 }) => {
   const network = await serveOffline(page, { brouter: byProfile });
-  const middle = await drawPoints(page, [-150, 0, 150]);
-  await tripName(page).fill("Ourthe weekend");
-  await setPaddle(page, 1);
+  const middle = await drawPoints(page, [-150, 0, 150], [1]);
+  await renameTrip(page, "Ourthe weekend");
   await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
   await expect(legLines(page).nth(1)).toHaveClass(/leg-routed/);
   await page.mouse.click(middle.x, middle.y); // select the middle point
@@ -80,9 +76,7 @@ test("exports a hike leg, a paddle leg and a camp as a ZIP of one GPX 1.1 file p
 
 test("joins consecutive paddle legs into one file without repeating the point where they meet", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
-  await drawPoints(page, [-200, -70, 70, 200]);
-  await setPaddle(page, 1);
-  await setPaddle(page, 2);
+  await drawPoints(page, [-200, -70, 70, 200], [1, 2]);
   for (const leg of [0, 1, 2]) await expect(legLines(page).nth(leg)).toHaveClass(/leg-routed/);
 
   const zip = await downloadGpxZip(page, exportButton(page));
@@ -115,13 +109,11 @@ test("an unnamed trip whose legs could not be routed exports straight lines with
 
 test("export is unavailable until the trip has a leg", async ({ page }) => {
   await serveOffline(page);
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  await expect(exportButton(page)).toBeDisabled();
-  await expect(exportButton(page)).toHaveAccessibleDescription(strings.exportGpxDisabledReason);
-  const box = (await mapRegion(page).boundingBox())!;
+  await openPlanner(page);
+  expect(await exportGpxDisabled(page)).toBe(true);
+  const box = (await freeMapBox(page));
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-  await expect(exportButton(page)).toBeDisabled();
+  expect(await exportGpxDisabled(page)).toBe(true);
   await page.mouse.click(box.x + box.width / 2 + 100, box.y + box.height / 2);
-  await expect(exportButton(page)).toBeEnabled();
+  expect(await exportGpxDisabled(page)).toBe(false);
 });

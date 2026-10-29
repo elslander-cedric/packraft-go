@@ -3,17 +3,17 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { freeMapBox, openPlanner } from "./support/planner";
 
 const HIKE = "rgb(181, 73, 27)"; // #b5491b, --color-hike in both themes
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
 
 async function drawHikeLeg(page: Page) {
-  await page.goto("/");
+  await openPlanner(page);
   await page.evaluate(() => document.fonts.ready);
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await mapRegion(page).boundingBox())!;
+  const box = (await freeMapBox(page));
   await page.mouse.click(box.x + box.width / 2 - 80, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2 + 80, box.y + box.height / 2);
   await expect(mapRegion(page).locator(".leaflet-overlay-pane path.leg")).toHaveCount(1);
@@ -37,14 +37,15 @@ test.describe("with the system set to dark", () => {
 
     expect(brightness(await style(page, "body", "background-color"))).toBeLessThan(0.2);
     expect(brightness(await style(page, "body", "color"))).toBeGreaterThan(0.8);
-    expect(brightness(await style(page, ".leaflet-control-zoom-in", "background-color"))).toBeLessThan(0.2);
+    expect(brightness(await style(page, ".side-panel", "background-color"))).toBeLessThan(0.2);
 
     expect(await style(page, ".leaflet-tile-pane", "filter")).toBe("brightness(0.65)");
     expect(await style(page, ".leaflet-overlay-pane", "filter")).toBe("none");
 
     expect(await style(page, ".leaflet-overlay-pane path.leg", "stroke")).toBe(HIKE);
-    const row = legsPanel(page).getByRole("listitem").first();
-    expect(await row.evaluate((el) => getComputedStyle(el).borderLeftColor)).toBe(HIKE);
+    // A hike row's distance icon has the hike colour.
+    const icon = legsPanel(page).getByRole("listitem").first().locator(".phone-row-distance .phone-row-figure-icon");
+    expect(await icon.evaluate((el) => getComputedStyle(el).color)).toBe(HIKE);
 
     // Native inputs and the phone's status bar follow the theme.
     expect(await style(page, "html", "color-scheme")).toBe("light dark");
@@ -61,7 +62,7 @@ test("with the system set to light, the panels and tiles look as before", async 
 
   expect(await style(page, "body", "background-color")).toBe("rgb(255, 255, 255)");
   expect(await style(page, ".leaflet-tile-pane", "filter")).toBe("none");
-  expect(await style(page, ".leaflet-control-zoom-in", "background-color")).toBe("rgb(255, 255, 255)");
+  expect(await style(page, ".side-panel", "background-color")).toBe("rgb(255, 255, 255)");
   await expect(page.locator('meta[name="theme-color"][media="(prefers-color-scheme: light)"]')).toHaveAttribute(
     "content",
     "#1b6fb5",

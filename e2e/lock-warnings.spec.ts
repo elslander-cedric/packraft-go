@@ -3,6 +3,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { legDetailsDialog, openPlanner, showTab } from "./support/planner";
 
 // The Anderlecht lock is at 4.30174 E, 50.81956 N, on the Brussels canal (open).
 const throughLock = [
@@ -35,11 +36,13 @@ async function seed(page: Page, water: { lat: number; lng: number }[]) {
 }
 
 const legRow = (page: Page) =>
-  page.getByRole("complementary", { name: strings.legsPanelLabel }).locator(".leg-row").first();
+  page.getByRole("list", { name: strings.legsPanelLabel }).locator(".phone-row").first();
+const legDetails = legDetailsDialog;
 const dayRow = (page: Page) =>
   page.getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem").first();
 const dayChip = (page: Page) =>
   dayRow(page).getByRole("group", { name: strings.tripAccess.dayWarningsLabel }).getByRole("button");
+const showDays = (page: Page) => showTab(page, strings.phone.tabs.days);
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
@@ -48,25 +51,33 @@ test("a paddle leg through a lock shows the warning on the leg, and a Lock chip 
 }) => {
   await serveOffline(page);
   await seed(page, throughLock);
-  await page.goto("/");
+  await openPlanner(page);
 
+  // The leg's details dialog (#158) holds the warning, a lock's own, with its rule source.
   const text = strings.tripAccess.lockWarning("Écluse d'Anderlecht - Sluis van Anderlecht");
-  await expect(legRow(page).locator(".access-warning-lock")).toContainText(text);
+  await legRow(page).getByRole("button", { name: strings.phone.legDetailsButton(1) }).click();
+  await expect(legDetails(page).locator(".access-warning-lock")).toContainText(text);
+  await expect(legDetails(page).locator(".access-warning-lock").getByRole("link", { name: /Brussels police regulation/ })).toBeVisible();
+  await legDetails(page).getByRole("button", { name: strings.phone.legDetailsClose }).click();
   // The day only points at the leg (ADR 0029).
+  await showDays(page);
   await expect(dayChip(page)).toContainText(strings.tripAccess.chipKind.lock);
   await expect(dayRow(page).locator(".access-warning-lock")).toHaveCount(0);
-  // The warning is a lock's own, with its rule source.
-  await expect(legRow(page).locator(".access-warning-lock").getByRole("link", { name: /Brussels police regulation/ })).toBeVisible();
 });
 
 test("a paddle leg away from any lock has no lock warning", async ({ page }) => {
   await serveOffline(page);
   await seed(page, awayFromLock);
-  await page.goto("/");
+  await openPlanner(page);
 
   // Wait for the access content before checking what is absent.
-  await expect(legRow(page).locator(".leg-access-status")).toBeVisible();
+  await expect(legRow(page).locator(".leg-access-icons")).toBeVisible();
+  await expect(legRow(page).locator('svg[data-icon="stairs"]')).toHaveCount(0);
+  await legRow(page).getByRole("button", { name: strings.phone.legDetailsButton(1) }).click();
+  await expect(legDetails(page)).toBeVisible();
   await expect(page.locator(".access-warning-lock")).toHaveCount(0);
+  await legDetails(page).getByRole("button", { name: strings.phone.legDetailsClose }).click();
+  await showDays(page);
   await expect(dayChip(page)).toHaveCount(0);
 });
 

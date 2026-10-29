@@ -1,23 +1,26 @@
 // Acceptance tests for #27 (leg rows get more room) written
-// from the ticket's criteria, at a 1280×800 desktop window (ADR 0005).
-// Checks are made on the rendered text, not on class names,
+// from the ticket's criteria, at a 1280×800 desktop window, now in the one planner's
+// side panel (ADR 0034). Checks are made on the rendered text, not on class names,
 // so they hold for any layout that meets the criteria.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import {
+  dayCards as dayRows,
+  freeMapBox,
+  legRows,
+  openPlanner,
+  pickNextMode,
+  showTab,
+  totals,
+  tripPanel,
+} from "./support/planner";
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
-const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("complementary", { name: strings.legsPanelLabel });
-const legRows = (page: Page) => legsPanel(page).getByRole("listitem");
-const daysPanel = (page: Page) => page.getByRole("complementary", { name: strings.daysPanelLabel });
-const dayRows = (page: Page) => daysPanel(page).getByRole("listitem");
-const modeButton = (page: Page, leg: number, name: string) =>
-  legRows(page)
-    .nth(leg)
-    .getByRole("group", { name: strings.legModeLabel(leg + 1) })
-    .getByRole("button", { name });
+const daysPanel = (page: Page) => tripPanel(page).getByRole("complementary", { name: strings.daysPanelLabel });
+/** A figure's shown value: its text without the label only read out (e.g. "49 min"). */
+const shownValue = async (figure: Locator, label: string) => (await figure.textContent())!.replace(`${label} `, "");
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.geojson") };
@@ -32,13 +35,15 @@ function riverEndingAbove(rise: number): BRouterReply {
 }
 
 async function openMap(page: Page) {
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await openPlanner(page);
   // Updated: line counts are only meaningful once the self-hosted font has loaded (#70).
   await page.evaluate(() => document.fonts.ready);
-  const box = (await mapRegion(page).boundingBox())!;
+  const box = (await freeMapBox(page));
   const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  const click = (dx: number, dy = 0) => page.mouse.click(centre.x + dx, centre.y + dy);
+  const click = async (dx: number, dy = 0, mode?: "hike" | "paddle") => {
+    if (mode) await pickNextMode(page, mode);
+    await page.mouse.click(centre.x + dx, centre.y + dy);
+  };
   return { click, centre };
 }
 
@@ -57,9 +62,12 @@ const linesOfText = (scope: Locator, text: string) =>
     return -1; // not found
   }, text);
 
+/** Text that is only read out (the figures' labels, the access icons' names) isn't laid out. */
+const readOutOnly = ".visually-hidden, .leg-access-icons";
+
 /** Number of distinct text lines in `scope` (text boxes whose tops are within 6 px count as one line). */
 const textLineCount = (scope: Locator) =>
-  scope.evaluate((root) => {
+  scope.evaluate((root, hidden) => {
     const tops: number[] = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
@@ -67,6 +75,7 @@ const textLineCount = (scope: Locator) =>
       // Updated: a paddle leg's access status and warnings sit in their own block below
       // the figures and are not part of the two-line rule for the figures (#58).
       if (n.parentElement?.closest(".leg-access")) continue;
+      if (n.parentElement?.closest(hidden)) continue;
       const range = document.createRange();
       range.selectNodeContents(n);
       for (const r of range.getClientRects()) if (r.width > 0) tops.push(r.top);
@@ -79,7 +88,7 @@ const textLineCount = (scope: Locator) =>
       last = t;
     }
     return lines;
-  });
+  }, readOutOnly);
 
 /** Every figure (the leg's own texts) is on one line and inside the row; the row never scrolls sideways. */
 async function expectFiguresUnbroken(row: Locator, figures: string[]) {
@@ -139,34 +148,22 @@ test.describe("#27 leg rows at 1280×800", () => {
     const { click } = await openMap(page);
     await click(-150);
     await click(0);
-    await click(150);
-    await modeButton(page, 1, strings.legModePaddle).click();
+    await click(150, 0, "paddle");
     const hike = legRows(page).nth(0);
     const paddle = legRows(page).nth(1);
     await expect(paddle).toContainText(strings.dropLabel);
     await expect(hike).toContainText(strings.climbLabel);
 
-    await expectFiguresUnbroken(hike, [
-      strings.legLabel(1),
-      "3.2 km",
-      `${strings.climbLabel} 100 m`,
-      `${strings.descentLabel} 59 m`,
-      `${strings.legTimeEstimate} 49 min`,
-    ]);
-    await expectFiguresUnbroken(paddle, [
-      strings.legLabel(2),
-      "5.9 km",
-      `${strings.dropLabel} 7 m`,
-      `${strings.legTimeEstimate} 1 h 11 min`,
-    ]);
-    // Name, switch, distance, climb/descent/drop and time read as at most two lines.
+    await expectFiguresUnbroken(hike, ["3.2 km", "100 m", "59 m", "49 min"]);
+    await expectFiguresUnbroken(paddle, ["5.9 km", "7 m", "1 h 11 min"]);
+    // Distance and time, then climb/descent/drop: at most two lines.
     expect(await textLineCount(hike)).toBeLessThanOrEqual(2);
     expect(await textLineCount(paddle)).toBeLessThanOrEqual(2);
-    // The leg name and its mode switch are on the same line.
-    for (const [i, row] of [hike, paddle].entries()) {
-      const name = (await row.getByText(strings.legLabel(i + 1), { exact: true }).boundingBox())!;
-      const sw = (await row.getByRole("group").boundingBox())!;
-      expect(Math.abs(name.y + name.height / 2 - (sw.y + sw.height / 2))).toBeLessThan(6);
+    // The distance and the time share the first line.
+    for (const row of [hike, paddle]) {
+      const distance = (await row.locator(".phone-row-distance").boundingBox())!;
+      const time = (await row.locator(".phone-row-time").boundingBox())!;
+      expect(Math.abs(distance.y + distance.height / 2 - (time.y + time.height / 2))).toBeLessThan(6);
     }
   });
 
@@ -175,12 +172,11 @@ test.describe("#27 leg rows at 1280×800", () => {
     await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RISE : TRAIL) });
     const { click } = await openMap(page);
     await click(-100);
-    await click(100);
-    await modeButton(page, 0, strings.legModePaddle).click();
+    await click(100, 0, "paddle");
     const row = legRows(page).nth(0);
-    const rise = strings.riseFigure("5 m");
-    await expect(row).toContainText(rise);
-    await expectFiguresUnbroken(row, [rise, `${strings.legTimeEstimate} 1 h 11 min`]);
+    const rise = "5 m?";
+    await expect(row).toContainText(`${strings.phone.legFigures.rise} ${rise}`);
+    await expectFiguresUnbroken(row, [rise, "1 h 11 min"]);
     expect(await textLineCount(row)).toBeLessThanOrEqual(2);
   });
 
@@ -192,7 +188,7 @@ test.describe("#27 leg rows at 1280×800", () => {
     const row = legRows(page).nth(0);
     await expect(row.getByRole("status")).toHaveText(strings.legRouting);
     const distance = (await row.textContent())!.match(/[\d.]+ km/)![0];
-    await expectFiguresUnbroken(row, [strings.legLabel(1), distance, strings.legRouting]);
+    await expectFiguresUnbroken(row, [distance, strings.legRouting]);
     expect(await textLineCount(row)).toBeLessThanOrEqual(3); // heading, time, snapping note
   });
 });
@@ -205,7 +201,8 @@ test.describe("#27 Retry on a failed leg at 1280×800", () => {
     await click(120);
     const row = legRows(page).nth(0);
     await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailed.unavailable);
-    const time = (await row.textContent())!.match(/Est\. time .*?\(no climb data\)/)![0];
+    const time = await shownValue(row.locator(".phone-row-time"), strings.phone.legFigures.time);
+    expect(time).toContain("(no climb data)");
     expect(await linesOfText(row, time), "time without climb data breaks").toBe(1);
     await expectRetryUsable(page, row, net);
   });
@@ -214,14 +211,12 @@ test.describe("#27 Retry on a failed leg at 1280×800", () => {
     const net = await serveOffline(page, { brouter: () => NO_ROUTE });
     const { click } = await openMap(page);
     await click(-120);
-    await click(120);
-    await modeButton(page, 0, strings.legModePaddle).click();
+    await click(120, 0, "paddle");
     const row = legRows(page).nth(0);
     await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailedNoRiver);
-    // Updated: the row also gets access status and aire warnings once the rules load
-    // (#58, #81); measure Retry after they are in, not while they push it down.
-    await expect(row.locator(".leg-access-status")).toBeVisible();
-    await expect(row.locator(".aire-warnings")).toBeVisible();
+    // Updated: the row also gets its access icons once the rules load (#58, #81);
+    // measure Retry after they are in, not while they push it down.
+    await expect(row.locator(".leg-access-icons")).toBeVisible();
     await expectRetryUsable(page, row, net);
   });
 
@@ -249,18 +244,22 @@ test.describe("#27 hike and paddle rows, totals at 1280×800", () => {
     const { click } = await openMap(page);
     await click(-150);
     await click(0);
-    await click(150);
-    await modeButton(page, 1, strings.legModePaddle).click();
+    await click(150, 0, "paddle");
     await expect(legRows(page).nth(1)).toContainText(strings.dropLabel);
+    // Updated for ADR 0034: a row shows its mode by its distance's icon, in the mode's colour.
     const look = (row: Locator) =>
       row.evaluate((el) => {
-        const s = getComputedStyle(el);
-        return { border: s.borderLeftColor, width: s.borderLeftWidth, bg: s.backgroundColor, font: parseFloat(s.fontSize) };
+        const icon = el.querySelector(".phone-row-distance .phone-row-figure-icon")!;
+        return {
+          icon: icon.getAttribute("data-icon"),
+          colour: getComputedStyle(icon).color,
+          font: parseFloat(getComputedStyle(el).fontSize),
+        };
       });
     const hike = await look(legRows(page).nth(0));
     const paddle = await look(legRows(page).nth(1));
-    expect(hike.border).not.toBe(paddle.border);
-    expect(hike.bg).not.toBe(paddle.bg);
+    expect(hike.icon).not.toBe(paddle.icon);
+    expect(hike.colour).not.toBe(paddle.colour);
     expect(hike.font).toBeGreaterThanOrEqual(12);
     expect(paddle.font).toBeGreaterThanOrEqual(12);
   });
@@ -270,53 +269,44 @@ test.describe("#27 hike and paddle rows, totals at 1280×800", () => {
     const { click, centre } = await openMap(page);
     await click(-150);
     await click(0);
-    await click(150);
-    await modeButton(page, 1, strings.legModePaddle).click();
+    await click(150, 0, "paddle");
     await expect(legRows(page).nth(1)).toContainText(strings.dropLabel);
     // A camp at the middle point makes two days.
+    await page.waitForTimeout(450);
     await page.mouse.click(centre.x, centre.y);
     await page.getByRole("button", { name: strings.campButton }).click();
+    await showTab(page, strings.phone.tabs.days);
     await expect(dayRows(page)).toHaveCount(2);
 
     for (const day of await dayRows(page).all()) {
-      const text = (await day.textContent())!;
-      for (const label of [
-        strings.dayHikeDistance,
-        strings.dayPaddleDistance,
-        strings.climbLabel,
-        strings.descentLabel,
-        strings.dayTimeEstimate,
-      ]) {
-        const figure = text.match(new RegExp(`${label.replace(/[.]/g, "\\.")} [\\d.]+(?: h \\d+ min| min| km| m)`))![0];
-        expect(await linesOfText(day, figure), `day figure "${figure}" breaks`).toBe(1);
+      for (const figure of await day.locator(".day-figure").all()) {
+        const label = (await figure.locator(".visually-hidden").textContent())!.trim();
+        const value = await shownValue(figure, label);
+        expect(await linesOfText(figure, value), `day figure "${label} ${value}" breaks`).toBe(1);
       }
       expect(await day.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
       expect(await day.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);
     }
     expect(await daysPanel(page).evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
 
-    // Trip totals: each on one line, and set apart from the last leg row.
-    const panel = legsPanel(page);
-    for (const label of [strings.tripTotalDistance, strings.tripTotalTimeEstimate]) {
-      const line = panel.getByText(label);
-      await line.scrollIntoViewIfNeeded();
-      await expect(line).toBeVisible();
-      const text = (await line.textContent())!;
-      expect(await linesOfText(line, text), `"${text}" breaks`).toBe(1);
+    // Trip totals in the panel's header: each figure on one line, apart from the leg rows.
+    const figures = totals(page).locator(".phone-total");
+    await expect(figures.first()).toBeVisible();
+    for (const figure of await figures.all()) {
+      const label = (await figure.locator(".visually-hidden").textContent())!.trim();
+      const value = await shownValue(figure, label);
+      expect(await linesOfText(figure, value), `"${label} ${value}" breaks`).toBe(1);
     }
-    const total = panel.getByText(strings.tripTotalDistance);
-    const lastLeg = (await legRows(page).last().boundingBox())!;
-    const totalBox = (await total.boundingBox())!;
-    const ruled = await total.evaluate((el) => parseFloat(getComputedStyle(el).borderTopWidth) > 0);
-    const gap = totalBox.y - (lastLeg.y + lastLeg.height);
-    expect(gap >= 8 || ruled, `totals touch the leg rows (gap ${gap}px, no rule)`).toBe(true);
-    expect(gap).toBeGreaterThanOrEqual(0);
+    await showTab(page, strings.phone.tabs.legs);
+    const firstLeg = (await legRows(page).first().boundingBox())!;
+    const totalsBox = (await totals(page).boundingBox())!;
+    expect(firstLeg.y - (totalsBox.y + totalsBox.height), "totals touch the leg rows").toBeGreaterThanOrEqual(8);
   });
 
   test("the map keeps most of a 1280 px window (desktop-first)", async ({ page }) => {
     await serveOffline(page);
     await openMap(page);
-    const map = (await mapRegion(page).boundingBox())!;
+    const map = (await freeMapBox(page));
     expect(map.width).toBeGreaterThanOrEqual(800);
   });
 });

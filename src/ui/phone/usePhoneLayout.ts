@@ -1,14 +1,17 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Screens this narrow, and touch screens this short (a phone held sideways),
- * get the phone planner (ADR 0026): the full planner with a phone layout.
- * Wider screens, iPads included, get the desktop planner.
+ * Screens this narrow, and touch screens this short (a phone held sideways), hide the disclaimer
+ * banner: the planner shows it in the access dialog instead (ADR 0026). Kept in step with the
+ * rule in globals.css.
  */
 export const PHONE_QUERY = "(max-width: 640px), (max-height: 640px) and (pointer: coarse)";
 
-/** Within the phone layout, a screen wider than tall gets the side panel instead of the sheet (#126). */
-export const SIDEWAYS_QUERY = "(orientation: landscape)";
+/**
+ * A narrow screen in portrait gets the bottom sheet; every other screen (a phone held sideways,
+ * tablets either way up, desktop) gets the side panel on the right (ADR 0034).
+ */
+export const SHEET_QUERY = "(max-width: 640px) and (orientation: portrait)";
 
 /** Whether `query` matches, kept up to date; null on the server and while hydrating. */
 function useMediaQuery(query: string): boolean | null {
@@ -24,12 +27,7 @@ function useMediaQuery(query: string): boolean | null {
   );
 }
 
-/** True on a phone-sized screen, false on a larger one, null until known. */
-export function usePhoneLayout(): boolean | null {
-  return useMediaQuery(PHONE_QUERY);
-}
-
-/** True while the screen is wider than tall (a phone held sideways), false otherwise or until known. */
+/** True when the planner gets the side panel instead of the bottom sheet (ADR 0034). */
 export function useSideways(): boolean {
-  return useMediaQuery(SIDEWAYS_QUERY) === true;
+  return useMediaQuery(SHEET_QUERY) === false;
 }

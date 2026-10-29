@@ -1,5 +1,5 @@
-// The base map switcher on the desktop (#179, ADR 0031): a map button bottom right opens the
-// three base maps. Each switch loads its own sources and attribution, the choice is a setting
+// The base map switcher on a desktop-sized window (#179, ADR 0031): the layers button under the
+// position button (ADR 0034) opens the three base maps. Each switch loads its own sources and attribution, the choice is a setting
 // on the device (never in the trip, its file or the GPX), and a base map that goes less far in
 // zooms the map out. Every tile comes from the fixture; no live service is called.
 import { readFile } from "node:fs/promises";
@@ -10,12 +10,12 @@ import { SETTINGS_KEY } from "../src/persistence/settingsStorage";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { downloadGpxZip } from "./support/gpxZip";
-import { baseMapItem, chooseBaseMap, mapMenuButton, toggleOverlay } from "./support/mapMenu";
+import { baseMapItem, chooseBaseMap, mapMenuButton, toggleAccessLayer, toggleOverlay } from "./support/mapMenu";
 import { serveOffline, tileSourceOf, type TileSource } from "./support/offline";
+import { freeMapCentre, openPlanner, saveTripFile, startGpxExport, tripPanel } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const attribution = (page: Page) => mapRegion(page).locator(".leaflet-control-attribution");
-const zoomIn = (page: Page) => page.getByRole("button", { name: "Zoom in" });
 const tiles = (page: Page) => mapRegion(page).locator(".leaflet-tile-pane img");
 
 /**
@@ -31,8 +31,7 @@ const sorted = (sources: Set<TileSource | null>) => [...sources].sort();
 
 async function openMap(page: Page) {
   const network = await serveOffline(page);
-  await page.goto("/");
-  await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+  await openPlanner(page);
   return network;
 }
 
@@ -41,18 +40,17 @@ const overlaps = (a: { x: number; y: number; width: number; height: number }, b:
 
 const box = async (locator: Locator) => (await locator.boundingBox())!;
 
-test("the base map button bottom right switches to aerial photos, NGI topo and back to OpenTopoMap", async ({
-  page,
-}) => {
+test("the layers button switches to aerial photos, NGI topo and back to OpenTopoMap", async ({ page }) => {
   const network = await openMap(page);
   expect(sorted(await drawnSources(page))).toEqual(["opentopomap"]);
 
-  // It sits in the map's bottom-right corner, above the attribution.
+  // It sits top right in the part of the map the panel leaves free.
   const map = await box(mapRegion(page));
   const button = await box(mapMenuButton(page));
-  const credits = await box(attribution(page));
-  expect(map.x + map.width - (button.x + button.width)).toBeLessThan(20);
-  expect(button.y + button.height).toBeLessThanOrEqual(credits.y + 1);
+  const panel = await box(tripPanel(page));
+  expect(button.x + button.width).toBeLessThanOrEqual(panel.x);
+  expect(panel.x - (button.x + button.width)).toBeLessThan(40);
+  expect(button.y - map.y).toBeLessThan(150);
 
   // OpenTopoMap is marked as the current one.
   await mapMenuButton(page).click();
@@ -120,28 +118,39 @@ test("aerial photos go to zoom 18 and further; switching to OpenTopoMap there zo
   test.setTimeout(90_000);
   const network = await openMap(page);
   await chooseBaseMap(page, "aerial-be");
-  // The map opens on Wallonia: the Walloon WMS shows each zoom. Leaflet drops clicks during
-  // a zoom animation, so wait for each step's tiles and for the animation to end.
-  for (let zoom = 9; zoom <= 18; zoom++) {
-    await zoomIn(page).click();
-    await expect.poll(() => network.tiles.some((tile) => tile.source === "wallonia" && tile.z === zoom)).toBe(true);
+  // The map opens on Wallonia: the Walloon WMS shows each zoom. The wheel zooms (the planner
+  // has no zoom buttons, ADR 0034); wait for each step's tiles and for the animation to end.
+  const centre = await freeMapCentre(page);
+  const wheelIn = async () => {
+    await page.mouse.move(centre.x, centre.y);
+    await page.mouse.wheel(0, -60);
     await expect(mapRegion(page).locator(".leaflet-map-pane")).not.toHaveClass(/leaflet-zoom-anim/);
+  };
+  for (let step = 0; step < 30; step++) {
+    if (network.tiles.some((tile) => tile.source === "wallonia" && tile.z === 18)) break;
+    await wheelIn();
+    await page.waitForTimeout(300);
   }
-  await expect(zoomIn(page)).not.toHaveClass(/leaflet-disabled/);
-  // At 18 OpenTopoMap, underneath, shows its zoom 17 tiles enlarged to twice their size.
+  await expect.poll(() => network.tiles.some((tile) => tile.source === "wallonia" && tile.z === 18)).toBe(true);
+  // From 18 OpenTopoMap, underneath, shows its zoom 17 tiles enlarged (twice their size at 18;
+  // a wheel turn may have gone a level further).
+  const zoom = Math.max(...network.tiles.filter((tile) => tile.source === "wallonia").map((tile) => tile.z));
   const openTopoMapTileWidths = () =>
     tiles(page).evaluateAll((images) =>
       images
         .filter((image) => image.closest(".leaflet-layer")?.querySelector("img[src*='opentopomap']"))
         .map((image) => Math.round(image.getBoundingClientRect().width)),
     );
-  expect(new Set(await openTopoMapTileWidths())).toEqual(new Set([512]));
+  await expect.poll(async () => new Set(await openTopoMapTileWidths())).toEqual(new Set([256 * 2 ** (zoom - 17)]));
+  expect(zoom).toBeGreaterThanOrEqual(18);
 
   // OpenTopoMap goes to 17: the map zooms out, its tiles at their own size, and no further zoom in.
   const from = network.tiles.length;
   await chooseBaseMap(page, "opentopomap");
   await expect.poll(async () => new Set(await openTopoMapTileWidths())).toEqual(new Set([256]));
-  await expect(zoomIn(page)).toHaveClass(/leaflet-disabled/);
+  // The wheel goes no further in.
+  await wheelIn();
+  await page.waitForTimeout(500);
   expect(network.tiles.slice(from).filter((tile) => tile.z > 17)).toEqual([]);
   expect(network.blocked).toEqual([]);
 });
@@ -150,20 +159,21 @@ for (const viewport of [
   { width: 1280, height: 720 },
   { width: 800, height: 600 },
 ]) {
-  test(`the base map button covers neither the place search bar nor the access overlay (${viewport.width}×${viewport.height})`, async ({
+  test(`the layers button covers neither the place search pill nor the access chip (${viewport.width}×${viewport.height})`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
     const network = await openMap(page);
-    await page.getByRole("switch", { name: strings.accessLayerToggle }).click();
-    await expect(page.locator(".access-overlay .access-legend")).toBeVisible();
-    // Aerial photos have the longest attribution, so the button sits highest.
+    await toggleAccessLayer(page);
+    const chip = page.getByRole("button", { name: /^Access · / });
+    await expect(chip).toBeVisible();
     await chooseBaseMap(page, "aerial-be");
     await page.evaluate(() => document.fonts.ready);
 
     const button = await box(mapMenuButton(page));
-    expect(overlaps(button, await box(page.locator(".place-search-map-bar")))).toBe(false);
-    expect(overlaps(button, await box(page.locator(".access-overlay")))).toBe(false);
+    const pill = page.getByRole("button", { name: strings.placeSearch.pill(undefined) });
+    expect(overlaps(button, await box(pill))).toBe(false);
+    expect(overlaps(button, await box(chip))).toBe(false);
     // The button is fully inside the map.
     const map = await box(mapRegion(page));
     expect(button.y).toBeGreaterThanOrEqual(map.y);
@@ -192,12 +202,9 @@ test("the trip, its file and its GPX never hold the base map or the overlays; th
   );
   expect(JSON.parse(stored[1] ?? "{}")).toMatchObject({ baseMap: "aerial-be", overlays: ["hiking-trails"] });
 
-  const [download] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByRole("button", { name: strings.saveFileButton }).click(),
-  ]);
+  const download = await saveTripFile(page);
   const file = await readFile((await download.path())!, "utf8");
-  const gpx = await downloadGpxZip(page, page.getByRole("button", { name: strings.exportGpxButton }));
+  const gpx = await downloadGpxZip(page, () => startGpxExport(page));
 
   for (const text of [stored[0] ?? "", file, ...gpx.files.map((entry) => entry.text)]) {
     expect(text).not.toBe("");
