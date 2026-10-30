@@ -58,8 +58,8 @@ test("the service worker is registered and the app shell opens offline", async (
   await page.reload();
 
   await expect(mapRegion(page)).toBeVisible();
-  await expect(page.getByRole("button", { name: strings.phone.menu.button, exact: true })).toBeVisible();
-  await expect(page.getByRole("complementary", { name: strings.phone.sheetLabel })).toBeVisible();
+  await expect(page.getByRole("button", { name: strings.planner.menu.button, exact: true })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: strings.planner.sheetLabel })).toBeVisible();
 });
 
 test("map tiles and routing answers are never cached", async ({ page }) => {
@@ -82,17 +82,17 @@ test("map tiles and routing answers are never cached", async ({ page }) => {
   expect(urls.filter((url) => !url.startsWith(origin))).toEqual([]);
 });
 
-test("the phone layout also opens offline after one visit", async ({ page, context }) => {
+test("the planner also opens offline on a phone after one visit", async ({ page, context }) => {
   await page.setViewportSize({ width: 412, height: 915 });
   await serveOffline(page);
   await page.goto("/");
-  await expect(page.getByRole("button", { name: strings.phone.showPositionButton })).toBeVisible();
+  await expect(page.getByRole("button", { name: strings.planner.showPositionButton })).toBeVisible();
   await waitForServiceWorker(page);
 
   await context.setOffline(true);
   await page.reload();
 
   await expect(mapRegion(page)).toBeVisible();
-  await expect(page.getByRole("button", { name: strings.phone.showPositionButton })).toBeVisible();
-  await expect(page.getByRole("dialog", { name: strings.phone.sheetLabel })).toBeVisible();
+  await expect(page.getByRole("button", { name: strings.planner.showPositionButton })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: strings.planner.sheetLabel })).toBeVisible();
 });

@@ -19,7 +19,7 @@
   padding-left: var(--space-3);
 }
 
-/* A phone leg row's status and warning icons, in a row. */
+/* A leg row's status and warning icons, in a row. */
 .leg-access-icons {
   display: flex;
   align-items: center;

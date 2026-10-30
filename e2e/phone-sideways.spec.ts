@@ -15,7 +15,7 @@ const SIDEWAYS = { width: viewport.height, height: viewport.width };
 
 const routed = { brouter: () => ({ status: 200, body: brouterFixture("hiking-success.geojson") }) };
 
-const text = strings.phone;
+const text = strings.planner;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
 const panel = (page: Page) => page.getByRole("complementary", { name: text.sheetLabel });
@@ -79,11 +79,11 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
   const strip = (await panel(page).boundingBox())!;
   expect(strip.width).toBeLessThan(100);
   expect(strip.x + strip.width).toBe(SIDEWAYS.width);
-  await expect(panel(page).locator(".phone-totals")).toBeVisible();
-  await expect(panel(page).locator(".phone-totals")).toContainText(strings.kilometreUnit);
+  await expect(panel(page).locator(".planner-totals")).toBeVisible();
+  await expect(panel(page).locator(".planner-totals")).toContainText(strings.kilometreUnit);
   // Every total fits inside the strip.
   const fits = await panel(page)
-    .locator(".phone-totals > span")
+    .locator(".planner-totals > span")
     .evaluateAll((spans) => spans.every((s) => s.scrollWidth <= s.parentElement!.parentElement!.clientWidth));
   expect(fits).toBe(true);
 
@@ -181,7 +181,7 @@ test("rotating keeps the open tab, the tapped leg row and the selected point; th
   await expect.poll(() => sheetHeight(page)).toBeLessThan(140);
   await page.setViewportSize(SIDEWAYS);
   await expect(expand(page)).toBeVisible();
-  await expect(panel(page).locator(".phone-totals")).toBeVisible();
+  await expect(panel(page).locator(".planner-totals")).toBeVisible();
   await expand(page).click();
   await expect(panelTab(page, text.tabs.legs)).toHaveAttribute("aria-selected", "true");
   // Opening the panel doesn't raise the sheet: back in portrait it is at its peek.

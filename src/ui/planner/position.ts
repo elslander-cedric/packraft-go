@@ -1,4 +1,4 @@
-// Your GPS position on the phone (#56, ADR 0023): what is known about it, and
+// Your GPS position (#56, ADR 0023): what is known about it, and
 // what to tell the user. Browser access lives in usePosition.ts.
 import type { LatLng } from "@/core/trip";
 import { strings } from "../strings";
@@ -23,10 +23,10 @@ export function positionFailure(code: number): PositionFailure {
 }
 
 const failureText: Record<PositionFailure, string> = {
-  denied: strings.phone.positionDenied,
-  unavailable: strings.phone.positionUnavailable,
-  timeout: strings.phone.positionTimeout,
-  unsupported: strings.phone.positionUnsupported,
+  denied: strings.planner.positionDenied,
+  unavailable: strings.planner.positionUnavailable,
+  timeout: strings.planner.positionTimeout,
+  unsupported: strings.planner.positionUnsupported,
 };
 
 /** What to show about your position: a status line while finding it, an alert for failures, or nothing. */
@@ -35,7 +35,7 @@ export function positionMessage(position: MyPosition): { kind: "status" | "alert
     case "off":
       return null;
     case "locating":
-      return { kind: "status", text: strings.phone.positionLocating };
+      return { kind: "status", text: strings.planner.positionLocating };
     // The dot and its accuracy circle on the map say where you are.
     case "shown":
       return null;

@@ -48,24 +48,24 @@ export const icons = {
   time: faClock,
   showPosition: faLocationCrosshairs,
   undo: faRotateLeft,
-  // Back to start (GLOSSARY "Loop"), on the phone's map.
+  // Back to start (GLOSSARY "Loop"), on the map.
   backToStart: faArrowsSpin,
   accessPoint: faFlag,
   deletePoint: faXmark,
-  // An access point row's edit and delete buttons (phone).
+  // An access point row's edit and delete buttons.
   editAccessPoint: faPen,
   deleteAccessPoint: faTrashCan,
   camp: faTent,
-  // The base map button (desktop) and the button that opens the Map menu (phone).
+  // The layers button that opens the Map menu.
   mapMenu: faLayerGroup,
   menu: faBars,
   openAccessDialog: faChevronDown,
   // The side panel is on the right: it opens leftwards and collapses rightwards.
   expandPanel: faChevronLeft,
   collapsePanel: faChevronRight,
-  // A leg row's button that opens its access details (phone, #158).
+  // A leg row's button that opens its access details (#158).
   legDetails: faCircleInfo,
-  // A leg's access status (phone rows and details), in the status's colour.
+  // A leg's access status (rows and details), in the status's colour.
   accessOpen: faCircleCheck,
   accessClosedToday: faCalendarXmark,
   accessForbidden: faBan,
@@ -77,7 +77,7 @@ export const icons = {
   warningCheckFlow: faGaugeHigh,
   warningLock: faStairs,
   warningAire: faFlag,
-  // The phone menu's items.
+  // The planner menu's items.
   newTrip: faFileCirclePlus,
   editTrip: faPen,
   saveTrip: faFloppyDisk,
@@ -88,6 +88,6 @@ export const icons = {
   search: faMagnifyingGlass,
   clearSearch: faXmark,
   searchResult: faLocationDot,
-  // The phone's open search field closes back to its pill (#174).
+  // The open search field closes back to its pill (#174).
   closeSearch: faArrowLeft,
 };

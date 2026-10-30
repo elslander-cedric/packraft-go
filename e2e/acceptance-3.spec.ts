@@ -18,7 +18,7 @@ const km = async (locator: Locator) => {
 /** The trip's hike distance in the panel's totals; an empty trip shows no totals. */
 const totalKm = async (page: Page) => {
   if ((await totals(page).count()) === 0) return 0;
-  return Number((await figure(totals(page), strings.phone.totals.labels.hike)).replace(/\s*km$/, ""));
+  return Number((await figure(totals(page), strings.planner.totals.labels.hike)).replace(/\s*km$/, ""));
 };
 
 async function openMap(page: Page) {
@@ -91,7 +91,7 @@ test("AC1/AC2/AC3: each click adds a point and a straight hike leg; panel lists 
   for (let i = 0; i < clicks.length - 1; i++) {
     const row = rows(page).nth(i);
     await expect(row).toContainText(strings.legLabel(i + 1));
-    await expect(row).toContainText(strings.phone.legFigures.hike);
+    await expect(row).toContainText(strings.planner.legFigures.hike);
     legKm.push(await km(row));
     expect(legKm[i]).toBeGreaterThan(0);
   }

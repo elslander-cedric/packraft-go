@@ -7,7 +7,7 @@ import { strings } from "../strings";
 
 type Draft = { name: string; startDate: string | undefined };
 
-export type PhoneTripDetailsDialogProps = {
+export type TripDetailsDialogProps = {
   open: boolean;
   name: string;
   /** The trip's start date ("YYYY-MM-DD"), or undefined for an undated trip. */
@@ -19,18 +19,18 @@ export type PhoneTripDetailsDialogProps = {
 };
 
 /**
- * The trip's name and start date on the phone (#154): a dialog from the menu,
+ * The trip's name and start date (#154): a dialog from the menu,
  * in place of the Trip tab. What the planner types is a draft; Save applies
  * only what changed, Cancel drops it.
  */
-export default function PhoneTripDetailsDialog({
+export default function TripDetailsDialog({
   open,
   name,
   startDate,
   onRename,
   onSetStartDate,
   onClose,
-}: PhoneTripDetailsDialogProps) {
+}: TripDetailsDialogProps) {
   const [draft, setDraft] = useState<Draft>({ name, startDate });
   // Each opening starts from the trip again.
   const [wasOpen, setWasOpen] = useState(open);
@@ -42,8 +42,8 @@ export default function PhoneTripDetailsDialog({
   return (
     <FormDialog
       open={open}
-      title={strings.phone.menu.tripDetailsTitle}
-      confirmLabel={strings.phone.menu.tripDetailsConfirm}
+      title={strings.planner.menu.tripDetailsTitle}
+      confirmLabel={strings.planner.menu.tripDetailsConfirm}
       cancelLabel={strings.confirmCancel}
       onConfirm={() => {
         if (draft.name !== name) onRename(draft.name);
@@ -52,7 +52,7 @@ export default function PhoneTripDetailsDialog({
       }}
       onCancel={onClose}
     >
-      <div className="phone-trip-details">
+      <div className="planner-trip-details">
         <label>
           <span>{strings.tripNameLabel}</span>
           <input
@@ -62,7 +62,7 @@ export default function PhoneTripDetailsDialog({
             onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
           />
         </label>
-        <div className="phone-start-date">
+        <div className="planner-start-date">
           <label>
             <span>{strings.startDateLabel}</span>
             <input
@@ -74,7 +74,7 @@ export default function PhoneTripDetailsDialog({
           </label>
           {draft.startDate !== undefined && (
             <Button
-              className="phone-button"
+              className="planner-button"
               onClick={() => setDraft((current) => ({ ...current, startDate: undefined }))}
             >
               {strings.clearStartDateButton}

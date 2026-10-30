@@ -1,322 +1,73 @@
 "use client";
 
-import type {
-  CircleMarker as LeafletCircleMarker,
-  LeafletEventHandlerFnMap,
-  Polyline as LeafletPolyline,
-} from "leaflet";
-import { divIcon } from "leaflet";
+import type { CircleMarker as LeafletCircleMarker, Polyline as LeafletPolyline } from "leaflet";
+import { latLngBounds, type Point } from "leaflet";
 import { useEffect, useRef, useState } from "react";
-import { CircleMarker, MapContainer, Marker, Pane, Polyline, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import {
+  Circle,
+  CircleMarker,
+  MapContainer,
+  Marker,
+  Pane,
+  Polyline,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import type { SearchArea, SearchResult } from "@/core/placeSearch";
 import type { BaseMapId, OverlayId } from "@/core/settings";
-import { putInsAndTakeOuts, type LatLng, type LegMode, type ModeChange, type Trip } from "@/core/trip";
-import { icons } from "@/ui/icons/icons";
-import { iconSvg } from "@/ui/icons/iconSvg";
-import MapMenu from "@/ui/MapMenu";
-import { strings } from "@/ui/strings";
-import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
-import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
+import { putInsAndTakeOuts, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import BaseMapTiles from "./BaseMapTiles";
-import MapControl from "./MapControl";
 import { initialMapView, paneZIndex } from "./mapConfig";
 import OverlayTiles from "./OverlayTiles";
-import SearchResultLayer from "./SearchResultLayer";
+import SearchResultLayer, { type MapCover } from "./SearchResultLayer";
+import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
+import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
+import { HOLD_MS, isPrimaryPress, useHold } from "./hold";
+import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
+import { campIcon, legCasingStyle, legStyle, modeChangeStyle } from "./tripStyles";
+
+/**
+ * A place to show in the part of the map the sheet leaves free (it covers
+ * `coveredBelow` of the map's height), or the side panel (it covers
+ * `coveredRight` of the map's width, #126): a spot, zoomed in and centred, or an
+ * area (such as a leg, #121, or a day's route, #123), fitted whole.
+ */
+export type MapFocus = ({ at: LatLng } | { area: readonly LatLng[] }) & { coveredBelow: number; coveredRight?: number };
 
 export type TripMapProps = {
-  /** The base map drawn under everything (ADR 0031), and choosing another with the map's button. */
+  /** The base map drawn under everything (ADR 0031), chosen in the Map menu. */
   baseMap: BaseMapId;
-  onBaseMapChange: (id: BaseMapId) => void;
   /** The switched-on overlays (ADR 0032), drawn over the base map. */
   overlays: readonly OverlayId[];
-  onOverlayChange: (id: OverlayId, on: boolean) => void;
   trip: Trip;
+  /** A tap on the map (not a double tap, not the end of a pinch, not on a point). */
+  onMapTap: (at: LatLng) => void;
   /** Index of the selected point, if any. */
   selectedPoint: number | null;
-  /** The planner clicked the map away from any point. */
-  onMapClick: (at: LatLng) => void;
-  /** The planner clicked an existing point (without dragging it). */
-  onPointClick: (index: number) => void;
-  /** The planner dragged an existing point and dropped it at `to`. */
-  onPointDrag: (index: number, to: LatLng) => void;
-  /** The access layer to draw under the trip, when it is switched on. */
-  access?: AccessLayerProps | null;
-  /** Your access points (#55), drawn in their own layer. */
+  /** A tap on a point (#120). */
+  onPointTap: (index: number) => void;
+  /** A point was pressed, dragged and let go at `to` (#120). */
+  onPointDrop: (index: number, to: LatLng) => void;
+  /** A finger held still on a leg for 0.4 s, or a right-click on it, at `at` (#122). */
+  onLegHold: (leg: number, at: LatLng) => void;
+  /** Your position and the browser's accuracy radius in metres, once shown. */
+  position: { at: LatLng; accuracyM: number } | null;
+  /** Your access points: tap one to select it, drag it to correct it (#63). */
   accessPoints?: AccessPointLayerProps;
-  /** The shown place search result (#173): the map moves to it and pins it. */
+  /** A place to show (a new object shows it again). */
+  focus?: MapFocus | null;
+  /** The access layer, while it is switched on (#125): hold a water or tap a lock for its details. */
+  access?: AccessLayerProps | null;
+  /** The shown place search result (#174): the map moves to it, into the part `searchCover` leaves free, and pins it. */
   searchResult?: SearchResult | null;
+  /** What hides the map (the top row, the sheet or the side panel); a fitted trip and a search result stay clear of it. */
+  searchCover?: () => MapCover;
   /** The visible map, when it loads and after every move (place search ranks places in it). */
   onAreaChange?: (area: SearchArea) => void;
 };
 
-// Hike legs are thin and earth-coloured, paddle legs wider and water-blue, so the mix shows at a glance.
-export const legStyle: Record<LegMode, { color: string; weight: number }> = {
-  hike: { color: "#b5491b", weight: 4 },
-  paddle: { color: "#1b6fb5", weight: 6 },
-};
-
-// A white casing under each leg sets it apart from the overlays' trails and the access
-// layer's waters, which use colours close to the legs' own (prototype/layer-colours).
-export const legCasingStyle: Record<LegMode, { color: string; weight: number; opacity: number }> = {
-  hike: { color: "#fff", weight: legStyle.hike.weight + 5, opacity: 1 },
-  paddle: { color: "#fff", weight: legStyle.paddle.weight + 5, opacity: 1 },
-};
-
-export const modeChangeStyle: Record<ModeChange["kind"], { color: string }> = {
-  "put-in": { color: "#1a8f3a" },
-  "take-out": { color: "#7a3fb5" },
-};
-
-const modeChangeLabel: Record<ModeChange["kind"], string> = {
-  "put-in": strings.putIn,
-  "take-out": strings.takeOut,
-};
-
-// A green triangle with a white tent in it (ADR 0028), drawn below and to the right of
-// its point, clear of the point and of the put-in/take-out labels above it.
-const campTentPlacement = { x: 6, y: 8.5, width: 8, height: 7.5 };
-export const campIcon = divIcon({
-  className: "camp-marker",
-  html:
-    `<svg role="img" aria-label=${JSON.stringify(strings.campMarker)} viewBox="0 0 20 18" width="20" height="18">` +
-    '<path d="M10 1 L19 17 H1 Z" fill="#2e6b30" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>' +
-    `<g color="#fff">${iconSvg(icons.camp, campTentPlacement)}</g></svg>`,
-  iconSize: [20, 18],
-  iconAnchor: [-7, -5],
-});
-
-const pointStyle = { color: "#333", weight: 2, fillColor: "#fff", fillOpacity: 1 };
-const selectedPointStyle = { ...pointStyle, color: "#000", weight: 3, fillColor: "#ffd400" };
-
-// A press that moves less than this (in screen pixels) is a click, not a drag.
-const DRAG_THRESHOLD_PX = 3;
-
-type DragPreview = { index: number; at: LatLng };
-
-type PointMarkerProps = {
-  at: LatLng;
-  selected: boolean;
-  eventHandlers: LeafletEventHandlerFnMap;
-  /** A pointer (mouse, finger or pen) was pressed on the point. */
-  onPointerDown: (event: PointerEvent) => void;
-  /** Called when the marker leaves the map (its point was deleted or undone). */
-  onRemoved: () => void;
-};
-
-function PointMarker({ at, selected, eventHandlers, onPointerDown, onRemoved }: PointMarkerProps) {
-  const marker = useRef<LeafletCircleMarker>(null);
-  const removed = useRef(onRemoved);
-  useEffect(() => {
-    removed.current = onRemoved;
-  });
-  useEffect(() => () => removed.current(), []);
-  // Leaflet has no pointer events for layers, so this listens on the point's own element.
-  // It fires before the touchstart Leaflet uses to pan the map, so a finger on a point can switch panning off first.
-  const pressed = useRef(onPointerDown);
-  useEffect(() => {
-    pressed.current = onPointerDown;
-  });
-  useEffect(() => {
-    const element = marker.current?.getElement();
-    const press = (event: Event) => pressed.current(event as PointerEvent);
-    element?.addEventListener("pointerdown", press);
-    return () => element?.removeEventListener("pointerdown", press);
-  }, []);
-  // Leaflet only reads className when the marker is created, so selection toggles the class directly.
-  useEffect(() => {
-    marker.current?.getElement()?.classList.toggle("point-selected", selected);
-  }, [selected]);
-  return (
-    <CircleMarker
-      ref={marker}
-      center={at}
-      radius={selected ? 7 : 5}
-      className="point"
-      // Clicks on a point are for the point, not the map behind it.
-      bubblingMouseEvents={false}
-      pathOptions={selected ? selectedPointStyle : pointStyle}
-      eventHandlers={eventHandlers}
-    />
-  );
-}
-
-type LegStatus = "pending" | "routed" | "failed";
-const legStatuses: readonly LegStatus[] = ["pending", "routed", "failed"];
-const legModes: readonly LegMode[] = ["hike", "paddle"];
-
-/** One leg's line on its casing, styled by mode; failed legs are dashed. */
-function LegLine({ mode, status, positions }: { mode: LegMode; status: LegStatus; positions: LatLng[] }) {
-  const line = useRef<LeafletPolyline>(null);
-  // Leaflet only reads className when the path is created, and re-creating it
-  // would move it to the end of the SVG (out of leg order), so the status and
-  // mode classes are switched on the existing path.
-  useEffect(() => {
-    const element = line.current?.getElement();
-    for (const s of legStatuses) element?.classList.toggle(`leg-${s}`, s === status);
-    for (const m of legModes) element?.classList.toggle(`leg-${m}`, m === mode);
-  }, [status, mode]);
-  return (
-    <>
-      <Polyline positions={positions} interactive={false} className="leg-casing" pathOptions={legCasingStyle[mode]} />
-      <Polyline
-        ref={line}
-        positions={positions}
-        // className must be a prop: react-leaflet applies pathOptions via setStyle, which ignores it.
-        className={`leg leg-${mode} leg-${status}`}
-        pathOptions={{ ...legStyle[mode], dashArray: status === "failed" ? "8 8" : undefined }}
-      />
-    </>
-  );
-}
-
-/**
- * Draws the trip and turns mouse input into planner intentions: click the map,
- * click a point, drag a point. While a point is dragged it is drawn at the
- * mouse; the trip itself only changes when it is dropped.
- */
-function TripLayers({
-  trip,
-  selectedPoint,
-  onMapClick,
-  onPointClick,
-  onPointDrag,
-}: Omit<TripMapProps, "baseMap" | "onBaseMapChange" | "overlays" | "onOverlayChange">) {
-  const map = useMap();
-  const [preview, setPreview] = useState<DragPreview | null>(null);
-  // The browser sends a click after a drag ends; that click must not add or select a point.
-  // A click always belongs to the press that started it, so this is reset on every press
-  // (not after a timer, which a busy page can run after the next click: #19).
-  const pressWasDrag = useRef(false);
-  useEffect(() => {
-    const container = map.getContainer();
-    const press = () => (pressWasDrag.current = false);
-    // Capture phase: runs before Leaflet's own handlers, including a point's pointerdown.
-    container.addEventListener("pointerdown", press, true);
-    return () => container.removeEventListener("pointerdown", press, true);
-  }, [map]);
-  // Leaflet starts panning the map on the same press that would grab a point, so
-  // panning is off while the mouse is over a point or a point is being dragged.
-  const overPoint = useRef(false);
-  const dragging = useRef(false);
-  const updateMapPanning = () => {
-    if (overPoint.current || dragging.current) map.dragging.disable();
-    else map.dragging.enable();
-  };
-
-  useMapEvents({
-    click: (event) => {
-      if (pressWasDrag.current) return;
-      onMapClick({ lat: event.latlng.lat, lng: event.latlng.lng });
-    },
-  });
-
-  const startDrag = (index: number, down: PointerEvent) => {
-    if (down.button !== 0) return;
-    dragging.current = true;
-    updateMapPanning();
-    let dropAt: LatLng | null = null;
-
-    const move = (event: PointerEvent) => {
-      const far = Math.hypot(event.clientX - down.clientX, event.clientY - down.clientY);
-      if (!dropAt && far < DRAG_THRESHOLD_PX) return;
-      const { lat, lng } = map.mouseEventToLatLng(event);
-      dropAt = { lat, lng };
-      setPreview({ index, at: dropAt });
-    };
-    const end = (dropped: boolean) => {
-      document.removeEventListener("pointermove", move);
-      document.removeEventListener("pointerup", up);
-      document.removeEventListener("pointercancel", cancel);
-      dragging.current = false;
-      updateMapPanning();
-      setPreview(null);
-      if (dropped && dropAt) {
-        pressWasDrag.current = true;
-        onPointDrag(index, dropAt);
-      }
-    };
-    const up = () => end(true);
-    const cancel = () => end(false);
-    document.addEventListener("pointermove", move);
-    document.addEventListener("pointerup", up);
-    document.addEventListener("pointercancel", cancel);
-  };
-
-  const leavePoint = () => {
-    overPoint.current = false;
-    updateMapPanning();
-  };
-
-  const pointEvents = (index: number): LeafletEventHandlerFnMap => ({
-    mouseover: () => {
-      overPoint.current = true;
-      updateMapPanning();
-    },
-    mouseout: leavePoint,
-    click: () => {
-      if (!pressWasDrag.current) onPointClick(index);
-    },
-  });
-
-  const points = preview ? trip.points.with(preview.index, preview.at) : trip.points;
-
-  return (
-    <>
-      {/* The legs, above the access layer's waters. */}
-      <Pane name="trip-legs" pane="overlayPane" style={{ zIndex: paneZIndex.tripLegs }}>
-        {trip.legs.map((leg, i) => {
-          const status = leg.route?.status ?? "pending";
-          const dragged = preview !== null && (preview.index === i || preview.index === i + 1);
-          // A routed leg follows its geometry; others (and legs touching a dragged
-          // point) are a straight line, dashed if routing failed.
-          const positions =
-            leg.route?.status === "routed" && !dragged ? [...leg.route.geometry] : [points[i], points[i + 1]];
-          return <LegLine key={`leg-${i}`} mode={leg.mode} status={status} positions={positions} />;
-        })}
-      </Pane>
-      {/* Put-ins and take-outs: rings around the points where the mode changes, above the legs, below the points. */}
-      <Pane name="trip-mode-changes" pane="overlayPane" style={{ zIndex: paneZIndex.tripModeChanges }}>
-        {putInsAndTakeOuts(trip).map(({ kind, point }) => (
-          <CircleMarker
-            key={`${kind}-${point}`}
-            center={points[point]}
-            radius={11}
-            className={kind}
-            interactive={false}
-            pathOptions={{ ...modeChangeStyle[kind], weight: 3, fill: false }}
-          >
-            <Tooltip permanent direction="top" offset={[0, -10]} className={`${kind}-label`}>
-              {modeChangeLabel[kind]}
-            </Tooltip>
-          </CircleMarker>
-        ))}
-      </Pane>
-      {/* Camps: a tent just above the point, not clickable, so the point under it can still be grabbed. */}
-      <Pane name="trip-camps" pane="overlayPane" style={{ zIndex: paneZIndex.tripCamps }}>
-        {(trip.camps ?? []).map((point) => (
-          <Marker key={`camp-${point}`} position={points[point]} icon={campIcon} interactive={false} keyboard={false} />
-        ))}
-      </Pane>
-      {/* Points get their own pane above the legs, so a leg drawn later never covers a point. */}
-      <Pane name="trip-points" pane="overlayPane" style={{ zIndex: paneZIndex.tripPoints }}>
-        {points.map((point, i) => (
-          <PointMarker
-            key={`point-${i}`}
-            at={point}
-            selected={i === selectedPoint}
-            eventHandlers={pointEvents(i)}
-            onPointerDown={(event) => startDrag(i, event)}
-            // A point can disappear under the mouse (deleted, undone): treat that as leaving it.
-            onRemoved={leavePoint}
-          />
-        ))}
-      </Pane>
-    </>
-  );
-}
-
 /** Tells `onChange` the visible map when it loads and after every move. */
-export function MapAreaReporter({ onChange }: { onChange: (area: SearchArea) => void }) {
+function MapAreaReporter({ onChange }: { onChange: (area: SearchArea) => void }) {
   const map = useMap();
   const report = () => {
     const bounds = map.getBounds();
@@ -328,38 +79,400 @@ export function MapAreaReporter({ onChange }: { onChange: (area: SearchArea) => 
   return null;
 }
 
-// Imports Leaflet, which needs `window`: only load this through ClientTripMap.
+/** Zoom used to show your position: close enough to see the river bank. */
+const POSITION_ZOOM = 15;
+
+/** Two taps this close in time and place are one double tap, which does nothing. */
+const DOUBLE_TAP_MS = 400;
+const DOUBLE_TAP_PX = 40;
+
+const positionStyle = { color: "#fff", weight: 3, fillColor: "#1a73e8", fillOpacity: 1 };
+const accuracyStyle = { color: "#1a73e8", weight: 1, fillColor: "#1a73e8", fillOpacity: 0.12 };
+const pointStyle = { color: "#333", weight: 2, fillColor: "#fff", fillOpacity: 1 };
+const selectedPointStyle = { ...pointStyle, color: "#000", weight: 3, fillColor: "#ffd400" };
+// A point's finger-sized hit area is invisible.
+const hitStyle = { stroke: false, fillColor: "#000", fillOpacity: 0 };
+
+/** Fits the trip on screen when the map opens, and centres on your position when it is first shown. */
+function MapView({ trip, position, cover }: Pick<TripMapProps, "trip" | "position"> & { cover?: () => MapCover }) {
+  const map = useMap();
+  // The number of points the map last saw; null until it opens.
+  const shown = useRef<number | null>(null);
+  useEffect(() => {
+    // Fits the trip the map opens with, and a trip opened over an empty one (it arrives with
+    // several points at once). Otherwise the map is the user's to move: the first point drawn
+    // on an empty trip doesn't move it.
+    const before = shown.current;
+    shown.current = trip.points.length;
+    const opened = before === null ? trip.points.length > 0 : before === 0 && trip.points.length > 1;
+    if (!opened) return;
+    // Into the part of the map the top row, the sheet or the side panel leave free.
+    const { top, right, bottom } = cover?.() ?? { top: 0, right: 0, bottom: 0 };
+    map.fitBounds(latLngBounds(trip.points.map((p) => [p.lat, p.lng])), {
+      paddingTopLeft: [24, top + 24],
+      paddingBottomRight: [right + 24, bottom + 24],
+    });
+  }, [map, trip]);
+  const centred = useRef(false);
+  useEffect(() => {
+    if (!position) {
+      centred.current = false;
+      return;
+    }
+    if (centred.current) return;
+    centred.current = true;
+    map.setView(position.at, Math.max(map.getZoom(), POSITION_ZOOM));
+  }, [map, position]);
+  return null;
+}
+
+/** Margin around a fitted stretch, in pixels. */
+const FOCUS_PADDING = 24;
+
+/**
+ * Shows `focus` above the sheet, whenever a new one is given. Leaflet ignores a new view while
+ * a zoom animation runs, so a focus given during one (a second row or day tapped soon after the
+ * first) waits for it to end.
+ */
+function Focus({ focus }: { focus: MapFocus }) {
+  const map = useMap();
+  const zooming = useRef(false);
+  useEffect(() => {
+    const start = () => {
+      zooming.current = true;
+    };
+    const end = () => {
+      zooming.current = false;
+    };
+    map.on("zoomanim", start);
+    map.on("zoomend", end);
+    return () => {
+      map.off("zoomanim", start);
+      map.off("zoomend", end);
+    };
+  }, [map]);
+  useEffect(() => {
+    const show = () => {
+      if ("area" in focus) {
+        if (focus.area.length === 0) return;
+        const below = map.getSize().y * focus.coveredBelow;
+        const right = map.getSize().x * (focus.coveredRight ?? 0);
+        map.fitBounds(latLngBounds(focus.area.map((p) => [p.lat, p.lng])), {
+          paddingTopLeft: [FOCUS_PADDING, FOCUS_PADDING],
+          paddingBottomRight: [right + FOCUS_PADDING, below + FOCUS_PADDING],
+        });
+        return;
+      }
+      const zoom = Math.max(map.getZoom(), POSITION_ZOOM);
+      const shiftX = (map.getSize().x * (focus.coveredRight ?? 0)) / 2;
+      const shiftY = (map.getSize().y * focus.coveredBelow) / 2;
+      map.setView(map.unproject(map.project(focus.at, zoom).add([shiftX, shiftY]), zoom), zoom);
+    };
+    if (!zooming.current) {
+      show();
+      return;
+    }
+    map.once("zoomend", show);
+    return () => {
+      map.off("zoomend", show);
+    };
+  }, [map, focus]);
+  return null;
+}
+
+/**
+ * Turns taps into `onMapTap`. A double tap gives one tap (its second tap is
+ * ignored), and the click that can follow a pinch is ignored. So is the click
+ * that ends a finger or the mouse held for 0.4 s or more: holding the map does
+ * nothing, and holding a leg inserts a point instead (#122, ADR 0034); a tap
+ * right after a hold is a tap.
+ */
+function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
+  const map = useMap();
+  const lastTap = useRef<{ at: number; point: Point } | null>(null);
+  const pinched = useRef(false);
+  const pressedAt = useRef<number | null>(null);
+  useEffect(() => {
+    const container = map.getContainer();
+    // Capture phase, before Leaflet's own handlers.
+    const touch = (event: TouchEvent) => {
+      pinched.current = event.touches.length > 1;
+    };
+    const down = (event: PointerEvent) => {
+      pressedAt.current = isPrimaryPress(event) ? event.timeStamp : null;
+    };
+    container.addEventListener("touchstart", touch, true);
+    container.addEventListener("pointerdown", down, true);
+    return () => {
+      container.removeEventListener("touchstart", touch, true);
+      container.removeEventListener("pointerdown", down, true);
+    };
+  }, [map]);
+  useMapEvents({
+    click: (event) => {
+      const now = event.originalEvent.timeStamp;
+      const previous = lastTap.current;
+      lastTap.current = { at: now, point: event.containerPoint };
+      if (pinched.current) return;
+      const downAt = pressedAt.current;
+      pressedAt.current = null;
+      // A hold is not a tap, so it doesn't start a double tap either.
+      if (downAt !== null && now - downAt >= HOLD_MS) {
+        lastTap.current = previous;
+        return;
+      }
+      if (previous && now - previous.at < DOUBLE_TAP_MS && previous.point.distanceTo(event.containerPoint) < DOUBLE_TAP_PX) {
+        return;
+      }
+      onTap({ lat: event.latlng.lat, lng: event.latlng.lng });
+    },
+  });
+  return null;
+}
+
+/** A point's invisible 44 px hit area: tap it to select the point, press and drag it to move the point. */
+function PointHitArea({ at, handlers }: { at: LatLng; handlers: PressDragHandlers }) {
+  const hit = useRef<LeafletCircleMarker>(null);
+  usePressDrag(hit, handlers);
+  return (
+    <CircleMarker
+      ref={hit}
+      center={at}
+      radius={HIT_SIZE_PX / 2}
+      className="point-hit"
+      // Clicks on a point are for the point, not the map behind it.
+      bubblingMouseEvents={false}
+      pathOptions={hitStyle}
+    />
+  );
+}
+
+// Leaflet only reads className when a path is made, and making it again would
+// move it to the end of the SVG (out of order), so classes are switched on the
+// existing path.
+function useClass(path: { current: { getElement(): Element | undefined } | null }, name: string, on: boolean) {
+  useEffect(() => {
+    path.current?.getElement()?.classList.toggle(name, on);
+  }, [path, name, on]);
+}
+
+type LegStatus = "pending" | "routed" | "failed";
+
+/** One leg's line on its casing; while one of its points is dragged it is a dashed straight line. */
+function MapLeg({
+  mode,
+  status,
+  positions,
+  dragged,
+}: {
+  mode: LegMode;
+  status: LegStatus;
+  positions: LatLng[];
+  dragged: boolean;
+}) {
+  const line = useRef<LeafletPolyline>(null);
+  useClass(line, "leg-dragged", dragged);
+  useClass(line, "leg-hike", mode === "hike");
+  useClass(line, "leg-paddle", mode === "paddle");
+  useClass(line, "leg-pending", status === "pending");
+  useClass(line, "leg-routed", status === "routed");
+  useClass(line, "leg-failed", status === "failed");
+  const dashed = dragged || status === "failed";
+  return (
+    <>
+      <Polyline positions={positions} interactive={false} className="leg-casing" pathOptions={legCasingStyle[mode]} />
+      <Polyline
+        ref={line}
+        positions={positions}
+        className={`leg leg-${mode}`}
+        interactive={false}
+        pathOptions={{ ...legStyle[mode], dashArray: dashed ? "8 8" : undefined }}
+      />
+    </>
+  );
+}
+
+/** A leg's transparent hit line, in screen pixels across (#122). */
+const LEG_HIT_WIDTH_PX = 28;
+
+// A leg's hit line is invisible; Leaflet still hits its stroke.
+const legHitStyle = { color: "#000", opacity: 0, weight: LEG_HIT_WIDTH_PX, fill: false };
+
+/**
+ * A leg's transparent 28 px hit line: hold it 0.4 s (or right-click it) to
+ * insert a point (#122). A tap on it is still a tap on the map.
+ */
+function LegHitLine({ positions, onHold }: { positions: LatLng[]; onHold: (at: LatLng) => void }) {
+  const line = useRef<LeafletPolyline>(null);
+  useHold(line, onHold);
+  return <Polyline ref={line} positions={positions} className="leg-hit" pathOptions={legHitStyle} />;
+}
+
+/** A trip point as drawn; its hit area is separate and larger. */
+function PointDot({ at, selected }: { at: LatLng; selected: boolean }) {
+  const dot = useRef<LeafletCircleMarker>(null);
+  useClass(dot, "point-selected", selected);
+  return (
+    <CircleMarker
+      ref={dot}
+      center={at}
+      radius={selected ? 7 : 5}
+      className="point"
+      interactive={false}
+      pathOptions={selected ? selectedPointStyle : pointStyle}
+    />
+  );
+}
+
+/**
+ * The trip: legs, put-ins and take-outs, camps and points. While a point is
+ * dragged it is drawn under the finger and its legs are dashed straight lines;
+ * the trip itself only changes when it is let go.
+ */
+function TripLayers({
+  trip,
+  selectedPoint,
+  onPointTap,
+  onPointDrop,
+  onLegHold,
+}: Pick<TripMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold">) {
+  const [preview, setPreview] = useState<{ index: number; at: LatLng } | null>(null);
+  const points = preview ? trip.points.with(preview.index, preview.at) : trip.points;
+  const handlers = (index: number): PressDragHandlers => ({
+    onTap: () => onPointTap(index),
+    onDrag: (at) => setPreview({ index, at }),
+    onDrop: (to) => {
+      setPreview(null);
+      onPointDrop(index, to);
+    },
+    onCancel: () => setPreview(null),
+  });
+  const legs = trip.legs.map((leg, i) => {
+    const dragged = preview !== null && (preview.index === i || preview.index === i + 1);
+    const routed = leg.route?.status === "routed" && !dragged;
+    const positions = routed ? [...leg.route!.geometry] : [points[i], points[i + 1]];
+    return { leg, dragged, positions };
+  });
+  return (
+    <>
+      {/* The legs, above the access layer's waters. */}
+      <Pane name="trip-legs" pane="overlayPane" style={{ zIndex: paneZIndex.tripLegs }}>
+        {legs.map(({ leg, dragged, positions }, i) => (
+          <MapLeg
+            key={`leg-${i}`}
+            mode={leg.mode}
+            status={leg.route?.status ?? "pending"}
+            dragged={dragged}
+            positions={positions}
+          />
+        ))}
+      </Pane>
+      {/* Leg hit lines sit above the drawn trip but under the access-point markers and the
+          points' hit areas, so a point or an access point on a leg is still grabbed first. */}
+      <Pane name="trip-leg-hits" style={{ zIndex: paneZIndex.tripLegHits }}>
+        {legs.map(({ positions }, i) => (
+          <LegHitLine key={`leg-hit-${i}`} positions={positions} onHold={(at) => onLegHold(i, at)} />
+        ))}
+      </Pane>
+      {putInsAndTakeOuts(trip).map(({ kind, point }) => (
+        <CircleMarker
+          key={`${kind}-${point}`}
+          center={points[point]}
+          radius={11}
+          className={kind}
+          interactive={false}
+          pathOptions={{ ...modeChangeStyle[kind], weight: 3, fill: false }}
+        />
+      ))}
+      <Pane name="trip-camps" pane="overlayPane" style={{ zIndex: paneZIndex.tripCamps }}>
+        {(trip.camps ?? []).map((point) => (
+          <Marker key={`camp-${point}`} position={points[point]} icon={campIcon} interactive={false} keyboard={false} />
+        ))}
+      </Pane>
+      {/* Points get their own pane above the legs, so a leg never covers a point. */}
+      <Pane name="trip-points" pane="overlayPane" style={{ zIndex: paneZIndex.tripPoints }}>
+        {points.map((point, i) => (
+          <PointDot key={`point-${i}`} at={point} selected={i === selectedPoint} />
+        ))}
+      </Pane>
+      {/* Their hit areas sit above the access-point markers (Leaflet's marker pane is 600), so a
+          route point that is also an access point can still be selected and dragged (#120). */}
+      <Pane name="trip-point-hits" style={{ zIndex: paneZIndex.tripPointHits }}>
+        {points.map((point, i) => (
+          <PointHitArea key={`hit-${i}`} at={point} handlers={handlers(i)} />
+        ))}
+      </Pane>
+    </>
+  );
+}
+
+/**
+ * The planner's map (ADR 0026): the trip, the overlays, the access layer, your access points, your position
+ * and the shown place search result.
+ * Pinch zoom is on and double-tap zoom is off, because the first tap of a
+ * double tap would add a point. Imports Leaflet, which needs `window`: only load
+ * this through ClientTripMap.
+ */
 export default function TripMap({
   baseMap,
-  onBaseMapChange,
   overlays,
-  onOverlayChange,
+  trip,
+  onMapTap,
+  selectedPoint,
+  onPointTap,
+  onPointDrop,
+  onLegHold,
+  position,
+  accessPoints,
+  focus,
   access,
   searchResult,
+  searchCover,
   onAreaChange,
-  ...props
 }: TripMapProps) {
   return (
     <MapContainer
       center={[...initialMapView.center]}
       zoom={initialMapView.zoom}
       style={{ height: "100%", width: "100%" }}
+      doubleClickZoom={false}
+      touchZoom
+      zoomControl={false}
     >
       <BaseMapTiles id={baseMap} />
       <OverlayTiles ids={overlays} />
-      <MapControl position="bottomright">
-        <MapMenu
-          baseMap={baseMap}
-          onBaseMapChange={onBaseMapChange}
-          overlays={overlays}
-          onOverlayChange={onOverlayChange}
-        />
-      </MapControl>
       {access && <AccessLayer {...access} />}
-      <TripLayers {...props} />
-      {props.accessPoints && <AccessPointLayer {...props.accessPoints} />}
-      {searchResult && <SearchResultLayer result={searchResult} />}
+      <MapView trip={trip} position={position} cover={searchCover} />
+      {focus && <Focus focus={focus} />}
+      <Taps onTap={onMapTap} />
+      <TripLayers
+        trip={trip}
+        selectedPoint={selectedPoint}
+        onPointTap={onPointTap}
+        onPointDrop={onPointDrop}
+        onLegHold={onLegHold}
+      />
+      {accessPoints && <AccessPointLayer {...accessPoints} />}
+      {searchResult && <SearchResultLayer result={searchResult} cover={searchCover} />}
       {onAreaChange && <MapAreaReporter onChange={onAreaChange} />}
+      {position && (
+        <>
+          <Circle
+            center={position.at}
+            radius={position.accuracyM}
+            className="my-position-accuracy"
+            interactive={false}
+            pathOptions={accuracyStyle}
+          />
+          <CircleMarker
+            center={position.at}
+            radius={8}
+            className="my-position"
+            interactive={false}
+            pathOptions={positionStyle}
+          />
+        </>
+      )}
     </MapContainer>
   );
 }

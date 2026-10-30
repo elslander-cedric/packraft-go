@@ -53,7 +53,7 @@ test("seeded: a figure squeezed until it wraps inside itself is caught by the me
   await expect(row).toContainText(`${strings.climbLabel} ${figure}`);
   expect(await lines(row, figure)).toBe(1);
   await page.addStyleTag({
-    content: ".phone-row-figure { white-space: normal !important; display: inline-block !important; width: 1ch !important; }",
+    content: ".planner-row-figure { white-space: normal !important; display: inline-block !important; width: 1ch !important; }",
   });
   expect(await lines(row, figure)).toBeGreaterThan(1);
 });

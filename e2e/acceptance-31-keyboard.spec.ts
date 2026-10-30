@@ -9,7 +9,7 @@ import { expectInitialFocus } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
 import { freeMapCentre, legRows, openPlanner, points as pointMarkers } from "./support/planner";
 
-const text = strings.phone;
+const text = strings.planner;
 const rows = legRows;
 const button = (page: Page, name: string) => page.getByRole("button", { name, exact: true });
 const menuItem = (page: Page, name: string) => page.getByRole("menuitem", { name, exact: true });
@@ -18,7 +18,7 @@ const settingsDialog = (page: Page) => page.getByRole("dialog", { name: strings.
 const modeGroup = (page: Page) => page.getByRole("group", { name: text.nextLegModeLabel });
 const modeButton = (page: Page, mode: string) => modeGroup(page).getByRole("button", { name: mode });
 const paceField = (page: Page) => settingsDialog(page).getByLabel(strings.paceFactorLabel);
-const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".phone-row-time");
+const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".planner-row-time");
 const storedSettings = (page: Page) => page.evaluate((key) => window.localStorage.getItem(key), SETTINGS_KEY);
 const storedName = (page: Page) =>
   page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? "null")?.trip.name ?? null, TRIP_KEY);
@@ -229,8 +229,8 @@ test.describe("#31: controls by keyboard alone", () => {
     // The next leg drawn is a paddle leg.
     await click(150, 0);
     await expect(rows(page)).toHaveCount(2);
-    await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
-    await expect(rows(page).nth(0)).toHaveClass(/phone-row-hike/);
+    await expect(rows(page).nth(1)).toHaveClass(/planner-row-paddle/);
+    await expect(rows(page).nth(0)).toHaveClass(/planner-row-hike/);
 
     // Undo works from the keyboard and removes it.
     await page.keyboard.press("ControlOrMeta+z");

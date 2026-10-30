@@ -45,7 +45,7 @@ test("a hike → paddle → hike trip: the middle leg follows the river, shows i
   await expect(legLines(page).nth(2)).toHaveClass(/leg-hike/);
   const hikeColour = await legLines(page).nth(0).getAttribute("stroke");
   expect(await legLines(page).nth(1).getAttribute("stroke")).not.toBe(hikeColour);
-  await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
+  await expect(rows(page).nth(1)).toHaveClass(/planner-row-paddle/);
 
   const profiles = network.brouter.map((url) => url.searchParams.get("profile"));
   expect(profiles).toEqual(["hiking-mountain", "river", "hiking-mountain"]);
@@ -147,13 +147,13 @@ test("a paddle leg that ends more than 2 m higher shows a rise with an upstream 
   await clickMap(100, 0, "paddle");
 
   const row = rows(page).nth(0);
-  await expect(row).toContainText(`${strings.phone.legFigures.rise} 7 m?`);
+  await expect(row).toContainText(`${strings.planner.legFigures.rise} 7 m?`);
   await expect(row).not.toContainText(strings.dropLabel);
 });
 
 for (const { rise, shown } of [
   { rise: 2.4, shown: `${strings.dropLabel} 0 m` },
-  { rise: 2.6, shown: `${strings.phone.legFigures.rise} 3 m?` },
+  { rise: 2.6, shown: `${strings.planner.legFigures.rise} 3 m?` },
 ]) {
   test(`a paddle leg ending ${rise} m higher shows "${shown}" (rise rounded before the 2 m rule)`, async ({ page }) => {
     const track = JSON.parse(RIVER.body);
@@ -201,7 +201,7 @@ test("a point added after a paddle leg makes a paddle leg, routed with the river
   await expect(nextLegMode(page, strings.legModePaddle)).toHaveAttribute("aria-pressed", "true");
   await clickMap(100, 0);
   await expect(legLines(page)).toHaveCount(2);
-  await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
+  await expect(rows(page).nth(1)).toHaveClass(/planner-row-paddle/);
   await expect(legLines(page).nth(1)).toHaveClass(/leg-paddle/);
   await expect(legLines(page).nth(1)).toHaveClass(/leg-routed/);
 

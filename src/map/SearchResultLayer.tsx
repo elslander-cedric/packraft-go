@@ -21,7 +21,7 @@ const pin = divIcon({
   tooltipAnchor: [0, -30],
 });
 
-/** How many pixels of the map are hidden at its top, right and bottom (the phone's pill, panel and sheet; #174). */
+/** How many pixels of the map are hidden at its top, right and bottom (the pill, the side panel or the sheet; #174). */
 export type MapCover = { top: number; right: number; bottom: number };
 
 const UNCOVERED: MapCover = { top: 0, right: 0, bottom: 0 };

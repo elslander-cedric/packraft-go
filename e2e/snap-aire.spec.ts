@@ -88,11 +88,11 @@ test("a Walloon put-in without an official aire nearby shows the warning on the 
 
   // The leg's details dialog (#158) holds the warning.
   const legs = page.getByRole("list", { name: strings.legsPanelLabel });
-  await legs.getByRole("button", { name: strings.phone.legDetailsButton(1) }).click();
+  await legs.getByRole("button", { name: strings.planner.legDetailsButton(1) }).click();
   await expect(legDetails(page).locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
-  await legDetails(page).getByRole("button", { name: strings.phone.legDetailsClose }).click();
+  await legDetails(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();
   // The day only points at the leg (ADR 0029); the paddle leg is also forbidden here or not, but it has a chip.
-  await showTab(page, strings.phone.tabs.days);
+  await showTab(page, strings.planner.tabs.days);
   const days = page.getByRole("complementary", { name: strings.daysPanelLabel });
   await expect(days.locator(".day-warning-chip")).toHaveCount(1);
   await expect(days.locator(".access-warning-aire")).toHaveCount(0);
@@ -108,7 +108,7 @@ test("an official aire of yours within 200 m of the put-in removes that warning"
   await drawPaddleLeg(page);
 
   const legs = page.getByRole("list", { name: strings.legsPanelLabel });
-  await legs.getByRole("button", { name: strings.phone.legDetailsButton(1) }).click();
+  await legs.getByRole("button", { name: strings.planner.legDetailsButton(1) }).click();
   // The take-out at the leg's end is still not at an aire; the put-in is.
   await expect(legDetails(page).locator(".access-warning-aire")).toHaveCount(1);
   await expect(legDetails(page).locator(".access-warning-aire")).toContainText("take-out");

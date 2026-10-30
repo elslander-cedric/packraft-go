@@ -60,7 +60,8 @@ export type SidePanelProps = {
  * A full-height panel on the right of the screen, beside the page (non-modal). Open, it shows
  * the summary, the header and the body, and its left edge resizes it (drag it, or the arrow
  * keys on it; ADR 0034); collapsed, a thin strip with the summary only. The sheet's
- * counterpart when a phone is held sideways (#126); it holds the same content.
+ * counterpart on every screen but a narrow one in portrait (#126, ADR 0034); it holds the
+ * same content.
  */
 export function SidePanel({
   label,

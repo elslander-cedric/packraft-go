@@ -1,4 +1,4 @@
-// Your access points in the phone planner (#119, ADR 0026; first #63, ADR 0023): the
+// Your access points in the planner on a phone (#119, ADR 0026; first #63, ADR 0023): the
 // Access points tab with its edit and delete buttons, the edit dialog, the floating
 // button bottom left, place mode without a fix, and every Save stored on the device at
 // once, with or without signal. Dragging a marker is
@@ -14,32 +14,32 @@ const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
 const text = strings.accessPoints;
-const phoneText = strings.phone;
+const plannerText = strings.planner;
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 // Not through the map region, which the edit dialog hides from the accessibility tree while open.
 const markers = (page: Page) => page.locator(".leaflet-container .access-point-marker");
 const routePoints = (page: Page) => page.locator(".leaflet-container path.point");
-const sheet = (page: Page) => page.getByRole("dialog", { name: phoneText.sheetLabel });
-const accessTab = (page: Page) => sheet(page).getByRole("tab", { name: phoneText.tabs.accessPoints });
+const sheet = (page: Page) => page.getByRole("dialog", { name: plannerText.sheetLabel });
+const accessTab = (page: Page) => sheet(page).getByRole("tab", { name: plannerText.tabs.accessPoints });
 const section = (page: Page) =>
   sheet(page).getByRole("region", {
-    name: phoneText.accessPointsLabel,
+    name: plannerText.accessPointsLabel,
     exact: true,
   });
-const details = (page: Page) => page.getByRole("dialog", { name: phoneText.accessPointDialogTitle });
-const save = (page: Page) => details(page).getByRole("button", { name: phoneText.accessPointSave });
+const details = (page: Page) => page.getByRole("dialog", { name: plannerText.accessPointDialogTitle });
+const save = (page: Page) => details(page).getByRole("button", { name: plannerText.accessPointSave });
 const cancel = (page: Page) => details(page).getByRole("button", { name: strings.confirmCancel });
-const markButton = (page: Page) => page.getByRole("button", { name: phoneText.markAccessPointButton });
+const markButton = (page: Page) => page.getByRole("button", { name: plannerText.markAccessPointButton });
 const rows = (page: Page) => section(page).getByRole("list").getByRole("listitem");
 /** A row's own button, which shows the point on the map (its edit and delete buttons follow it). */
 const rowButton = (page: Page, n: number) => rows(page).nth(n).getByRole("button").first();
 const editButton = (page: Page, heading: string) =>
-  section(page).getByRole("button", { name: phoneText.editAccessPoint(heading), exact: true });
+  section(page).getByRole("button", { name: plannerText.editAccessPoint(heading), exact: true });
 const deleteButton = (page: Page, heading: string) =>
-  section(page).getByRole("button", { name: phoneText.deleteAccessPoint(heading), exact: true });
-const placingLine = (page: Page) => page.getByRole("status").filter({ hasText: phoneText.placingState });
-const cancelPlacing = (page: Page) => page.getByRole("button", { name: phoneText.placingCancel });
+  section(page).getByRole("button", { name: plannerText.deleteAccessPoint(heading), exact: true });
+const placingLine = (page: Page) => page.getByRole("status").filter({ hasText: plannerText.placingState });
+const cancelPlacing = (page: Page) => page.getByRole("button", { name: plannerText.placingCancel });
 const toggle = (page: Page, group: string, option: string) =>
   details(page).getByRole("group", { name: group }).getByRole("button", { name: option });
 
@@ -126,7 +126,7 @@ test("the floating button marks one at my GPS position, saved at once, and opens
   await openPhone(page);
 
   await accessTab(page).click();
-  await expect(section(page)).toContainText(phoneText.noAccessPoints);
+  await expect(section(page)).toContainText(plannerText.noAccessPoints);
   // No Mark here in the tab: the floating button marks.
   await expect(section(page).getByRole("button")).toHaveCount(0);
   await markButton(page).click();
@@ -135,10 +135,8 @@ test("the floating button marks one at my GPS position, saved at once, and opens
   await expect(markers(page)).toHaveCount(1);
   await expect(markers(page)).toHaveClass(/access-point-selected/);
   await expect(details(page)).toBeVisible();
-  await expect(details(page)).not.toContainText(text.moveHint);
   // No GPS accuracy anywhere.
   await expect(page.getByText(/accurate to about/)).toHaveCount(0);
-  await expect(details(page).getByRole("button", { name: text.deleteButton })).toHaveCount(0);
   await expect.poll(async () => (await stored(page))?.accessPoints.length).toBe(1);
   const [point] = (await stored(page)).accessPoints;
   expect(point).toMatchObject({ use: "both", kind: "informal-bank" });
@@ -186,7 +184,7 @@ test("the floating button marks one at my GPS position, saved at once, and opens
     expect(box.height).toBeGreaterThanOrEqual(44);
   }
 
-  // It survives a reload, and shows on the desktop too.
+  // It survives a reload.
   await page.reload();
   await expect(markers(page)).toHaveCount(1);
   await accessTab(page).click();
@@ -196,9 +194,9 @@ test("the floating button marks one at my GPS position, saved at once, and opens
   // On a wide screen the same planner shows it in the side panel's tab (ADR 0034).
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.reload();
-  const panel = page.getByRole("complementary", { name: phoneText.sheetLabel });
-  await panel.getByRole("tab", { name: phoneText.tabs.accessPoints }).click();
-  await expect(panel.getByRole("region", { name: phoneText.accessPointsLabel, exact: true })).toContainText(
+  const panel = page.getByRole("complementary", { name: plannerText.sheetLabel });
+  await panel.getByRole("tab", { name: plannerText.tabs.accessPoints }).click();
+  await expect(panel.getByRole("region", { name: plannerText.accessPointsLabel, exact: true })).toContainText(
     "Slipway by the bridge",
   );
 });
@@ -289,7 +287,7 @@ test("without a fix the button enters place mode; Cancel leaves it; the next tap
   const tapMap = (dx: number) => page.touchscreen.tap(box.x + box.width / 2 + dx, box.y + box.height / 3);
 
   await markButton(page).click();
-  await expect(page.getByRole("alert").filter({ hasText: phoneText.positionDenied })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: plannerText.positionDenied })).toBeVisible();
   await expect(placingLine(page)).toBeVisible();
   await expect(markers(page)).toHaveCount(0);
 
@@ -328,7 +326,7 @@ test("while the floating button waits for a fix it says so over the map", async 
   });
 
   await markButton(page).click();
-  await expect(page.getByRole("status").filter({ hasText: phoneText.markLocating })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: plannerText.markLocating })).toBeVisible();
   await expect(markButton(page)).toBeDisabled();
   await expect(markers(page)).toHaveCount(0);
 });

@@ -32,8 +32,8 @@ test("AC1/AC3: a leg is drawn with the next leg's mode; paddle legs look differe
   await clickMap(0, 0, "paddle");
   await clickMap(100, 0, "hike");
   await expect(rows(page)).toHaveCount(2);
-  await expect(rows(page).nth(0)).toHaveClass(/phone-row-paddle/);
-  await expect(rows(page).nth(1)).toHaveClass(/phone-row-hike/);
+  await expect(rows(page).nth(0)).toHaveClass(/planner-row-paddle/);
+  await expect(rows(page).nth(1)).toHaveClass(/planner-row-hike/);
   await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
 
   const [paddleStyle, hikeStyle] = await Promise.all(
@@ -49,7 +49,7 @@ test("AC1/AC3: a leg is drawn with the next leg's mode; paddle legs look differe
     [0, 1].map((i) =>
       rows(page)
         .nth(i)
-        .locator(".phone-row-distance .phone-row-figure-icon")
+        .locator(".planner-row-distance .planner-row-figure-icon")
         .evaluate((el) => getComputedStyle(el).color),
     ),
   );
@@ -69,7 +69,7 @@ test("picking the next leg's mode sends no request and adds no undo step", async
     await nextLegMode(page, mode === "hike" ? strings.legModeHike : strings.legModePaddle).click();
   }
   await expect(legLines(page)).toHaveClass(/leg-routed/);
-  await expect(rows(page).nth(0)).toHaveClass(/phone-row-hike/);
+  await expect(rows(page).nth(0)).toHaveClass(/planner-row-hike/);
   expect(network.brouter).toHaveLength(1);
 
   // One undo removes the last point (the most recent real edit), not a pick.
@@ -116,7 +116,7 @@ test("a paddle leg that can't be snapped stays as a dashed straight paddle leg w
   await expect(line).toHaveClass(/leg-paddle/);
   expect(((await line.getAttribute("d")) ?? "").match(/[ML]/g)).toEqual(["M", "L"]);
   expect(await line.getAttribute("stroke-dasharray")).toBeTruthy();
-  await expect(row).toHaveClass(/phone-row-paddle/);
+  await expect(row).toHaveClass(/planner-row-paddle/);
   await expect(row).not.toContainText(strings.dropLabel);
   await expect(row).not.toContainText(strings.climbLabel);
   await expect(rows(page)).toHaveCount(2);
@@ -178,7 +178,7 @@ test("round 2, rule 2: a paddle leg ending 1.5 m higher shows Drop 0 m and no up
   // Updated: the row also shows access rule text, which can contain "upstream" and
   // date ranges like "1 Oct - 15 Jun" (#58, #59). Both rules are about the figures, so
   // check the figures only.
-  const figures = (await row.locator(".phone-row-headline, .phone-row-figures").allTextContents()).join(" ");
+  const figures = (await row.locator(".planner-row-headline, .planner-row-figures").allTextContents()).join(" ");
   expect(figures).not.toContain("upstream");
   expect(figures).not.toMatch(/-\s*\d/);
 });
@@ -192,7 +192,7 @@ test("round 2, rule 2: a paddle leg ending 5 m higher shows the rise with the up
   await clickMap(-100, 0);
   await clickMap(100, 0, "paddle");
   const row = rows(page).nth(0);
-  await expect(row).toContainText(`${strings.phone.legFigures.rise} 5 m?`);
+  await expect(row).toContainText(`${strings.planner.legFigures.rise} 5 m?`);
   await expect(row).not.toContainText(strings.dropLabel);
 });
 
@@ -238,7 +238,7 @@ test("round 2, rule 1: drawing the last leg as paddle too puts the take-out at t
   // The last leg drawn as paddle too: one stretch, the take-out is at the trip's end.
   await page.keyboard.press("ControlOrMeta+z");
   await clickMap(150, 0, "paddle");
-  await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
+  await expect(rows(page).nth(1)).toHaveClass(/planner-row-paddle/);
   await expect(putIn).toHaveCount(1);
   await expect(takeOut).toHaveCount(1);
   const centre = await centreX(page);

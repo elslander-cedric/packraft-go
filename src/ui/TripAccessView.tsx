@@ -98,7 +98,7 @@ function Note({ note }: { note: AccessNote }) {
 }
 
 /** Lock warnings (#60): "lock at X: portage required", with the region's rule source. Never blocks. */
-export function LockWarnings({ warnings }: { warnings: readonly LockWarning[] }) {
+function LockWarnings({ warnings }: { warnings: readonly LockWarning[] }) {
   if (warnings.length === 0) return null;
   return (
     <div className="access-warnings lock-warnings">
@@ -195,7 +195,7 @@ export function DayWarningChips({ legs, onShowLeg }: { legs: readonly LegWarning
             className={`day-warning-chip day-warning-chip-${kind}`}
             aria-label={strings.tripAccess.chipName(leg + 1, label, count)}
             onClick={(event) => {
-              // On the phone the chip sits on a day card, which takes taps of its own.
+              // The chip sits on a day card, which takes taps of its own.
               event.stopPropagation();
               onShowLeg(leg);
             }}
@@ -211,7 +211,7 @@ export function DayWarningChips({ legs, onShowLeg }: { legs: readonly LegWarning
 }
 
 /**
- * A phone leg row's access at a glance: its status's icon, then one icon per kind of warning
+ * A leg row's access at a glance: its status's icon, then one icon per kind of warning
  * it has (access, lock, aire), each icon once. Their names are only read out; the text is in
  * the leg's dialog.
  */

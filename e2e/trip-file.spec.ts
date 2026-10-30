@@ -75,7 +75,7 @@ test("save file, start a new trip, open the file: the trip is restored without r
   });
 
   // Updated for Base UI (#31): the questions are in-page dialogs, not window.confirm.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await expect(pointMarkers(page)).toHaveCount(0);
   await expectTripName(page, "");
@@ -100,7 +100,7 @@ test("save file, start a new trip, open the file: the trip is restored without r
     expect(box.x).toBeGreaterThanOrEqual(free.x);
     expect(box.x + box.width).toBeLessThanOrEqual(free.x + free.width);
   }
-  await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
+  await expect(rows(page).nth(1)).toHaveClass(/planner-row-paddle/);
   await expect(rows(page).nth(0)).toContainText(`${strings.climbLabel} 100 m`);
   await expect(rows(page).nth(1)).toContainText(`${strings.dropLabel} 7 m`);
   await expect(confirmDialog(page)).toHaveCount(0);

@@ -11,16 +11,12 @@ export const strings = {
   plannerLoading: "Loading trip…",
   legsPanelLabel: "Legs",
   legsPanelEmpty: "Click the map to place the start point, then click again to add legs.",
-  editHint:
-    "Drag a point to move it. Click a point to select it, then delete it or mark it as a camp. Switch a leg between hike and paddle in the list.",
-  tripToolbarLabel: "Trip",
   tripNameLabel: "Trip name",
   tripNamePlaceholder: "Untitled trip",
   // The trip's optional start date (#52, GLOSSARY "Start date"); days get dates from it.
   startDateLabel: "Start date",
   clearStartDateButton: "Clear date",
   newTripButton: "New trip",
-  newTripHint: "Start an empty trip. The current trip is replaced.",
   // Asked in an in-page dialog before a trip with points is replaced (#31).
   newTripConfirm: {
     title: "Start a new trip?",
@@ -28,10 +24,6 @@ export const strings = {
     confirm: "Discard current trip",
   },
   confirmCancel: "Cancel",
-  saveFileButton: "Save to file",
-  saveFileHint: "Download the trip as a file, as a backup or to open on another computer.",
-  openFileButton: "Open file",
-  openFileHint: "Open a trip file saved earlier. The current trip is replaced.",
   openFileConfirm: {
     title: "Open this trip file?",
     message: "Your current trip will be replaced.",
@@ -44,34 +36,21 @@ export const strings = {
   autosaveUnknownVersion:
     "Your saved trip is from a newer or unknown version of packraft-go. Reload the page to update. " +
     "It is kept until you start a new trip or open a file; changes made here are not saved.",
-  exportGpxButton: "Export GPX",
-  exportGpxHint:
-    "Download the trip as a ZIP of GPX files for a GPS device or outdoor app: one file per hike or paddle section, split at camps.",
-  exportGpxDisabledReason: "Nothing to export yet: click the map twice to add a leg.",
   // A section's name in the GPX export (ADR 0021), used for its file, metadata and track,
   // e.g. "Ourthe – 2 – paddle", or "Ourthe – 2 – Day 1 – paddle" when the trip has camps.
   gpxSectionName: (trip: string, n: number, mode: "hike" | "paddle", day?: number) =>
     [trip, String(n), ...(day === undefined ? [] : [`Day ${day}`]), mode === "hike" ? "hike" : "paddle"].join(" – "),
-  toolbarLabel: "Edit route",
   undoButton: "Undo",
-  undoShortcut: "Undo the last edit (Ctrl+Z / Cmd+Z)",
   undoDisabledReason: "Nothing to undo yet.",
   // Back to start (GLOSSARY "Loop"): a leg from the last point back to the start point.
   backToStartButton: "Back to start",
-  backToStartHint: "Add a leg from the last point back to the start point.",
-  backToStartNeedsTwoPoints: "Add at least two points first.",
-  backToStartAlreadyThere: "The trip already ends at its start.",
   deletePointButton: "Delete point",
-  deletePointShortcut: "Delete the selected point (Delete key)",
-  deletePointDisabledReason: "Select a point on the map to delete it.",
   campButton: "Camp",
-  campButtonHint: "Mark or unmark the selected point as a camp. Camps split the trip into days.",
-  campDisabledReason: "Select a point on the map to mark it as a camp.",
   campMarker: "Camp",
   daysPanelLabel: "Days",
   daysPanelEmpty: "Add legs to see the trip's days. Mark a point as a camp to split it into days.",
   dayLabel: (n: number) => `Day ${n}`,
-  // An undated day's calendar tile on the phone: "Day" above its number.
+  // An undated day's calendar tile: "Day" above its number.
   dayTileWord: "Day",
   // A day's calendar date from the trip's start date (#52), e.g. "Sat 31 Oct 2026".
   dayDate: (weekday: string, day: number, month: string, year: number) => `${weekday} ${day} ${month} ${year}`,
@@ -79,40 +58,24 @@ export const strings = {
   monthNames: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   // Which legs a day covers, e.g. "Legs 1–2" or "Leg 3".
   dayLegs: (first: number, last: number) => (first === last ? `Leg ${first}` : `Legs ${first}–${last}`),
-  dayHikeDistance: "Hike",
-  dayPaddleDistance: "Paddle",
-  dayTimeEstimate: "Est. time",
   legLabel: (n: number) => `Leg ${n}`,
   legModeHike: "Hike",
   legModePaddle: "Paddle",
   legModeLabel: (n: number) => `Leg ${n} mode`,
-  putIn: "Put-in",
-  takeOut: "Take-out",
-  tripTotalDistance: "Total distance",
   kilometreUnit: "km",
   metreUnit: "m",
   hourUnit: "h",
   minuteUnit: "min",
-  // Times are estimates (ADR 0009) and say so wherever they are shown.
-  legTimeEstimate: "Est. time",
-  tripTotalTimeEstimate: "Estimated total time",
   // Shown instead of a time while a hike leg (or, for the total, any leg) is still being snapped.
   timePending: "…",
   // A hike leg that failed to route is timed on distance only; `duration` is formatted, e.g. "45 min".
   timeWithoutClimb: (duration: string) => `${duration} (no climb data)`,
-  timeEstimateNote: "Times are estimates: Naismith's rule for hike legs, your paddling speed for paddle legs.",
   settingsPanelLabel: "Settings",
   paceFactorLabel: "Hiking pace factor",
   paceFactorHint: "1.0 is Naismith's pace; 1.2 is 20% slower, 0.8 is 20% faster.",
   paddleSpeedLabel: "Paddling speed (km/h)",
   // Your access points (#55, ADR 0023, GLOSSARY "Access point"): your own collection, apart from trips.
   accessPoints: {
-    panelLabel: "Access points",
-    toolbarLabel: "Access point actions",
-    count: (n: number) => (n === 0 ? "No access points yet." : n === 1 ? "1 access point" : `${n} access points`),
-    addButton: "Add access point",
-    addHint: "Then click the map where you can get onto or off the water.",
-    placingHint: "Click the map to place the access point. Press Escape to cancel.",
     autosaveUnknownVersion:
       "Your saved access points are from a newer or unknown version of packraft-go. Reload the page to update. " +
       "They are kept; access point changes made here are not saved.",
@@ -131,7 +94,6 @@ export const strings = {
     // when it has no name or note (#136).
     useAndKind: (use: string, kind: string) => `${use}, ${kind}`,
     detailsLabel: "Access point",
-    moveHint: "Drag the marker on the map to move it.",
     useLabel: "Use",
     uses: { "put-in": "Put-in", "take-out": "Take-out", both: "Both" },
     kindLabel: "Kind",
@@ -139,7 +101,6 @@ export const strings = {
     nameLabel: "Name",
     // Shown while the default name (ADR 0027) is still to be looked up, or when none was found.
     namePlaceholder: "e.g. Hotton bridge",
-    nameHint: "Leave empty for a name from the nearest road and place.",
     noteLabel: "Note",
     notePlaceholder: "e.g. steep bank, park at the church",
     checkedOnSiteLabel: "Checked on site",
@@ -148,19 +109,15 @@ export const strings = {
     // When it was added and last changed; `date` is formatted, e.g. "Tue 13 Oct 2026".
     added: (date: string) => `Added ${date}`,
     changed: (date: string) => `changed ${date}`,
-    deleteButton: "Delete access point",
     deleteConfirm: {
       title: "Delete this access point?",
       message: "It is removed from your access points. This can't be undone.",
       confirm: "Delete access point",
     },
-    closeButton: "Done",
   },
   climbLabel: "Climb",
   descentLabel: "Descent",
   dropLabel: "Drop",
-  // A paddle leg that ends higher than it starts (ADR 0018); `elevation` is formatted, e.g. "3 m".
-  riseFigure: (elevation: string) => `↑ ${elevation} (upstream?)`,
   legRouting: "Snapping to the map…",
   legRouteFailed: {
     "no-route": "No path found between these points. Shown as a straight line; move a point or retry.",
@@ -169,9 +126,9 @@ export const strings = {
   legRouteFailedNoRiver:
     "No river route found between these points. Shown as a straight line; move a point onto the river or retry.",
   retryRouting: "Retry",
-  // The phone layout of the planner (ADR 0026), with your position and access points on it (ADR 0023).
-  phone: {
-    // The phone planner's sheet and tabs (#118, ADR 0026).
+  // The planner (ADRs 0026, 0034), with your position and access points on it (ADR 0023).
+  planner: {
+    // The planner's sheet and tabs (#118, ADR 0026).
     sheetLabel: "Trip",
     tabsLabel: "Trip sections",
     tabs: { legs: "Legs", days: "Days", accessPoints: "Access points" },
@@ -208,7 +165,7 @@ export const strings = {
       descent: "Descent",
       time: "Estimated time",
     },
-    // The side panel that replaces the sheet when the phone is held sideways (#126).
+    // The side panel that replaces the sheet on every screen but a narrow one in portrait (#126, ADR 0034).
     collapsePanelButton: "Collapse the trip panel",
     expandPanelButton: "Open the trip panel",
     // Its left edge, a splitter: drag it or use the arrow keys to resize the panel (ADR 0034).
@@ -224,13 +181,12 @@ export const strings = {
     // The icon-only floating button above the access-point button (GLOSSARY "Loop").
     backToStartButton: "Route back to the start",
     positionLocating: "Finding your position…",
-    positionMarker: "Your position",
     positionDenied:
       "Location permission was denied, so your position can't be shown. To show it, allow location for this site in your browser settings, then try again.",
     positionUnavailable: "Your position isn't available right now. Try again in the open, away from steep valley sides.",
     positionTimeout: "Finding your position took too long. Try again.",
     positionUnsupported: "This browser can't share your location.",
-    // Your access points in the phone planner (#119; first #63, ADR 0023).
+    // Your access points in the planner (#119; first #63, ADR 0023).
     accessPointsLabel: "Your access points",
     // The floating button bottom left, icon-only.
     markAccessPointButton: "Mark an access point",
@@ -259,7 +215,7 @@ export const strings = {
     // The edit dialog: what you change is kept until Save stores it on the device.
     accessPointDialogTitle: "Access point details",
     accessPointSave: "Save",
-    // The access layer on the phone (#125): switched on and off in the Map menu, named `accessLayerToggle`.
+    // The access layer (#125): switched on and off in the Map menu, named `accessLayerToggle`.
     // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a dialog.
     accessChip: (when: string) => `Access · ${when}`,
     accessChipToday: "today",
@@ -397,7 +353,7 @@ export const strings = {
     placeholder: "Place or coordinates",
     search: "Search",
     clear: "Clear search",
-    // The phone's pill opens the field, which closes back to it (#174).
+    // The pill opens the field, which closes back to it (#174).
     pill: (shown?: string) => (shown ? `Search a place, showing ${shown}` : "Search a place"),
     back: "Close search",
     resultsLabel: "Search results",
@@ -436,7 +392,7 @@ export const strings = {
   accessAttribution:
     'Access data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
     '(<a href="https://opendatacommons.org/licenses/odbl/">ODbL</a>)',
-  // The base maps (ADR 0031): the choices in the desktop's base map menu and the phone's Map menu.
+  // The base maps (ADR 0031): the choices in the Map menu.
   baseMaps: {
     opentopomap: "OpenTopoMap",
     "aerial-be": "Aerial photos (Belgium)",
@@ -444,10 +400,10 @@ export const strings = {
   } satisfies Record<BaseMapId, string>,
   // The menus' name for the choice of base map.
   baseMapChoice: "Base map",
-  // The Map menu's button (ADR 0032): bottom right on the desktop; on the phone the layers button under
-  // the position button (#179), whose menu adds the access layer's switch before the overlays.
+  // The Map menu's button (ADR 0032): the layers button under the position button (#179), whose
+  // menu has the base maps, then the access layer's switch and the overlays.
   mapMenuButton: "Map",
-  // The overlays (ADR 0032): switched on and off in the Map menu, desktop and phone.
+  // The overlays (ADR 0032): switched on and off in the Map menu.
   overlays: {
     "hiking-trails": "Hiking trails",
   } satisfies Record<OverlayId, string>,

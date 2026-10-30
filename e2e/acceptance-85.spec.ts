@@ -56,12 +56,12 @@ test("status history is checking, then closed: open never appears; nothing leaks
   await watchStatuses(page);
   await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), save("2026-10-14"));
   await openPlanner(page);
-  const leg = page.getByRole("list", { name: strings.legsPanelLabel }).locator(".phone-row").first();
+  const leg = page.getByRole("list", { name: strings.legsPanelLabel }).locator(".planner-row").first();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessChecking);
   await expect.poll(() => network.kiwis.length).toBeGreaterThan(0);
   // The day's chip makes no claim about the flow while checking: the two aire warnings stay
   // visible, and only the flow-dependent closed warning waits (ADR 0029).
-  await showTab(page, strings.phone.tabs.days);
+  await showTab(page, strings.planner.tabs.days);
   const chip = page.locator(".day-warning-chip");
   const { chipKind, chipMore } = strings.tripAccess;
   await expect(chip).toContainText(chipKind.aire);
@@ -69,7 +69,7 @@ test("status history is checking, then closed: open never appears; nothing leaks
   held.release();
   await expect(chip).toContainText(chipKind.closed);
   await expect(chip).toContainText(chipMore(2));
-  await showTab(page, strings.phone.tabs.legs);
+  await showTab(page, strings.planner.tabs.legs);
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState["closed-today"]);
 
   const seen = await history(page);
@@ -86,7 +86,7 @@ test("a failing service ends unknown, never open, in the whole history (#85)", a
   await watchStatuses(page);
   await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), save("2026-10-14"));
   await openPlanner(page);
-  const leg = page.getByRole("list", { name: strings.legsPanelLabel }).locator(".phone-row").first();
+  const leg = page.getByRole("list", { name: strings.legsPanelLabel }).locator(".planner-row").first();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessChecking);
   held.release();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState.unknown);
@@ -101,7 +101,7 @@ test("another date is never checking and asks no flows (#85)", async ({ page }) 
   await watchStatuses(page);
   await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), save("2026-10-20"));
   await openPlanner(page);
-  const leg = page.getByRole("list", { name: strings.legsPanelLabel }).locator(".phone-row").first();
+  const leg = page.getByRole("list", { name: strings.legsPanelLabel }).locator(".planner-row").first();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState.open);
   expect((await history(page)).filter((s) => s.includes(strings.accessChecking))).toEqual([]);
   expect(network.kiwis).toHaveLength(0);

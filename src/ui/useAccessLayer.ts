@@ -27,7 +27,7 @@ export type AccessLayer = {
 };
 
 /**
- * The access layer's state, shared by the desktop map and the phone planner: on or off,
+ * The access layer's state for the planner: on or off,
  * the date (today unless another is picked, #59), the coloured waters and locks for that
  * date (with live Walloon flows for today, #61), and the water or lock whose details are open.
  */

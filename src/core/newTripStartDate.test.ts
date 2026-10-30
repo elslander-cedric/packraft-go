@@ -1,4 +1,4 @@
-// A new trip on the phone starts with today as its start date (#124, spec #114
+// A new trip in the planner starts with today as its start date (#124, spec #114
 // stories 57 and 55). Seams: the planner session's new-trip path, and today's
 // calendar date in Europe/Brussels.
 import { describe, expect, it } from "vitest";
@@ -20,7 +20,7 @@ describe("new trip with a start date", () => {
     expect(next.trip).toEqual({ name: "", points: [], legs: [], startDate: "2026-10-26" });
   });
 
-  it("starts undated without one, as on desktop", () => {
+  it("starts undated without one, as before #124", () => {
     const next = plannerSession(blank, { type: "newTrip" });
     expect(next.trip).toEqual({ name: "", points: [], legs: [] });
     expect("startDate" in next.trip).toBe(false);

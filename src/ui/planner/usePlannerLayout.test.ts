@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { PHONE_QUERY } from "./usePhoneLayout";
+import { PHONE_QUERY } from "./usePlannerLayout";
 
 describe("PHONE_QUERY", () => {
   // The disclaimer banner is server-rendered, so the phone hides it with CSS (ADR 0026).

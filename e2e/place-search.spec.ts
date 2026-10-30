@@ -214,7 +214,7 @@ test("a click on the pin reaches the map and adds a point; trip actions leave th
   await page.keyboard.press("ControlOrMeta+z");
   await expect(mapRegion(page).locator("path.point")).toHaveCount(0);
   await expect(pin(page)).toBeVisible();
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await expect(pin(page)).toBeVisible();
 
   // Opening a trip file leaves it too.

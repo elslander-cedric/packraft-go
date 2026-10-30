@@ -161,8 +161,8 @@ test.describe("#27 leg rows at 1280×800", () => {
     expect(await textLineCount(paddle)).toBeLessThanOrEqual(2);
     // The distance and the time share the first line.
     for (const row of [hike, paddle]) {
-      const distance = (await row.locator(".phone-row-distance").boundingBox())!;
-      const time = (await row.locator(".phone-row-time").boundingBox())!;
+      const distance = (await row.locator(".planner-row-distance").boundingBox())!;
+      const time = (await row.locator(".planner-row-time").boundingBox())!;
       expect(Math.abs(distance.y + distance.height / 2 - (time.y + time.height / 2))).toBeLessThan(6);
     }
   });
@@ -175,7 +175,7 @@ test.describe("#27 leg rows at 1280×800", () => {
     await click(100, 0, "paddle");
     const row = legRows(page).nth(0);
     const rise = "5 m?";
-    await expect(row).toContainText(`${strings.phone.legFigures.rise} ${rise}`);
+    await expect(row).toContainText(`${strings.planner.legFigures.rise} ${rise}`);
     await expectFiguresUnbroken(row, [rise, "1 h 11 min"]);
     expect(await textLineCount(row)).toBeLessThanOrEqual(2);
   });
@@ -201,7 +201,7 @@ test.describe("#27 Retry on a failed leg at 1280×800", () => {
     await click(120);
     const row = legRows(page).nth(0);
     await expect(row.getByRole("alert")).toHaveText(strings.legRouteFailed.unavailable);
-    const time = await shownValue(row.locator(".phone-row-time"), strings.phone.legFigures.time);
+    const time = await shownValue(row.locator(".planner-row-time"), strings.planner.legFigures.time);
     expect(time).toContain("(no climb data)");
     expect(await linesOfText(row, time), "time without climb data breaks").toBe(1);
     await expectRetryUsable(page, row, net);
@@ -249,7 +249,7 @@ test.describe("#27 hike and paddle rows, totals at 1280×800", () => {
     // Updated for ADR 0034: a row shows its mode by its distance's icon, in the mode's colour.
     const look = (row: Locator) =>
       row.evaluate((el) => {
-        const icon = el.querySelector(".phone-row-distance .phone-row-figure-icon")!;
+        const icon = el.querySelector(".planner-row-distance .planner-row-figure-icon")!;
         return {
           icon: icon.getAttribute("data-icon"),
           colour: getComputedStyle(icon).color,
@@ -275,7 +275,7 @@ test.describe("#27 hike and paddle rows, totals at 1280×800", () => {
     await page.waitForTimeout(450);
     await page.mouse.click(centre.x, centre.y);
     await page.getByRole("button", { name: strings.campButton }).click();
-    await showTab(page, strings.phone.tabs.days);
+    await showTab(page, strings.planner.tabs.days);
     await expect(dayRows(page)).toHaveCount(2);
 
     for (const day of await dayRows(page).all()) {
@@ -290,14 +290,14 @@ test.describe("#27 hike and paddle rows, totals at 1280×800", () => {
     expect(await daysPanel(page).evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
 
     // Trip totals in the panel's header: each figure on one line, apart from the leg rows.
-    const figures = totals(page).locator(".phone-total");
+    const figures = totals(page).locator(".planner-total");
     await expect(figures.first()).toBeVisible();
     for (const figure of await figures.all()) {
       const label = (await figure.locator(".visually-hidden").textContent())!.trim();
       const value = await shownValue(figure, label);
       expect(await linesOfText(figure, value), `"${label} ${value}" breaks`).toBe(1);
     }
-    await showTab(page, strings.phone.tabs.legs);
+    await showTab(page, strings.planner.tabs.legs);
     const firstLeg = (await legRows(page).first().boundingBox())!;
     const totalsBox = (await totals(page).boundingBox())!;
     expect(firstLeg.y - (totalsBox.y + totalsBox.height), "totals touch the leg rows").toBeGreaterThanOrEqual(8);

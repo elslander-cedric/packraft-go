@@ -12,11 +12,11 @@ import { serveOffline } from "./support/offline";
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
-const text = strings.phone;
+const text = strings.planner;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
 const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
-const totals = (page: Page) => sheet(page).locator(".phone-totals");
+const totals = (page: Page) => sheet(page).locator(".planner-totals");
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 
 const START = { lat: 50.25, lng: 4.85 };
@@ -79,7 +79,7 @@ test("the header shows the totals, not the trip name: hike, paddle, climb, desce
   // The name is in Trip details only (#154).
   await expect(sheet(page).getByRole("heading")).toHaveCount(0);
   await expect(sheet(page)).not.toContainText("Dinant weekend");
-  const figures = totals(page).locator(".phone-total");
+  const figures = totals(page).locator(".planner-total");
   await expect(figures).toHaveCount(5);
   const { labels } = text.totals;
   for (const [i, key] of (["hike", "paddle", "climb", "descent", "time"] as const).entries()) {
@@ -96,7 +96,7 @@ test("on a phone, all five totals fit on one line", async ({ page }) => {
   await expect(points(page)).toHaveCount(3);
   await settled(page);
 
-  const figures = totals(page).locator(".phone-total");
+  const figures = totals(page).locator(".planner-total");
   await expect(figures).toHaveCount(5);
   const tops = await figures.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
   expect(new Set(tops).size).toBe(1);
@@ -110,7 +110,7 @@ test("a trip with no paddle legs leaves the paddle figure out", async ({ page })
   await open(page, save);
   await expect(points(page)).toHaveCount(2);
 
-  await expect(totals(page).locator(".phone-total")).toHaveCount(4);
+  await expect(totals(page).locator(".planner-total")).toHaveCount(4);
   await expect(iconIn(totals(page), icons.paddle)).toHaveCount(0);
   await expect(iconIn(totals(page), icons.hike)).toBeVisible();
   await expect(totals(page)).not.toContainText(text.totals.labels.paddle);
@@ -124,7 +124,7 @@ test("on a narrow phone the totals wrap, with the tab row still in the peek", as
   await settled(page);
 
   // No figure breaks inside or spills out of the screen.
-  for (const figure of await totals(page).locator(".phone-total").all()) {
+  for (const figure of await totals(page).locator(".planner-total").all()) {
     const { x, width, height } = await box(figure);
     expect(height).toBeLessThan(30);
     expect(x + width).toBeLessThanOrEqual(320);

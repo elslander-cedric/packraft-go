@@ -13,7 +13,7 @@ import { formatDistance } from "../format";
 import { strings } from "../strings";
 import type { AccessPointsState } from "../useAccessPoints";
 
-const text = strings.phone;
+const text = strings.planner;
 const pointText = strings.accessPoints;
 
 type Props = {
@@ -37,13 +37,13 @@ function alongRoute({ alongKm, role }: OnRoute): string {
 }
 
 /**
- * The phone planner's Access points tab (#119, ADR 0026): your list, each row
+ * The planner's Access points tab (#119, ADR 0026): your list, each row
  * with edit and delete buttons. While the trip has a route, the points on it
  * come first in route order, then the rest nearest to you (#156). Marking is
  * the floating button on the map; the details are a dialog. Every change is
  * saved on the device at once by `useAccessPoints`, with or without signal.
  */
-export default function PhoneAccessPoints({ access, trip, position, onOpen, onEdit }: Props) {
+export default function AccessPoints({ access, trip, position, onOpen, onEdit }: Props) {
   const { points, selected } = access;
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const lists = useRef<HTMLDivElement>(null);
@@ -57,13 +57,13 @@ export default function PhoneAccessPoints({ access, trip, position, onOpen, onEd
   }, [selected]);
 
   const savingPausedAlert = access.savingPaused !== null && (
-    <p role="alert" className="phone-position-alert">
+    <p role="alert" className="planner-position-alert">
       {access.savingPaused === "unknown-version" ? pointText.autosaveUnknownVersion : pointText.damagedNotBackedUp}
     </p>
   );
   // A damaged save was backed up on load, before it was replaced (round 2 of #55).
   const backedUpNote = access.backupKey !== null && (
-    <p role="status" className="phone-position-alert">
+    <p role="status" className="planner-position-alert">
       {pointText.damagedBackedUp(access.backupKey)}
     </p>
   );
@@ -71,26 +71,26 @@ export default function PhoneAccessPoints({ access, trip, position, onOpen, onEd
   const row = (point: AccessPoint, figure: string | null): ReactNode => {
     const { heading, note, detail } = accessPointText(point);
     return (
-      <li key={point.id} className="phone-access-point-item">
+      <li key={point.id} className="planner-access-point-item">
         <Button
-          className="phone-row phone-access-point-row"
+          className="planner-row planner-access-point-row"
           aria-current={point.id === selected?.id || undefined}
           onClick={() => onOpen(point.id)}
         >
-          <span className="phone-row-heading">{heading}</span>
-          {figure && <span className="phone-access-point-figure">{figure}</span>}
-          {note && <span className="phone-access-point-note">{note}</span>}
-          {detail && <span className="phone-access-point-detail">{detail}</span>}
+          <span className="planner-row-heading">{heading}</span>
+          {figure && <span className="planner-access-point-figure">{figure}</span>}
+          {note && <span className="planner-access-point-note">{note}</span>}
+          {detail && <span className="planner-access-point-detail">{detail}</span>}
         </Button>
         <Button
-          className="phone-access-point-action"
+          className="planner-access-point-action"
           aria-label={text.editAccessPoint(heading)}
           onClick={() => onEdit(point.id)}
         >
           <Icon icon={icons.editAccessPoint} />
         </Button>
         <Button
-          className="phone-access-point-action"
+          className="planner-access-point-action"
           aria-label={text.deleteAccessPoint(heading)}
           onClick={() => setPendingDelete(point.id)}
         >
@@ -104,35 +104,35 @@ export default function PhoneAccessPoints({ access, trip, position, onOpen, onEd
   );
 
   return (
-    <section className="phone-access-points" aria-label={text.accessPointsLabel}>
+    <section className="planner-access-points" aria-label={text.accessPointsLabel}>
       {savingPausedAlert}
       {backedUpNote}
       {points.length === 0 ? (
-        <p className="phone-empty">{text.noAccessPoints}</p>
+        <p className="planner-empty">{text.noAccessPoints}</p>
       ) : (
-        <div ref={lists} className="phone-access-point-lists">
+        <div ref={lists} className="planner-access-point-lists">
           {!split.hasRoute ? (
-            <ul className="phone-access-point-list" aria-label={text.accessPointsLabel}>
+            <ul className="planner-access-point-list" aria-label={text.accessPointsLabel}>
               {notOnRouteRows}
             </ul>
           ) : (
             <>
-              <h3 id={onRouteId} className="phone-access-point-heading">
+              <h3 id={onRouteId} className="planner-access-point-heading">
                 {text.onRouteHeading}
               </h3>
               {split.onRoute.length === 0 ? (
-                <p className="phone-empty phone-access-point-none">{text.noneOnRoute}</p>
+                <p className="planner-empty planner-access-point-none">{text.noneOnRoute}</p>
               ) : (
-                <ul className="phone-access-point-list" aria-labelledby={onRouteId}>
+                <ul className="planner-access-point-list" aria-labelledby={onRouteId}>
                   {split.onRoute.map((entry) => row(entry.point, alongRoute(entry)))}
                 </ul>
               )}
               {notOnRouteRows.length > 0 && (
                 <>
-                  <h3 id={notOnRouteId} className="phone-access-point-heading">
+                  <h3 id={notOnRouteId} className="planner-access-point-heading">
                     {text.notOnRouteHeading}
                   </h3>
-                  <ul className="phone-access-point-list" aria-labelledby={notOnRouteId}>
+                  <ul className="planner-access-point-list" aria-labelledby={notOnRouteId}>
                     {notOnRouteRows}
                   </ul>
                 </>

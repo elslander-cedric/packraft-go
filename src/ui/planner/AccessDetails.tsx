@@ -1,7 +1,7 @@
 import type { AccessFeature, LockMarker } from "@/core/access";
 import { AccessDetailPanel, LockDetailPanel } from "../AccessPanel";
 
-export type PhoneAccessDetailsProps = {
+export type AccessDetailsProps = {
   /** The water whose details are open, if any. */
   water?: AccessFeature;
   /** The lock whose details are open, if any. */
@@ -13,14 +13,14 @@ export type PhoneAccessDetailsProps = {
 };
 
 /**
- * A water's or a lock's details on the phone (#125): shown in the sheet (portrait) or the
+ * A water's or a lock's details (#125): shown in the sheet (portrait) or the
  * side panel (sideways), above the open tab, which Close goes back to. Renders nothing
  * while no water or lock is selected.
  */
-export default function PhoneAccessDetails({ water, lock, date, onClose }: PhoneAccessDetailsProps) {
+export default function AccessDetails({ water, lock, date, onClose }: AccessDetailsProps) {
   if (!water && !lock) return null;
   return (
-    <div className="phone-access-details">
+    <div className="planner-access-details">
       {water ? (
         <AccessDetailPanel feature={water} date={date} onClose={onClose} />
       ) : (

@@ -10,7 +10,7 @@ import { freeMapBox, menuButton, openPlanner } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const pointMarkers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const newTripItem = (page: Page) => page.getByRole("menuitem", { name: strings.phone.menu.newTrip, exact: true });
+const newTripItem = (page: Page) => page.getByRole("menuitem", { name: strings.planner.menu.newTrip, exact: true });
 
 /** Opens the menu by keyboard; its first item, New trip, has focus. */
 async function focusNewTrip(page: Page) {

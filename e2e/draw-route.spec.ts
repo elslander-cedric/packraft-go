@@ -80,8 +80,8 @@ test("clicking three points draws two straight hike legs and shows their distanc
 
   const legs = legsPanel(page).getByRole("listitem");
   await expect(legs).toHaveCount(2);
-  await expect(legs.nth(0)).toContainText(strings.phone.legFigures.hike);
-  await expect(legs.nth(1)).toContainText(strings.phone.legFigures.hike);
+  await expect(legs.nth(0)).toContainText(strings.planner.legFigures.hike);
+  await expect(legs.nth(1)).toContainText(strings.planner.legFigures.hike);
   expectWithinOneKm(await kmShown(legs.nth(0)), expectedFirst);
   expectWithinOneKm(await kmShown(legs.nth(1)), expectedSecond);
 

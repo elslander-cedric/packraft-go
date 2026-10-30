@@ -21,7 +21,7 @@ export const isPrimaryPress = (event: PointerEvent) => event.pointerType !== "mo
  * the one a long touch press can give is ignored (the timer already handled
  * it). Nothing is stopped: a tap on the shape is still a tap on the map, and a
  * finger or mouse that moves still pans it. The click that ends a hold is ignored
- * by the map's tap handling (see `PhoneMap`). Returns a function that stops
+ * by the map's tap handling (see `TripMap`). Returns a function that stops
  * listening.
  */
 export function listenForHold(element: Element, map: LeafletMap, onHold: (at: LatLng) => void): () => void {
@@ -81,14 +81,13 @@ export function listenForHold(element: Element, map: LeafletMap, onHold: (at: La
 }
 
 /**
- * Hold on a map layer's element (see `listenForHold`), with this render's `onHold`; off unless `on`.
+ * Hold on a map layer's element (see `listenForHold`), with this render's `onHold`.
  * A layer in a group that joins the map after it (the access layer's waters) has no element yet
  * when it mounts: then it starts listening once the layer is added to the map.
  */
 export function useHold(
   layer: { readonly current: Pick<Layer, "on" | "off"> & { getElement(): Element | undefined } | null },
   onHold: (at: LatLng) => void,
-  on = true,
 ) {
   const map = useMap();
   const latest = useRef(onHold);
@@ -97,7 +96,7 @@ export function useHold(
   });
   useEffect(() => {
     const current = layer.current;
-    if (!on || !current) return;
+    if (!current) return;
     let stop: (() => void) | undefined;
     const listen = () => {
       const element = current.getElement();
@@ -110,5 +109,5 @@ export function useHold(
       current.off("add", listen);
       stop?.();
     };
-  }, [map, layer, on]);
+  }, [map, layer]);
 }

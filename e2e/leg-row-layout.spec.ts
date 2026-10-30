@@ -8,7 +8,7 @@ import { mapClicker, openPlanner, totals, tripPanel } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
-const rows = (page: Page) => legsPanel(page).locator(".phone-row");
+const rows = (page: Page) => legsPanel(page).locator(".planner-row");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
@@ -52,7 +52,7 @@ const lineCount = (el: Locator) =>
 
 /** Every figure in a row sits on one line and inside the row. */
 async function expectFiguresFit(row: Locator) {
-  const figures = row.locator(".phone-row-figure");
+  const figures = row.locator(".planner-row-figure");
   expect(await figures.count()).toBeGreaterThanOrEqual(2);
   for (const figure of await figures.all()) {
     expect(await lineCount(figure), `"${await figure.textContent()}" wraps`).toBe(1);
@@ -96,7 +96,7 @@ test("a failed hike leg's figures and its time without climb data fit on their l
   await click(-120, 0);
   await click(120, 0);
   const row = rows(page).first();
-  await expect(row.locator(".phone-row-time")).toContainText(strings.timeWithoutClimb(""));
+  await expect(row.locator(".planner-row-time")).toContainText(strings.timeWithoutClimb(""));
   await expectFiguresFit(row);
 });
 
@@ -108,13 +108,13 @@ test("each leg row shows its figures without wrapping at 1280 px, the distance a
 
   for (const row of await rows(page).all()) {
     // The distance and the time share the first line of the row.
-    const distance = (await row.locator(".phone-row-distance").boundingBox())!;
-    const time = (await row.locator(".phone-row-time").boundingBox())!;
+    const distance = (await row.locator(".planner-row-distance").boundingBox())!;
+    const time = (await row.locator(".planner-row-time").boundingBox())!;
     expect(Math.abs(distance.y + distance.height / 2 - (time.y + time.height / 2))).toBeLessThan(6);
     await expectFiguresFit(row);
   }
   // The time keeps its label and value together.
-  await expect(rows(page).nth(0).locator(".phone-row-time")).toHaveText(`${strings.phone.legFigures.time} 49 min`);
+  await expect(rows(page).nth(0).locator(".planner-row-time")).toHaveText(`${strings.planner.legFigures.time} 49 min`);
 });
 
 test("hike and paddle rows stay visually distinct", async ({ page }) => {
@@ -122,7 +122,7 @@ test("hike and paddle rows stay visually distinct", async ({ page }) => {
   await drawHikeThenPaddle(page);
   // A row shows its mode by its distance's icon, in the mode's colour.
   const look = (row: Locator) =>
-    row.locator(".phone-row-distance .phone-row-figure-icon").evaluate((el) => {
+    row.locator(".planner-row-distance .planner-row-figure-icon").evaluate((el) => {
       return `${el.getAttribute("data-icon")} ${getComputedStyle(el).color}`;
     });
   expect(await look(rows(page).nth(0))).not.toBe(await look(rows(page).nth(1)));

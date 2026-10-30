@@ -185,15 +185,15 @@ export const paneZIndex = {
   access: 350,
   /** The legs and their casings: above the access layer's waters, so a water never covers a leg. */
   tripLegs: 360,
-  /** Put-ins and take-outs, above the legs (desktop). */
+  /** Put-ins and take-outs, above the legs: Leaflet's own overlay pane, where they are drawn. */
   tripModeChanges: 400,
   /** The trip's points, above the legs, so a leg never covers a point. */
   tripPoints: 401,
   tripCamps: 402,
-  /** The phone's leg hit lines: above the drawn trip, below the access-point markers and point hit areas. */
+  /** The legs' hit lines: above the drawn trip, below the access-point markers and point hit areas. */
   tripLegHits: 450,
-  /** The phone's lock markers: above the leg hit lines, so a tap on a lock on a leg opens the lock. */
+  /** The lock markers: above the leg hit lines, so a tap on a lock on a leg opens the lock. */
   accessLocks: 460,
-  /** The phone's point hit areas: above the access-point markers, so a route point there is grabbed first (#120). */
+  /** The points' hit areas: above the access-point markers, so a route point there is grabbed first (#120). */
   tripPointHits: 620,
 } as const;

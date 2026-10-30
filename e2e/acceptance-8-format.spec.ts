@@ -30,7 +30,7 @@ const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane 
 const campMarkers = (page: Page) => mapRegion(page).getByRole("img", { name: strings.campMarker });
 /** The Days tab's cards; shows the tab first. */
 const dayRows = async (page: Page) => {
-  await showTab(page, strings.phone.tabs.days);
+  await showTab(page, strings.planner.tabs.days);
   return dayCards(page);
 };
 const legsPanel = tripPanel;

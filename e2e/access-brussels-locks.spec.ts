@@ -104,9 +104,9 @@ test("locks are marked, including Anderlecht and Molenbeek, and say portage requ
 
   // The legend, in the access chip's dialog, explains the marker.
   await page.getByRole("button", { name: /^Access · / }).click();
-  const accessDialog = page.getByRole("dialog", { name: strings.phone.accessDialogTitle });
+  const accessDialog = page.getByRole("dialog", { name: strings.planner.accessDialogTitle });
   await expect(accessDialog.getByRole("region", { name: strings.accessLegendLabel })).toContainText(strings.lockLegend);
-  await accessDialog.getByRole("button", { name: strings.phone.accessDialogClose }).click();
+  await accessDialog.getByRole("button", { name: strings.planner.accessDialogClose }).click();
   await expect(accessDialog).toHaveCount(0);
 
   const detail = page.getByRole("region", { name: strings.lockDetailLabel });

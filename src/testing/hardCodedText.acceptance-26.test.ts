@@ -52,22 +52,16 @@ describe("#26 AC2: still fails on real hard-coded user-facing text in JSX", () =
 describe("#26 AC4: code rearranged to dodge the old check is restored", () => {
   const read = (file: string) => readFileSync(path.join(UI, file), "utf8");
 
-  // Updated: the pending trip moved into the planner session, so TripPlanner no longer has a useState<Trip | null> (#96)
-  it("TripPlanner uses natural generics for refs", () => {
-    const code = read("TripPlanner.tsx");
+  // Updated: the files rearranged then (TripPlanner, TripToolbar, the Toolbar wrapper) went with
+  // the desktop layout (#191, ADR 0034); the planner's own files are checked instead.
+  it("the planner uses natural generics for refs", () => {
+    const code = read("planner/PlaceSearch.tsx");
     expect(code).toContain("useRef<HTMLButtonElement>(null)");
     expect(code).not.toMatch(/null as [A-Z]/);
   });
 
-  it("toolbars type refs directly, without a dodge alias", () => {
-    for (const file of ["TripToolbar.tsx", "components/Toolbar.tsx"]) {
-      expect(read(file)).not.toMatch(/type ButtonRef\b/);
-      expect(read(file)).toContain("Ref<HTMLButtonElement>");
-    }
-  });
-
   it("the real UI files pass the checker", () => {
-    for (const file of ["TripPlanner.tsx", "TripToolbar.tsx", "components/Toolbar.tsx"]) {
+    for (const file of ["planner/Planner.tsx", "planner/PlaceSearch.tsx", "components/Button.tsx"]) {
       expect(findHardCodedText(read(file))).toEqual([]);
     }
   });

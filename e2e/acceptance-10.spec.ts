@@ -98,7 +98,7 @@ test("#10: opening restores paddle legs, climb, drop and failed legs with no rou
   const calls = net.brouter.length;
 
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await expect(pointMarkers(page)).toHaveCount(0);
 
@@ -106,7 +106,7 @@ test("#10: opening restores paddle legs, climb, drop and failed legs with no rou
   await expect(pointMarkers(page)).toHaveCount(4);
   await expectTripName(page, "Round trip");
   await expect(legLines(page).nth(1)).toHaveClass(/leg-paddle/);
-  await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
+  await expect(rows(page).nth(1)).toHaveClass(/planner-row-paddle/);
   await expect(rows(page).nth(0)).toContainText(`${strings.climbLabel} 100 m`);
   await expect(rows(page).nth(1)).toContainText(`${strings.dropLabel} 7 m`);
   await expect(rows(page).nth(2)).toContainText(strings.retryRouting);
@@ -140,7 +140,7 @@ test("#10: undo after opening steps back within the opened trip only, never into
 
   // A different trip with its own undo history.
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await click(0, -100);
   await click(0, 100);
@@ -177,7 +177,7 @@ test("#10: a leg that was still routing when saved is routed after opening, as a
   hold = false;
 
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   release();
   await open(page, file.name, file.text);
@@ -293,7 +293,7 @@ test("#10: opening over a trip with points asks; cancel keeps it; OK replaces it
   const file = await save(page);
 
   // Updated for Base UI (#31): the questions are in-page dialogs, answered with their buttons.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await renameTrip(page, "Current");
   await click(0, 100);
@@ -314,7 +314,7 @@ test("#10: opening over a trip with points asks; cancel keeps it; OK replaces it
   await expect(pointMarkers(page)).toHaveCount(2);
 
   // A trip without points (only a name) is replaced without asking.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await renameTrip(page, "Name only");
   await open(page, file.name, file.text);

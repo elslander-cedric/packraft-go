@@ -11,11 +11,10 @@ import { DayWarningChips } from "./TripAccessView";
 
 /**
  * Totals for each day (ADR 0008): the trip is split into days at camps.
- * Renders the core's day summaries; no domain logic. A dated trip's days show
- * their calendar dates (#52). A day with access, lock or aire warnings shows one chip
- * per leg that has any; the warnings themselves are on the leg, which a chip shows (#58).
- * Where cards take taps (the phone), each card is titled by a calendar tile with its
- * date instead of "Day n", and its figures are shown after icons.
+ * Renders the core's day summaries; no domain logic. Each day is a card titled by a
+ * calendar tile with its date (#52), its figures shown after icons. A day with access,
+ * lock or aire warnings shows one chip per leg that has any; the warnings themselves
+ * are on the leg, which a chip shows (#58).
  */
 export default function DaysPanel({
   days,
@@ -23,68 +22,35 @@ export default function DaysPanel({
   aire = [],
   onSelectDay,
   selectedDay,
-  heading = true,
   onShowLeg,
 }: {
   days: readonly DaySummary[];
   access?: readonly DayAccess[];
   aire?: readonly AireWarning[];
-  /** A day card was tapped (the phone zooms the map to that day, #123); desktop rows take no taps. */
-  onSelectDay?: (day: number) => void;
+  /** A day card was tapped: the planner zooms the map to that day (#123). */
+  onSelectDay: (day: number) => void;
   /** The tapped card; none when undefined. */
   selectedDay?: number;
-  /** False where a tab already names the panel (the phone's Days tab). */
-  heading?: boolean;
   /** A warning chip was tapped: show that leg with its warnings. */
   onShowLeg: (leg: number) => void;
 }) {
   if (days.length === 0) return null;
+  // The Days tab names the panel: it needs no heading of its own.
   return (
     <aside className="days-panel" aria-label={strings.daysPanelLabel}>
-      {heading && <h2>{strings.daysPanelLabel}</h2>}
       <ol className="days">
-        {days.map((day, i) =>
-          onSelectDay ? (
-            <PhoneDayCard
-              key={i}
-              day={day}
-              index={i}
-              warnings={<DayWarningChips legs={dayWarnings(i, access?.[i], aire)} onShowLeg={onShowLeg} />}
-              selected={i === selectedDay}
-              onSelect={() => onSelectDay(i)}
-            />
-          ) : (
-            <li key={i} className="day-row">
-              <span className="day-heading">
-                <span className="day-label">{strings.dayLabel(i + 1)}</span>{" "}
-                {day.date && (
-                  <>
-                    <time className="day-date" dateTime={day.date}>
-                      {formatDayDate(day.date)}
-                    </time>{" "}
-                  </>
-                )}
-                <span className="day-legs">{strings.dayLegs(day.firstLeg + 1, day.lastLeg + 1)}</span>
-              </span>
-              <DayFigures day={day} />
-              <DayWarningChips legs={dayWarnings(i, access?.[i], aire)} onShowLeg={onShowLeg} />
-            </li>
-          ),
-        )}
+        {days.map((day, i) => (
+          <DayCard
+            key={i}
+            day={day}
+            index={i}
+            warnings={<DayWarningChips legs={dayWarnings(i, access?.[i], aire)} onShowLeg={onShowLeg} />}
+            selected={i === selectedDay}
+            onSelect={() => onSelectDay(i)}
+          />
+        ))}
       </ol>
     </aside>
-  );
-}
-
-function DayFigures({ day }: { day: DaySummary }) {
-  return (
-    <>
-      <span>{`${strings.dayHikeDistance} ${formatDistance(day.hikeDistanceKm)}`}</span>
-      <span>{`${strings.dayPaddleDistance} ${formatDistance(day.paddleDistanceKm)}`}</span>
-      <span>{`${strings.climbLabel} ${formatElevation(day.climbM)}`}</span>
-      <span>{`${strings.descentLabel} ${formatElevation(day.descentM)}`}</span>
-      <span className="day-time">{`${strings.dayTimeEstimate} ${formatTimeEstimate(day.timeH, day.timeStatus)}`}</span>
-    </>
   );
 }
 
@@ -96,20 +62,20 @@ function DayFigure({ figure, value }: { figure: DayFigureKey; value: string | fa
   return (
     <span className={`day-figure day-figure-${figure}`}>
       <Icon icon={icons[figure]} className="day-figure-icon" />
-      <span className="visually-hidden">{`${strings.phone.dayFigures[figure]} `}</span>
+      <span className="visually-hidden">{`${strings.planner.dayFigures[figure]} `}</span>
       {value}
     </span>
   );
 }
 
 /**
- * A phone day card: a calendar tile (weekday, day, month) is its title; an undated
+ * A day card: a calendar tile (weekday, day, month) is its title; an undated
  * trip's tile shows "Day" and the day's number. Beside it, like a leg row, the hike and
  * paddle distances as a headline with the time on the right, and under them the climb,
  * descent and legs; a figure that is zero is left out. The card takes the tap and zooms
  * the map to that day (#123); its warning chips take taps of their own.
  */
-function PhoneDayCard({
+function DayCard({
   day,
   index,
   warnings,

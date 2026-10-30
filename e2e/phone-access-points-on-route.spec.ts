@@ -14,14 +14,14 @@ import { serveOffline } from "./support/offline";
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
-const text = strings.phone;
+const text = strings.planner;
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
 const section = (page: Page) => sheet(page).getByRole("region", { name: text.accessPointsLabel, exact: true });
 const list = (page: Page, name: string) => section(page).getByRole("list", { name, exact: true });
 /** Each row's own button (before its edit and delete buttons) reads its heading, then its figure. */
-const rowsOf = (page: Page, name: string) => list(page, name).locator(".phone-access-point-row");
+const rowsOf = (page: Page, name: string) => list(page, name).locator(".planner-access-point-row");
 
 // Hotton to the north-east: a hike leg, then a paddle leg, about 2.3 and 2.6 km.
 const P: LatLng[] = [

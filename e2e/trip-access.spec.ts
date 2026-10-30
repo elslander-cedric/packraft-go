@@ -45,7 +45,7 @@ async function seed(page: Page, startDate?: string, water = canal) {
 }
 
 const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
-const legRow = (page: Page, n: number) => legsPanel(page).locator(".phone-row").nth(n);
+const legRow = (page: Page, n: number) => legsPanel(page).locator(".planner-row").nth(n);
 const daysPanel = (page: Page) => page.getByRole("complementary", { name: strings.daysPanelLabel });
 const dayChips = (page: Page) =>
   daysPanel(page).getByRole("group", { name: strings.tripAccess.dayWarningsLabel }).getByRole("button");
@@ -72,10 +72,10 @@ test("a paddle leg on a forbidden Flemish canal shows a warning with its reason;
 
   // The hike leg has no access status, and no details to show.
   await expect(legRow(page, 0).locator(".leg-access-icons")).toHaveCount(0);
-  await expect(legRow(page, 0).getByRole("button", { name: strings.phone.legDetailsButton(1) })).toHaveCount(0);
+  await expect(legRow(page, 0).getByRole("button", { name: strings.planner.legDetailsButton(1) })).toHaveCount(0);
 
   // The day card only points at the leg: one chip, no warning text, and no trip summary (ADR 0029).
-  await showTab(page, strings.phone.tabs.days);
+  await showTab(page, strings.planner.tabs.days);
   const day = daysPanel(page).getByRole("listitem").first();
   const forbidden = strings.tripAccess.chipKind.forbidden;
   await expect(dayChips(page)).toHaveCount(1);

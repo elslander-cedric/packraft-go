@@ -59,9 +59,9 @@ test("deleting the access point an offer points at removes the offer", async ({ 
   await expect(offer(page)).toBeVisible();
 
   // Delete it from its row in the Access points tab.
-  await showTab(page, strings.phone.tabs.accessPoints);
+  await showTab(page, strings.planner.tabs.accessPoints);
   await tripPanel(page)
-    .locator(".phone-access-point-item")
+    .locator(".planner-access-point-item")
     .getByRole("button", { name: /^Delete / })
     .click();
   await page.getByRole("alertdialog").getByRole("button", { name: text.deleteConfirm.confirm }).click();
@@ -82,8 +82,8 @@ test("a file error survives mount and selecting an access point (points unchange
   await expect(fileError(page)).toBeVisible();
 
   // Selecting an access point (from its row) and resizing re-render without changing the points.
-  await showTab(page, strings.phone.tabs.accessPoints);
-  await tripPanel(page).locator(".phone-access-point-item").getByRole("button").first().click();
+  await showTab(page, strings.planner.tabs.accessPoints);
+  await tripPanel(page).locator(".planner-access-point-item").getByRole("button").first().click();
   await page.setViewportSize({ width: 1300, height: 800 });
   await page.waitForTimeout(300);
   await expect(fileError(page)).toBeVisible();

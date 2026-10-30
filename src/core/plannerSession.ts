@@ -74,7 +74,7 @@ export type PlannerAction =
   | { readonly type: "deselect" }
   | { readonly type: "acceptOffer"; readonly offer: SnapOffer }
   | { readonly type: "declineOffer"; readonly offer: SnapOffer }
-  /** A new trip, starting on `startDate` when given (the phone passes today, the desktop none; #124). */
+  /** A new trip, starting on `startDate` when given (the planner passes today; #124). */
   | { readonly type: "newTrip"; readonly startDate?: CalendarDate }
   | { readonly type: "fileOpened"; readonly trip: Trip }
   | { readonly type: "fileRejected"; readonly reason: FileError }

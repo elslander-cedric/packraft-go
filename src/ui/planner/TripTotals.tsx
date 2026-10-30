@@ -8,9 +8,9 @@ import { strings } from "../strings";
  * The trip's totals in the sheet's peek: hike and paddle distance, climb, descent and time,
  * each after its icon. A figure that is zero is left out; an empty trip shows nothing.
  */
-export default function PhoneTripTotals({ trip }: { trip: TripSummary["trip"] }) {
+export default function TripTotals({ trip }: { trip: TripSummary["trip"] }) {
   if (trip.distanceKm === 0) return null;
-  const { labels } = strings.phone.totals;
+  const { labels } = strings.planner.totals;
   const figures = [
     { key: "hike", value: trip.hikeDistanceKm > 0 && formatDistance(trip.hikeDistanceKm) },
     { key: "paddle", value: trip.paddleDistanceKm > 0 && formatDistance(trip.paddleDistanceKm) },
@@ -19,12 +19,12 @@ export default function PhoneTripTotals({ trip }: { trip: TripSummary["trip"] })
     { key: "time", value: formatTimeEstimate(trip.timeH, trip.timeStatus) },
   ] as const;
   return (
-    <p className="phone-totals">
+    <p className="planner-totals">
       {figures.map(
         ({ key, value }) =>
           value && (
-            <span key={key} className="phone-total">
-              <Icon icon={icons[key]} className="phone-total-icon" />
+            <span key={key} className="planner-total">
+              <Icon icon={icons[key]} className="planner-total-icon" />
               <span className="visually-hidden">{`${labels[key]} `}</span>
               {value}
             </span>

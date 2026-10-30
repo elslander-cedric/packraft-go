@@ -28,7 +28,7 @@ const TRIP_KEY = "packraft-go.trip";
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 /** The Days tab's cards; shows the tab first. */
 const dayRows = async (page: Page) => {
-  await showTab(page, strings.phone.tabs.days);
+  await showTab(page, strings.planner.tabs.days);
   return dayCards(page);
 };
 const dayDates = dayCardDates;
@@ -37,11 +37,11 @@ const dayDateTimes = async (page: Page) =>
 const startDate = (page: Page) => tripDetailsDialog(page).getByLabel(strings.startDateLabel);
 const clearDate = (page: Page) => tripDetailsDialog(page).getByRole("button", { name: strings.clearStartDateButton });
 const saveDetails = (page: Page) =>
-  tripDetailsDialog(page).getByRole("button", { name: strings.phone.menu.tripDetailsConfirm });
+  tripDetailsDialog(page).getByRole("button", { name: strings.planner.menu.tripDetailsConfirm });
 const campButton = (page: Page) => page.getByRole("button", { name: strings.campButton });
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 /** Menu → Edit trip: the dialog with the start date, left open. */
-const openDetails = (page: Page) => menuItem(page, strings.phone.menu.tripDetails);
+const openDetails = (page: Page) => menuItem(page, strings.planner.menu.tripDetails);
 const autosaveWarning = (page: Page) => page.getByRole("alert").filter({ hasText: strings.autosaveUnknownVersion });
 const alertWith = (page: Page, text: string) => page.getByRole("alert").filter({ hasText: text });
 const stored = (page: Page) => page.evaluate((key) => localStorage.getItem(key), TRIP_KEY);
@@ -190,7 +190,7 @@ test("a new trip starts on today in Brussels", async ({ page }) => {
   await serveOffline(page);
   await drawThreeDays(page);
   await setStartDate(page, "2026-10-31");
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   const today = todayInBrussels(new Date());
   expect(await shownStartDate(page)).toBe(today);

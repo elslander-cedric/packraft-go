@@ -8,7 +8,7 @@ import { icons } from "../icons/icons";
 import { overlayToggles } from "../overlayToggles";
 import { strings } from "../strings";
 
-export type PhoneMapMenuProps = {
+export type MapMenuProps = {
   baseMap: BaseMapId;
   onBaseMapChange: (id: BaseMapId) => void;
   accessLayerOn: boolean;
@@ -18,23 +18,23 @@ export type PhoneMapMenuProps = {
 };
 
 /**
- * The phone's layers button (#179, ADR 0031): it opens the Map menu, the base maps
+ * The layers button (#179, ADR 0031): it opens the Map menu, the base maps
  * (pick one, the current one marked), then the switches of the access layer and the
  * overlays (ADR 0032).
  */
-export default function PhoneMapMenu({
+export default function MapMenu({
   baseMap,
   onBaseMapChange,
   accessLayerOn,
   onAccessLayerChange,
   overlays,
   onOverlayChange,
-}: PhoneMapMenuProps) {
+}: MapMenuProps) {
   return (
     <Menu
       label={strings.mapMenuButton}
       trigger={<Icon icon={icons.mapMenu} />}
-      triggerClassName="phone-fab"
+      triggerClassName="planner-fab"
       align="end"
       items={[
         baseMapChoice(baseMap, onBaseMapChange),

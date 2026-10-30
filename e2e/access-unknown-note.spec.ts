@@ -38,7 +38,7 @@ async function seed(page: Page, waters: P[][]) {
 const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
 /** The Days tab's warning chips; shows the tab first. */
 const dayChips = async (page: Page) => {
-  await showTab(page, strings.phone.tabs.days);
+  await showTab(page, strings.planner.tabs.days);
   return page
     .getByRole("complementary", { name: strings.daysPanelLabel })
     .getByRole("group", { name: strings.tripAccess.dayWarningsLabel })
@@ -53,14 +53,14 @@ test("a leg in the Netherlands shows a neutral note and its day gets no warning 
   await seed(page, [netherlands]);
   await openPlanner(page);
 
-  const leg = legsPanel(page).locator(".phone-row").first();
+  const leg = legsPanel(page).locator(".planner-row").first();
   // Wait for the access to render before checking what is absent.
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState.unknown);
   // The note is in the leg's details dialog (#158).
-  await leg.getByRole("button", { name: strings.phone.legDetailsButton(1) }).click();
+  await leg.getByRole("button", { name: strings.planner.legDetailsButton(1) }).click();
   await expect(legDetails(page).locator(".access-note")).toHaveText(strings.tripAccess.noRule);
   await expect(legDetails(page).locator(".access-warning")).toHaveCount(0);
-  await legDetails(page).getByRole("button", { name: strings.phone.legDetailsClose }).click();
+  await legDetails(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();
 
   await expect(await dayChips(page)).toHaveCount(0);
 });

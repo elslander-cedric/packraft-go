@@ -4,8 +4,8 @@ import { useId, useRef, useState, type CSSProperties } from "react";
 import type { Router } from "@/core/router";
 import type { DaySummary } from "@/core/summarise";
 import { canGoBackToStart, canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
-import ClientPhoneMap from "@/map/ClientPhoneMap";
-import type { MapFocus } from "@/map/PhoneMap";
+import ClientTripMap from "@/map/ClientTripMap";
+import type { MapFocus } from "@/map/TripMap";
 import type { MapCover } from "@/map/SearchResultLayer";
 import { BottomSheet, sheetStopShare, type SheetStop } from "../components/BottomSheet";
 import { Button } from "../components/Button";
@@ -21,25 +21,25 @@ import { useAccessLayer } from "../useAccessLayer";
 import { useBaseMap, useOverlays, useSidePanel } from "../useSettings";
 import { usePlaceSearch } from "../usePlaceSearch";
 import { usePlanner } from "../usePlanner";
-import PhoneAccessChip from "./PhoneAccessChip";
-import PhoneAccessDetails from "./PhoneAccessDetails";
-import PhoneAccessPointDialog from "./PhoneAccessPointDialog";
-import PhoneAccessPoints from "./PhoneAccessPoints";
+import AccessChip from "./AccessChip";
+import AccessDetails from "./AccessDetails";
+import AccessPointDialog from "./AccessPointDialog";
+import AccessPoints from "./AccessPoints";
 import SnapOffers from "../SnapOffers";
-import PhoneLegDetailsDialog from "./PhoneLegDetailsDialog";
-import PhoneLegsList from "./PhoneLegsList";
-import PhoneMapMenu from "./PhoneMapMenu";
-import PhoneMenu from "./PhoneMenu";
-import PhonePlaceSearch from "./PhonePlaceSearch";
-import PhoneTripTotals from "./PhoneTripTotals";
+import LegDetailsDialog from "./LegDetailsDialog";
+import LegsList from "./LegsList";
+import MapMenu from "./MapMenu";
+import PlannerMenu from "./PlannerMenu";
+import PlaceSearch from "./PlaceSearch";
+import TripTotals from "./TripTotals";
 import { positionMessage } from "./position";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
-import { useSideways } from "./usePhoneLayout";
+import { useSideways } from "./usePlannerLayout";
 import { usePosition } from "./usePosition";
-import "./phone.css";
+import "./planner.css";
 
-type PhoneTab = keyof typeof strings.phone.tabs;
-const tabs = Object.keys(strings.phone.tabs) as PhoneTab[];
+type PlannerTab = keyof typeof strings.planner.tabs;
+const tabs = Object.keys(strings.planner.tabs) as PlannerTab[];
 
 /**
  * The next leg's mode the planner picked, and the trip state it was picked for: the trip's
@@ -55,7 +55,7 @@ type NextModePick = {
 const pickedFor = (trip: Trip) => ({ points: trip.points, undoSteps: trip.undoSteps });
 const pickHolds = (pick: NextModePick, trip: Trip) => pick.points === trip.points && pick.undoSteps === trip.undoSteps;
 
-/** Hike / Paddle, icon-only, coloured as the desktop's mode switch: the map's next leg toggle. */
+/** Hike / Paddle, icon-only, in the legs' colours: the map's next leg toggle. */
 const legModeOptions: readonly ToggleOption<LegMode>[] = [
   { value: "hike", label: strings.legModeHike, icon: <Icon icon={icons.hike} />, className: "leg-mode leg-mode-hike" },
   {
@@ -75,12 +75,12 @@ function dayArea(trip: Trip, day: DaySummary): LatLng[] {
 }
 
 /**
- * The phone layout of the planner (ADR 0026): a full-screen map with a bottom
- * sheet over it, or, held sideways, a side panel on its right (#126). Like the
- * desktop layout it draws what `usePlanner` returns and sends it actions; it
- * adds no planning rules.
+ * The planner, on every screen (ADRs 0026, 0034): a full-screen map with a bottom
+ * sheet over it on a narrow screen in portrait, a side panel on its right everywhere
+ * else (#126). It draws what `usePlanner` returns and sends it actions; it adds no
+ * planning rules.
  */
-export default function PhonePlanner({ router }: { router?: Router }) {
+export default function Planner({ router }: { router?: Router }) {
   const {
     session,
     dispatch,
@@ -100,7 +100,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const undoReasonId = useId();
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
-  const [tab, setTab] = useState<PhoneTab>("legs");
+  const [tab, setTab] = useState<PlannerTab>("legs");
   // The sheet's last stop; kept while sideways, so turning back to portrait restores it (#126).
   const [stop, setStop] = useState<SheetStop>("peek");
   // The peek's height, so the bottom buttons sit just above it.
@@ -133,7 +133,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const marking = useMarkAccessPoint(access, position, showPosition, placed);
   // The access layer (#125): on or off, its date, and the water or lock whose details are open.
   const layer = useAccessLayer(trip);
-  // The base map (ADR 0031): a setting on this device, shared with the desktop layout.
+  // The base map (ADR 0031): a setting on this device, never in the trip.
   const [baseMap, chooseBaseMap] = useBaseMap();
   // The overlays (ADR 0032): settings on this device too.
   const [overlays, switchOverlay] = useOverlays();
@@ -161,7 +161,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
   const root = useRef<HTMLDivElement>(null);
   const searchCover = (): MapCover => {
     const top = root.current?.getBoundingClientRect().top ?? 0;
-    const rows = root.current?.querySelectorAll(".phone-place-search, .phone-access-chip-slot") ?? [];
+    const rows = root.current?.querySelectorAll(".planner-place-search, .planner-access-chip-slot") ?? [];
     const rowsBottom = Math.max(top, ...Array.from(rows, (row) => row.getBoundingClientRect().bottom));
     const panel = root.current?.querySelector(".side-panel")?.getBoundingClientRect().width ?? 0;
     const sheet = stop === "peek" ? (peekPx ?? 0) : sheetStopShare[stop] * window.innerHeight;
@@ -239,30 +239,30 @@ export default function PhonePlanner({ router }: { router?: Router }) {
 
   // What the sheet holds, and the side panel instead when sideways (#126): the same content.
   const peekSummary = (
-    <div className="phone-peek-summary">
-      <PhoneTripTotals trip={summary.trip} />
+    <div className="planner-peek-summary">
+      <TripTotals trip={summary.trip} />
     </div>
   );
   const tabList = (
-    <TabList label={strings.phone.tabsLabel}>
+    <TabList label={strings.planner.tabsLabel}>
       {tabs.map((value) => (
         <Tab key={value} value={value} onPress={pressTab}>
-          {strings.phone.tabs[value]}
+          {strings.planner.tabs[value]}
         </Tab>
       ))}
     </TabList>
   );
   const sheetContent = (
     <>
-      <PhoneAccessDetails
+      <AccessDetails
         water={layer.selectedWater}
         lock={layer.selectedLock}
         date={layer.date}
         onClose={() => layer.select(null)}
       />
-      <div className="phone-tab-panels" hidden={detailsOpen}>
+      <div className="planner-tab-panels" hidden={detailsOpen}>
         <TabPanel value="legs">
-          <PhoneLegsList
+          <LegsList
             summary={summary}
             legs={trip.legs}
             access={waterAccess}
@@ -274,20 +274,19 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           />
         </TabPanel>
         <TabPanel value="days">
-          {summary.days.length === 0 && <p className="phone-empty">{strings.daysPanelEmpty}</p>}
+          {summary.days.length === 0 && <p className="planner-empty">{strings.daysPanelEmpty}</p>}
           <DaysPanel
             days={summary.days}
             access={waterAccess?.days}
             aire={aire}
             onSelectDay={openDay}
             selectedDay={selectedDay}
-            heading={false}
             // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
             onShowLeg={setDetailsLeg}
           />
         </TabPanel>
         <TabPanel value="accessPoints">
-          <PhoneAccessPoints
+          <AccessPoints
             access={access}
             trip={trip}
             position={position.state === "shown" ? position.at : null}
@@ -307,8 +306,8 @@ export default function PhonePlanner({ router }: { router?: Router }) {
       ref={root}
       className={
         sideways
-          ? `phone phone-sideways ${panelOpen ? "phone-panel-open" : "phone-panel-collapsed"}`
-          : `phone phone-stop-${stop}`
+          ? `planner planner-sideways ${panelOpen ? "planner-panel-open" : "planner-panel-collapsed"}`
+          : `planner planner-stop-${stop}`
       }
       style={
         {
@@ -317,7 +316,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         } as CSSProperties
       }
     >
-      <ClientPhoneMap
+      <ClientTripMap
         baseMap={baseMap}
         overlays={overlays}
         trip={trip}
@@ -340,12 +339,12 @@ export default function PhonePlanner({ router }: { router?: Router }) {
         onAreaChange={search.setArea}
       />
       {layer.on && (
-        <div className="phone-access-chip-slot">
-          <PhoneAccessChip dateSelector={layer.dateSelector} />
+        <div className="planner-access-chip-slot">
+          <AccessChip dateSelector={layer.dateSelector} />
         </div>
       )}
-      <div className="phone-buttons phone-buttons-top phone-buttons-left">
-        <PhoneMenu
+      <div className="planner-buttons planner-buttons-top planner-buttons-left">
+        <PlannerMenu
           trip={trip}
           question={session.question}
           pendingTrip={session.pendingTrip}
@@ -358,22 +357,22 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           saveSettings={saveSettings}
         />
         {session.keepStoredSave && (
-          <p role="alert" className="phone-message phone-message-alert">
+          <p role="alert" className="planner-message planner-message-alert">
             {strings.autosaveUnknownVersion}
           </p>
         )}
       </div>
-      <PhonePlaceSearch search={search} />
-      <div className="phone-buttons phone-buttons-top">
+      <PlaceSearch search={search} />
+      <div className="planner-buttons planner-buttons-top">
         <Button
-          className="phone-fab"
-          aria-label={strings.phone.showPositionButton}
+          className="planner-fab"
+          aria-label={strings.planner.showPositionButton}
           onClick={() => showPosition()}
           disabled={position.state === "locating"}
         >
           <Icon icon={icons.showPosition} />
         </Button>
-        <PhoneMapMenu
+        <MapMenu
           baseMap={baseMap}
           onBaseMapChange={chooseBaseMap}
           accessLayerOn={layer.on}
@@ -382,41 +381,41 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           onOverlayChange={switchOverlay}
         />
         {message && (
-          <p role={message.kind} className={`phone-message phone-message-${message.kind}`}>
+          <p role={message.kind} className={`planner-message planner-message-${message.kind}`}>
             {message.text}
           </p>
         )}
       </div>
-      <div className="phone-buttons phone-buttons-bottom phone-buttons-left">
+      <div className="planner-buttons planner-buttons-bottom planner-buttons-left">
         {marking.locating && (
-          <p role="status" className="phone-message">
-            {strings.phone.markLocating}
+          <p role="status" className="planner-message">
+            {strings.planner.markLocating}
           </p>
         )}
         {access.placing && (
           // Cancel sits beside the live region, so it isn't read out as part of the state.
-          <div className="phone-message phone-state-line">
-            <span role="status">{`${strings.phone.placingState} ·`}</span>
-            <Button className="phone-state-action" onClick={access.togglePlacing}>
-              {strings.phone.placingCancel}
+          <div className="planner-message planner-state-line">
+            <span role="status">{`${strings.planner.placingState} ·`}</span>
+            <Button className="planner-state-action" onClick={access.togglePlacing}>
+              {strings.planner.placingCancel}
             </Button>
           </div>
         )}
         {canGoBackToStart(trip) && (
           <Button
-            className="phone-fab"
-            aria-label={strings.phone.backToStartButton}
+            className="planner-fab"
+            aria-label={strings.planner.backToStartButton}
             onClick={() => dispatch({ type: "backToStart", mode: nextMode })}
           >
             <Icon icon={icons.backToStart} />
           </Button>
         )}
         <Button
-          className="phone-fab"
+          className="planner-fab"
           aria-label={
             selectedPoint === null
-              ? strings.phone.markAccessPointButton
-              : strings.phone.selectedPointToAccessPointButton
+              ? strings.planner.markAccessPointButton
+              : strings.planner.selectedPointToAccessPointButton
           }
           onClick={selectedPoint === null ? marking.mark : markSelectedPoint}
           disabled={selectedPoint === null && marking.locating}
@@ -424,14 +423,14 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           <Icon icon={icons.accessPoint} />
         </Button>
       </div>
-      <div className="phone-buttons phone-buttons-bottom">
+      <div className="planner-buttons planner-buttons-bottom">
         {selectedPoint !== null && (
           <>
-            <Button className="phone-fab" aria-label={strings.deletePointButton} onClick={deleteSelectedPoint}>
+            <Button className="planner-fab" aria-label={strings.deletePointButton} onClick={deleteSelectedPoint}>
               <Icon icon={icons.deletePoint} />
             </Button>
             <Button
-              className="phone-fab"
+              className="planner-fab"
               aria-label={strings.campButton}
               aria-pressed={isCamp(trip, selectedPoint)}
               onClick={() => dispatch({ type: "toggleCampOnSelectedPoint" })}
@@ -441,15 +440,15 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           </>
         )}
         <ToggleGroup
-          label={strings.phone.nextLegModeLabel}
+          label={strings.planner.nextLegModeLabel}
           value={nextMode}
           options={legModeOptions}
           onChange={(mode) => setPick({ mode, ...pickedFor(trip) })}
-          className="phone-next-mode"
+          className="planner-next-mode"
         />
         {/* Disabled, it stays a Tab stop and says why (#31). */}
         <Button
-          className="phone-fab"
+          className="planner-fab"
           aria-label={strings.undoButton}
           aria-describedby={canUndo(trip) ? undefined : undoReasonId}
           onClick={undo}
@@ -462,14 +461,14 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           {strings.undoDisabledReason}
         </span>
       </div>
-      <PhoneLegDetailsDialog
+      <LegDetailsDialog
         leg={detailsLeg}
         summary={summary}
         access={waterAccess}
         aire={aire}
         onClose={() => setDetailsLeg(null)}
       />
-      <div className="phone-snap-offers">
+      <div className="planner-snap-offers">
         <SnapOffers
           offers={offers}
           onAccept={(offer) => dispatch({ type: "acceptOffer", offer })}
@@ -479,15 +478,15 @@ export default function PhonePlanner({ router }: { router?: Router }) {
       <Tabs value={tab} onChange={setTab}>
         {sideways ? (
           <SidePanel
-            label={strings.phone.sheetLabel}
+            label={strings.planner.sheetLabel}
             open={panelOpen}
             onOpenChange={setPanelOpen}
             width={panelWidth}
             onWidthChange={(width) => changePanel({ width })}
-            resizeLabel={strings.phone.resizePanelHandle}
-            collapseLabel={strings.phone.collapsePanelButton}
+            resizeLabel={strings.planner.resizePanelHandle}
+            collapseLabel={strings.planner.collapsePanelButton}
             collapseIcon={<Icon icon={icons.collapsePanel} />}
-            expandLabel={strings.phone.expandPanelButton}
+            expandLabel={strings.planner.expandPanelButton}
             expandIcon={<Icon icon={icons.expandPanel} />}
             summary={peekSummary}
             header={tabList}
@@ -496,9 +495,9 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           </SidePanel>
         ) : (
           <BottomSheet
-            label={strings.phone.sheetLabel}
-            handleLabel={strings.phone.resizeSheetHandle}
-            stopLabels={strings.phone.sheetStops}
+            label={strings.planner.sheetLabel}
+            handleLabel={strings.planner.resizeSheetHandle}
+            stopLabels={strings.planner.sheetStops}
             stop={stop}
             onStopChange={setStop}
             onPeekHeightChange={setPeekPx}
@@ -513,7 +512,7 @@ export default function PhonePlanner({ router }: { router?: Router }) {
           </BottomSheet>
         )}
       </Tabs>
-      <PhoneAccessPointDialog point={editing} onSave={access.update} onClose={() => setEditingId(null)} />
+      <AccessPointDialog point={editing} onSave={access.update} onClose={() => setEditingId(null)} />
     </div>
   );
 }

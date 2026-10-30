@@ -44,7 +44,7 @@ test.describe("with the system set to dark", () => {
 
     expect(await style(page, ".leaflet-overlay-pane path.leg", "stroke")).toBe(HIKE);
     // A hike row's distance icon has the hike colour.
-    const icon = legsPanel(page).getByRole("listitem").first().locator(".phone-row-distance .phone-row-figure-icon");
+    const icon = legsPanel(page).getByRole("listitem").first().locator(".planner-row-distance .planner-row-figure-icon");
     expect(await icon.evaluate((el) => getComputedStyle(el).color)).toBe(HIKE);
 
     // Native inputs and the phone's status bar follow the theme.

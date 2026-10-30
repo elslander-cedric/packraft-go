@@ -2,7 +2,6 @@ import type { AccessFeature, AccessReason, AccessState, LockMarker } from "@/cor
 import { accessColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
 import { FlowFiguresView } from "./FlowFiguresView";
-import { Switch } from "./components/Switch";
 import { accessStateLabel, strings } from "./strings";
 import { StatusIcon } from "./TripAccessView";
 import "./AccessPanel.css";
@@ -53,25 +52,6 @@ export function AccessDateSelector({ date, isToday, onDate, onToday, tripDays }:
           </select>
         </label>
       )}
-    </div>
-  );
-}
-
-/** The access layer's switch and, while it is on, its date and legend (#53, #59). */
-export function AccessLayerControls({
-  on,
-  onToggle,
-  dateSelector,
-}: {
-  on: boolean;
-  onToggle: (on: boolean) => void;
-  dateSelector: AccessDateProps;
-}) {
-  return (
-    <div className="access-controls">
-      <Switch label={strings.accessLayerToggle} checked={on} onChange={onToggle} />
-      {on && <AccessDateSelector {...dateSelector} />}
-      {on && <AccessLegend />}
     </div>
   );
 }

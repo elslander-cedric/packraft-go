@@ -1,6 +1,6 @@
 // The base map on the phone (#179, ADR 0031): the layers button under the position button opens
 // the Map menu, the three base maps and then the access layer's switch. The choice is the same
-// setting as on the desktop. Every tile comes from the fixture; no live service is called.
+// setting on every screen. Every tile comes from the fixture; no live service is called.
 import { devices, expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { accessLayerItem, baseMapItem, chooseBaseMap, mapMenuButton } from "./support/mapMenu";

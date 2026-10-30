@@ -19,13 +19,13 @@ import {
   settingsDialog,
 } from "./support/planner";
 
-const text = strings.phone;
+const text = strings.planner;
 const button = (page: Page, name: string) => page.getByRole("button", { name, exact: true });
 const modeButton = (page: Page, mode: string) =>
   page.getByRole("group", { name: text.nextLegModeLabel }).getByRole("button", { name: mode });
 const paceField = (page: Page) => settingsDialog(page).getByLabel(strings.paceFactorLabel);
 const speedField = (page: Page) => settingsDialog(page).getByLabel(strings.paddleSpeedLabel);
-const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".phone-row-time");
+const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".planner-row-time");
 const storedName = (page: Page) =>
   page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? "null")?.trip.name ?? null, TRIP_KEY);
 
@@ -191,12 +191,12 @@ test.describe("keyboard alone", () => {
 
     // Each leg is drawn with the mode picked for it.
     await click(-50, 0);
-    await expect(rows(page).nth(0)).toHaveClass(/phone-row-hike/);
+    await expect(rows(page).nth(0)).toHaveClass(/planner-row-hike/);
     await paddle.focus();
     await page.keyboard.press("Space");
     await click(100, 0);
     await expect(rows(page)).toHaveCount(2);
-    await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
+    await expect(rows(page).nth(1)).toHaveClass(/planner-row-paddle/);
   });
 
   test("settings Number Fields: arrow keys step the value and typing replaces it; Save stores it and times follow", async ({

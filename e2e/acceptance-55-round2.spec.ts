@@ -18,7 +18,7 @@ const backups = (page: Page) =>
 
 async function ready(page: Page) {
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  await showTab(page, strings.phone.tabs.accessPoints);
+  await showTab(page, strings.planner.tabs.accessPoints);
 }
 
 test("backup write fails: damaged save kept byte for byte and warned", async ({ page }) => {

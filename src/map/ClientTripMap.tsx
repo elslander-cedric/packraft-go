@@ -1,12 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { AccessDetailPanel, AccessLayerControls, LockDetailPanel } from "@/ui/AccessPanel";
-import PlaceSearchBar from "@/ui/PlaceSearchBar";
 import { strings } from "@/ui/strings";
-import { useAccessLayer } from "@/ui/useAccessLayer";
-import { usePlaceSearch } from "@/ui/usePlaceSearch";
-import { useBaseMap, useOverlays } from "@/ui/useSettings";
 import type { TripMapProps } from "./TripMap";
 
 // Leaflet touches `window` on import, so the map is never rendered on the server.
@@ -15,39 +10,10 @@ const TripMap = dynamic(() => import("./TripMap"), {
   loading: () => <div className="map-loading">{strings.mapLoading}</div>,
 });
 
-type ClientTripMapProps = Omit<
-  TripMapProps,
-  "baseMap" | "onBaseMapChange" | "overlays" | "onOverlayChange" | "access" | "searchResult" | "onAreaChange"
->;
-
-export default function ClientTripMap(props: ClientTripMapProps) {
-  const layer = useAccessLayer(props.trip);
-  // Place search (#173) belongs to the map, not the trip: it lives here, outside the planner session.
-  const search = usePlaceSearch();
-  const close = () => layer.select(null);
-  // The base map is a setting on this device (ADR 0031), shared with the phone layout.
-  const [baseMap, chooseBaseMap] = useBaseMap();
-  // So are the overlays (ADR 0032).
-  const [overlays, switchOverlay] = useOverlays();
-
+export default function ClientTripMap(props: TripMapProps) {
   return (
-    <section className="map" aria-label={strings.mapLabel}>
-      <TripMap
-        {...props}
-        baseMap={baseMap}
-        onBaseMapChange={chooseBaseMap}
-        overlays={overlays}
-        onOverlayChange={switchOverlay}
-        access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: layer.select }}
-        searchResult={search.state.shown}
-        onAreaChange={search.setArea}
-      />
-      <PlaceSearchBar search={search} className="place-search-map-bar" />
-      <div className="access-overlay">
-        <AccessLayerControls on={layer.on} onToggle={layer.setOn} dateSelector={layer.dateSelector} />
-        {layer.selectedWater && <AccessDetailPanel feature={layer.selectedWater} date={layer.date} onClose={close} />}
-        {layer.selectedLock && <LockDetailPanel lock={layer.selectedLock} onClose={close} />}
-      </div>
+    <section className="map planner-map" aria-label={strings.mapLabel}>
+      <TripMap {...props} />
     </section>
   );
 }

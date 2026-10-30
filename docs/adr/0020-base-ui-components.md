@@ -3,7 +3,7 @@
 Date: 2026-10-12
 
 ## Status
-Accepted
+Accepted. Amended by ADR 0034: the trip toolbar went with the desktop layout, and the `Toolbar` and `Switch` wrappers with it (#191).
 
 ## Context
 v1's controls are hand-built: plain buttons, a hand-made hike/paddle toggle, plain number inputs, and the browser's native `window.confirm` for "New trip" and "Open file". These work, but accessibility (keyboard use, focus handling, screen-reader labels) is ad hoc, and native confirm dialogs can't be styled.

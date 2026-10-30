@@ -1,5 +1,5 @@
 // Inserting a point on a leg (#122, spec #114 stories 46–49, 51): tested through
-// the planner session (ADR 0025), the seam the phone and desktop both drive.
+// the planner session (ADR 0025), the seam the planner drives.
 import { describe, expect, it } from "vitest";
 import { firstSession, plannerSession, type PlannerAction, type PlannerSession } from "./plannerSession";
 import type { LegRoute } from "./router";

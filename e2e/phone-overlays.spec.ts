@@ -1,6 +1,6 @@
 // The Hiking trails overlay on the phone (#180, ADR 0032): the Map menu lists the base maps,
-// then the access layer and Hiking trails switches. The overlay is the same setting as on the
-// desktop and is remembered after a reload. Every tile comes from the fixture; no live service is called.
+// then the access layer and Hiking trails switches. The overlay is the same setting on every
+// screen and is remembered after a reload. Every tile comes from the fixture; no live service is called.
 import { devices, expect, test, type Page } from "@playwright/test";
 import { serialiseTrip } from "../src/core/saveFile";
 import type { Trip } from "../src/core/trip";
