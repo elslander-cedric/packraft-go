@@ -38,7 +38,7 @@ ADR 0023 gave phones a read-only view: the map, your position, your access point
   - a chip with a dialog (a popover until #163) holds the date, the legend and the note;
   - a tap always edits the route, even on water;
   - holding a water opens its details, and a tap opens a lock's;
-  - details show in the sheet.
+  - details show in a dialog (amended 2026-10-31: in the sheet, above the open tab, until then).
 
   The "Indicative only" disclaimer (ADR 0024) lives in that dialog, not as a permanent line or under the day cards.
 - **Names and dates:** saving or exporting asks for the trip name in a dialog. A new trip on the phone gets today as its start date. The start date stays trip data (#106).
