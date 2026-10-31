@@ -1,5 +1,5 @@
 // #59: the Walloon stretches on the access layer: coloured for the selected
-// date, a date selector, and a detail panel with category, hours and the
+// date, a date selector, and a details dialog with category, hours and the
 // official link. Built-in data only; no live service is called.
 import { expect, test } from "@playwright/test";
 import { strings } from "../src/ui/strings";
@@ -43,9 +43,9 @@ test("switching the date changes a Walloon stretch's colour, and the panel shows
   await setDate("2026-12-15");
   await expect(water(page, lesse)).toHaveAttribute("stroke", "#1f9d55");
 
-  // The detail panel: category, hours for that date, the official link and the date.
+  // The details dialog: category, hours for that date, the official link and the date.
   await holdWater(page, lesse);
-  const detail = page.getByRole("region", { name: strings.accessDetailLabel });
+  const detail = page.getByRole("dialog");
   await expect(detail).toContainText(strings.accessCategory("1.C"));
   await expect(detail).toContainText("Permitted hours on 2026-12-15: 10:00-17:00");
   await expect(detail).toContainText(strings.accessStatusOn("2026-12-15"));
@@ -54,12 +54,15 @@ test("switching the date changes a Walloon stretch's colour, and the panel shows
     "https://kayak.spw.wallonie.be/",
   );
 
-  // Back to July: the panel says why it is closed today.
+  // Back to July: the dialog says why it is closed today.
+  await detail.getByRole("button", { name: strings.accessDetailClose }).click();
   await setDate("2026-07-15");
+  await holdWater(page, lesse);
   await expect(detail.getByText(strings.accessState["closed-today"], { exact: true })).toBeVisible();
   await expect(detail).toContainText("Closed today: season");
 
   // "Today" goes back to the default date.
+  await detail.getByRole("button", { name: strings.accessDetailClose }).click();
   await chip.click();
   await accessDialog.getByRole("button", { name: strings.accessTodayButton }).click();
   await expect(accessDialog.getByRole("button", { name: strings.accessTodayButton })).toHaveCount(0);

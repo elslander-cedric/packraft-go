@@ -60,7 +60,7 @@ test("the access layer colours Flemish exceptions and shows why on click", async
 
   // Holding a forbidden water shows its status, reason, source and research date.
   await holdWater(page, "flanders-lier-nete-diversion");
-  const detail = page.getByRole("region", { name: strings.accessDetailLabel });
+  const detail = page.getByRole("dialog");
   await expect(detail.getByRole("heading", { name: "Afleiding van de Nete, Lier" })).toBeVisible();
   await expect(detail.getByText(strings.accessState.forbidden, { exact: true })).toBeVisible();
   await expect(detail).toContainText("excludes the Afleiding van de Nete");
@@ -74,6 +74,8 @@ test("the access layer colours Flemish exceptions and shows why on click", async
   await expect(map.locator("path.point")).toHaveCount(0);
 
   // A VMM stretch shows its text rules and a link.
+  await detail.getByRole("button", { name: strings.accessDetailClose }).click();
+  await expect(detail).toHaveCount(0);
   await holdWater(page, "flanders-vmm-kleine-nete");
   await expect(detail.getByRole("heading", { name: /Kleine Nete/ })).toBeVisible();
   await expect(detail.getByText(strings.accessState.open, { exact: true })).toBeVisible();
@@ -91,4 +93,17 @@ test("the access layer colours Flemish exceptions and shows why on click", async
   await expect(page.locator(".leaflet-control-attribution")).not.toContainText("Access data");
 
   expect(network.blocked).toEqual([]);
+});
+
+test("on a short screen a long water's details open at the top, with its status in view", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 420 });
+  await serveOffline(page);
+  await page.goto("/");
+  await toggleAccessLayer(page);
+  await expect(water(page, "flanders-vmm-kleine-nete")).toBeVisible();
+
+  await holdWater(page, "flanders-vmm-kleine-nete");
+  const detail = page.getByRole("dialog");
+  await expect(detail.getByText(strings.accessState.open, { exact: true })).toBeInViewport({ ratio: 1 });
+  await expect(detail.locator(".info-dialog-body")).toHaveJSProperty("scrollTop", 0);
 });

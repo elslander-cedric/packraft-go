@@ -268,10 +268,8 @@ export const strings = {
   accessCategory: (category: string) => `Walloon category ${category}`,
   // Locks (#57, GLOSSARY "Lock"): marked on the access layer in Flanders and Brussels.
   lockLegend: "Lock: portage required (shown when zoomed in)",
-  lockDetailLabel: "Lock details",
   lockPortageRequired: "Portage required",
   lockPortageText: "Don't go through the lock on the water: get out before it and carry your packraft around it.",
-  accessDetailLabel: "Access details",
   accessDetailClose: "Close",
   accessNoRule: "No access rules are known for this place.",
   accessConditionsHeading: "Extra rules",

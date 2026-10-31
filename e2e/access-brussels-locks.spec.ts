@@ -48,7 +48,7 @@ test("Brussels canal, ponds, Senne and streams are coloured and explained", asyn
   await expect(water(page, "brussels-senne").first()).toHaveAttribute("stroke", accessColours.unknown);
   await expect(water(page, "brussels-streams").first()).toHaveAttribute("stroke", accessColours.unknown);
 
-  const detail = page.getByRole("region", { name: strings.accessDetailLabel });
+  const detail = page.getByRole("dialog");
 
   // The canal: open, with the priority, VHF and Capitainerie notes and its source.
   await holdWater(page, "brussels-canal");
@@ -64,6 +64,7 @@ test("Brussels canal, ponds, Senne and streams are coloured and explained", asyn
   await expect(detail).toContainText(strings.accessResearched("2026-10-12"));
 
   // A pond: forbidden without permission, with its source.
+  await detail.getByRole("button", { name: strings.accessDetailClose }).click();
   await holdWater(page, "brussels-ponds");
   await expect(detail.getByRole("heading", { name: "Ponds, Brussels" })).toBeVisible();
   await expect(detail.getByText(strings.accessState.forbidden, { exact: true })).toBeVisible();
@@ -71,6 +72,7 @@ test("Brussels canal, ponds, Senne and streams are coloured and explained", asyn
   await expect(detail.getByRole("link", { name: /Bruxelles Environnement/ }).first()).toBeVisible();
 
   // The Senne: unknown.
+  await detail.getByRole("button", { name: strings.accessDetailClose }).click();
   await holdWater(page, "brussels-senne");
   await expect(detail.getByRole("heading", { name: "Senne (Zenne), Brussels" })).toBeVisible();
   await expect(detail.getByText(strings.accessState.unknown, { exact: true })).toBeVisible();
@@ -109,7 +111,7 @@ test("locks are marked, including Anderlecht and Molenbeek, and say portage requ
   await accessDialog.getByRole("button", { name: strings.planner.accessDialogClose }).click();
   await expect(accessDialog).toHaveCount(0);
 
-  const detail = page.getByRole("region", { name: strings.lockDetailLabel });
+  const detail = page.getByRole("dialog");
   // OpenStreetMap ways of the two Brussels lock chambers.
   for (const [id, name] of [
     ["lock-way-580151104", /Anderlecht/],
@@ -123,11 +125,10 @@ test("locks are marked, including Anderlecht and Molenbeek, and say portage requ
       "href",
       /^https:\/\//,
     );
+    // Closing the lock's details hides them.
+    await detail.getByRole("button", { name: strings.accessDetailClose }).click();
+    await expect(detail).toBeHidden();
   }
-
-  // Closing the lock's details hides them.
-  await detail.getByRole("button", { name: strings.accessDetailClose }).click();
-  await expect(detail).toBeHidden();
 
   // A click on a lock opens its details; it doesn't add a point to the trip.
   await expect(map.locator("path.point")).toHaveCount(0);

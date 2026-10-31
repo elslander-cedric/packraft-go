@@ -22,7 +22,7 @@ import { useBaseMap, useOverlays, useSidePanel } from "../useSettings";
 import { usePlaceSearch } from "../usePlaceSearch";
 import { usePlanner } from "../usePlanner";
 import AccessChip from "./AccessChip";
-import AccessDetails from "./AccessDetails";
+import AccessDetailsDialog from "./AccessDetailsDialog";
 import AccessPointDialog from "./AccessPointDialog";
 import AccessPoints from "./AccessPoints";
 import SnapOffers from "../SnapOffers";
@@ -137,7 +137,6 @@ export default function Planner({ router }: { router?: Router }) {
   const [baseMap, chooseBaseMap] = useBaseMap();
   // The overlays (ADR 0032): settings on this device too.
   const [overlays, switchOverlay] = useOverlays();
-  const detailsOpen = layer.selectedWater !== undefined || layer.selectedLock !== undefined;
   // Where the map last zoomed to, for an access point row (#119).
   const [focus, setFocus] = useState<MapFocus | null>(null);
 
@@ -197,7 +196,6 @@ export default function Planner({ router }: { router?: Router }) {
 
   // A marker tap shows the point's row in the Access points tab, raised to half from the peek.
   const onSelectAccessPoint = (id: string) => {
-    layer.select(null);
     access.select(id);
     setTab("accessPoints");
     raiseFromPeek();
@@ -210,18 +208,6 @@ export default function Planner({ router }: { router?: Router }) {
     raise();
     setFocus({ at: point.position, ...covered() });
   };
-  // Holding a water or tapping a lock opens its details in the sheet at half, from any stop,
-  // above the open tab (#125, story 81); sideways, in the opened panel.
-  const openAccessDetails = (id: string) => {
-    layer.select(id);
-    raise();
-  };
-  // A tab press goes to that tab, so it closes any water or lock details over it.
-  const pressTab = () => {
-    layer.select(null);
-    raiseFromPeek();
-  };
-
   // A day card tap shows the whole day on the map, above the half-raised sheet (#123).
   // Tapping the selected card again unselects it.
   const [selectedDay, setSelectedDay] = useState<number | undefined>(undefined);
@@ -246,59 +232,51 @@ export default function Planner({ router }: { router?: Router }) {
   const tabList = (
     <TabList label={strings.planner.tabsLabel}>
       {tabs.map((value) => (
-        <Tab key={value} value={value} onPress={pressTab}>
+        <Tab key={value} value={value} onPress={raiseFromPeek}>
           {strings.planner.tabs[value]}
         </Tab>
       ))}
     </TabList>
   );
   const sheetContent = (
-    <>
-      <AccessDetails
-        water={layer.selectedWater}
-        lock={layer.selectedLock}
-        date={layer.date}
-        onClose={() => layer.select(null)}
-      />
-      <div className="planner-tab-panels" hidden={detailsOpen}>
-        <TabPanel value="legs">
-          <LegsList
-            summary={summary}
-            legs={trip.legs}
-            access={waterAccess}
-            aire={aire}
-            selected={selectedLeg}
-            onSelect={selectLegRow}
-            onShowDetails={setDetailsLeg}
-            onRetry={(index) => dispatch({ type: "retryLeg", index })}
-          />
-        </TabPanel>
-        <TabPanel value="days">
-          {summary.days.length === 0 && <p className="planner-empty">{strings.daysPanelEmpty}</p>}
-          <DaysPanel
-            days={summary.days}
-            access={waterAccess?.days}
-            aire={aire}
-            onSelectDay={openDay}
-            selectedDay={selectedDay}
-            // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
-            onShowLeg={setDetailsLeg}
-          />
-        </TabPanel>
-        <TabPanel value="accessPoints">
-          <AccessPoints
-            access={access}
-            trip={trip}
-            position={position.state === "shown" ? position.at : null}
-            onOpen={openAccessPoint}
-            onEdit={(id) => {
-              access.select(id);
-              setEditingId(id);
-            }}
-          />
-        </TabPanel>
-      </div>
-    </>
+    <div className="planner-tab-panels">
+      <TabPanel value="legs">
+        <LegsList
+          summary={summary}
+          legs={trip.legs}
+          access={waterAccess}
+          aire={aire}
+          selected={selectedLeg}
+          onSelect={selectLegRow}
+          onShowDetails={setDetailsLeg}
+          onRetry={(index) => dispatch({ type: "retryLeg", index })}
+        />
+      </TabPanel>
+      <TabPanel value="days">
+        {summary.days.length === 0 && <p className="planner-empty">{strings.daysPanelEmpty}</p>}
+        <DaysPanel
+          days={summary.days}
+          access={waterAccess?.days}
+          aire={aire}
+          onSelectDay={openDay}
+          selectedDay={selectedDay}
+          // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
+          onShowLeg={setDetailsLeg}
+        />
+      </TabPanel>
+      <TabPanel value="accessPoints">
+        <AccessPoints
+          access={access}
+          trip={trip}
+          position={position.state === "shown" ? position.at : null}
+          onOpen={openAccessPoint}
+          onEdit={(id) => {
+            access.select(id);
+            setEditingId(id);
+          }}
+        />
+      </TabPanel>
+    </div>
   );
 
   return (
@@ -333,7 +311,7 @@ export default function Planner({ router }: { router?: Router }) {
           onMove: (id, to) => access.update(id, { position: to }),
         }}
         focus={focus}
-        access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: openAccessDetails }}
+        access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: layer.select }}
         searchResult={search.state.shown}
         searchCover={searchCover}
         onAreaChange={search.setArea}
@@ -461,6 +439,12 @@ export default function Planner({ router }: { router?: Router }) {
           {strings.undoDisabledReason}
         </span>
       </div>
+      <AccessDetailsDialog
+        water={layer.selectedWater}
+        lock={layer.selectedLock}
+        date={layer.date}
+        onClose={() => layer.select(null)}
+      />
       <LegDetailsDialog
         leg={detailsLeg}
         summary={summary}

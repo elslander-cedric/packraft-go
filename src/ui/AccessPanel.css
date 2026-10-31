@@ -1,12 +1,7 @@
 /* The access layer's legend and date (in the chip's dialog) and a water's or a lock's details
-   (in the sheet or side panel, above the open tab: part of it, not a floating card). */
+   (in their own dialog). */
 .access-detail {
-  margin: 0 var(--space-3) var(--space-3);
   font-size: 0.95rem;
-}
-
-.access-detail .access-detail-close {
-  min-height: 2.75rem;
 }
 
 .access-legend ul {
@@ -33,18 +28,6 @@
   margin: var(--space-1) 0 0;
   color: var(--color-muted);
   font-size: 0.8rem;
-}
-
-.access-detail header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.access-detail h3 {
-  margin: 0;
-  font-size: 0.95rem;
 }
 
 .access-detail h4 {

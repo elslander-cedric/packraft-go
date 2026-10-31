@@ -26,7 +26,10 @@ test("with the layer on, planning still works off the coloured waters; on them i
   await expect(pts).toHaveCount(1);
   // Held on the line: details open, no further point.
   await mouseHold(page, at);
-  await expect(tripPanel(page).getByRole("region", { name: strings.accessDetailLabel })).toBeVisible();
+  const details = page.getByRole("dialog");
+  await expect(details).toBeVisible();
+  await details.getByRole("button", { name: strings.accessDetailClose }).click();
+  await expect(details).toHaveCount(0);
   await expect(pts).toHaveCount(1);
   // A click on the line plans: it adds a point.
   await page.mouse.click(at.x, at.y + 12);

@@ -13,7 +13,7 @@ const AMBLEVE = "walloon-1B1a";
 test.use({ viewport: { width: 1400, height: 900 } });
 
 const water = accessWater;
-const detail = (page: Page) => page.getByRole("region", { name: strings.accessDetailLabel });
+const detail = (page: Page) => page.getByRole("dialog");
 
 
 async function openAccessLayer(page: Page) {

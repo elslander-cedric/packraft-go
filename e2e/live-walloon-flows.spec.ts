@@ -31,7 +31,7 @@ async function openAccessLayer(page: Page) {
   await toggleAccessLayer(page);
 }
 
-const detail = (page: Page) => page.getByRole("region", { name: strings.accessDetailLabel });
+const detail = (page: Page) => page.getByRole("dialog");
 
 /** Sets the access layer's date in the access chip's dialog (ADR 0034). */
 async function setLayerDate(page: Page, date: string) {
@@ -68,7 +68,9 @@ test("a stretch closes on low flow today, with flow figures, freshness, the assu
   );
 
   // Another date has no live flow: the rules alone decide, without figures.
+  await panel.getByRole("button", { name: strings.accessDetailClose }).click();
   await setLayerDate(page, "2026-10-20");
+  await holdWater(page, SEMOIS);
   await expect(panel).toContainText(strings.accessStatusOn("2026-10-20"));
   await expect(water(page, SEMOIS)).toHaveClass(/access-open/);
   await expect(panel.getByText(strings.flow.heading)).toHaveCount(0);

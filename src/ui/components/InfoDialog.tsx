@@ -30,7 +30,8 @@ export function InfoDialog({ open, title, children, closeLabel, onClose }: InfoD
     >
       <Dialog.Portal>
         <Dialog.Backdrop className="dialog-backdrop" />
-        <Dialog.Popup ref={popup} className="dialog info-dialog" style={area}>
+        {/* Focus goes to the dialog, not its first link: that would scroll a long body past its top. */}
+        <Dialog.Popup ref={popup} initialFocus={popup} className="dialog info-dialog" style={area}>
           <Dialog.Title className="dialog-title">{title}</Dialog.Title>
           <div className="info-dialog-body">{children}</div>
           <div className="dialog-actions">

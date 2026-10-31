@@ -116,15 +116,9 @@ function Reason({ reason }: { reason: AccessReason }) {
 }
 
 /** A lock: portage required, with where the rule comes from and when it was researched (#57). */
-export function LockDetailPanel({ lock, onClose }: { lock: LockMarker; onClose: () => void }) {
+export function LockDetail({ lock }: { lock: LockMarker }) {
   return (
-    <section className="access-detail" aria-label={strings.lockDetailLabel}>
-      <header>
-        <h3>{lock.name}</h3>
-        <Button className="access-detail-close" onClick={onClose}>
-          {strings.accessDetailClose}
-        </Button>
-      </header>
+    <div className="access-detail">
       <p className="access-status access-status-lock">
         <span className="access-lock-swatch" aria-hidden="true" />
         {strings.lockPortageRequired}
@@ -139,30 +133,22 @@ export function LockDetailPanel({ lock, onClose }: { lock: LockMarker; onClose: 
         {strings.accessResearched(lock.researched)}
       </p>
       <p className="access-legend-note">{strings.accessDataCredit}</p>
-    </section>
+    </div>
   );
 }
 
 /** Why a water has its access status: status, reasons, extra rules, source and research date. */
-export function AccessDetailPanel({
+export function AccessDetail({
   feature,
   date,
-  onClose,
 }: {
   feature: AccessFeature;
   /** The date the status is for. */
   date: string;
-  onClose: () => void;
 }) {
-  const { record, status } = feature;
+  const { status } = feature;
   return (
-    <section className="access-detail" aria-label={strings.accessDetailLabel}>
-      <header>
-        <h3>{record.name}</h3>
-        <Button className="access-detail-close" onClick={onClose}>
-          {strings.accessDetailClose}
-        </Button>
-      </header>
+    <div className="access-detail">
       <p className={`access-status access-status-${status.state}`}>
         <StatusIcon state={status.state} />
         {accessStateLabel(status.state)}
@@ -174,6 +160,6 @@ export function AccessDetailPanel({
         ))}
       </ul>
       <p className="access-legend-note">{strings.accessDataCredit}</p>
-    </section>
+    </div>
   );
 }
