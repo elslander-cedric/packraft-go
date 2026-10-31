@@ -1,5 +1,6 @@
 import { addDays, type CalendarDate } from "./calendarDate";
 import type { LegRoute, RoutedPoint } from "./router";
+import { tripSections, type Section } from "./sections";
 import { defaultSettings, type Pace } from "./settings";
 import type { LatLng, Leg, LegMode, Trip } from "./trip";
 
@@ -65,10 +66,20 @@ export type DaySummary = {
   readonly date?: CalendarDate;
 };
 
+/**
+ * Totals for one section, as figures like a leg's so they read the same. A hike
+ * section's climb and descent add up its routed legs (absent while none is), and
+ * its time follows a day's rule. A paddle section's drop or rise is net, from its
+ * first put-in to its last take-out, and absent until every leg is routed.
+ */
+export type SectionSummary = Section & LegSummary;
+
 export type TripSummary = {
   readonly legs: readonly LegSummary[];
   /** The trip's days: one without camps, none without legs. Always derived, never stored. */
   readonly days: readonly DaySummary[];
+  /** The trip's sections in order (ADR 0021). Always derived, never stored. */
+  readonly sections: readonly SectionSummary[];
   /** The whole trip: its distance, split by mode, climb and descent (hike legs only, like a day's) and time. */
   readonly trip: {
     readonly distanceKm: number;
@@ -145,7 +156,12 @@ function legClimbAndDescent(route: Extract<LegRoute, { status: "routed" }>) {
  */
 function legDrop(route: Extract<LegRoute, { status: "routed" }>): { dropM: number } | { riseM: number } {
   const { geometry } = route;
-  const dropM = geometry[0].elevation - geometry[geometry.length - 1].elevation;
+  return dropBetween(geometry[0], geometry[geometry.length - 1]);
+}
+
+/** Drop from a put-in to a take-out; a small rise counts as no drop, a larger one is a rise. */
+function dropBetween(putIn: RoutedPoint, takeOut: RoutedPoint): { dropM: number } | { riseM: number } {
+  const dropM = putIn.elevation - takeOut.elevation;
   if (dropM >= 0) return { dropM };
   // Rounded to whole metres first, as it is shown, so a rise shown as 2 m is noise too.
   return Math.round(-dropM) > RISE_NOISE_M ? { riseM: -dropM } : { dropM: 0 };
@@ -198,6 +214,7 @@ export function summarise(trip: Trip, settings: Pace = defaultSettings): TripSum
       // Day n (counted from 1) falls on the start date + n - 1.
       return trip.startDate === undefined ? summary : { ...summary, date: addDays(trip.startDate, day) };
     }),
+    sections: tripSections(trip).map((section) => summariseSection(trip, legs, section)),
     trip: {
       distanceKm: sum((leg) => leg.distanceKm),
       hikeDistanceKm: sum((leg) => (leg.mode === "hike" ? leg.distanceKm : 0)),
@@ -242,8 +259,27 @@ function summariseDay(trip: Trip, legs: readonly LegSummary[], first: number, la
   };
 }
 
+function summariseSection(trip: Trip, legs: readonly LegSummary[], section: Section): SectionSummary {
+  const sectionLegs = legs.slice(section.firstLeg, section.lastLeg + 1);
+  const routes = trip.legs.slice(section.firstLeg, section.lastLeg + 1).map((leg) => leg.route);
+  const sum = (figure: (leg: LegSummary) => number) => sectionLegs.reduce((total, leg) => total + figure(leg), 0);
+  const totals = {
+    ...section,
+    distanceKm: sum((leg) => leg.distanceKm),
+    timeH: sum((leg) => leg.timeH),
+    timeStatus: timeStatusOf(trip.legs.slice(section.firstLeg, section.lastLeg + 1), sectionLegs),
+  };
+  if (section.mode === "hike") {
+    if (sectionLegs.every((leg) => leg.climbM === undefined)) return totals;
+    return { ...totals, climbM: sum((leg) => leg.climbM ?? 0), descentM: sum((leg) => leg.descentM ?? 0) };
+  }
+  const geometries = routes.flatMap((route) => (route?.status === "routed" ? [route.geometry] : []));
+  if (geometries.length < routes.length) return totals;
+  return { ...totals, ...dropBetween(geometries[0][0], geometries[geometries.length - 1].at(-1)!) };
+}
+
 /**
- * A total's time (the trip's or a day's) waits while any of its legs is still
+ * A total's time (the trip's, a day's or a section's) waits while any of its legs is still
  * being routed, and lacks climb data when any of its legs' times does.
  */
 function timeStatusOf(legs: readonly Leg[], summaries: readonly LegSummary[]): TimeStatus {

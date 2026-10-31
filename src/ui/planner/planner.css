@@ -171,7 +171,7 @@
   list-style: none;
 }
 
-/* The leg rows run edge to edge, right under the tab row: cancel the body's side padding
+/* The leg and section rows run edge to edge, right under the tab row: cancel the body's side padding
    and the panels' top gap. */
 .planner-legs {
   margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) 0;
@@ -490,6 +490,13 @@
 /* Larger than the row's other icons, its right edge in line with the time's. */
 .planner-legs .planner-row-details-button .icon {
   font-size: 1.35rem;
+}
+
+/* A section's details name each leg above that leg's details. */
+.planner-section-details-leg {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 /* A leg's details in their dialog. */

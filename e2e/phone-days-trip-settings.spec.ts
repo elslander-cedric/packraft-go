@@ -222,7 +222,7 @@ test("the sheet has no Trip or Settings tab; the menu's Settings opens a dialog 
 }) => {
   await serveOffline(page);
   await openWithTrip(page);
-  await expect(sheet(page).getByRole("tab")).toHaveText([text.tabs.legs, text.tabs.days, text.tabs.accessPoints]);
+  await expect(sheet(page).getByRole("tab")).toHaveText([text.tabs.legs, text.tabs.sections, text.tabs.days, text.tabs.accessPoints]);
 
   await openSettings(page);
   // The dialog's title is its only heading: it already names the fields.

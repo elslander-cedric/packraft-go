@@ -1,49 +1,10 @@
 import type { AireWarning } from "@/core/aire";
-import type { LegSummary, TripSummary } from "@/core/summarise";
+import type { TripSummary } from "@/core/summarise";
 import type { TripAccess } from "@/core/tripAccess";
 import type { Leg } from "@/core/trip";
-import { Button } from "../components/Button";
-import { formatDistance, formatElevation, formatTimeEstimate } from "../format";
-import { Icon } from "../icons/Icon";
-import { icons, type IconDefinition } from "../icons/icons";
 import { strings } from "../strings";
-import { LegAccessIcons } from "../TripAccessView";
-
-/** True when a leg has access details or aire warnings to show in its dialog. */
-function hasLegDetails(access: TripAccess | null, aire: readonly AireWarning[], legIndex: number): boolean {
-  return access?.legs[legIndex] !== undefined || aire.some((warning) => warning.leg === legIndex);
-}
-
-type Figure = { key: string; icon: IconDefinition; label: string; value: string };
-
-/** A leg's time, climb and descent (drop, or rise, on a paddle leg) that are known. */
-function figures(leg: LegSummary): Figure[] {
-  const labels = strings.planner.legFigures;
-  const all: (Figure | false)[] = [
-    { key: "time", icon: icons.time, label: labels.time, value: formatTimeEstimate(leg.timeH, leg.timeStatus) },
-    leg.climbM !== undefined && { key: "climb", icon: icons.climb, label: labels.climb, value: formatElevation(leg.climbM) },
-    leg.descentM !== undefined && {
-      key: "descent",
-      icon: icons.descent,
-      label: labels.descent,
-      value: formatElevation(leg.descentM),
-    },
-    leg.dropM !== undefined && { key: "drop", icon: icons.descent, label: labels.drop, value: formatElevation(leg.dropM) },
-    leg.riseM !== undefined && { key: "rise", icon: icons.climb, label: labels.rise, value: `${formatElevation(leg.riseM)}?` },
-  ];
-  return all.filter((figure): figure is Figure => figure !== false);
-}
-
-/** One figure after its icon; the icon's meaning is read out before the value. */
-function FigureView({ figure, className }: { figure: Figure; className?: string }) {
-  return (
-    <span className={className ? `planner-row-figure ${className}` : "planner-row-figure"}>
-      <Icon icon={figure.icon} className="planner-row-figure-icon" />
-      <span className="visually-hidden">{`${figure.label} `}</span>
-      {figure.value}
-    </span>
-  );
-}
+import { hasLegDetails } from "./LegDetailsDialog";
+import { RoutingFailure, RoutingStatus, TripRow } from "./TripRow";
 
 export type LegsListProps = {
   summary: TripSummary;
@@ -63,12 +24,8 @@ export type LegsListProps = {
 };
 
 /**
- * The Legs tab (#121): one row per leg, its mode icon and distance as a headline with the
- * time on the right, and under it the climb and descent (drop on a paddle leg), each after
- * its icon, then icons for the access and each kind of warning. The leg's number is
- * only read out. Rows don't open (#158): a row with access details or aire warnings has an
- * info button beside its access, which shows them in full in a dialog. A leg's mode is not changed here. A leg whose routing
- * failed shows the failure with Retry.
+ * The Legs tab (#121): one row per leg. The leg's number is only read out. A leg's mode is
+ * not changed here. A leg whose routing failed shows the failure with Retry.
  */
 export default function LegsList({
   summary,
@@ -86,67 +43,24 @@ export default function LegsList({
       {summary.legs.map((leg, i) => {
         const route = legs[i]?.route;
         const legAccess = access?.legs[i];
-        const status = legAccess?.status.state;
-        const [time, ...elevation] = figures(leg);
         return (
-          <li key={i} className={`planner-row planner-row-${leg.mode}`}>
-            <div className="planner-row-head">
-              <Button className="planner-row-toggle" aria-current={i === selected || undefined} onClick={() => onSelect(i)}>
-                <span className="visually-hidden">{`${strings.legLabel(i + 1)} `}</span>
-                <span className="planner-row-headline">
-                  <FigureView
-                    figure={{
-                      key: "distance",
-                      icon: icons[leg.mode],
-                      label: strings.planner.legFigures[leg.mode],
-                      value: formatDistance(leg.distanceKm),
-                    }}
-                    className="planner-row-distance"
-                  />
-                  <FigureView figure={time} className="planner-row-time" />
-                </span>
-                {elevation.length > 0 && (
-                  <span className="planner-row-figures">
-                    {elevation.map((figure) => (
-                      <FigureView key={figure.key} figure={figure} />
-                    ))}
-                  </span>
-                )}
-                <LegAccessIcons
-                  state={status}
-                  access={legAccess}
-                  aire={aire.filter((warning) => warning.leg === i)}
-                  className="planner-row-access"
-                />
-              </Button>
-              {hasLegDetails(access, aire, i) && (
-                <Button
-                  className="planner-row-details-button"
-                  aria-label={strings.planner.legDetailsButton(i + 1)}
-                  onClick={() => onShowDetails(i)}
-                >
-                  <Icon icon={icons.legDetails} />
-                </Button>
-              )}
-            </div>
-            {(!route || route.status === "pending") && (
-              <span role="status" className="planner-row-routing">
-                {strings.legRouting}
-              </span>
-            )}
+          <TripRow
+            key={i}
+            row={leg}
+            label={strings.legLabel(i + 1)}
+            state={legAccess?.status.state}
+            access={legAccess}
+            aire={aire.filter((warning) => warning.leg === i)}
+            selected={i === selected}
+            onSelect={() => onSelect(i)}
+            {...(hasLegDetails(access, aire, i) && { detailsLabel: strings.planner.legDetailsButton(i + 1) })}
+            onShowDetails={() => onShowDetails(i)}
+          >
+            {(!route || route.status === "pending") && <RoutingStatus />}
             {route?.status === "failed" && (
-              <span className="planner-row-failed">
-                <span role="alert">
-                  {leg.mode === "paddle" && route.failure.kind === "no-route"
-                    ? strings.legRouteFailedNoRiver
-                    : strings.legRouteFailed[route.failure.kind]}
-                </span>
-                <Button className="planner-button" onClick={() => onRetry(i)}>
-                  {strings.retryRouting}
-                </Button>
-              </span>
+              <RoutingFailure mode={leg.mode} failure={route.failure} onRetry={() => onRetry(i)} />
             )}
-          </li>
+          </TripRow>
         );
       })}
     </ol>

@@ -6,7 +6,7 @@ import { tripToGpxFiles } from "./gpx";
 import type { LegRoute } from "./router";
 import { parseTrip, serialiseTrip } from "./saveFile";
 import { applyEdit, type LatLng, type Leg, type Trip } from "./trip";
-import { tripAccess } from "./tripAccess";
+import { legsAccess, tripAccess } from "./tripAccess";
 import { onWalloonAllYear, walloonAllYear, agreementStretch, fakeAccessRules, flandersSquare, forbiddenCanal } from "./testing/fakeAccessRules";
 
 const flanders = fakeAccessRules([flandersSquare, forbiddenCanal, agreementStretch]);
@@ -325,5 +325,33 @@ describe("flows still loading (#85)", () => {
   it("another date, or flows that have arrived, are unchanged", () => {
     expect(tripAccess(dated("2026-10-20"), walloon, { today: "2026-10-14", flowsPending: true }).legs[0]!.status.state).toBe("open");
     expect(tripAccess(dated("2026-10-14"), walloon, { today: "2026-10-14" }).legs[0]!.status.state).toBe("open");
+  });
+});
+
+describe("the access of a section's legs together", () => {
+  const today = { today: "2026-10-14" };
+  const paddling = trip(
+    [openA, openB, southOfCanal, northOfCanal, openA],
+    [
+      { mode: "paddle", route: routed(openA, openB) },
+      { mode: "paddle", route: routed(southOfCanal, northOfCanal) },
+      { mode: "hike" },
+      { mode: "paddle", route: routed(southOfCanal, northOfCanal) },
+    ],
+    { startDate: "2026-10-20" },
+  );
+
+  it("has the most restrictive state and the warnings of those legs only", () => {
+    const access = tripAccess(paddling, flanders, today);
+    const together = legsAccess(access, { firstLeg: 0, lastLeg: 1 });
+    expect(together.state).toBe("forbidden");
+    expect(together.warnings).toEqual(access.legs[1]!.warnings);
+    expect(together.warnings.every((warning) => warning.leg === 1)).toBe(true);
+  });
+
+  it("has no state for legs without access, such as a hike leg", () => {
+    const together = legsAccess(tripAccess(paddling, flanders, today), { firstLeg: 2, lastLeg: 2 });
+    expect(together.state).toBeUndefined();
+    expect(together.warnings).toEqual([]);
   });
 });

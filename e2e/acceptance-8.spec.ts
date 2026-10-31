@@ -161,8 +161,8 @@ test("AC2/AC3: camps on the start and end add no day; a middle camp splits the d
   const day1 = await dayRows(page).nth(0).textContent();
   const day2 = await dayRows(page).nth(1).textContent();
   // Day 1 = legs 1-2 (hike + paddle), day 2 = leg 3 (hike).
-  expect(day1).toContain(strings.dayLegs(1, 2));
-  expect(day2).toContain(strings.dayLegs(3, 3));
+  expect(day1).toContain(strings.legRange(1, 2));
+  expect(day2).toContain(strings.legRange(3, 3));
   expect(
     Math.abs(kmIn(day1, dayLabels.hike) - h0),
   ).toBeLessThanOrEqual(0.1);
@@ -336,7 +336,7 @@ test("camps persist through autosave: marking and unmarking are both stored", as
   await expect(campMarkers(page)).toHaveCount(1);
   await showDays(page);
   await expect(dayRows(page)).toHaveCount(2);
-  await expect(dayRows(page).nth(0)).toContainText(strings.dayLegs(1, 2));
+  await expect(dayRows(page).nth(0)).toContainText(strings.legRange(1, 2));
 });
 
 // Updated: v1 dropped (#33). A version 1 file used to open as a trip without

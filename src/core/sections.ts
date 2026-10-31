@@ -1,5 +1,6 @@
-// Sections (ADR 0021, GLOSSARY "Section"): the parts of a trip exported as
-// separate GPX files, so each imports as one course on a GPS device.
+// Sections (ADR 0021, GLOSSARY "Section"): the parts of a trip shown in the
+// Sections tab and exported as separate GPX files, so each imports as one course
+// on a GPS device.
 import { isCamp, type LegMode, type Trip } from "./trip";
 
 /**

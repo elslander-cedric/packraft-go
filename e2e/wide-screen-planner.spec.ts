@@ -328,6 +328,7 @@ test.describe("keyboard alone", () => {
     const tabs = panel(page).getByRole("tablist");
     await tabTo(page, tabs.getByRole("tab", { name: strings.planner.tabs.legs }));
     await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
     await page.keyboard.press("Enter");
     await expect(tabs.getByRole("tab", { name: strings.planner.tabs.days })).toHaveAttribute("aria-selected", "true");
 

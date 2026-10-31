@@ -14,7 +14,7 @@ ADR 0023 gave phones a read-only view: the map, your position, your access point
 - **Layout (portrait):** a full-screen map with a bottom sheet over it (Base UI Drawer, non-modal, never closes; ADR 0020) (#106).
   - **Stops:** three fixed stops (peek, half, 90%), chosen by drag distance.
   - **Peek:** the trip name, the totals and the tabs.
-  - **Tabs:** Legs, Days, Access points. The tabs share the row's width equally; a name too long for its share wraps onto a second line (amended 2026-10-28: the row scrolled sideways until then). (The Trip tab, with only the trip's name and start date, became the Trip details dialog, Edit trip in the menu: #154.)
+  - **Tabs:** Legs, Sections, Days, Access points (Sections added 2026-10-31). The tabs share the row's width equally; a name too long for its share wraps onto a second line (amended 2026-10-28: the row scrolled sideways until then). (The Trip tab, with only the trip's name and start date, became the Trip details dialog, Edit trip in the menu: #154.)
     - **Legs:** compact rows; a tap zooms the map to the leg and opens the row.
     - **Days:** a card per day; a day's access warnings are chips that open their leg (ADR 0029).
     - **Trip:** name and start date (the access summary went in #123; ADR 0029).
