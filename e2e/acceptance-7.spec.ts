@@ -17,15 +17,15 @@ import {
 
 const paceField = (page: Page) => settingsDialog(page).getByLabel(strings.paceFactorLabel);
 const speedField = (page: Page) => settingsDialog(page).getByLabel(strings.paddleSpeedLabel);
-const saveSettings = (page: Page) => settingsDialog(page).getByRole("button", { name: strings.phone.menu.settingsConfirm });
+const saveSettings = (page: Page) => settingsDialog(page).getByRole("button", { name: strings.planner.menu.settingsConfirm });
 /** Menu → Settings, left open. */
-const openSettings = (page: Page) => menuItem(page, strings.phone.menu.settings);
+const openSettings = (page: Page) => menuItem(page, strings.planner.menu.settings);
 const closeSettings = async (page: Page) => {
   await settingsDialog(page).getByRole("button", { name: strings.confirmCancel }).click();
   await expect(settingsDialog(page)).toHaveCount(0);
 };
-const legTimeLabel = strings.phone.legFigures.time;
-const tripTimeLabel = strings.phone.totals.labels.time;
+const legTimeLabel = strings.planner.legFigures.time;
+const tripTimeLabel = strings.planner.totals.labels.time;
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.geojson") };
@@ -40,7 +40,7 @@ function minutesIn(text: string | null): number {
 const legMinutes = async (page: Page, leg: number) => minutesIn(await rows(page).nth(leg).textContent());
 /** The trip's total time in the panel's header. */
 const tripLine = (page: Page) =>
-  legsPanel(page).locator(".phone-total").filter({ hasText: new RegExp(`^${tripTimeLabel}`) });
+  legsPanel(page).locator(".planner-total").filter({ hasText: new RegExp(`^${tripTimeLabel}`) });
 
 async function openMap(page: Page) {
   await openPlanner(page);

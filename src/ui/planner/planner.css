@@ -1,8 +1,6 @@
-/* Phone layout (#56, ADR 0023): the map on top, the position control and the
-   trip below. Touch-friendly: large tap targets, readable text. */
-/* The phone planner (ADR 0026): the map fills the screen, the sheet and the
-   floating buttons sit over it. Touch-friendly: 44 px targets, readable text. */
-.phone {
+/* The planner, on every screen (ADRs 0026, 0034): the map fills the screen, the sheet or
+   side panel and the floating buttons sit over it. Touch-friendly: 44 px targets, readable text. */
+.planner {
   position: relative;
   flex: 1;
   min-height: 0;
@@ -11,29 +9,29 @@
   --sheet-height: var(--sheet-peek, 8rem);
   /* What floats over the map (buttons, chip, snap offers): above Leaflet's map pane (400),
      below its controls (1000), the sheet and the side panel. */
-  --phone-z-floating: 500;
+  --planner-z-floating: 500;
 }
 
-.phone-stop-half {
+.planner-stop-half {
   --sheet-height: 50dvh;
 }
 
-.phone-stop-full {
+.planner-stop-full {
   --sheet-height: 90dvh;
 }
 
 /* Held sideways (#126): no sheet below; the side panel covers the right, so the right-hand
    buttons sit beside it, in the same corners. */
-.phone-sideways {
+.planner-sideways {
   --sheet-height: 0px;
   --panel-cover: var(--side-panel-strip-width);
 }
 
-.phone-panel-open {
+.planner-panel-open {
   --panel-cover: var(--side-panel-width);
 }
 
-.phone-sideways .phone-buttons:not(.phone-buttons-left) {
+.planner-sideways .planner-buttons:not(.planner-buttons-left) {
   right: calc(var(--panel-cover) + var(--space-3));
   transition:
     right 250ms,
@@ -41,11 +39,11 @@
 }
 
 /* The collapsed panel is a strip with the totals only, one under the other. */
-.phone .side-panel:not([data-open]) .phone-peek-summary {
+.planner .side-panel:not([data-open]) .planner-peek-summary {
   padding: 0;
 }
 
-.phone .side-panel:not([data-open]) .phone-totals {
+.planner .side-panel:not([data-open]) .planner-totals {
   flex-direction: column;
   flex-wrap: nowrap;
   gap: var(--space-2);
@@ -53,45 +51,45 @@
   text-align: center;
 }
 
-.phone .side-panel:not([data-open]) .phone-total {
+.planner .side-panel:not([data-open]) .planner-total {
   white-space: normal;
 }
 
-.phone .side-panel[data-open] .phone-peek-summary {
+.planner .side-panel[data-open] .planner-peek-summary {
   padding: var(--space-2) var(--space-1) var(--space-1);
 }
 
-.phone-map {
+.planner-map {
   position: absolute;
   inset: 0;
 }
 
-.phone-buttons {
+.planner-buttons {
   position: absolute;
   right: var(--space-3);
-  z-index: var(--phone-z-floating);
+  z-index: var(--planner-z-floating);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: var(--space-2);
 }
 
-.phone-buttons-top {
+.planner-buttons-top {
   top: var(--space-3);
 }
 
-.phone-buttons-bottom {
+.planner-buttons-bottom {
   bottom: calc(var(--sheet-height) + var(--space-3));
   transition: bottom 250ms;
 }
 
-.phone-buttons-left {
+.planner-buttons-left {
   right: auto;
   left: var(--space-3);
   align-items: flex-start;
 }
 
-.phone-fab {
+.planner-fab {
   min-width: 2.75rem;
   min-height: 2.75rem;
   padding: 0;
@@ -101,7 +99,7 @@
   font-size: 1rem;
 }
 
-.phone-message {
+.planner-message {
   max-width: 16rem;
   margin: 0;
   padding: var(--space-2);
@@ -111,25 +109,25 @@
   font-size: 0.85rem;
 }
 
-.phone-message-alert {
+.planner-message-alert {
   color: var(--color-danger);
 }
 
 /* The peek's header: the trip's totals. */
-.phone-peek-summary {
+.planner-peek-summary {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
 }
 
-.phone-peek-summary:empty {
+.planner-peek-summary:empty {
   display: none;
 }
 
 /* Small enough for all five figures to fit one line on a phone; wraps on a narrower screen, but a
    figure never breaks inside. Centred in the sheet's head, wrapped lines too. */
-.phone-totals {
+.planner-totals {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -139,52 +137,35 @@
   font-variant-numeric: tabular-nums;
 }
 
-.phone-total {
+.planner-total {
   white-space: nowrap;
 }
 
-.phone-total-icon {
+.planner-total-icon {
   margin-right: 0.3em;
 }
 
 /* Every tab's content starts a little below the tab row. */
-.phone-tab-panels {
+.planner-tab-panels {
   padding-top: var(--space-3);
 }
 
-.phone-empty {
+.planner-empty {
   color: var(--color-muted);
 }
 
 /* At least 44 px tall: easy to hit with a wet thumb. */
-.phone-button {
+.planner-button {
   min-height: 2.75rem;
   padding: var(--space-2) var(--space-3);
   font-size: 1rem;
 }
 
-.phone-position {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
-.phone-position p {
-  margin: 0;
-}
-
-.phone-position-explanation {
-  color: var(--color-muted);
-  font-size: 0.85rem;
-}
-
-.phone-position-alert {
+.planner-position-alert {
   color: var(--color-danger);
 }
 
-.phone-legs,
-.phone-days {
+.planner-legs {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -192,15 +173,15 @@
 
 /* The leg rows run edge to edge, right under the tab row: cancel the body's side padding
    and the panels' top gap. */
-.phone-legs {
+.planner-legs {
   margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) 0;
 }
 
-.phone-legs .phone-row {
+.planner-legs .planner-row {
   padding-right: var(--space-3);
 }
 
-.phone-row {
+.planner-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -212,15 +193,15 @@
   font-size: 0.95rem;
 }
 
-.phone-row-heading {
+.planner-row-heading {
   font-weight: 600;
 }
 
-.phone-row-heading {
+.planner-row-heading {
   flex-basis: 100%;
 }
 
-.phone-row-failed {
+.planner-row-failed {
   display: flex;
   flex-basis: 100%;
   align-items: center;
@@ -228,87 +209,87 @@
 }
 
 /* Like the access point rows, the left bar marks the selected leg; the mode shows in its icon. */
-.phone-legs .phone-row:has(.phone-row-toggle[aria-current]) {
+.planner-legs .planner-row:has(.planner-row-toggle[aria-current]) {
   border-left-color: var(--color-focus);
 }
 
 /* A short state line with its action, e.g. "Placing an access point · Cancel". */
-.phone-state-line {
+.planner-state-line {
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.phone-state-action {
+.planner-state-action {
   min-height: 2.75rem;
   padding: var(--space-1) var(--space-3);
   font-size: 0.95rem;
 }
 
-/* Access points on the phone (#63, #119): big targets for the form and the list. */
-.phone-access-point-form .toggle,
-.phone-access-point-form .button,
-.phone-access-point-form input {
+/* Access points (#63, #119): big targets for the form and the list. */
+.planner-access-point-form .toggle,
+.planner-access-point-form .button,
+.planner-access-point-form input {
   min-height: 2.75rem;
   font-size: 1rem;
 }
 
 /* Labels as in the other dialogs: the text's own size and colour, a little above the field. */
-.phone-access-point-form .access-point-field {
+.planner-access-point-form .access-point-field {
   gap: var(--space-2);
 }
 
-.phone-access-point-form .access-point-field > :is(span, label) {
+.planner-access-point-form .access-point-field > :is(span, label) {
   font-size: inherit;
   color: var(--color-text);
 }
 
 /* The dialog's title names it and rules it off: the details need no heading or dashed rule of their own. */
-.phone-access-point-form .access-point-details {
+.planner-access-point-form .access-point-details {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
 }
 
-.phone-access-point-form .access-point-details h3 {
+.planner-access-point-form .access-point-details h3 {
   display: none;
 }
 
 /* Use and kind: separate options with the fields' rounded corners, the chosen one in the accent. */
-.phone-access-point-form .toggle-group {
+.planner-access-point-form .toggle-group {
   gap: var(--space-2);
 }
 
-.phone-access-point-form .toggle,
-.phone-access-point-form .toggle + .toggle {
+.planner-access-point-form .toggle,
+.planner-access-point-form .toggle + .toggle {
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-control);
 }
 
-.phone-access-point-form .toggle[data-pressed] {
+.planner-access-point-form .toggle[data-pressed] {
   border-color: var(--color-primary);
   background: var(--color-primary);
   color: var(--color-on-accent);
 }
 
 /* "Added …, changed …" stands a little apart from the date field above it. */
-.phone-access-point-form .access-point-dates {
+.planner-access-point-form .access-point-dates {
   margin-top: var(--space-3);
 }
 
 /* The lists run edge to edge like the Legs and Days rows (#156): cancel the body's side
    padding, and the panels' top gap unless the saved note comes first. */
-.phone-access-point-lists {
+.planner-access-point-lists {
   margin: 0 calc(-1 * var(--space-3));
 }
 
-.phone-access-point-lists:first-child {
+.planner-access-point-lists:first-child {
   margin-top: calc(-1 * var(--space-3));
 }
 
 /* "On the route" and "Not on the route", lined up with the row text (its 4 px bar plus padding). */
-.phone-access-point-heading {
+.planner-access-point-heading {
   margin: 0;
   padding: var(--space-3) var(--space-3) var(--space-2) calc(var(--space-2) + 4px);
   color: var(--color-muted);
@@ -319,13 +300,13 @@
 }
 
 /* Each list, or the line saying none is on the route, leaves extra room before "Not on the route". */
-.phone-access-point-none {
+.planner-access-point-none {
   margin: 0 0 var(--space-3);
   padding: 0 var(--space-3) 0 calc(var(--space-2) + 4px);
 }
 
 /* A line above the first row as well as below each one, like the Legs and Days rows. */
-.phone-access-point-list {
+.planner-access-point-list {
   margin: 0 0 var(--space-3);
   padding: 0;
   border-top: 1px solid var(--color-border);
@@ -333,14 +314,14 @@
 }
 
 /* A row: the button that opens that point, then its edit and delete buttons. */
-.phone-access-point-item {
+.planner-access-point-item {
   display: flex;
   align-items: center;
   padding-right: var(--space-1);
   border-bottom: 1px solid var(--color-border);
 }
 
-.button.phone-access-point-row {
+.button.planner-access-point-row {
   flex: 1;
   min-width: 0;
   border-width: 0 0 0 4px;
@@ -349,7 +330,7 @@
   text-align: left;
 }
 
-.button.phone-access-point-action {
+.button.planner-access-point-action {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -363,36 +344,36 @@
 }
 
 /* One background whether selected or not (#156): the left bar marks the selected row. */
-.button.phone-access-point-row:hover:not([data-disabled]) {
+.button.planner-access-point-row:hover:not([data-disabled]) {
   background: var(--color-surface);
 }
 
-.button.phone-access-point-row[aria-current] {
+.button.planner-access-point-row[aria-current] {
   border-left-color: var(--color-focus);
 }
 
 /* Under the heading: the rest of the note, then use and kind, small and muted (#136). */
-.phone-access-point-note {
+.planner-access-point-note {
   flex-basis: 100%;
   white-space: pre-line;
 }
 
 /* How far along the route, or from you (#156). */
-.phone-access-point-figure {
+.planner-access-point-figure {
   flex-basis: 100%;
   color: var(--color-muted);
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
 
-.phone-access-point-detail {
+.planner-access-point-detail {
   flex-basis: 100%;
   color: var(--color-muted);
   font-size: 0.8rem;
 }
 
 /* The Legs tab (#121): a row's head is the button that shows its leg on the map. */
-.phone-row-head {
+.planner-row-head {
   display: flex;
   flex-basis: 100%;
   align-items: center;
@@ -400,7 +381,7 @@
   min-width: 0;
 }
 
-.button.phone-row-toggle {
+.button.planner-row-toggle {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -417,54 +398,54 @@
   text-align: left;
 }
 
-.button.phone-row-toggle:hover:not([data-disabled]) {
+.button.planner-row-toggle:hover:not([data-disabled]) {
   background: transparent;
 }
 
 /* The mode icon and distance, large, with the time on the right while the row is closed. */
 /* The same sizes as a day card's headline. */
-.phone-row-headline {
+.planner-row-headline {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
   line-height: 1.2;
 }
 
-.phone-row-figure {
+.planner-row-figure {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.phone-row-figure-icon {
+.planner-row-figure-icon {
   margin-right: 0.3em;
 }
 
 /* Every icon on a leg row is one size, whatever the text beside it: the headline's. */
-.phone-legs .icon {
+.planner-legs .icon {
   font-size: 0.95rem;
 }
 
-.phone-row-distance {
+.planner-row-distance {
   font-size: 0.95rem;
   font-weight: 700;
 }
 
-.phone-row-hike .phone-row-distance .phone-row-figure-icon {
+.planner-row-hike .planner-row-distance .planner-row-figure-icon {
   color: var(--color-hike);
 }
 
-.phone-row-paddle .phone-row-distance .phone-row-figure-icon {
+.planner-row-paddle .planner-row-distance .planner-row-figure-icon {
   color: var(--color-paddle);
 }
 
-.phone-row-time {
+.planner-row-time {
   margin-left: auto;
   font-size: 0.9rem;
   font-weight: 600;
 }
 
 /* Climb and descent (or drop), smaller and muted under the headline. */
-.phone-row-figures {
+.planner-row-figures {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
@@ -473,24 +454,24 @@
 }
 
 /* A paddle leg's access icons, on a line of their own under the figures, their bottoms on the line's. */
-.phone-row-access {
+.planner-row-access {
   align-self: flex-start;
   align-items: flex-end;
   font-size: 0.85rem;
 }
 
-.phone-row-access > span,
-.phone-row-access .access-icon {
+.planner-row-access > span,
+.planner-row-access .access-icon {
   display: flex;
 }
 
 /* A row's icon-only button for its access details (#158), at the row's right with its icon's
    bottom level with the access icons'; out of the flow, so the time stays lined up with the other rows'. */
-.phone-row-head:has(.phone-row-details-button) {
+.planner-row-head:has(.planner-row-details-button) {
   position: relative;
 }
 
-.button.phone-row-details-button {
+.button.planner-row-details-button {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -507,12 +488,12 @@
 }
 
 /* Larger than the row's other icons, its right edge in line with the time's. */
-.phone-legs .phone-row-details-button .icon {
+.planner-legs .planner-row-details-button .icon {
   font-size: 1.35rem;
 }
 
 /* A leg's details in their dialog. */
-.phone-leg-details {
+.planner-leg-details {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -522,21 +503,21 @@
 
 /* The parts of the access (status, rules, warnings, notes, extra rules) stand apart from each
    other; inside the extra rules, the source link stands apart from the rules above it. */
-.phone-leg-details .leg-access > * + * {
+.planner-leg-details .leg-access > * + * {
   margin-top: var(--space-3);
 }
 
-.phone-leg-details .leg-access-extra > a {
+.planner-leg-details .leg-access-extra > a {
   display: inline-block;
   margin-top: var(--space-2);
 }
 
 /* The next leg's mode over the map, with the other bottom-right buttons: an icon-only, rounded
    segmented control, stacked, one width. */
-.phone-next-mode {
+.planner-next-mode {
   flex: none;
   flex-direction: column;
-  width: var(--phone-next-mode-width);
+  width: var(--planner-next-mode-width);
   box-sizing: border-box;
   gap: 2px;
   padding: 2px;
@@ -544,8 +525,8 @@
   background: var(--color-surface);
 }
 
-.phone-next-mode .toggle,
-.phone-next-mode .toggle + .toggle {
+.planner-next-mode .toggle,
+.planner-next-mode .toggle + .toggle {
   min-height: calc(2.75rem - 4px);
   padding: 0;
   border: none;
@@ -553,17 +534,17 @@
   font-size: 1rem;
 }
 
-.phone {
-  --phone-next-mode-width: 2.75rem;
+.planner {
+  --planner-next-mode-width: 2.75rem;
 }
 
 /* A snap offer floats above the sheet, left of the bottom-right buttons; the sheet keeps its height. */
-.phone-snap-offers {
+.planner-snap-offers {
   position: absolute;
   bottom: calc(var(--sheet-height) + var(--space-3));
   left: calc(var(--space-3) + 2.75rem + var(--space-2));
-  right: calc(var(--panel-cover, 0px) + var(--space-3) * 2 + var(--phone-next-mode-width));
-  z-index: var(--phone-z-floating);
+  right: calc(var(--panel-cover, 0px) + var(--space-3) * 2 + var(--planner-next-mode-width));
+  z-index: var(--planner-z-floating);
   display: flex;
   justify-content: flex-end;
   pointer-events: none;
@@ -572,11 +553,11 @@
     right 250ms;
 }
 
-.phone-snap-offers .snap-offers {
+.planner-snap-offers .snap-offers {
   pointer-events: auto;
 }
 
-.phone-snap-offers .snap-offer {
+.planner-snap-offers .snap-offer {
   padding: var(--space-2);
   border-radius: 0.5rem;
   background: var(--color-surface);
@@ -584,25 +565,20 @@
   font-size: 0.9rem;
 }
 
-.phone-snap-offers .button {
+.planner-snap-offers .button {
   min-height: 2.75rem;
   padding: var(--space-1) var(--space-3);
   font-size: 0.95rem;
 }
 
-/* The Days tab (#123): the desktop's day rows as cards; tapping one zooms the map to that day.
-   Scoped to the tab panels, not .phone: the bottom sheet is rendered in a portal outside it.
+/* The Days tab (#123): a card per day; tapping one zooms the map to that day.
+   Scoped to the tab panels, not .planner: the bottom sheet is rendered in a portal outside it.
    Like the leg rows, the cards run edge to edge right under the tab row, touching, with a rule between. */
-.phone-tab-panels .days-panel {
-  max-height: none;
-  min-height: 0;
+.planner-tab-panels .days-panel {
   margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) 0;
-  padding: 0;
-  border: 0;
-  overflow: visible;
 }
 
-.phone-tab-panels .day-row {
+.planner-tab-panels .day-row {
   min-height: 2.75rem;
   padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
   margin-bottom: 0;
@@ -611,21 +587,21 @@
 }
 
 /* The selected card, which shows its access warnings: the left bar marks it, as on the leg rows. */
-.phone-tab-panels .day-card.day-row-selected {
+.planner-tab-panels .day-card.day-row-selected {
   border-left-color: var(--color-focus);
 }
 
 /* No flash of the browser's tap highlight on a card or row: the left bar marks the selected one. */
-.phone-tab-panels .day-card,
-.phone-tab-panels .day-tile,
-.button.phone-row-toggle,
-.button.phone-access-point-row {
+.planner-tab-panels .day-card,
+.planner-tab-panels .day-tile,
+.button.planner-row-toggle,
+.button.planner-access-point-row {
   -webkit-tap-highlight-color: transparent;
 }
 
 /* A card's title is a calendar tile with its date (weekday, day, month), the
    accent along its top; the figures and access sit beside it, their top level with the tile's. */
-.phone-tab-panels .day-card {
+.planner-tab-panels .day-card {
   flex-wrap: nowrap;
   align-items: flex-start;
   gap: var(--space-3);
@@ -724,45 +700,42 @@
 }
 
 /* The Trip details dialog from the menu (#154): name and start date. */
-.phone-trip-details {
+.planner-trip-details {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.phone-trip-details label {
+.planner-trip-details label {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.phone-trip-details input {
+.planner-trip-details input {
   min-height: 2.75rem;
   font-size: 1rem;
 }
 
-.phone-start-date {
+.planner-start-date {
   display: flex;
   align-items: flex-end;
   gap: var(--space-2);
 }
 
-.phone-start-date label {
+.planner-start-date label {
   flex: 1;
 }
 
-.phone-disclaimer {
+.planner-disclaimer {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.85rem;
 }
 
-/* The Settings tab (#123): the desktop's fields, finger-sized. The tab names the panel, and the
-   sheet body already pads it: no heading, rule or padding of its own. */
-/* The settings dialog from the menu (#151). */
-.form-dialog .settings-panel {
-  padding: 0;
-  border: 0;
+/* The settings dialog from the menu (#151): finger-sized fields. */
+.form-dialog .settings-panel .number-field {
+  margin-bottom: 0.75rem;
 }
 
 .form-dialog .settings-panel input {
@@ -772,12 +745,12 @@
 
 /* Place search (#174): a pill on the top row, between the menu and the right-hand buttons;
    sideways it stops short of the side panel, as those buttons do. */
-.phone-place-search {
+.planner-place-search {
   position: absolute;
   top: var(--space-3);
   left: calc(var(--space-3) + 2.75rem + var(--space-2));
   right: calc(var(--panel-cover, 0px) + var(--space-3) + 2.75rem + var(--space-2));
-  z-index: var(--phone-z-floating);
+  z-index: var(--planner-z-floating);
   display: flex;
   align-items: center;
   min-width: 0;
@@ -788,12 +761,12 @@
 }
 
 /* The pill follows the side panel as the buttons beside it do; opening the field doesn't animate. */
-.phone-sideways .phone-place-search:not(.phone-place-search-open),
-.phone-sideways .phone-access-chip-slot {
+.planner-sideways .planner-place-search:not(.planner-place-search-open),
+.planner-sideways .planner-access-chip-slot {
   transition: right 250ms;
 }
 
-.button.phone-search-pill {
+.button.planner-search-pill {
   display: flex;
   flex: 1;
   align-items: center;
@@ -808,17 +781,17 @@
   text-align: left;
 }
 
-.phone-search-pill-text {
+.planner-search-pill-text {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.phone-search-pill-placeholder {
+.planner-search-pill-placeholder {
   color: var(--color-muted);
 }
 
-.button.phone-search-pill-clear {
+.button.planner-search-pill-clear {
   flex: none;
   width: 2.75rem;
   min-height: 2.75rem;
@@ -831,7 +804,7 @@
 /* Open, it widens over the buttons beside it into a field with its results under it, kept in the
    area above the on-screen keyboard (--visible-*, set while open; #163). It goes over the sheet
    (z-index 1000), however high that is, but never over the side panel, which it stops short of. */
-.phone-place-search-open {
+.planner-place-search-open {
   top: calc(var(--visible-top, 0px) + var(--space-3));
   left: var(--space-3);
   right: calc(var(--panel-cover, 0px) + var(--space-3));
@@ -842,20 +815,20 @@
   border-radius: var(--radius-large);
 }
 
-.phone-place-search-box {
+.planner-place-search-box {
   display: flex;
   flex-direction: column;
   min-height: 0;
   border-radius: inherit;
 }
 
-.phone-place-search-box .search-box-group {
+.planner-place-search-box .search-box-group {
   padding-left: 0;
   border-radius: var(--radius-large);
 }
 
 /* Only the results scroll; the field stays put. */
-.phone-place-search-box .search-box-answer {
+.planner-place-search-box .search-box-answer {
   min-height: 0;
   overflow-y: auto;
   border-top: 1px solid var(--color-border-subtle);
@@ -863,19 +836,19 @@
 
 /* The access layer's chip (#125): on the second row, under the pill (#174), at the right beside the
    access layer's own button. A long trip day shortens it rather than push it off the map. */
-.phone-access-chip-slot {
+.planner-access-chip-slot {
   position: absolute;
   top: calc(var(--space-3) + 2.75rem + var(--space-2));
   left: var(--space-3);
   right: calc(var(--panel-cover, 0px) + var(--space-3) + 2.75rem + var(--space-2));
-  z-index: var(--phone-z-floating);
+  z-index: var(--planner-z-floating);
   display: flex;
   justify-content: flex-end;
   /* The slot spans the row; only the chip takes taps. */
   pointer-events: none;
 }
 
-.phone-access-chip {
+.planner-access-chip {
   min-width: 0;
   max-width: 100%;
   min-height: 2.75rem;
@@ -891,14 +864,14 @@
 
 /* The access layer's dialog (#163): the dialogs' text size; the date row's fields take
    the dialogs' 44 px height from Dialog.css. */
-.phone-access-dialog .access-date {
+.planner-access-dialog .access-date {
   align-items: flex-end;
   gap: var(--space-3) var(--space-2);
   margin-top: var(--space-3);
 }
 
 /* As in Edit trip: each label above its field, the fields full width, Today beside the date. */
-.phone-access-dialog .access-date label {
+.planner-access-dialog .access-date label {
   flex: 1 1 0;
   flex-direction: column;
   align-items: stretch;
@@ -906,28 +879,14 @@
   min-width: 0;
 }
 
-.phone-access-dialog .access-date label:has(select) {
+.planner-access-dialog .access-date label:has(select) {
   flex-basis: 100%;
 }
 
-.phone-access-dialog .access-date :is(input, select) {
+.planner-access-dialog .access-date :is(input, select) {
   font-size: 1rem;
 }
 
-.phone-access-dialog .access-legend {
+.planner-access-dialog .access-legend {
   margin-top: var(--space-3);
-}
-
-/* A water's or a lock's details in the sheet, above the open tab: part of the sheet, not a floating card. */
-.phone-access-details .access-detail {
-  width: auto;
-  margin: 0 var(--space-3) var(--space-3);
-  padding: 0;
-  border: none;
-  box-shadow: none;
-  font-size: 0.95rem;
-}
-
-.phone-access-details .access-detail .access-detail-close {
-  min-height: 2.75rem;
 }

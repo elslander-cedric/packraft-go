@@ -9,7 +9,7 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const legRows = (page: Page) => legsPanel(page).getByRole("listitem");
-const backButton = (page: Page) => page.getByRole("button", { name: strings.phone.backToStartButton });
+const backButton = (page: Page) => page.getByRole("button", { name: strings.planner.backToStartButton });
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 
 async function centreOf(shape: Locator) {

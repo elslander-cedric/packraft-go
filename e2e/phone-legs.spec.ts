@@ -19,7 +19,7 @@ const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.
 const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.geojson") };
 const byProfile = (url: URL) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL);
 
-const text = strings.phone;
+const text = strings.planner;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
 const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
@@ -215,14 +215,14 @@ test("a row shows its figures after their icons, without a visible leg number; t
   await expect(paddle).not.toContainText(labels.climb);
 
   // Tapped: no mode switch; the time stays on the headline and the figures under it don't change.
-  const time = hike.locator(".phone-row-headline .phone-row-time");
-  const figures = await hike.locator(".phone-row-figures").textContent();
+  const time = hike.locator(".planner-row-headline .planner-row-time");
+  const figures = await hike.locator(".planner-row-figures").textContent();
   await hike.click();
   await expect(modeSwitch(page, 1)).toHaveCount(0);
   await expect(legRows(page).nth(0).getByRole("button", { name: strings.legModePaddle })).toHaveCount(0);
   await expect(time).toBeVisible();
   await expect(time).toContainText(labels.time);
-  await expect(hike.locator(".phone-row-figures")).toHaveText(figures!);
+  await expect(hike.locator(".planner-row-figures")).toHaveText(figures!);
 });
 
 // Durbuy is in Wallonia. 0.001 degrees of latitude is about 111 m.
@@ -359,7 +359,7 @@ test("a paddle row shows its access as icons on a line of their own under the fi
   expect(new Set(names).size).toBe(names.length);
   expect(names.filter((name) => name === "flag")).toHaveLength(1);
   await sheetSettled(page);
-  const figures = (await button.locator(".phone-row-figures").boundingBox())!;
+  const figures = (await button.locator(".planner-row-figures").boundingBox())!;
   expect((await status.boundingBox())!.y).toBeGreaterThanOrEqual(figures.y + figures.height);
 });
 
@@ -522,7 +522,7 @@ test.describe("at a narrow phone width", () => {
     await sheetSettled(page);
 
     const row = legRows(page).nth(0);
-    const figures = row.locator(".phone-row-figure");
+    const figures = row.locator(".planner-row-figure");
     expect(await figures.count()).toBeGreaterThanOrEqual(4);
     for (const figure of await figures.all()) {
       expect(await lineCount(figure), `"${await figure.textContent()}" wraps`).toBe(1);

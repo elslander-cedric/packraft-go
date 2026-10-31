@@ -19,14 +19,14 @@ import {
 
 // The trip panel shows one tab at a time (ADR 0034): each list shows its tab first.
 const legRows = async (page: Page) => {
-  await showTab(page, strings.phone.tabs.legs);
+  await showTab(page, strings.planner.tabs.legs);
   return legCards(page);
 };
 const dayRows = async (page: Page) => {
-  await showTab(page, strings.phone.tabs.days);
+  await showTab(page, strings.planner.tabs.days);
   return dayCards(page);
 };
-const dayLabels = strings.phone.dayFigures;
+const dayLabels = strings.planner.dayFigures;
 const dayTime = (day: Locator) => day.locator(".day-figure-time");
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
@@ -83,7 +83,7 @@ test("a camp splits the trip into two days with correct per-day totals, and undo
   const routedSoFar = network.brouter.length;
   const legs = await legRows(page);
   const legDescent = (await legs.nth(0).textContent())!.match(/Descent (\d+) m/)![1];
-  const paddleMin = minutes((await legs.nth(1).locator(".phone-row-time").textContent()) ?? "");
+  const paddleMin = minutes((await legs.nth(1).locator(".planner-row-time").textContent()) ?? "");
 
   await campAtMiddle(page, middle);
   await expect(campMarkers(page)).toHaveCount(1);
@@ -157,7 +157,7 @@ test("camps are kept through save to file and open file", async ({ page }) => {
   const download = await saveTripFile(page);
   const saved = await download.path();
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await expect(points(page)).toHaveCount(0);
   await expect(campMarkers(page)).toHaveCount(0);

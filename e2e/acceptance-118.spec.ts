@@ -4,8 +4,8 @@ import { devices, expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
 
-const sheet = (page: Page) => page.getByRole("dialog", { name: strings.phone.sheetLabel });
-const panel = (page: Page) => page.getByRole("complementary", { name: strings.phone.sheetLabel });
+const sheet = (page: Page) => page.getByRole("dialog", { name: strings.planner.sheetLabel });
+const panel = (page: Page) => page.getByRole("complementary", { name: strings.planner.sheetLabel });
 
 // Updated for ADR 0034 (#190): every screen gets the one planner. A narrow screen in portrait
 // gets the bottom sheet; every other screen, touch or not, the side panel on the right.
@@ -99,6 +99,6 @@ test.describe("sheet stops by drag distance", () => {
     await expect(sheet(page)).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(sheet(page)).toBeVisible();
-    await expect(page.getByRole("tab", { name: strings.phone.tabs.legs })).toBeVisible();
+    await expect(page.getByRole("tab", { name: strings.planner.tabs.legs })).toBeVisible();
   });
 });

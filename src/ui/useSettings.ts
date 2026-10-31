@@ -39,8 +39,7 @@ export function useSettings(): [Settings | null, (settings: Settings) => void] {
 }
 
 /**
- * The chosen base map (ADR 0031) and a way to choose another, shared by the desktop and
- * the phone. The default until the settings are read in the browser.
+ * The chosen base map (ADR 0031) and a way to choose another. The default until the settings are read in the browser.
  */
 export function useBaseMap(): [BaseMapId, (id: BaseMapId) => void] {
   const [settings, saveSettings] = useSettings();
@@ -53,8 +52,7 @@ export function useBaseMap(): [BaseMapId, (id: BaseMapId) => void] {
 }
 
 /**
- * The switched-on overlays (ADR 0032) and a way to switch one on or off, shared by the
- * desktop and the phone. None until the settings are read in the browser.
+ * The switched-on overlays (ADR 0032) and a way to switch one on or off. None until the settings are read in the browser.
  */
 export function useOverlays(): [readonly OverlayId[], (id: OverlayId, on: boolean) => void] {
   const [settings, saveSettings] = useSettings();

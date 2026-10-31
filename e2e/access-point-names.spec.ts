@@ -18,7 +18,7 @@ import {
 } from "./support/planner";
 
 const text = strings.accessPoints;
-const phoneText = strings.phone;
+const plannerText = strings.planner;
 const DEFAULT_NAME = "Rue du Batty, Melreux";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
@@ -135,11 +135,11 @@ test.describe("on the phone", () => {
   const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
   test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
-  const sheet = (page: Page) => page.getByRole("dialog", { name: phoneText.sheetLabel });
-  const section = (page: Page) => sheet(page).getByRole("region", { name: phoneText.accessPointsLabel, exact: true });
+  const sheet = (page: Page) => page.getByRole("dialog", { name: plannerText.sheetLabel });
+  const section = (page: Page) => sheet(page).getByRole("region", { name: plannerText.accessPointsLabel, exact: true });
   const rows = (page: Page) => section(page).getByRole("list").getByRole("listitem");
 
-  const dialog = (page: Page) => page.getByRole("dialog", { name: phoneText.accessPointDialogTitle });
+  const dialog = (page: Page) => page.getByRole("dialog", { name: plannerText.accessPointDialogTitle });
 
   test("a point marked offline gets its default name back online, also while its details are open, which leads its row", async ({
     page,
@@ -149,10 +149,10 @@ test.describe("on the phone", () => {
     await context.setGeolocation({ latitude: 50.268, longitude: 5.446, accuracy: 10 });
     const network = await serveOffline(page, { nominatim: nominatimFixture("reverse-road.json") });
     await openMap(page);
-    await sheet(page).getByRole("tab", { name: phoneText.tabs.accessPoints }).click();
+    await sheet(page).getByRole("tab", { name: plannerText.tabs.accessPoints }).click();
 
     await context.setOffline(true);
-    await page.getByRole("button", { name: phoneText.markAccessPointButton }).click();
+    await page.getByRole("button", { name: plannerText.markAccessPointButton }).click();
     await expect(dialog(page)).toBeVisible();
     await expect.poll(async () => (await stored(page))?.[0]?.nameSource).toBe("to-look-up");
     await expect(nameField(page)).toHaveAttribute("placeholder", text.namePlaceholder);
@@ -162,13 +162,13 @@ test.describe("on the phone", () => {
     await dialog(page).getByLabel(text.noteLabel).fill("Gravel bank");
     await context.setOffline(false);
     await expect(nameField(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
-    await dialog(page).getByRole("button", { name: phoneText.accessPointSave }).click();
+    await dialog(page).getByRole("button", { name: plannerText.accessPointSave }).click();
     await expect.poll(async () => (await stored(page))[0]).toMatchObject({
       name: DEFAULT_NAME,
       nameSource: "default",
       note: "Gravel bank",
     });
-    await expect(rows(page).first().locator(".phone-row-heading")).toHaveText(DEFAULT_NAME);
+    await expect(rows(page).first().locator(".planner-row-heading")).toHaveText(DEFAULT_NAME);
     expect(network.blocked).toEqual([]);
   });
 
@@ -177,23 +177,23 @@ test.describe("on the phone", () => {
     await context.setGeolocation({ latitude: 50.268, longitude: 5.446, accuracy: 10 });
     const network = await serveOffline(page, { nominatim: nominatimFixture("reverse-road.json") });
     await openMap(page);
-    await sheet(page).getByRole("tab", { name: phoneText.tabs.accessPoints }).click();
+    await sheet(page).getByRole("tab", { name: plannerText.tabs.accessPoints }).click();
 
     await context.setOffline(true);
-    await page.getByRole("button", { name: phoneText.markAccessPointButton }).click();
+    await page.getByRole("button", { name: plannerText.markAccessPointButton }).click();
     await dialog(page).getByRole("button", { name: strings.confirmCancel }).click();
     await expect(rows(page)).toHaveCount(1);
     await expect.poll(async () => (await stored(page))?.[0]?.nameSource).toBe("to-look-up");
     // Unnamed, without a note: its use and kind lead.
-    await expect(rows(page).first().locator(".phone-row-heading")).toHaveText(
+    await expect(rows(page).first().locator(".planner-row-heading")).toHaveText(
       text.useAndKind(text.uses.both, text.kinds["informal-bank"]),
     );
     expect(network.nominatim).toHaveLength(0);
 
     await context.setOffline(false);
-    await expect(rows(page).first().locator(".phone-row-heading")).toHaveText(DEFAULT_NAME);
+    await expect(rows(page).first().locator(".planner-row-heading")).toHaveText(DEFAULT_NAME);
     await expect(rows(page).first()).toContainText(text.useAndKind(text.uses.both, text.kinds["informal-bank"]));
-    await rows(page).first().getByRole("button", { name: phoneText.editAccessPoint(DEFAULT_NAME) }).click();
+    await rows(page).first().getByRole("button", { name: plannerText.editAccessPoint(DEFAULT_NAME) }).click();
     await expect(nameField(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
     await expect.poll(async () => (await stored(page))[0]).toMatchObject({ name: DEFAULT_NAME, nameSource: "default" });
     expect(network.blocked).toEqual([]);
@@ -218,11 +218,11 @@ test.describe("on the phone", () => {
       [ACCESS_POINTS_KEY, serialiseAccessPoints([named])],
     );
     await openMap(page);
-    await sheet(page).getByRole("tab", { name: phoneText.tabs.accessPoints }).click();
+    await sheet(page).getByRole("tab", { name: plannerText.tabs.accessPoints }).click();
 
     // The name leads the row; the whole note and use and kind follow.
     const row = rows(page).first();
-    await expect(row.locator(".phone-row-heading")).toHaveText("Hotton bridge");
+    await expect(row.locator(".planner-row-heading")).toHaveText("Hotton bridge");
     await expect(row).toContainText("Steep bank");
     await expect(row).toContainText(text.useAndKind(text.uses["put-in"], text.kinds.slipway));
 

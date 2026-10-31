@@ -1,4 +1,4 @@
-// #156: your access points split by the trip's route, for the phone's Access points tab.
+// #156: your access points split by the trip's route, for the planner's Access points tab.
 import { describe, expect, it } from "vitest";
 import { addAccessPoint, type AccessPoints } from "./accessPoints";
 import { projectOntoLine } from "./geo";

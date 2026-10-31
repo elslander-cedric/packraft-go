@@ -42,7 +42,7 @@ async function openWith(page: Page, initial?: string) {
     await page.reload();
     await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
   }
-  await showTab(page, strings.phone.tabs.accessPoints);
+  await showTab(page, strings.planner.tabs.accessPoints);
   const box = (await freeMapBox(page));
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
@@ -55,7 +55,7 @@ test("new trip and opening a trip file leave access points untouched", async ({ 
   // Make a trip so the confirmations show.
   await page.mouse.click(mid.x + 200, mid.y + 100);
   await page.mouse.click(mid.x + 250, mid.y + 100);
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await expect(markers(page)).toHaveCount(1);
   expect(await stored(page)).toBe(before);
@@ -119,7 +119,7 @@ test("special characters in notes and border positions survive a reload", async 
   await expect(markers(page)).toHaveCount(4);
   // A change saves them all again, and a reload reads them back.
   // Edited from its row (the markers spread over the country, some behind the panel).
-  const edit = (note: string) => panel(page).getByRole("button", { name: strings.phone.editAccessPoint(note), exact: true });
+  const edit = (note: string) => panel(page).getByRole("button", { name: strings.planner.editAccessPoint(note), exact: true });
   await edit(notes[1]).click();
   await details(page).getByLabel(text.noteLabel).fill(notes[1]);
   await saveAccessPoint(page);
@@ -128,7 +128,7 @@ test("special characters in notes and border positions survive a reload", async 
   const saved = JSON.parse((await stored(page))!).accessPoints;
   expect(saved.map((p: { note: string }) => p.note)).toEqual(notes);
   expect(saved.map((p: { position: { lat: number; lng: number } }) => [p.position.lat, p.position.lng])).toEqual(coords);
-  await showTab(page, strings.phone.tabs.accessPoints);
+  await showTab(page, strings.planner.tabs.accessPoints);
   await edit(notes[0]).click();
   await expect(details(page).getByLabel(text.noteLabel)).toHaveValue(notes[0]);
 });

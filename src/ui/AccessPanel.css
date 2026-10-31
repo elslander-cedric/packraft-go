@@ -1,31 +1,12 @@
-/* The access layer's controls and detail panel float over the map's top-right corner. */
-.map {
-  position: relative;
-}
-
-.access-overlay {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  /* Above Leaflet's panes and controls (z-index up to 1000). */
-  z-index: 1100;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-2);
-  max-width: 20rem;
-  /* Leaves the bottom-right corner to the base map button and the attribution under it (#179). */
-  max-height: calc(100% - var(--space-2) - var(--map-bottom-right-reserve));
-  font-size: 0.85rem;
-}
-
-.access-controls,
+/* The access layer's legend and date (in the chip's dialog) and a water's or a lock's details
+   (in the sheet or side panel, above the open tab: part of it, not a floating card). */
 .access-detail {
-  padding: var(--space-2);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-popup);
+  margin: 0 var(--space-3) var(--space-3);
+  font-size: 0.95rem;
+}
+
+.access-detail .access-detail-close {
+  min-height: 2.75rem;
 }
 
 .access-legend ul {
@@ -52,11 +33,6 @@
   margin: var(--space-1) 0 0;
   color: var(--color-muted);
   font-size: 0.8rem;
-}
-
-.access-detail {
-  overflow-y: auto;
-  width: 20rem;
 }
 
 .access-detail header {

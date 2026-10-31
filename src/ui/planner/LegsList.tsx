@@ -10,7 +10,7 @@ import { strings } from "../strings";
 import { LegAccessIcons } from "../TripAccessView";
 
 /** True when a leg has access details or aire warnings to show in its dialog. */
-export function hasLegDetails(access: TripAccess | null, aire: readonly AireWarning[], legIndex: number): boolean {
+function hasLegDetails(access: TripAccess | null, aire: readonly AireWarning[], legIndex: number): boolean {
   return access?.legs[legIndex] !== undefined || aire.some((warning) => warning.leg === legIndex);
 }
 
@@ -18,7 +18,7 @@ type Figure = { key: string; icon: IconDefinition; label: string; value: string 
 
 /** A leg's time, climb and descent (drop, or rise, on a paddle leg) that are known. */
 function figures(leg: LegSummary): Figure[] {
-  const labels = strings.phone.legFigures;
+  const labels = strings.planner.legFigures;
   const all: (Figure | false)[] = [
     { key: "time", icon: icons.time, label: labels.time, value: formatTimeEstimate(leg.timeH, leg.timeStatus) },
     leg.climbM !== undefined && { key: "climb", icon: icons.climb, label: labels.climb, value: formatElevation(leg.climbM) },
@@ -37,15 +37,15 @@ function figures(leg: LegSummary): Figure[] {
 /** One figure after its icon; the icon's meaning is read out before the value. */
 function FigureView({ figure, className }: { figure: Figure; className?: string }) {
   return (
-    <span className={className ? `phone-row-figure ${className}` : "phone-row-figure"}>
-      <Icon icon={figure.icon} className="phone-row-figure-icon" />
+    <span className={className ? `planner-row-figure ${className}` : "planner-row-figure"}>
+      <Icon icon={figure.icon} className="planner-row-figure-icon" />
       <span className="visually-hidden">{`${figure.label} `}</span>
       {figure.value}
     </span>
   );
 }
 
-export type PhoneLegsListProps = {
+export type LegsListProps = {
   summary: TripSummary;
   /** The trip's legs, for their routing state. */
   legs: readonly Leg[];
@@ -70,7 +70,7 @@ export type PhoneLegsListProps = {
  * info button beside its access, which shows them in full in a dialog. A leg's mode is not changed here. A leg whose routing
  * failed shows the failure with Retry.
  */
-export default function PhoneLegsList({
+export default function LegsList({
   summary,
   legs,
   access,
@@ -79,34 +79,34 @@ export default function PhoneLegsList({
   onSelect,
   onShowDetails,
   onRetry,
-}: PhoneLegsListProps) {
-  if (summary.legs.length === 0) return <p className="phone-empty">{strings.legsPanelEmpty}</p>;
+}: LegsListProps) {
+  if (summary.legs.length === 0) return <p className="planner-empty">{strings.legsPanelEmpty}</p>;
   return (
-    <ol className="phone-legs" aria-label={strings.legsPanelLabel}>
+    <ol className="planner-legs" aria-label={strings.legsPanelLabel}>
       {summary.legs.map((leg, i) => {
         const route = legs[i]?.route;
         const legAccess = access?.legs[i];
         const status = legAccess?.status.state;
         const [time, ...elevation] = figures(leg);
         return (
-          <li key={i} className={`phone-row phone-row-${leg.mode}`}>
-            <div className="phone-row-head">
-              <Button className="phone-row-toggle" aria-current={i === selected || undefined} onClick={() => onSelect(i)}>
+          <li key={i} className={`planner-row planner-row-${leg.mode}`}>
+            <div className="planner-row-head">
+              <Button className="planner-row-toggle" aria-current={i === selected || undefined} onClick={() => onSelect(i)}>
                 <span className="visually-hidden">{`${strings.legLabel(i + 1)} `}</span>
-                <span className="phone-row-headline">
+                <span className="planner-row-headline">
                   <FigureView
                     figure={{
                       key: "distance",
                       icon: icons[leg.mode],
-                      label: strings.phone.legFigures[leg.mode],
+                      label: strings.planner.legFigures[leg.mode],
                       value: formatDistance(leg.distanceKm),
                     }}
-                    className="phone-row-distance"
+                    className="planner-row-distance"
                   />
-                  <FigureView figure={time} className="phone-row-time" />
+                  <FigureView figure={time} className="planner-row-time" />
                 </span>
                 {elevation.length > 0 && (
-                  <span className="phone-row-figures">
+                  <span className="planner-row-figures">
                     {elevation.map((figure) => (
                       <FigureView key={figure.key} figure={figure} />
                     ))}
@@ -116,13 +116,13 @@ export default function PhoneLegsList({
                   state={status}
                   access={legAccess}
                   aire={aire.filter((warning) => warning.leg === i)}
-                  className="phone-row-access"
+                  className="planner-row-access"
                 />
               </Button>
               {hasLegDetails(access, aire, i) && (
                 <Button
-                  className="phone-row-details-button"
-                  aria-label={strings.phone.legDetailsButton(i + 1)}
+                  className="planner-row-details-button"
+                  aria-label={strings.planner.legDetailsButton(i + 1)}
                   onClick={() => onShowDetails(i)}
                 >
                   <Icon icon={icons.legDetails} />
@@ -130,18 +130,18 @@ export default function PhoneLegsList({
               )}
             </div>
             {(!route || route.status === "pending") && (
-              <span role="status" className="phone-row-routing">
+              <span role="status" className="planner-row-routing">
                 {strings.legRouting}
               </span>
             )}
             {route?.status === "failed" && (
-              <span className="phone-row-failed">
+              <span className="planner-row-failed">
                 <span role="alert">
                   {leg.mode === "paddle" && route.failure.kind === "no-route"
                     ? strings.legRouteFailedNoRiver
                     : strings.legRouteFailed[route.failure.kind]}
                 </span>
-                <Button className="phone-button" onClick={() => onRetry(i)}>
+                <Button className="planner-button" onClick={() => onRetry(i)}>
                   {strings.retryRouting}
                 </Button>
               </span>

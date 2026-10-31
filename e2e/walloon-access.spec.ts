@@ -23,18 +23,18 @@ test("switching the date changes a Walloon stretch's colour, and the panel shows
   await expect(water(page, lesse)).toBeVisible();
   // The layer's date is in the access chip's dialog (ADR 0034).
   const chip = page.getByRole("button", { name: /^Access · / });
-  const accessDialog = page.getByRole("dialog", { name: strings.phone.accessDialogTitle });
+  const accessDialog = page.getByRole("dialog", { name: strings.planner.accessDialogTitle });
   const dateField = accessDialog.getByLabel(strings.accessDateLabel, { exact: true });
   const setDate = async (date: string) => {
     await chip.click();
     await dateField.fill(date);
-    await accessDialog.getByRole("button", { name: strings.phone.accessDialogClose }).click();
+    await accessDialog.getByRole("button", { name: strings.planner.accessDialogClose }).click();
     await expect(accessDialog).toHaveCount(0);
   };
   // Today is the default.
   await chip.click();
   await expect(dateField).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
-  await accessDialog.getByRole("button", { name: strings.phone.accessDialogClose }).click();
+  await accessDialog.getByRole("button", { name: strings.planner.accessDialogClose }).click();
 
   await setDate("2026-07-15");
   await expect(water(page, lesse)).toHaveAttribute("stroke", "#e07b00");
@@ -63,8 +63,8 @@ test("switching the date changes a Walloon stretch's colour, and the panel shows
   await chip.click();
   await accessDialog.getByRole("button", { name: strings.accessTodayButton }).click();
   await expect(accessDialog.getByRole("button", { name: strings.accessTodayButton })).toHaveCount(0);
-  await accessDialog.getByRole("button", { name: strings.phone.accessDialogClose }).click();
-  await expect(chip).toHaveAccessibleName(strings.phone.accessChip(strings.phone.accessChipToday));
+  await accessDialog.getByRole("button", { name: strings.planner.accessDialogClose }).click();
+  await expect(chip).toHaveAccessibleName(strings.planner.accessChip(strings.planner.accessChipToday));
 
   expect(network.blocked).toEqual([]);
 });

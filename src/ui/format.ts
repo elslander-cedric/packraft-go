@@ -22,7 +22,7 @@ export function formatDuration(hours: number): string {
 
 /**
  * A day's calendar date ("YYYY-MM-DD") in parts, e.g. Sat / 31 / Oct / 2026, for the
- * phone's calendar tile. Read in UTC, so it never shifts a day.
+ * day card's calendar tile. Read in UTC, so it never shifts a day.
  */
 export function dayDateParts(date: string): { weekday: string; day: number; month: string; year: number } {
   const day = new Date(`${date}T00:00:00Z`);

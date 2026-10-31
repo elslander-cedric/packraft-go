@@ -110,7 +110,7 @@ test("AC2: cancelling New trip keeps the save, the warning and the in-memory tri
   await clickMap(100);
   await expect(pointMarkers(page)).toHaveCount(2);
 
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "cancel");
 
   await expect(pointMarkers(page)).toHaveCount(2);

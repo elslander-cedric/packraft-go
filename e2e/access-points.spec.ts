@@ -22,8 +22,8 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 // Not through the map region, which the details dialog hides from the accessibility tree while open.
 const markers = (page: Page) => page.locator(".leaflet-container .access-point-marker");
 const details = accessPointDialog;
-const markButton = (page: Page) => page.getByRole("button", { name: strings.phone.markAccessPointButton, exact: true });
-const placingLine = (page: Page) => page.getByRole("status").filter({ hasText: strings.phone.placingState });
+const markButton = (page: Page) => page.getByRole("button", { name: strings.planner.markAccessPointButton, exact: true });
+const placingLine = (page: Page) => page.getByRole("status").filter({ hasText: strings.planner.placingState });
 const toggle = (page: Page, group: string, option: string) =>
   details(page).getByRole("group", { name: group }).getByRole("button", { name: option });
 
@@ -122,9 +122,9 @@ test("delete an access point after confirming", async ({ page }) => {
   await addAccessPoint(page, middle);
   await saveAccessPoint(page);
   // Deleted from its row in the Access points tab.
-  await showTab(page, strings.phone.tabs.accessPoints);
+  await showTab(page, strings.planner.tabs.accessPoints);
   const deleteButton = tripPanel(page)
-    .locator(".phone-access-point-item")
+    .locator(".planner-access-point-item")
     .getByRole("button", { name: /^Delete / });
   await deleteButton.click();
 

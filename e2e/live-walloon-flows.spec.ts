@@ -36,9 +36,9 @@ const detail = (page: Page) => page.getByRole("region", { name: strings.accessDe
 /** Sets the access layer's date in the access chip's dialog (ADR 0034). */
 async function setLayerDate(page: Page, date: string) {
   await page.getByRole("button", { name: /^Access · / }).click();
-  const dialog = page.getByRole("dialog", { name: strings.phone.accessDialogTitle });
+  const dialog = page.getByRole("dialog", { name: strings.planner.accessDialogTitle });
   await dialog.getByLabel(strings.accessDateLabel, { exact: true }).fill(date);
-  await dialog.getByRole("button", { name: strings.phone.accessDialogClose }).click();
+  await dialog.getByRole("button", { name: strings.planner.accessDialogClose }).click();
   await expect(dialog).toHaveCount(0);
 }
 
@@ -232,7 +232,7 @@ test("a day with one held flow-dependent leg and one open leg claims nothing abo
   await expect((await openLegDetails(page, 1)).locator(".leg-access-status")).toContainText(strings.accessChecking);
   await closeLegDetails(page);
 
-  await showTab(page, strings.phone.tabs.days);
+  await showTab(page, strings.planner.tabs.days);
   const day = page.getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem").first();
   // The day's chips (ADR 0029): none says Closed while the flow is held, and the open leg has none.
   const chips = day.locator(".day-warning-chip");

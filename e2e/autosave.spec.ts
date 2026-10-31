@@ -88,8 +88,8 @@ test("a paddle leg is restored on reload with its mode, river route and drop, an
   await page.reload();
   await waitForMap(page);
 
-  await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
-  await expect(rows(page).nth(0)).toHaveClass(/phone-row-hike/);
+  await expect(rows(page).nth(1)).toHaveClass(/planner-row-paddle/);
+  await expect(rows(page).nth(0)).toHaveClass(/planner-row-hike/);
   await expect(legLines(page).nth(1)).toHaveClass(/leg-paddle/);
   await expect(legLines(page).nth(1)).toHaveClass(/leg-routed/);
   await expect(rows(page).nth(1)).toContainText("5.9 km");
@@ -143,7 +143,7 @@ test("new trip, once confirmed, clears to an empty trip, which stays empty after
   await expect(legLines(page)).toHaveClass(/leg-routed/);
 
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
 
   await expect(pointMarkers(page)).toHaveCount(0);
@@ -168,7 +168,7 @@ test("cancelling the new trip question keeps the current trip", async ({ page })
   await expect(legLines(page)).toHaveClass(/leg-routed/);
 
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "cancel");
 
   await expect(pointMarkers(page)).toHaveCount(2);
@@ -189,7 +189,7 @@ test("new trip on a trip without points clears it without asking", async ({ page
   await openMap(page);
 
   await renameTrip(page, "Only a name");
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
 
   await expectTripName(page, "");
   // Updated for Base UI (#31): no in-page confirmation was shown.

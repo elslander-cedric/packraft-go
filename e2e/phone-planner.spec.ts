@@ -1,4 +1,4 @@
-// The phone planner shell (#118, ADR 0026): a full-screen map with a bottom
+// The planner shell on a phone (#118, ADR 0026): a full-screen map with a bottom
 // sheet, tap to add points, undo, show my position. Portrait only.
 import { devices, expect, test, type Page } from "@playwright/test";
 import { serialiseTrip } from "../src/core/saveFile";
@@ -17,9 +17,9 @@ test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 const routed = { brouter: () => ({ status: 200, body: brouterFixture("hiking-success.geojson") }) };
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const sheet = (page: Page) => page.getByRole("dialog", { name: strings.phone.sheetLabel });
+const sheet = (page: Page) => page.getByRole("dialog", { name: strings.planner.sheetLabel });
 const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
-const showPosition = (page: Page) => page.getByRole("button", { name: strings.phone.showPositionButton });
+const showPosition = (page: Page) => page.getByRole("button", { name: strings.planner.showPositionButton });
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const legRows = (page: Page) => sheet(page).getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem");
@@ -77,15 +77,15 @@ test("tapping the map adds points, routes the legs, updates the totals; undo rem
 
   // The totals are in the peek.
   await expect(sheet(page)).toContainText(strings.kilometreUnit);
-  await expect(sheet(page).locator(".phone-totals")).not.toContainText(/^\s*0\.0 km/);
-  const before = await sheet(page).locator(".phone-totals").textContent();
+  await expect(sheet(page).locator(".planner-totals")).not.toContainText(/^\s*0\.0 km/);
+  const before = await sheet(page).locator(".planner-totals").textContent();
 
   await tapMap(page, 100, 120);
   await expect(legLines(page)).toHaveCount(2);
-  await expect.poll(() => sheet(page).locator(".phone-totals").textContent()).not.toBe(before);
+  await expect.poll(() => sheet(page).locator(".planner-totals").textContent()).not.toBe(before);
 
   // The legs tab lists compact rows: mode, distance, time.
-  await tab(page, strings.phone.tabs.legs).click();
+  await tab(page, strings.planner.tabs.legs).click();
   await expect(legRows(page)).toHaveCount(2);
   await expect(legRows(page).first()).toContainText(strings.legModeHike);
   await expect(legRows(page).first()).toContainText(strings.kilometreUnit);
@@ -109,14 +109,14 @@ test("the peek shows the five tabs (an empty, unnamed trip has no name or totals
   await openPhone(page);
   await dataFonts(page);
 
-  const names = Object.values(strings.phone.tabs);
+  const names = Object.values(strings.planner.tabs);
   for (const name of names) await expect(tab(page, name)).toBeVisible();
-  await expect(sheet(page).locator(".phone-totals")).toHaveCount(0);
+  await expect(sheet(page).locator(".planner-totals")).toHaveCount(0);
 
   // The sheet slides in when the planner opens.
   await expect.poll(() => sheetHeight(page)).toBeLessThan(200);
-  await tab(page, strings.phone.tabs.days).click();
-  await expect(tab(page, strings.phone.tabs.days)).toHaveAttribute("aria-selected", "true");
+  await tab(page, strings.planner.tabs.days).click();
+  await expect(tab(page, strings.planner.tabs.days)).toHaveAttribute("aria-selected", "true");
   await expect.poll(() => sheetHeight(page)).toBeGreaterThan(page.viewportSize()!.height * 0.45);
   expect(await sheetHeight(page)).toBeLessThan(page.viewportSize()!.height * 0.55);
 });
@@ -132,7 +132,7 @@ test("on a narrow phone the tabs share the row equally, each keeps its full name
   // Each tab gets the same width; a long name may wrap onto a second line but is never cut off,
   // and no tab is out of view.
   const widths: number[] = [];
-  for (const name of Object.values(strings.phone.tabs)) {
+  for (const name of Object.values(strings.planner.tabs)) {
     const fits = await tab(page, name).evaluate((el) => el.scrollWidth <= el.clientWidth && el.clientHeight < 60);
     expect(fits).toBe(true);
     await expect(tab(page, name)).toBeInViewport({ ratio: 1 });
@@ -165,7 +165,7 @@ test("the sheet settles at peek, half or 90% by drag distance, never closes, and
   await dragSheet(page, screen);
   await expect.poll(() => sheetHeight(page)).toBeLessThan(peek + 4);
   await expect(sheet(page)).toBeVisible();
-  await expect(tab(page, strings.phone.tabs.legs)).toBeVisible();
+  await expect(tab(page, strings.planner.tabs.legs)).toBeVisible();
   // And it stays there: the drawer doesn't bounce back to 90% once its animations end (#126).
   await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   await page.waitForTimeout(300);
@@ -197,7 +197,7 @@ test("a finger drag on the sheet settles at peek, half or 90% and never closes i
   await fingerDrag(screen);
   await expect.poll(() => sheetHeight(page)).toBeLessThan(peek + 4);
   await expect(sheet(page)).toBeVisible();
-  await expect(tab(page, strings.phone.tabs.legs)).toBeVisible();
+  await expect(tab(page, strings.planner.tabs.legs)).toBeVisible();
 });
 
 test("a double tap neither zooms nor adds two points", async ({ page }) => {
@@ -261,7 +261,7 @@ test("the position button shows the position dot, also with the network blocked"
 
   await expect(positionMarker(page)).toHaveCount(1);
   // The dot says where you are; no status line once it is shown.
-  await expect(page.getByRole("status").filter({ hasText: strings.phone.positionLocating })).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: strings.planner.positionLocating })).toHaveCount(0);
 });
 
 test("a denied location permission says so", async ({ page, context }) => {
@@ -276,7 +276,7 @@ test("a denied location permission says so", async ({ page, context }) => {
     };
   });
   await showPosition(page).click();
-  await expect(page.getByRole("alert").filter({ hasText: strings.phone.positionDenied })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: strings.planner.positionDenied })).toBeVisible();
   await expect(positionMarker(page)).toHaveCount(0);
 });
 
@@ -317,7 +317,7 @@ test("offline, the planner opens from the app cache with the stored trip; an unr
   // The stored trip's one leg is back on the map.
   await expect(legLines(page)).toHaveCount(1);
   await expect(legLines(page)).toHaveAttribute("stroke-dasharray", "8 8");
-  await tab(page, strings.phone.tabs.legs).click();
+  await tab(page, strings.planner.tabs.legs).click();
   await expect(legRows(page).first().getByRole("button", { name: strings.retryRouting })).toBeVisible();
   // No offline banner.
   await expect(page.getByText(/offline/i)).toHaveCount(0);
@@ -340,10 +340,10 @@ test("the floating buttons are icon-only: an icon each, no glyph text, named for
   await serveOffline(page);
   await openPhone(page);
   const named = [
-    [strings.phone.menu.button, icons.menu],
-    [strings.phone.showPositionButton, icons.showPosition],
+    [strings.planner.menu.button, icons.menu],
+    [strings.planner.showPositionButton, icons.showPosition],
     [strings.mapMenuButton, icons.mapMenu],
-    [strings.phone.markAccessPointButton, icons.accessPoint],
+    [strings.planner.markAccessPointButton, icons.accessPoint],
     [strings.legModeHike, icons.hike],
     [strings.legModePaddle, icons.paddle],
     [strings.undoButton, icons.undo],
@@ -359,7 +359,7 @@ test("the floating buttons are icon-only: an icon each, no glyph text, named for
 // Updated for ADR 0034 (#190): every screen gets this planner; only a narrow screen in
 // portrait gets the sheet, every other one the side panel.
 test.describe("which screens get the sheet", () => {
-  const panel = (page: Page) => page.getByRole("complementary", { name: strings.phone.sheetLabel });
+  const panel = (page: Page) => page.getByRole("complementary", { name: strings.planner.sheetLabel });
 
   test("640 px wide in portrait gets the sheet, 641 px the side panel", async ({ page }) => {
     await serveOffline(page);
@@ -379,7 +379,7 @@ test.describe("which screens get the sheet", () => {
     await expect(sheet(page)).toHaveCount(0);
   });
 
-  test("an iPad-sized touch screen gets the side panel, not the desktop planner", async ({ page }) => {
+  test("an iPad-sized touch screen gets the side panel, not the sheet", async ({ page }) => {
     await serveOffline(page);
     await page.setViewportSize({ width: 810, height: 1080 });
     await openPhone(page);
@@ -399,7 +399,7 @@ test.describe("a narrowed desktop window with a mouse", () => {
     await page.mouse.click(box.x + box.width / 2 - 60, box.y + 150);
     await page.mouse.click(box.x + box.width / 2 + 60, box.y + 150);
     await expect(legLines(page)).toHaveCount(1);
-    await tab(page, strings.phone.tabs.legs).click();
+    await tab(page, strings.planner.tabs.legs).click();
     await expect(legRows(page)).toHaveCount(1);
     await undoButton(page).click();
     await expect(legLines(page)).toHaveCount(0);

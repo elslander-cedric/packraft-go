@@ -48,14 +48,8 @@
   --radius-control: 0.375rem;
   /* A finger-sized control: dialog buttons and fields, menu rows. */
   --control-height: 2.75rem;
-  /* A button among Leaflet's controls on the desktop map, like the zoom buttons (#179). */
-  --map-control-size: 2.25rem;
-  /* The border of Leaflet's own controls (its zoom buttons), for our map controls. */
-  --map-control-border: 2px solid rgb(0 0 0 / 20%);
-  /* The map's bottom-right corner: the base map button, its margins and up to three lines of attribution. */
-  --map-bottom-right-reserve: calc(var(--map-control-size) + 6rem);
   --shadow-popup: 0 0.25rem 1rem rgb(0 0 0 / 20%);
-  /* Buttons floating on the map (phone) and the bottom sheet's edge. */
+  /* Buttons floating on the map and the bottom sheet's edge. */
   --shadow-float: 0 1px 4px rgb(0 0 0 / 30%);
   /* Behind the tiles while they load (Leaflet's own grey in the light theme). */
   --color-map-background: #ddd;
@@ -145,188 +139,17 @@ body {
   font-size: 0.9rem;
 }
 
-/* The phone planner shows the disclaimer in the access dialog
-   instead (ADR 0026). Keep this query in step with PHONE_QUERY in usePhoneLayout.ts. */
+/* On a phone the planner shows the disclaimer in the access dialog
+   instead (ADR 0026). Keep this query in step with PHONE_QUERY in usePlannerLayout.ts. */
 @media (max-width: 640px), (max-height: 640px) and (pointer: coarse) {
   .navigation-notice {
     display: none;
   }
 }
 
-.planner {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-}
-
-.map {
-  flex: 1;
-  min-width: 0;
-}
-
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  /* Wide enough for a leg row's figures on two lines (#27); desktop-first (ADR 0005). */
-  width: 24rem;
-  border-left: 1px solid var(--color-border);
-  font-size: 0.9rem;
-}
-
 .planner-loading {
   flex: 1;
   padding: 1rem;
-}
-
-.trip-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem 0;
-}
-
-/* The name takes its own row; the trip actions wrap below it. */
-.trip-name {
-  display: flex;
-  flex-basis: 100%;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.trip-name span {
-  font-size: 0.8rem;
-  color: var(--color-muted);
-}
-
-/* The start date and its clear button share a row below the name (#52). */
-.trip-start-date {
-  display: flex;
-  flex-basis: 100%;
-  align-items: flex-end;
-  gap: 0.5rem;
-}
-
-.trip-start-date label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.trip-start-date span {
-  font-size: 0.8rem;
-  color: var(--color-muted);
-}
-
-.file-error {
-  flex-basis: 100%;
-  margin: 0;
-  color: var(--color-danger);
-  font-size: 0.8rem;
-}
-
-/* An autosave from a newer or unknown version is kept (#28). */
-.autosave-warning {
-  margin: 0;
-  padding: var(--space-2);
-  border-bottom: 1px solid var(--color-danger);
-  color: var(--color-danger);
-  font-size: 0.8rem;
-}
-
-.edit-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem 0;
-}
-
-.edit-hint {
-  flex-basis: 100%;
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.8rem;
-}
-
-.legs-panel {
-  flex: 1;
-  /* Keeps a few legs in view when the days panel below needs room too. */
-  min-height: 10rem;
-  padding: 0 1rem;
-  overflow-y: auto;
-}
-
-.legs-panel h2 {
-  font-size: 1rem;
-}
-
-.legs {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* A leg row reads in two lines: the leg, its mode and distance; then its
-   other figures with the time at the end. A figure never breaks inside. */
-.leg-row {
-  display: flex;
-  flex-direction: column;
-  row-gap: var(--space-1);
-  padding: var(--space-1) var(--space-2) var(--space-1) 0;
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-
-/* The leg a day row's warning chip asked to show: highlighted for a moment (#58). */
-.leg-row-shown {
-  animation: leg-row-shown 2s ease-out;
-}
-
-@keyframes leg-row-shown {
-  from {
-    background: var(--color-surface-hover);
-  }
-}
-
-.leg-row-heading,
-.leg-figures {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  column-gap: var(--space-2);
-}
-
-.leg-name {
-  min-width: 3.25rem;
-  font-weight: 600;
-}
-
-.leg-figures {
-  column-gap: 0.75rem;
-}
-
-.leg-figure {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-/* The distance and the time line up on the right of every row. */
-.leg-distance,
-.leg-time {
-  margin-left: auto;
-}
-
-/* Hike and paddle rows carry the colour of their line on the map. */
-.leg-row-hike {
-  border-left: 4px solid var(--color-hike);
-  padding-left: 0.4rem;
-}
-
-.leg-row-paddle {
-  border-left: 6px solid var(--color-paddle);
-  /* The thicker border takes 2px of the padding, so hike and paddle text line up. */
-  padding-left: calc(0.4rem - 2px);
-  background: var(--color-paddle-tint);
 }
 
 .toggle.leg-mode-hike[data-pressed] {
@@ -341,24 +164,6 @@ body {
   color: var(--color-on-accent);
 }
 
-.leg-routing,
-.leg-route-failed {
-  color: var(--color-muted);
-  font-size: 0.85rem;
-}
-
-/* The message wraps; the Retry button keeps its size beside it. */
-.leg-route-failed {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  color: var(--color-danger);
-}
-
-.leg-route-failed .button {
-  flex-shrink: 0;
-}
-
 /* Leaflet paths: a pending leg pulses until its route arrives. */
 path.leg-pending {
   animation: leg-pending-pulse 1s ease-in-out infinite alternate;
@@ -371,45 +176,6 @@ path.leg-pending {
   to {
     stroke-opacity: 0.3;
   }
-}
-
-.legs-panel-empty {
-  color: var(--color-muted);
-}
-
-.trip-total,
-.trip-time {
-  font-weight: 600;
-}
-
-/* The trip totals sit below a rule, apart from the leg rows. */
-.trip-total {
-  margin: var(--space-3) 0 0;
-  padding-top: var(--space-2);
-  border-top: 2px solid var(--color-border);
-}
-
-.trip-time {
-  margin-top: 0.25rem;
-}
-
-.time-estimate-note {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.8rem;
-}
-
-.days-panel {
-  flex: 0 1 auto;
-  min-height: 6rem;
-  max-height: 40%;
-  padding: 0 1rem 0.5rem;
-  border-top: 1px solid var(--color-border);
-  overflow-y: auto;
-}
-
-.days-panel h2 {
-  font-size: 1rem;
 }
 
 .days {
@@ -427,46 +193,12 @@ path.leg-pending {
   margin-bottom: 0.25rem;
 }
 
-.day-row > span {
-  white-space: nowrap;
-}
-
-.day-label,
-.day-time {
-  font-weight: 600;
-}
-
-/* The day and its legs on the first line, the figures below, the time on its own line. */
-.day-heading,
-.day-time {
-  flex-basis: 100%;
-}
-
 .day-legs {
   color: var(--color-muted);
 }
 
-.button.camp-toggle[aria-pressed="true"] {
-  border-color: var(--color-camp);
-  background: var(--color-camp);
-  color: var(--color-on-accent);
-}
-
 .camp-marker > svg {
   display: block;
-}
-
-.settings-panel {
-  padding: 0 1rem 1rem;
-  border-top: 1px solid var(--color-border);
-}
-
-.settings-panel h2 {
-  font-size: 1rem;
-}
-
-.settings-panel .number-field {
-  margin-bottom: 0.75rem;
 }
 
 .map-loading {

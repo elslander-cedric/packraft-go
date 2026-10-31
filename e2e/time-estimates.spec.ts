@@ -15,15 +15,15 @@ import {
   totals,
 } from "./support/planner";
 
-const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".phone-row-time");
+const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".planner-row-time");
 const tripTime = (page: Page) =>
-  totals(page).locator(".phone-total").filter({ hasText: strings.phone.totals.labels.time });
+  totals(page).locator(".planner-total").filter({ hasText: strings.planner.totals.labels.time });
 const paceFactor = (page: Page) => settingsDialog(page).getByLabel(strings.paceFactorLabel);
 const paddleSpeed = (page: Page) => settingsDialog(page).getByLabel(strings.paddleSpeedLabel);
-const legTimeLabel = strings.phone.legFigures.time;
-const tripTimeLabel = strings.phone.totals.labels.time;
+const legTimeLabel = strings.planner.legFigures.time;
+const tripTimeLabel = strings.planner.totals.labels.time;
 /** Menu → Settings, left open. */
-const openSettings = (page: Page) => menuItem(page, strings.phone.menu.settings);
+const openSettings = (page: Page) => menuItem(page, strings.planner.menu.settings);
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.geojson") };
@@ -95,7 +95,7 @@ test("changing the pace factor and paddling speed updates the times at once", as
   // While a field is cleared or not a positive number, the settings can't be saved and the
   // times keep the last usable value.
   await openSettings(page);
-  const save = settingsDialog(page).getByRole("button", { name: strings.phone.menu.settingsConfirm });
+  const save = settingsDialog(page).getByRole("button", { name: strings.planner.menu.settingsConfirm });
   await paceFactor(page).fill("");
   await expect(save).toBeDisabled();
   await paceFactor(page).fill("0");

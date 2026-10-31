@@ -1,6 +1,6 @@
 // Legs stand out from the map's layers: each leg is drawn on a white casing, and the legs sit
 // above the access layer's waters, which used to paint over a paddle leg on the same water
-// (prototype/layer-colours). Checked on the desktop and the phone with a paddle leg routed
+// (prototype/layer-colours). Checked on a desktop-sized window and a phone with a paddle leg routed
 // along the Ghent–Terneuzen canal, which the built-in Flemish data draws as a water.
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";

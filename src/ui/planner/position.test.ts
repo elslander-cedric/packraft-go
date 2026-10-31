@@ -20,7 +20,7 @@ describe("positionMessage", () => {
   });
 
   it("says it is looking while the browser locates", () => {
-    expect(positionMessage({ state: "locating" })).toEqual({ kind: "status", text: strings.phone.positionLocating });
+    expect(positionMessage({ state: "locating" })).toEqual({ kind: "status", text: strings.planner.positionLocating });
   });
 
   it("says nothing once the position is shown: the map shows it", () => {
@@ -30,10 +30,10 @@ describe("positionMessage", () => {
   it("explains each failure as an alert", () => {
     expect(positionMessage({ state: "failed", reason: "denied" })).toEqual({
       kind: "alert",
-      text: strings.phone.positionDenied,
+      text: strings.planner.positionDenied,
     });
-    expect(positionMessage({ state: "failed", reason: "unavailable" })?.text).toBe(strings.phone.positionUnavailable);
-    expect(positionMessage({ state: "failed", reason: "timeout" })?.text).toBe(strings.phone.positionTimeout);
-    expect(positionMessage({ state: "failed", reason: "unsupported" })?.text).toBe(strings.phone.positionUnsupported);
+    expect(positionMessage({ state: "failed", reason: "unavailable" })?.text).toBe(strings.planner.positionUnavailable);
+    expect(positionMessage({ state: "failed", reason: "timeout" })?.text).toBe(strings.planner.positionTimeout);
+    expect(positionMessage({ state: "failed", reason: "unsupported" })?.text).toBe(strings.planner.positionUnsupported);
   });
 });

@@ -1,0 +1,31 @@
+/* An access point's fields (#55, #63), in its dialog; planner.css sizes them for a finger. */
+.access-point-dates {
+  margin: var(--space-1) 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.access-point-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+}
+
+.access-point-field .toggle-group {
+  flex-wrap: wrap;
+}
+
+.access-point-field input[type="text"] {
+  font: inherit;
+}
+
+.access-point-checked {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.access-point-checked .access-point-field {
+  margin-bottom: 0;
+}

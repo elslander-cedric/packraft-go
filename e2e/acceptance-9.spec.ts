@@ -163,7 +163,7 @@ test("#9: typing in the name field does not trigger planner shortcuts, and undo 
   await expect(legLines(page)).toHaveCount(1);
 
   // The name is typed in the Edit trip dialog.
-  await menuItem(page, strings.phone.menu.tripDetails);
+  await menuItem(page, strings.planner.menu.tripDetails);
   const tripName = tripDetailsDialog(page).getByLabel(strings.tripNameLabel);
   await tripName.fill("Ambl");
   await tripName.press("ControlOrMeta+z");
@@ -192,7 +192,7 @@ test("#9: new trip clears everything; a late route answer does not bring legs ba
 
   // Updated in round 2: new trip asks for confirmation when the trip has points; accept it.
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   g.open(SNAPPED);
   await page.waitForTimeout(500);
@@ -204,7 +204,7 @@ test("#9: new trip clears everything; a late route answer does not bring legs ba
   expect((await stored(page)).trip).toMatchObject({ name: "", points: [], legs: [] });
 
   // Pressing it again on an empty trip is harmless.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await reload(page);
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
@@ -291,24 +291,24 @@ test("#9 round 2: a single point is enough to ask; cancel keeps it, OK clears it
   await expect(pointMarkers(page)).toHaveCount(1);
   await expect.poll(async () => (await stored(page))?.trip.points.length).toBe(1);
 
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "cancel");
   await page.waitForTimeout(300);
   await expect(pointMarkers(page)).toHaveCount(1);
   expect((await stored(page)).trip.points).toHaveLength(1);
 
   // Cancelling twice in a row still changes nothing.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "cancel");
   await expect(pointMarkers(page)).toHaveCount(1);
 
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await expect(pointMarkers(page)).toHaveCount(0);
   expect((await stored(page)).trip).toMatchObject({ name: "", points: [], legs: [] });
 
   // Now empty: no question.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await page.waitForTimeout(300);
   await expect(confirmDialog(page)).toHaveCount(0);
 });
@@ -323,7 +323,7 @@ test("#9 round 2: a trip restored after reload is asked about; a trip emptied by
   await reload(page);
   await expect(pointMarkers(page)).toHaveCount(2);
 
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "cancel");
   await expect(pointMarkers(page)).toHaveCount(2);
   await reload(page);
@@ -338,7 +338,7 @@ test("#9 round 2: a trip restored after reload is asked about; a trip emptied by
   await undoBtn(page).click();
   await expect(pointMarkers(page)).toHaveCount(0);
   await renameTrip(page, "Named but empty");
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await expectTripName(page, "");
   await expect(confirmDialog(page)).toHaveCount(0);
 });

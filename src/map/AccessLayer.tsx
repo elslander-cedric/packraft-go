@@ -13,14 +13,8 @@ export type AccessLayerProps = {
   features: readonly AccessFeature[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  /** Lock markers (#57), drawn above the waters. */
+  /** Lock markers (#57), drawn above the legs' hit lines, so a tap on one opens its details. */
   locks?: readonly LockMarker[];
-  /**
-   * The phone's gestures (#125, ADR 0026): a tap on water is a tap on the map (it edits the
-   * route), and holding a water 0.4 s (or a right-click on it) opens its details. Locks are
-   * drawn above the legs' hit lines, so a tap on one opens its details.
-   */
-  touch?: boolean;
 };
 
 const toLatLng = ([lng, lat]: Position): LatLngExpression => [lat, lng];
@@ -39,15 +33,18 @@ function shapeOf(geometry: Geometry): { kind: "line" | "area"; positions: LatLng
   }
 }
 
-type AccessShapeProps = { feature: AccessFeature; selected: boolean; onSelect: () => void; touch: boolean };
+type AccessShapeProps = { feature: AccessFeature; selected: boolean; onSelect: () => void };
 
-function AccessShape({ feature, selected, onSelect, touch }: AccessShapeProps) {
+/**
+ * A water, with the planner's gestures (#125, ADR 0026): a tap on it is a tap on the map
+ * (it edits the route), and holding it 0.4 s (or a right-click on it) opens its details.
+ */
+function AccessShape({ feature, selected, onSelect }: AccessShapeProps) {
   const line = useRef<LeafletPolyline>(null);
   const area = useRef<LeafletPolygon>(null);
   const state: AccessState = feature.status.state;
   const { kind, positions } = shapeOf(feature.record.geometry);
-  // On the phone, holding the water opens its details.
-  useHold(kind === "line" ? line : area, onSelect, touch);
+  useHold(kind === "line" ? line : area, onSelect);
   const colour = accessColours[state];
   // Leaflet only reads className when the path is created, so selection toggles the class directly.
   useEffect(() => {
@@ -56,9 +53,6 @@ function AccessShape({ feature, selected, onSelect, touch }: AccessShapeProps) {
   const common = {
     // Classes let tests and styles find a water by id and state.
     className: `access-feature access-${state} access-record-${feature.record.id}`,
-    // A click on a water opens its details; it doesn't add a point to the trip.
-    // On the phone a tap on water is a tap on the map, and a hold opens the details.
-    ...(touch ? {} : { bubblingMouseEvents: false, eventHandlers: { click: onSelect } }),
   };
   return kind === "line" ? (
     <Polyline
@@ -103,8 +97,7 @@ function LockMarkers({ locks, selectedId, onSelect }: Required<Pick<AccessLayerP
 }
 
 /** The access layer: specific waters coloured by access status, and lock markers, below the trip. */
-export default function AccessLayer({ features, selectedId, onSelect, locks = [], touch = false }: AccessLayerProps) {
-  const lockMarkers = <LockMarkers locks={locks} selectedId={selectedId} onSelect={onSelect} />;
+export default function AccessLayer({ features, selectedId, onSelect, locks = [] }: AccessLayerProps) {
   return (
     <>
       <Pane name="access" pane="overlayPane" style={{ zIndex: paneZIndex.access }}>
@@ -116,19 +109,15 @@ export default function AccessLayer({ features, selectedId, onSelect, locks = []
               feature={feature}
               selected={feature.record.id === selectedId}
               onSelect={() => onSelect(feature.record.id)}
-              touch={touch}
             />
           ))}
-          {!touch && lockMarkers}
         </LayerGroup>
       </Pane>
-      {/* On the phone, locks sit above the legs' hit lines and below the access-point markers,
+      {/* Locks sit above the legs' hit lines and below the access-point markers,
           so a tap on a lock on a leg still opens the lock. */}
-      {touch && (
-        <Pane name="access-locks" style={{ zIndex: paneZIndex.accessLocks }}>
-          {lockMarkers}
-        </Pane>
-      )}
+      <Pane name="access-locks" style={{ zIndex: paneZIndex.accessLocks }}>
+        <LockMarkers locks={locks} selectedId={selectedId} onSelect={onSelect} />
+      </Pane>
     </>
   );
 }

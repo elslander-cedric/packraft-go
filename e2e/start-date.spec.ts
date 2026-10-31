@@ -22,7 +22,7 @@ import {
 
 /** The Days tab's cards; shows the tab first. */
 const dayRows = async (page: Page) => {
-  await showTab(page, strings.phone.tabs.days);
+  await showTab(page, strings.planner.tabs.days);
   return dayCards(page);
 };
 const campButton = (page: Page) => page.getByRole("button", { name: strings.campButton });
@@ -43,7 +43,7 @@ test("set, change and clear a start date; day cards show their dates", async ({ 
   await drawTwoDays(page);
   expect(await shownStartDate(page)).toBe("");
   expect(await dayCardDates(page)).toEqual([]);
-  await menuItem(page, strings.phone.menu.tripDetails);
+  await menuItem(page, strings.planner.menu.tripDetails);
   await expect(tripDetailsDialog(page).getByRole("button", { name: strings.clearStartDateButton })).toHaveCount(0);
   await tripDetailsDialog(page).getByRole("button", { name: strings.confirmCancel }).click();
 
@@ -90,7 +90,7 @@ test("the start date survives save to file and open file", async ({ page }) => {
   });
 
   // Updated for ADR 0034: a new trip starts on today in Brussels.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   expect(await shownStartDate(page)).toBe(todayInBrussels(new Date()));
   await expect(await dayRows(page)).toHaveCount(0);

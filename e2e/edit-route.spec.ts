@@ -97,7 +97,7 @@ test("draw, drag a point, delete a point, then undo everything back to an empty 
   await deleteButton(page).click();
   await expect(points(page)).toHaveCount(2);
   await expect(legRows(page)).toHaveCount(1);
-  await expect(legRows(page).nth(0)).toContainText(strings.phone.legFigures.hike);
+  await expect(legRows(page).nth(0)).toContainText(strings.planner.legFigures.hike);
   const merged = (await legLines(page).nth(0).boundingBox())!;
   expect(Math.abs(merged.x - a.x)).toBeLessThan(6);
   expect(Math.abs(merged.x + merged.width - c.x)).toBeLessThan(6);

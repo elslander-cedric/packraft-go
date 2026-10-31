@@ -35,11 +35,11 @@ const results = (page: Page) => page.getByRole("listbox", { name: text.resultsLa
 const clear = (page: Page) => page.getByRole("button", { name: text.clear });
 const pin = (page: Page) => mapRegion(page).locator(".search-result-marker");
 const pinLabel = (page: Page) => mapRegion(page).locator(".search-result-label");
-const menuButton = (page: Page) => page.getByRole("button", { name: strings.phone.menu.button });
-const positionButton = (page: Page) => page.getByRole("button", { name: strings.phone.showPositionButton });
+const menuButton = (page: Page) => page.getByRole("button", { name: strings.planner.menu.button });
+const positionButton = (page: Page) => page.getByRole("button", { name: strings.planner.showPositionButton });
 const chip = (page: Page) => page.getByRole("button", { name: /^Access · / });
-const accessDialog = (page: Page) => page.getByRole("dialog", { name: strings.phone.accessDialogTitle });
-const panel = (page: Page) => page.getByRole("complementary", { name: strings.phone.sheetLabel });
+const accessDialog = (page: Page) => page.getByRole("dialog", { name: strings.planner.accessDialogTitle });
+const panel = (page: Page) => page.getByRole("complementary", { name: strings.planner.sheetLabel });
 
 /** The requests serveOffline blocked in the running test: there must be none (no live call, ADR 0019). */
 let blocked: string[] = [];
@@ -121,7 +121,7 @@ test("nothing found says so under the field and keeps the map where it is", asyn
 test("with the sheet raised, the results show over it and can be picked", async ({ page }) => {
   await offline(page, { nominatim: bySearchText });
   await openPhone(page);
-  await page.getByRole("dialog", { name: strings.phone.sheetLabel }).getByRole("tab", { name: strings.phone.tabs.days }).click();
+  await page.getByRole("dialog", { name: strings.planner.sheetLabel }).getByRole("tab", { name: strings.planner.tabs.days }).click();
   await settled(page);
   await search(page, "hotton");
   await expect(results(page)).toHaveCount(2);
@@ -188,7 +188,7 @@ test("coordinates jump there with no request, in the middle of the map the sheet
   // Once the map has zoomed, the pin's point is centred across it, and between the pill's row and the sheet.
   await settled(page);
   const map = await box(mapRegion(page));
-  const sheetTop = (await box(page.getByRole("dialog", { name: strings.phone.sheetLabel }))).y;
+  const sheetTop = (await box(page.getByRole("dialog", { name: strings.planner.sheetLabel }))).y;
   const pillBox = await box(pill(page));
   const marker = await box(pin(page));
   const tip = { x: marker.x + 14, y: marker.y + 34 };
@@ -262,14 +262,14 @@ async function withTripDayChip(page: Page) {
   await toggleAccessLayer(page);
   await chip(page).click();
   await accessDialog(page).getByLabel(strings.accessTripDayLabel).selectOption("2026-12-15");
-  await accessDialog(page).getByRole("button", { name: strings.phone.accessDialogClose }).click();
-  await expect(chip(page)).toHaveAccessibleName(strings.phone.accessChip("2026-12-15"));
+  await accessDialog(page).getByRole("button", { name: strings.planner.accessDialogClose }).click();
+  await expect(chip(page)).toHaveAccessibleName(strings.planner.accessChip("2026-12-15"));
   await settled(page);
 }
 
 /** The pill sits on the top row between the menu and the right-hand buttons, touching neither. */
 async function expectPillBetweenButtons(page: Page) {
-  const pillBox = await box(page.locator(".phone-place-search"));
+  const pillBox = await box(page.locator(".planner-place-search"));
   expect(apart(pillBox, await box(menuButton(page)))).toBe(true);
   expect(apart(pillBox, await box(positionButton(page)))).toBe(true);
   expect(apart(pillBox, await box(mapMenuButton(page)))).toBe(true);
@@ -279,7 +279,7 @@ async function expectPillBetweenButtons(page: Page) {
 
 /** The chip is on its own row under the pill, fully visible, its whole text shown. */
 async function expectChipUnderPill(page: Page) {
-  const pillBox = await box(page.locator(".phone-place-search"));
+  const pillBox = await box(page.locator(".planner-place-search"));
   const chipBox = await box(chip(page));
   expect(chipBox.y).toBeGreaterThanOrEqual(pillBox.y + pillBox.height);
   expect(apart(chipBox, await box(mapMenuButton(page)))).toBe(true);
@@ -301,7 +301,7 @@ for (const size of [
 
     // Open, the field widens over the buttons beside it and stays on screen.
     await pill(page).click();
-    await expectOnScreen(page, page.locator(".phone-place-search-open"));
+    await expectOnScreen(page, page.locator(".planner-place-search-open"));
   });
 }
 
@@ -309,16 +309,16 @@ test("sideways, the pill and the open field stop short of the side panel, collap
   await page.setViewportSize({ width: 812, height: 375 });
   await withTripDayChip(page);
   // The panel opens on first load (ADR 0034); start from the strip.
-  await panel(page).getByRole("button", { name: strings.phone.collapsePanelButton }).click();
+  await panel(page).getByRole("button", { name: strings.planner.collapsePanelButton }).click();
   await settled(page);
 
   for (const state of ["collapsed", "open"]) {
     if (state === "open") {
-      await panel(page).getByRole("button", { name: strings.phone.expandPanelButton }).click();
+      await panel(page).getByRole("button", { name: strings.planner.expandPanelButton }).click();
       await settled(page);
     }
     const panelLeft = (await box(panel(page))).x;
-    const pillBox = await box(page.locator(".phone-place-search"));
+    const pillBox = await box(page.locator(".planner-place-search"));
     expect(pillBox.x + pillBox.width, `pill, panel ${state}`).toBeLessThanOrEqual(panelLeft);
     await expectPillBetweenButtons(page);
     await expectChipUnderPill(page);
@@ -327,7 +327,7 @@ test("sideways, the pill and the open field stop short of the side panel, collap
 
     await pill(page).click();
     await settled(page);
-    const open = await box(page.locator(".phone-place-search-open"));
+    const open = await box(page.locator(".planner-place-search-open"));
     expect(open.x + open.width, `open field, panel ${state}`).toBeLessThanOrEqual(panelLeft);
     await back(page).click();
   }
@@ -378,7 +378,7 @@ test.describe("the on-screen keyboard", () => {
 
     // A tall keyboard leaves less room than the results need.
     await openKeyboard(page, 620);
-    const open = page.locator(".phone-place-search-open");
+    const open = page.locator(".planner-place-search-open");
     await expectAboveKeyboard(page, open);
     await expectAboveKeyboard(page, field(page));
     const answer = open.locator(".search-box-answer");

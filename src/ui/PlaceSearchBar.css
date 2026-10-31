@@ -13,33 +13,3 @@
   color: var(--color-muted);
   font-size: 0.85em;
 }
-
-/* Desktop (#173): over the map's top left, right of Leaflet's zoom buttons. It never covers
-   the access layer's date: it leaves room for the access overlay top right (at most 20rem);
-   on a map too narrow for both, the bar takes the top row and the overlay moves under it. */
-.map:has(> .place-search-map-bar) {
-  container: map / inline-size;
-}
-
-.place-search-map-bar {
-  position: absolute;
-  top: var(--space-2);
-  left: 3.5rem;
-  /* Above Leaflet's panes and controls (z-index up to 1000), like the access overlay. */
-  z-index: 1100;
-  width: min(22rem, calc(100% - 3.5rem - 20rem - 3 * var(--space-2)));
-  border-radius: var(--radius-control);
-  box-shadow: var(--shadow-popup);
-}
-
-@container map (max-width: 40rem) {
-  .place-search-map-bar {
-    width: auto;
-    right: var(--space-2);
-  }
-
-  .access-overlay {
-    top: calc(2 * var(--space-2) + var(--control-height));
-    max-height: calc(100% - 2 * var(--space-2) - var(--control-height) - var(--map-bottom-right-reserve));
-  }
-}

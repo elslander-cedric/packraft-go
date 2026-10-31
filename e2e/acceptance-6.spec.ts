@@ -15,7 +15,7 @@ const markers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane p
 const rows = (page: Page) => panel(page).getByRole("listitem");
 const undoBtn = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const deleteBtn = (page: Page) => page.getByRole("button", { name: strings.deletePointButton });
-const total = async (page: Page) => (await tripPanel(page).locator(".phone-totals").textContent()) ?? "";
+const total = async (page: Page) => (await tripPanel(page).locator(".planner-totals").textContent()) ?? "";
 
 async function openMap(page: Page) {
   const network = await serveOffline(page);
@@ -121,7 +121,7 @@ test("AC2: deleting a middle point merges its legs; deleting an end point remove
   await deleteBtn(page).click();
   await expect(markers(page)).toHaveCount(3);
   await expect(rows(page)).toHaveCount(2);
-  await expect(rows(page).first()).toContainText(strings.phone.legFigures.hike);
+  await expect(rows(page).first()).toContainText(strings.planner.legFigures.hike);
   const merged = await ends(legLines(page).nth(0));
   expect(near(merged[0], p[0]) && near(merged[1], p[2])).toBe(true);
 

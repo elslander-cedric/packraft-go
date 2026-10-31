@@ -18,7 +18,7 @@ const routed = {
   }),
 };
 
-const text = strings.phone;
+const text = strings.planner;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");

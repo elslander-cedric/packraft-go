@@ -11,12 +11,12 @@ import { TextEntryDialog } from "../components/TextEntryDialog";
 import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
 import { strings } from "../strings";
-import PhoneSettingsDialog from "./PhoneSettingsDialog";
-import PhoneTripDetailsDialog from "./PhoneTripDetailsDialog";
+import SettingsDialog from "./SettingsDialog";
+import TripDetailsDialog from "./TripDetailsDialog";
 
-const text = strings.phone.menu;
+const text = strings.planner.menu;
 
-/** The questions asked before a trip with points is replaced, as on desktop. */
+/** The questions asked before a trip with points is replaced. */
 const confirmations = { newTrip: strings.newTripConfirm, openFile: strings.openFileConfirm } as const;
 
 /** Which file the name dialog is asking the name for. */
@@ -27,7 +27,7 @@ const nameDialogs = {
   export: { title: text.exportTitle, confirm: text.exportConfirm },
 } as const;
 
-export type PhoneMenuProps = {
+export type PlannerMenuProps = {
   trip: Trip;
   question: ReplaceQuestion;
   /** Set while the replace question is open. */
@@ -43,14 +43,14 @@ export type PhoneMenuProps = {
 };
 
 /**
- * The phone's floating menu top left (#124, ADR 0026), each item with an icon, in three
+ * The planner's floating menu top left (#124, ADR 0026), each item with an icon, in three
  * groups: New trip, Edit trip (#154), which opens the trip's name and start date in a
  * dialog, Save trip and Open trip; Export GPX; Settings (#151), which opens the settings
  * dialog. Save and Export ask for the trip name first, prefilled with the current one.
  * A new trip starts with today in Brussels as its start date. New trip and Open trip
- * ask before losing points, as on desktop.
+ * ask before losing points.
  */
-export default function PhoneMenu({
+export default function PlannerMenu({
   trip,
   question,
   pendingTrip,
@@ -61,7 +61,7 @@ export default function PhoneMenu({
   openFile,
   settings,
   saveSettings,
-}: PhoneMenuProps) {
+}: PlannerMenuProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   // The name dialog: which file it asks for (kept while it closes, so its title doesn't change) and whether it is open.
   const [naming, setNaming] = useState<NamedFile>("save");
@@ -80,7 +80,7 @@ export default function PhoneMenu({
       <Menu
         label={text.button}
         trigger={<Icon icon={icons.menu} />}
-        triggerClassName="phone-fab"
+        triggerClassName="planner-fab"
         items={[
           {
             label: text.newTrip,
@@ -106,7 +106,7 @@ export default function PhoneMenu({
         ]}
       />
       {fileError && (
-        <p role="alert" className="phone-message phone-message-alert">
+        <p role="alert" className="planner-message planner-message-alert">
           {fileError === "unknown-version" ? strings.openFileUnknownVersion : strings.openFileInvalid}
         </p>
       )}
@@ -136,7 +136,7 @@ export default function PhoneMenu({
         }}
         onCancel={() => setNamingOpen(false)}
       />
-      <PhoneTripDetailsDialog
+      <TripDetailsDialog
         open={detailsOpen}
         name={trip.name}
         startDate={trip.startDate}
@@ -145,7 +145,7 @@ export default function PhoneMenu({
         onClose={() => setDetailsOpen(false)}
       />
       {settings && (
-        <PhoneSettingsDialog
+        <SettingsDialog
           open={settingsOpen}
           settings={settings}
           onSave={saveSettings}

@@ -3,7 +3,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../../src/ui/strings";
 
-const text = strings.phone;
+const text = strings.planner;
 
 export const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 
@@ -31,12 +31,12 @@ export async function showTab(page: Page, name: string) {
   await expect(tab).toHaveAttribute("aria-selected", "true");
 }
 
-/** The Days tab's day cards (shown with `showTab(page, strings.phone.tabs.days)`). */
+/** The Days tab's day cards (shown with `showTab(page, strings.planner.tabs.days)`). */
 export const dayCards = (page: Page) =>
   tripPanel(page).getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem");
 
 /** The trip's totals in the panel's header. */
-export const totals = (page: Page) => tripPanel(page).locator(".phone-totals");
+export const totals = (page: Page) => tripPanel(page).locator(".planner-totals");
 
 export const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 export const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
@@ -74,7 +74,7 @@ export async function km(locator: Locator) {
 
 /** The figure named `label` in `within` (e.g. a row's or the totals' "Hike distance"), as shown. */
 export async function figure(within: Locator, label: string) {
-  const all = await within.locator(".phone-row-figure, .phone-total, .day-figure").allTextContents();
+  const all = await within.locator(".planner-row-figure, .planner-total, .day-figure").allTextContents();
   const found = all.find((shown) => shown.startsWith(`${label} `));
   if (found === undefined) throw new Error(`no "${label}" in ${JSON.stringify(all)}`);
   return found.slice(label.length + 1);
@@ -82,7 +82,7 @@ export async function figure(within: Locator, label: string) {
 
 export const menuButton = (page: Page) => page.getByRole("button", { name: text.menu.button, exact: true });
 
-/** Opens the menu top left and picks `item` (one of `strings.phone.menu`'s items). */
+/** Opens the menu top left and picks `item` (one of `strings.planner.menu`'s items). */
 export async function menuItem(page: Page, item: string) {
   await menuButton(page).click();
   await page.getByRole("menuitem", { name: item, exact: true }).click();
@@ -238,7 +238,7 @@ export async function markAccessPointAt(page: Page, at: { x: number; y: number }
 
 /** Opens the dialog of the selected access point from its row in the Access points tab. */
 export async function editSelectedAccessPoint(page: Page) {
-  const row = tripPanel(page).locator(".phone-access-point-item:has([aria-current])");
+  const row = tripPanel(page).locator(".planner-access-point-item:has([aria-current])");
   await row.getByRole("button").nth(1).click();
   await expect(accessPointDialog(page)).toBeVisible();
 }
@@ -325,7 +325,7 @@ export async function holdWater(page: Page, id: string) {
   await mouseHold(page, await pointOnPath(page, accessWater(page, id)));
 }
 
-/** The open leg's details dialog (#158), titled "Leg n · mode · distance" (`strings.phone.legDetailsTitle`). */
+/** The open leg's details dialog (#158), titled "Leg n · mode · distance" (`strings.planner.legDetailsTitle`). */
 export const legDetailsDialog = (page: Page) => page.getByRole("dialog", { name: /^Leg \d+ · / });
 
 /** Opens leg `n`'s details dialog from its row's info button. */

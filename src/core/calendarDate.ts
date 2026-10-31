@@ -28,7 +28,7 @@ const brussels = new Intl.DateTimeFormat("en-CA", {
 
 /**
  * The calendar date in Europe/Brussels at the instant `now` (#124): the day a
- * new phone trip starts on, whatever time zone the device is set to, so a date
+ * new trip starts on, whatever time zone the device is set to, so a date
  * picked in Brussels never moves a day.
  */
 export function todayInBrussels(now: Date): CalendarDate {

@@ -26,7 +26,7 @@ const trip: Trip = {
 };
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const panel = (page: Page) => page.getByRole("complementary", { name: strings.phone.sheetLabel });
+const panel = (page: Page) => page.getByRole("complementary", { name: strings.planner.sheetLabel });
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const storedTrip = (page: Page) => page.evaluate((key) => localStorage.getItem(key), TRIP_KEY);
@@ -201,9 +201,9 @@ test.describe("keyboard alone", () => {
 
   /** Opens the menu from its button and picks `item` with the arrow keys and Enter. */
   async function pickFromMenu(page: Page, item: string) {
-    await tabTo(page, button(page, strings.phone.menu.button));
+    await tabTo(page, button(page, strings.planner.menu.button));
     await page.keyboard.press("Enter");
-    await expect(menuItem(page, strings.phone.menu.newTrip)).toBeFocused();
+    await expect(menuItem(page, strings.planner.menu.newTrip)).toBeFocused();
     for (let i = 0; i < 8 && !(await menuItem(page, item).evaluate((e) => e === document.activeElement)); i++) {
       await page.keyboard.press("ArrowDown");
     }
@@ -236,16 +236,16 @@ test.describe("keyboard alone", () => {
       expect(stop.y + stop.height, stop.name).toBeLessThanOrEqual(800);
     }
     for (const name of [
-      strings.phone.menu.button,
+      strings.planner.menu.button,
       strings.placeSearch.pill(undefined),
-      strings.phone.showPositionButton,
+      strings.planner.showPositionButton,
       strings.mapMenuButton,
-      strings.phone.backToStartButton,
-      strings.phone.markAccessPointButton,
+      strings.planner.backToStartButton,
+      strings.planner.markAccessPointButton,
       strings.legModeHike,
-      strings.phone.resizePanelHandle,
-      strings.phone.collapsePanelButton,
-      strings.phone.tabs.legs,
+      strings.planner.resizePanelHandle,
+      strings.planner.collapsePanelButton,
+      strings.planner.tabs.legs,
     ]) {
       expect(reached, name).toContain(name);
     }
@@ -260,20 +260,20 @@ test.describe("keyboard alone", () => {
     await expect(legLines(page).first()).toHaveClass(/leg-routed/);
 
     // Route back to the start, then undo it with the Undo button and again with Ctrl+Z.
-    await tabTo(page, button(page, strings.phone.backToStartButton));
+    await tabTo(page, button(page, strings.planner.backToStartButton));
     await page.keyboard.press("Enter");
     await expect(legLines(page)).toHaveCount(2);
     await tabTo(page, button(page, strings.undoButton));
     await page.keyboard.press("Enter");
     await expect(legLines(page)).toHaveCount(1);
-    await tabTo(page, button(page, strings.phone.backToStartButton));
+    await tabTo(page, button(page, strings.planner.backToStartButton));
     await page.keyboard.press("Enter");
     await expect(legLines(page)).toHaveCount(2);
     await page.keyboard.press("ControlOrMeta+z");
     await expect(legLines(page)).toHaveCount(1);
 
     // The next leg's mode: arrows move between Hike and Paddle, Space picks.
-    const modes = page.getByRole("group", { name: strings.phone.nextLegModeLabel });
+    const modes = page.getByRole("group", { name: strings.planner.nextLegModeLabel });
     await tabTo(page, modes.getByRole("button", { name: strings.legModeHike }));
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("Space");
@@ -287,7 +287,7 @@ test.describe("keyboard alone", () => {
 
     // Edit trip: the name field has focus, Tab stays in the dialog; Enter saves; focus returns to
     // the menu button.
-    await pickFromMenu(page, strings.phone.menu.tripDetails);
+    await pickFromMenu(page, strings.planner.menu.tripDetails);
     const dialog = page.getByRole("dialog");
     const nameField = dialog.getByRole("textbox", { name: strings.tripNameLabel });
     await expect(nameField).toBeFocused();
@@ -300,17 +300,17 @@ test.describe("keyboard alone", () => {
     await page.keyboard.press("Enter");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect.poll(() => tripName(page)).toBe("Ourthe");
-    await expect(button(page, strings.phone.menu.button)).toBeFocused();
+    await expect(button(page, strings.planner.menu.button)).toBeFocused();
 
     // Settings: the arrow keys step the pace factor; Enter saves.
-    await pickFromMenu(page, strings.phone.menu.settings);
+    await pickFromMenu(page, strings.planner.menu.settings);
     const pace = page.getByRole("dialog").getByRole("textbox", { name: strings.paceFactorLabel });
     await expect(pace).toBeFocused();
     await page.keyboard.press("ArrowUp");
     await page.keyboard.press("Enter");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect.poll(async () => (await storedSettings(page))?.paceFactor).toBeGreaterThan(1);
-    await expect(button(page, strings.phone.menu.button)).toBeFocused();
+    await expect(button(page, strings.planner.menu.button)).toBeFocused();
 
     // The Map menu: a base map picked with the arrows and Enter.
     await tabTo(page, button(page, strings.mapMenuButton));
@@ -326,17 +326,17 @@ test.describe("keyboard alone", () => {
 
     // The panel's tabs: arrows move, Enter shows the tab.
     const tabs = panel(page).getByRole("tablist");
-    await tabTo(page, tabs.getByRole("tab", { name: strings.phone.tabs.legs }));
+    await tabTo(page, tabs.getByRole("tab", { name: strings.planner.tabs.legs }));
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("Enter");
-    await expect(tabs.getByRole("tab", { name: strings.phone.tabs.days })).toHaveAttribute("aria-selected", "true");
+    await expect(tabs.getByRole("tab", { name: strings.planner.tabs.days })).toHaveAttribute("aria-selected", "true");
 
     // The panel collapses and opens again.
-    await tabTo(page, button(page, strings.phone.collapsePanelButton));
+    await tabTo(page, button(page, strings.planner.collapsePanelButton));
     await page.keyboard.press("Enter");
-    await tabTo(page, button(page, strings.phone.expandPanelButton));
+    await tabTo(page, button(page, strings.planner.expandPanelButton));
     await page.keyboard.press("Enter");
-    await expect(button(page, strings.phone.collapsePanelButton)).toBeVisible();
+    await expect(button(page, strings.planner.collapsePanelButton)).toBeVisible();
 
     // Search opens into its field; Escape closes it and gives the focus back to the pill.
     const pill = button(page, strings.placeSearch.pill(undefined));
@@ -347,13 +347,13 @@ test.describe("keyboard alone", () => {
     await expect(pill).toBeFocused();
 
     // New trip asks; Escape keeps the trip, and Tab + Enter on the confirm button clears it.
-    await pickFromMenu(page, strings.phone.menu.newTrip);
+    await pickFromMenu(page, strings.planner.menu.newTrip);
     await expectInitialFocus(page);
     await page.keyboard.press("Escape");
     await expect(confirmDialog(page)).toHaveCount(0);
     await expect(points(page)).toHaveCount(2);
-    await expect(button(page, strings.phone.menu.button)).toBeFocused();
-    await pickFromMenu(page, strings.phone.menu.newTrip);
+    await expect(button(page, strings.planner.menu.button)).toBeFocused();
+    await pickFromMenu(page, strings.planner.menu.newTrip);
     await expectInitialFocus(page);
     await page.keyboard.press("Tab");
     await page.keyboard.press("Enter");
@@ -364,7 +364,7 @@ test.describe("keyboard alone", () => {
 
 test.describe("keyboard alone on a portrait phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
-  const sheet = (page: Page) => page.getByRole("dialog", { name: strings.phone.sheetLabel });
+  const sheet = (page: Page) => page.getByRole("dialog", { name: strings.planner.sheetLabel });
 
   test("the sheet's handle moves it between its stops; at the peek Tab skips its hidden body", async ({ page }) => {
     await serveOffline(page, routed);
@@ -377,11 +377,11 @@ test.describe("keyboard alone on a portrait phone", () => {
     // At the peek the leg rows are off screen, and Tab never lands on them.
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press("Tab");
-      expect(await page.evaluate(() => document.activeElement?.classList.contains("phone-row-toggle"))).toBe(false);
+      expect(await page.evaluate(() => document.activeElement?.classList.contains("planner-row-toggle"))).toBe(false);
     }
 
     // Enter on a tab raises the sheet to half; then the rows are reachable and usable.
-    const legsTab = sheet(page).getByRole("tab", { name: strings.phone.tabs.legs });
+    const legsTab = sheet(page).getByRole("tab", { name: strings.planner.tabs.legs });
     await legsTab.focus();
     await page.keyboard.press("Enter");
     await expect(sheet(page)).toHaveAttribute("data-stop", "half");
@@ -392,7 +392,7 @@ test.describe("keyboard alone on a portrait phone", () => {
     await expect(row).toHaveAttribute("aria-current", "true");
 
     // The handle, a slider over the stops: arrow up and down go one stop, Home and End to the ends.
-    const handle = sheet(page).getByRole("slider", { name: strings.phone.resizeSheetHandle });
+    const handle = sheet(page).getByRole("slider", { name: strings.planner.resizeSheetHandle });
     await handle.focus();
     await page.keyboard.press("ArrowUp");
     await expect(sheet(page)).toHaveAttribute("data-stop", "full");
@@ -401,7 +401,7 @@ test.describe("keyboard alone on a portrait phone", () => {
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("ArrowDown");
     await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
-    await expect(handle).toHaveAttribute("aria-valuetext", strings.phone.sheetStops.peek);
+    await expect(handle).toHaveAttribute("aria-valuetext", strings.planner.sheetStops.peek);
     await page.keyboard.press("End");
     await expect(sheet(page)).toHaveAttribute("data-stop", "full");
     await page.keyboard.press("Home");
@@ -422,7 +422,7 @@ test.describe("keyboard alone on a portrait phone", () => {
     await expect(warning).toBeVisible();
     await expect(warning).toBeInViewport({ ratio: 1 });
     const box = (await warning.boundingBox())!;
-    for (const name of [strings.placeSearch.pill(undefined), strings.phone.showPositionButton, strings.mapMenuButton]) {
+    for (const name of [strings.placeSearch.pill(undefined), strings.planner.showPositionButton, strings.mapMenuButton]) {
       const other = (await page.getByRole("button", { name, exact: true }).boundingBox())!;
       const overlaps =
         box.x < other.x + other.width && other.x < box.x + box.width && box.y < other.y + other.height && other.y < box.y + box.height;

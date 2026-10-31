@@ -25,7 +25,7 @@ const mapRegion = (page: Page) =>
   page.getByRole("region", { name: strings.mapLabel });
 /** The Days tab's cards; shows the tab first. */
 const dayRows = async (page: Page) => {
-  await showTab(page, strings.phone.tabs.days);
+  await showTab(page, strings.planner.tabs.days);
   return dayCards(page);
 };
 const legLines = (page: Page) =>

@@ -72,7 +72,7 @@ test("#11: hike + paddle legs and a camp export as GPX 1.1 with routed elevation
   await click(0, 0);
   await click(150, 0, "paddle");
   await expect(legLines(page)).toHaveCount(2);
-  await expect(rows(page).nth(1)).toHaveClass(/phone-row-paddle/);
+  await expect(rows(page).nth(1)).toHaveClass(/planner-row-paddle/);
   await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
   await expect(legLines(page).nth(1)).toHaveClass(/leg-routed/);
   await click(0, 0); // select the middle point
@@ -162,18 +162,18 @@ test("#11: Export GPX is disabled until the trip has a leg, and again when it ha
   await click(80, 0);
   expect(await exportGpxDisabled(page)).toBe(false);
   // Updated for Base UI (#31): the question is an in-page dialog, not window.confirm.
-  await menuItem(page, strings.phone.menu.newTrip);
+  await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
   await expect(pointMarkers(page)).toHaveCount(0);
   expect(await exportGpxDisabled(page)).toBe(true);
   // A disabled item downloads nothing and asks nothing.
   let downloads = 0;
   page.on("download", () => (downloads += 1));
-  await page.getByRole("button", { name: strings.phone.menu.button }).click();
-  await page.getByRole("menuitem", { name: strings.phone.menu.exportGpx }).click({ force: true });
+  await page.getByRole("button", { name: strings.planner.menu.button }).click();
+  await page.getByRole("menuitem", { name: strings.planner.menu.exportGpx }).click({ force: true });
   await page.waitForTimeout(300);
   expect(downloads).toBe(0);
-  await expect(page.getByRole("dialog", { name: strings.phone.menu.exportTitle })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: strings.planner.menu.exportTitle })).toHaveCount(0);
 });
 
 test("#11: the export reflects a reloaded trip and renaming, without re-routing", async ({ page }) => {

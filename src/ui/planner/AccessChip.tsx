@@ -11,23 +11,23 @@ import { strings } from "../strings";
  * the colours are for, and opens a dialog with the "Indicative only" disclaimer, the date
  * (today or a trip day, #59), the legend and the note about the regions.
  */
-export default function PhoneAccessChip({ dateSelector }: { dateSelector: AccessDateProps }) {
+export default function AccessChip({ dateSelector }: { dateSelector: AccessDateProps }) {
   const [open, setOpen] = useState(false);
   const chip = useRef<HTMLButtonElement>(null);
-  const name = strings.phone.accessChip(dateSelector.isToday ? strings.phone.accessChipToday : dateSelector.date);
+  const name = strings.planner.accessChip(dateSelector.isToday ? strings.planner.accessChipToday : dateSelector.date);
   return (
     <>
-      <Button ref={chip} className="phone-access-chip" aria-label={name} onClick={() => setOpen(true)}>
+      <Button ref={chip} className="planner-access-chip" aria-label={name} onClick={() => setOpen(true)}>
         {name} <Icon icon={icons.openAccessDialog} />
       </Button>
       <InfoDialog
         open={open}
-        title={strings.phone.accessDialogTitle}
-        closeLabel={strings.phone.accessDialogClose}
+        title={strings.planner.accessDialogTitle}
+        closeLabel={strings.planner.accessDialogClose}
         onClose={() => setOpen(false)}
       >
-        <div className="phone-access-dialog">
-          <p className="phone-disclaimer">{strings.navigationRulesNotice}</p>
+        <div className="planner-access-dialog">
+          <p className="planner-disclaimer">{strings.navigationRulesNotice}</p>
           <AccessDateSelector {...dateSelector} />
           <AccessLegend />
         </div>

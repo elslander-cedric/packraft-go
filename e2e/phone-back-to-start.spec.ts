@@ -9,7 +9,7 @@ test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
 const routed = { brouter: () => ({ status: 200, body: brouterFixture("hiking-success.geojson") }) };
 
-const text = strings.phone;
+const text = strings.planner;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");

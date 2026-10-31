@@ -65,7 +65,7 @@ test("#4: a snapped hike leg shows pending, then the trail with distance, climb 
   // Updated in round 2 (Cedric's decision on PR #16): smoothed climb/descent; raw sums were 118/78.
   await expect(row).toContainText(`${strings.climbLabel} 100 m`);
   await expect(row).toContainText(`${strings.descentLabel} 59 m`);
-  await expect(page.locator(".phone-totals")).toContainText(`${strings.phone.totals.labels.hike} 3.2 km`);
+  await expect(page.locator(".planner-totals")).toContainText(`${strings.planner.totals.labels.hike} 3.2 km`);
   await expect(legLines(page)).not.toHaveAttribute("stroke-dasharray", /.+/);
 
   expect(net.brouter).toHaveLength(1);

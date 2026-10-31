@@ -1,4 +1,4 @@
-// The phone planner's Days tab (#123, ADR 0026) and its Trip details and Settings dialogs
+// The planner's Days tab on a phone (#123, ADR 0026) and its Trip details and Settings dialogs
 // from the menu (#154, #151): day cards that zoom the map to their day and carry its access,
 // the trip's name and start date, and the planner's settings stored on the device. The trip is seeded in browser storage with
 // routed legs, so nothing is routed: a hike to the Meuse at Dinant, a camp, then a
@@ -13,7 +13,7 @@ const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["
 // Dates are picked in Brussels: none may move a day (CLAUDE.md).
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, timezoneId: "Europe/Brussels" });
 
-const text = strings.phone;
+const text = strings.planner;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
 const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
@@ -51,7 +51,7 @@ async function openDetails(page: Page) {
   await page.getByRole("menuitem", { name: text.menu.tripDetails, exact: true }).click();
   await expect(detailsDialog(page)).toBeVisible();
 }
-const totals = (page: Page) => sheet(page).locator(".phone-totals");
+const totals = (page: Page) => sheet(page).locator(".planner-totals");
 
 const START = { lat: 50.25, lng: 4.85 };
 const DINANT = [
@@ -123,7 +123,7 @@ test("a two-day trip shows two day cards with their figures; tapping a card zoom
   // An undated trip's tiles show "Day" and the day's number.
   await expect(dayTile(dayCards(page).nth(0))).toHaveAccessibleName(strings.dayLabel(1));
   // Each figure after its icon, its name read out; a figure that is zero is left out.
-  const names = strings.phone.dayFigures;
+  const names = strings.planner.dayFigures;
   await expect(dayCards(page).nth(0)).toContainText(`${names.hike} 4.4 km`);
   await expect(dayCards(page).nth(0)).toContainText(`${names.climb} 35 m`);
   await expect(dayCards(page).nth(0)).toContainText(names.time);
@@ -164,7 +164,8 @@ test("an empty trip's Days tab says how days come about, like the Legs tab; the 
   await expect(panel(page)).toContainText(strings.legsPanelEmpty);
 
   await tab(page, text.tabs.days).click();
-  await expect(panel(page)).toContainText(strings.daysPanelEmpty);
+  // By name: while the tabs switch, the Legs panel is still there on its way out.
+  await expect(sheet(page).getByRole("tabpanel", { name: text.tabs.days })).toContainText(strings.daysPanelEmpty);
   await expect(dayCards(page)).toHaveCount(0);
 });
 

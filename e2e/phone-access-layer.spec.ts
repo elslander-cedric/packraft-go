@@ -15,7 +15,7 @@ import { touch, type Pixel } from "./support/touch";
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
-const phoneText = strings.phone;
+const plannerText = strings.planner;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const waters = (page: Page) => mapRegion(page).locator("path.access-feature");
 const water = (page: Page, id: string) => mapRegion(page).locator(`path.access-record-${id}`);
@@ -24,9 +24,9 @@ const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane pa
 const chip = (page: Page) => page.getByRole("button", { name: /^Access · / });
 // Behind the access dialog, which hides the rest of the page from the accessibility tree while open.
 const waterBehind = (page: Page, id: string) => page.locator(`.leaflet-container path.access-record-${id}`);
-const chipBehind = (page: Page) => page.locator(".phone-access-chip");
-const accessDialog = (page: Page) => page.getByRole("dialog", { name: phoneText.accessDialogTitle });
-const sheet = (page: Page) => page.getByRole("dialog", { name: phoneText.sheetLabel });
+const chipBehind = (page: Page) => page.locator(".planner-access-chip");
+const accessDialog = (page: Page) => page.getByRole("dialog", { name: plannerText.accessDialogTitle });
+const sheet = (page: Page) => page.getByRole("dialog", { name: plannerText.sheetLabel });
 const waterDetails = (page: Page) => sheet(page).getByRole("region", { name: strings.accessDetailLabel });
 const lockDetails = (page: Page) => sheet(page).getByRole("region", { name: strings.lockDetailLabel });
 const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
@@ -117,7 +117,7 @@ test("the layers button under the position button opens the Map menu; its switch
   await expect(chip(page)).toHaveCount(0);
 
   // It sits under the position button, top right.
-  const position = (await page.getByRole("button", { name: phoneText.showPositionButton }).boundingBox())!;
+  const position = (await page.getByRole("button", { name: plannerText.showPositionButton }).boundingBox())!;
   const layers = (await mapMenuButton(page).boundingBox())!;
   expect(layers.y).toBeGreaterThan(position.y + position.height - 1);
   expect(Math.abs(layers.x + layers.width - (position.x + position.width))).toBeLessThan(2);
@@ -144,7 +144,7 @@ test("the chip's dialog holds the date, legend, note and disclaimer; Today and T
   await toggleAccessLayer(page);
 
   // Today (15 July) is outside the Lesse's season.
-  await expect(chip(page)).toHaveAccessibleName(phoneText.accessChip(phoneText.accessChipToday));
+  await expect(chip(page)).toHaveAccessibleName(plannerText.accessChip(plannerText.accessChipToday));
   await expect(water(page, LESSE)).toHaveAttribute("stroke", ORANGE);
 
   await chip(page).click();
@@ -157,15 +157,15 @@ test("the chip's dialog holds the date, legend, note and disclaimer; Today and T
   // The trip's first day (15 December) is in season.
   await accessDialog(page).getByLabel(strings.accessTripDayLabel).selectOption("2026-12-15");
   await expect(waterBehind(page, LESSE)).toHaveAttribute("stroke", GREEN);
-  await expect(chipBehind(page)).toHaveAttribute("aria-label", phoneText.accessChip("2026-12-15"));
+  await expect(chipBehind(page)).toHaveAttribute("aria-label", plannerText.accessChip("2026-12-15"));
 
   await accessDialog(page).getByRole("button", { name: strings.accessTodayButton }).click();
   await expect(waterBehind(page, LESSE)).toHaveAttribute("stroke", ORANGE);
-  await expect(chipBehind(page)).toHaveAttribute("aria-label", phoneText.accessChip(phoneText.accessChipToday));
+  await expect(chipBehind(page)).toHaveAttribute("aria-label", plannerText.accessChip(plannerText.accessChipToday));
 
   // A dialog like the others (#163): finger-sized date field, Close goes back to the chip.
   await expect(accessDialog(page).getByLabel(strings.accessDateLabel)).toHaveCSS("height", "44px");
-  await accessDialog(page).getByRole("button", { name: phoneText.accessDialogClose }).click();
+  await accessDialog(page).getByRole("button", { name: plannerText.accessDialogClose }).click();
   await expect(accessDialog(page)).toHaveCount(0);
   await expect(chip(page)).toBeFocused();
   expect(network.blocked).toEqual([]);
@@ -187,7 +187,7 @@ test("holding a water off a leg opens its details in the sheet at half; Close go
   await toggleAccessLayer(page);
   await settled(page, water(page, LESSE));
   await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
-  await expect(tab(page, phoneText.tabs.legs)).toHaveAttribute("aria-selected", "true");
+  await expect(tab(page, plannerText.tabs.legs)).toHaveAttribute("aria-selected", "true");
 
   await (await touch(page)).hold(await middleOf(water(page, LESSE)), 550);
 
@@ -195,14 +195,14 @@ test("holding a water off a leg opens its details in the sheet at half; Close go
   await expect(waterDetails(page)).toContainText(strings.accessCategory("1.C"));
   await expect(sheet(page)).toHaveAttribute("data-stop", "half");
   // Above the current tab, which stays selected.
-  await expect(tab(page, phoneText.tabs.legs)).toHaveAttribute("aria-selected", "true");
+  await expect(tab(page, plannerText.tabs.legs)).toHaveAttribute("aria-selected", "true");
   // Holding opened details; it added no point.
   await expect(points(page)).toHaveCount(2);
 
   await waterDetails(page).getByRole("button", { name: strings.accessDetailClose }).click();
   await expect(waterDetails(page)).toHaveCount(0);
   await expect(sheet(page).getByRole("tabpanel")).toBeVisible();
-  await expect(tab(page, phoneText.tabs.legs)).toHaveAttribute("aria-selected", "true");
+  await expect(tab(page, plannerText.tabs.legs)).toHaveAttribute("aria-selected", "true");
 });
 
 test("a tap on a lock opens its details in the sheet", async ({ page }) => {
@@ -260,10 +260,10 @@ test("a tap on a lock with the sheet at 90% opens its details with the sheet at 
 test("sideways, a tap on a lock opens the side panel with its details above the tab", async ({ page }) => {
   await page.setViewportSize({ width: viewport.height, height: viewport.width });
   await openWith(page, nearLock);
-  const panel = page.getByRole("complementary", { name: phoneText.sheetLabel });
+  const panel = page.getByRole("complementary", { name: plannerText.sheetLabel });
   // The panel opens on first load (ADR 0034); collapsed, the tap opens it.
-  await panel.getByRole("button", { name: phoneText.collapsePanelButton }).click();
-  await expect(panel.getByRole("button", { name: phoneText.expandPanelButton })).toBeVisible();
+  await panel.getByRole("button", { name: plannerText.collapsePanelButton }).click();
+  await expect(panel.getByRole("button", { name: plannerText.expandPanelButton })).toBeVisible();
   await toggleAccessLayer(page);
   await expect(lock(page, ANDERLECHT_LOCK)).toBeVisible();
   await settled(page, lock(page, ANDERLECHT_LOCK));
@@ -273,7 +273,7 @@ test("sideways, a tap on a lock opens the side panel with its details above the 
   const details = panel.getByRole("region", { name: strings.lockDetailLabel });
   await expect(details).toBeVisible();
   await expect(details).toContainText(strings.lockPortageRequired);
-  await expect(panel.getByRole("button", { name: phoneText.collapsePanelButton })).toBeVisible();
+  await expect(panel.getByRole("button", { name: plannerText.collapsePanelButton })).toBeVisible();
   await expect(panel.getByRole("tabpanel")).toBeHidden();
 
   await details.getByRole("button", { name: strings.accessDetailClose }).click();

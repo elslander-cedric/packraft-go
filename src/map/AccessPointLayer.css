@@ -1,5 +1,9 @@
 /* Map markers: fill by use, shape by kind (drawn in AccessPointLayer). */
+/* A 44 px hit box with the shape in its middle, for press-and-drag (#120). */
 .access-point-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
@@ -7,11 +11,4 @@
 
 .access-point-marker.access-point-selected > svg {
   filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 3px #ffd400);
-}
-
-/* Press-and-drag mode (phone, #120): a 44 px hit box with the shape in its middle. */
-.access-point-marker.access-point-hit {
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }

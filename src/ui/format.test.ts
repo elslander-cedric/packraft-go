@@ -23,7 +23,7 @@ describe("formatDayDate", () => {
   });
 });
 
-// The phone's day cards are titled by a calendar tile (weekday, day, month).
+// The day cards are titled by a calendar tile (weekday, day, month).
 describe("dayDateParts", () => {
   it("splits a date into weekday, day, month and year", () => {
     expect(dayDateParts("2026-10-31")).toEqual({ weekday: "Sat", day: 31, month: "Oct", year: 2026 });

@@ -16,7 +16,7 @@ import { serveOffline } from "./support/offline";
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
-const text = strings.phone.menu;
+const text = strings.planner.menu;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const menuButton = (page: Page) => page.getByRole("button", { name: text.button });
 const menuItem = (page: Page, name: string) => page.getByRole("menuitem", { name, exact: true });

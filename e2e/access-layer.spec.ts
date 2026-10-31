@@ -39,10 +39,10 @@ test("the access layer colours Flemish exceptions and shows why on click", async
 
   // The legend names the four states.
   await chip.click();
-  const accessDialog = page.getByRole("dialog", { name: strings.phone.accessDialogTitle });
+  const accessDialog = page.getByRole("dialog", { name: strings.planner.accessDialogTitle });
   const legend = accessDialog.getByRole("region", { name: strings.accessLegendLabel });
   for (const label of Object.values(strings.accessState)) await expect(legend.getByText(label, { exact: true })).toBeVisible();
-  await accessDialog.getByRole("button", { name: strings.phone.accessDialogClose }).click();
+  await accessDialog.getByRole("button", { name: strings.planner.accessDialogClose }).click();
   await expect(accessDialog).toHaveCount(0);
 
   // Exceptions are red, VMM agreement stretches green.

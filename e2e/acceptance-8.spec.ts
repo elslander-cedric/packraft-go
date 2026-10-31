@@ -23,9 +23,9 @@ import {
 } from "./support/planner";
 
 const KEY = "packraft-go.trip";
-const showDays = (page: Page) => showTab(page, strings.phone.tabs.days);
-const showLegs = (page: Page) => showTab(page, strings.phone.tabs.legs);
-const dayLabels = strings.phone.dayFigures;
+const showDays = (page: Page) => showTab(page, strings.planner.tabs.days);
+const showLegs = (page: Page) => showTab(page, strings.planner.tabs.legs);
+const dayLabels = strings.planner.dayFigures;
 const pointMarkers = (page: Page) =>
   mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const legLines = (page: Page) =>
@@ -40,7 +40,7 @@ const deleteButton = (page: Page) =>
 const openBtn = (page: Page) => ({
   click: async () => {
     await menuButton(page).click();
-    await page.getByRole("menuitem", { name: strings.phone.menu.openFile, exact: true }).click();
+    await page.getByRole("menuitem", { name: strings.planner.menu.openFile, exact: true }).click();
   },
 });
 
@@ -76,7 +76,7 @@ const legKm = async (page: Page, i: number) =>
     )![1],
   );
 const legMin = async (page: Page, i: number) =>
-  minutesIn(await legRows(page).nth(i).locator(".phone-row-time").textContent());
+  minutesIn(await legRows(page).nth(i).locator(".planner-row-time").textContent());
 const dayTime = (page: Page, i: number) =>
   dayRows(page).nth(i).locator(".day-figure-time");
 
@@ -185,8 +185,8 @@ test("AC2/AC3: camps on the start and end add no day; a middle camp splits the d
   expect(d2).toBe(legMinutes[2]);
   const tripMin = minutesIn(
     await totals(page)
-      .locator(".phone-total")
-      .filter({ hasText: strings.phone.totals.labels.time })
+      .locator(".planner-total")
+      .filter({ hasText: strings.planner.totals.labels.time })
       .textContent(),
   );
   expect(Math.abs(d1 + d2 - tripMin)).toBeLessThanOrEqual(1);
@@ -238,8 +238,8 @@ test("AC3: a day with a hike leg that failed to route shows '(no climb data)'; t
   failHike = true;
   await click(XS[2]);
   await expect(legRows(page).nth(1)).toContainText(strings.retryRouting);
-  const legTime = (await legRows(page).nth(1).locator(".phone-row-time").textContent())!
-    .replace(`${strings.phone.legFigures.time} `, "")
+  const legTime = (await legRows(page).nth(1).locator(".planner-row-time").textContent())!
+    .replace(`${strings.planner.legFigures.time} `, "")
     .replace(" (no climb data)", "");
 
   await toggleCampAt(page, click, 1);

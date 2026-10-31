@@ -61,7 +61,7 @@ export function usePlanner(router?: Router) {
     dispatch({ type: "accessPointsChanged", accessPoints: access.points });
   }, [access.points]);
 
-  // With a `name` (the phone asks for it first, #124), the trip is renamed, then saved or exported
+  // With a `name` (the planner asks for it first, #124), the trip is renamed, then saved or exported
   // under that name.
   const toDownload = (name?: string) => {
     if (name === undefined) return trip;
