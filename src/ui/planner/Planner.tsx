@@ -2,7 +2,6 @@
 
 import { useId, useRef, useState, type CSSProperties } from "react";
 import type { Router } from "@/core/router";
-import type { DaySummary } from "@/core/summarise";
 import { canGoBackToStart, canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import type { MapFocus } from "@/map/TripMap";
@@ -27,7 +26,9 @@ import AccessPointDialog from "./AccessPointDialog";
 import AccessPoints from "./AccessPoints";
 import SnapOffers from "../SnapOffers";
 import LegDetailsDialog from "./LegDetailsDialog";
+import SectionDetailsDialog from "./SectionDetailsDialog";
 import LegsList from "./LegsList";
+import SectionsList from "./SectionsList";
 import MapMenu from "./MapMenu";
 import PlannerMenu from "./PlannerMenu";
 import PlaceSearch from "./PlaceSearch";
@@ -66,10 +67,10 @@ const legModeOptions: readonly ToggleOption<LegMode>[] = [
   },
 ];
 
-/** Where a day goes: its points and its legs' routes. */
-function dayArea(trip: Trip, day: DaySummary): LatLng[] {
-  const area: LatLng[] = trip.points.slice(day.firstLeg, day.lastLeg + 2);
-  for (const leg of trip.legs.slice(day.firstLeg, day.lastLeg + 1))
+/** Where a day or a section goes: its points and its legs' routes. */
+function legsArea(trip: Trip, { firstLeg, lastLeg }: { firstLeg: number; lastLeg: number }): LatLng[] {
+  const area: LatLng[] = trip.points.slice(firstLeg, lastLeg + 2);
+  for (const leg of trip.legs.slice(firstLeg, lastLeg + 1))
     if (leg.route?.status === "routed") area.push(...leg.route.geometry);
   return area;
 }
@@ -186,6 +187,16 @@ export default function Planner({ router }: { router?: Router }) {
     raise();
     setFocus({ area, ...covered() });
   };
+  // A section row tap does the same for the whole section.
+  const [selectedSection, setSelectedSection] = useState<number | undefined>(undefined);
+  const [detailsSection, setDetailsSection] = useState<number | null>(null);
+  const selectSectionRow = (index: number) => {
+    const section = summary.sections[index];
+    if (!section) return;
+    setSelectedSection(index);
+    raise();
+    setFocus({ area: legsArea(trip, section), ...covered() });
+  };
   // With a route point selected, the access-point button saves that point as an access point (#120).
   const markSelectedPoint = () => {
     if (selectedPoint === null) return;
@@ -220,7 +231,7 @@ export default function Planner({ router }: { router?: Router }) {
     }
     setSelectedDay(index);
     raise();
-    setFocus({ area: dayArea(trip, day), ...covered() });
+    setFocus({ area: legsArea(trip, day), ...covered() });
   };
 
   // What the sheet holds, and the side panel instead when sideways (#126): the same content.
@@ -249,6 +260,18 @@ export default function Planner({ router }: { router?: Router }) {
           selected={selectedLeg}
           onSelect={selectLegRow}
           onShowDetails={setDetailsLeg}
+          onRetry={(index) => dispatch({ type: "retryLeg", index })}
+        />
+      </TabPanel>
+      <TabPanel value="sections">
+        <SectionsList
+          sections={summary.sections}
+          legs={trip.legs}
+          access={waterAccess}
+          aire={aire}
+          selected={selectedSection}
+          onSelect={selectSectionRow}
+          onShowDetails={setDetailsSection}
           onRetry={(index) => dispatch({ type: "retryLeg", index })}
         />
       </TabPanel>
@@ -451,6 +474,13 @@ export default function Planner({ router }: { router?: Router }) {
         access={waterAccess}
         aire={aire}
         onClose={() => setDetailsLeg(null)}
+      />
+      <SectionDetailsDialog
+        section={detailsSection}
+        summary={summary}
+        access={waterAccess}
+        aire={aire}
+        onClose={() => setDetailsSection(null)}
       />
       <div className="planner-snap-offers">
         <SnapOffers

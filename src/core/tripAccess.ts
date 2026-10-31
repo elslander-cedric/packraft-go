@@ -176,6 +176,14 @@ export function tripAccess(trip: Trip, rules: AccessRules, { today, flows, flows
   };
 }
 
+/**
+ * The access of the legs from `firstLeg` to `lastLeg` together, for a section's row: the
+ * legs' own access gathered, adding nothing of its own (ADR 0029). Hike legs have none.
+ */
+export function legsAccess(access: TripAccess, { firstLeg, lastLeg }: { firstLeg: number; lastLeg: number }): AccessSummary {
+  return summary(access.legs.slice(firstLeg, lastLeg + 1).filter((leg) => leg !== undefined));
+}
+
 /** The most restrictive state of these legs (absent without any) and all their warnings. */
 function summary(legs: readonly LegAccess[]): AccessSummary {
   const warnings = legs.flatMap((leg) => leg.warnings);

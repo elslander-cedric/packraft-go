@@ -169,7 +169,7 @@ test("camps and dates stay in line when camps change and on undo", async ({ page
   await drawThreeDays(page);
   await setStartDate(page, "2026-10-31");
   await expect.poll(() => dayDates(page)).toEqual(["Sat 31 Oct 2026", "Sun 1 Nov 2026", "Mon 2 Nov 2026"]);
-  await expect((await dayRows(page)).nth(1)).toContainText(strings.dayLegs(2, 2));
+  await expect((await dayRows(page)).nth(1)).toContainText(strings.legRange(2, 2));
 
   // Select the second point and remove its camp.
   const box = (await freeMapBox(page));
@@ -177,7 +177,7 @@ test("camps and dates stay in line when camps change and on undo", async ({ page
   await campButton(page).click();
   await expect(await dayRows(page)).toHaveCount(2);
   await expect.poll(() => dayDates(page)).toEqual(["Sat 31 Oct 2026", "Sun 1 Nov 2026"]);
-  await expect((await dayRows(page)).nth(1)).toContainText(strings.dayLegs(3, 3));
+  await expect((await dayRows(page)).nth(1)).toContainText(strings.legRange(3, 3));
 
   await undoButton(page).click();
   await expect(await dayRows(page)).toHaveCount(3);

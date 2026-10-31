@@ -11,6 +11,8 @@ export const strings = {
   plannerLoading: "Loading trip…",
   legsPanelLabel: "Legs",
   legsPanelEmpty: "Click the map to place the start point, then click again to add legs.",
+  sectionsPanelLabel: "Sections",
+  sectionsPanelEmpty: "Add legs to see the trip's sections.",
   tripNameLabel: "Trip name",
   tripNamePlaceholder: "Untitled trip",
   // The trip's optional start date (#52, GLOSSARY "Start date"); days get dates from it.
@@ -57,8 +59,9 @@ export const strings = {
   weekdayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   monthNames: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   // Which legs a day covers, e.g. "Legs 1–2" or "Leg 3".
-  dayLegs: (first: number, last: number) => (first === last ? `Leg ${first}` : `Legs ${first}–${last}`),
+  legRange: (first: number, last: number) => (first === last ? `Leg ${first}` : `Legs ${first}–${last}`),
   legLabel: (n: number) => `Leg ${n}`,
+  sectionLabel: (n: number) => `Section ${n}`,
   legModeHike: "Hike",
   legModePaddle: "Paddle",
   legModeLabel: (n: number) => `Leg ${n} mode`,
@@ -130,8 +133,8 @@ export const strings = {
   planner: {
     // The planner's sheet and tabs (#118, ADR 0026).
     sheetLabel: "Trip",
-    tabsLabel: "Trip sections",
-    tabs: { legs: "Legs", days: "Days", accessPoints: "Access points" },
+    tabsLabel: "Trip details",
+    tabs: { legs: "Legs", sections: "Sections", days: "Days", accessPoints: "Access points" },
     // The trip's totals in the sheet's peek: each figure after its icon, named for screen readers.
     totals: {
       labels: {
@@ -157,6 +160,10 @@ export const strings = {
     legDetailsButton: (n: number) => `Access details, leg ${n}`,
     legDetailsTitle: (n: number, mode: string, distance: string) => `Leg ${n} · ${mode} · ${distance}`,
     legDetailsClose: "Close",
+    sectionDetailsButton: (n: number) => `Access details, section ${n}`,
+    sectionDetailsTitle: (n: number, mode: string, distance: string) => `Section ${n} · ${mode} · ${distance}`,
+    // A failed leg on a section's row, by its number.
+    sectionLegFailed: (leg: number, message: string) => `Leg ${leg}: ${message}`,
     // A day card's figures, each after its icon, named for screen readers.
     dayFigures: {
       hike: "Hike distance",

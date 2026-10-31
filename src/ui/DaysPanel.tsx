@@ -120,7 +120,7 @@ function DayCard({
         <div className="day-figures">
           <DayFigure figure="climb" value={Math.round(day.climbM) > 0 && formatElevation(day.climbM)} />
           <DayFigure figure="descent" value={Math.round(day.descentM) > 0 && formatElevation(day.descentM)} />
-          <span className="day-legs">{strings.dayLegs(day.firstLeg + 1, day.lastLeg + 1)}</span>
+          <span className="day-legs">{strings.legRange(day.firstLeg + 1, day.lastLeg + 1)}</span>
         </div>
         {warnings}
       </div>

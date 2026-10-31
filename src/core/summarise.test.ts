@@ -22,6 +22,7 @@ describe("summarise", () => {
     expect(summarise(emptyTrip())).toEqual({
       legs: [],
       days: [], // Updated for #8: summaries now include days.
+      sections: [],
       trip: { ...noTotals, timeStatus: "estimated" },
     });
   });
@@ -31,6 +32,7 @@ describe("summarise", () => {
     expect(summarise(tripThrough({ lat: 50, lng: 4 }))).toEqual({
       legs: [],
       days: [], // Updated for #8: summaries now include days.
+      sections: [],
       trip: { ...noTotals, timeStatus: "estimated" },
     });
   });

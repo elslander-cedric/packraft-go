@@ -2,7 +2,7 @@ import type { AccessState } from "@/core/access";
 import type { AireWarning } from "@/core/aire";
 import type { LockWarning } from "@/core/locks";
 import type { LegWarnings } from "@/core/dayWarnings";
-import type { AccessNote, AccessWarning, LegAccess } from "@/core/tripAccess";
+import type { AccessNote, AccessSummary, AccessWarning, LegAccess } from "@/core/tripAccess";
 import { accessColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
 import { FlowFiguresView } from "./FlowFiguresView";
@@ -211,9 +211,9 @@ export function DayWarningChips({ legs, onShowLeg }: { legs: readonly LegWarning
 }
 
 /**
- * A leg row's access at a glance: its status's icon, then one icon per kind of warning
- * it has (access, lock, aire), each icon once. Their names are only read out; the text is in
- * the leg's dialog.
+ * A leg or section row's access at a glance: its status's icon, then one icon per kind of
+ * warning it has (access, lock, aire), each icon once. Their names are only read out; the text
+ * is in the row's dialog.
  */
 export function LegAccessIcons({
   state,
@@ -222,7 +222,7 @@ export function LegAccessIcons({
   className,
 }: {
   state: AccessState | undefined;
-  access: LegAccess | undefined;
+  access: Pick<AccessSummary, "warnings" | "lockWarnings"> | undefined;
   aire: readonly AireWarning[];
   className?: string;
 }) {
