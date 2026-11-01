@@ -3,9 +3,6 @@ import type { TripSummary } from "@/core/summarise";
 import { legsAccess, type TripAccess } from "@/core/tripAccess";
 import type { Leg } from "@/core/trip";
 import { useEffect, useRef } from "react";
-import { Button } from "../components/Button";
-import { Icon } from "../icons/Icon";
-import { icons } from "../icons/icons";
 import { strings } from "../strings";
 import { hasLegDetails } from "./LegDetailsDialog";
 import { RoutingFailure, RoutingStatus, TripRow } from "./TripRow";
@@ -22,8 +19,10 @@ export type SectionsListProps = {
   onSelect: (section: number) => void;
   /** A leg's row was tapped. */
   onSelectLeg: (legIndex: number) => void;
-  /** An open section's details line was tapped. */
+  /** A section's details button was tapped. */
   onShowDetails: (section: number) => void;
+  /** A leg's details button was tapped. */
+  onShowLegDetails: (legIndex: number) => void;
   onRetry: (legIndex: number) => void;
   /** The section last tapped, marked by the row's left bar. */
   selected?: number;
@@ -37,9 +36,9 @@ export type SectionsListProps = {
  * The Sections tab: one row per section (GLOSSARY), like a leg row with the totals of its legs
  * and which legs those are. The warnings and routing state are its legs', gathered (ADR 0029):
  * one "Routing" line while any leg waits, and each failed leg, by number when there are several, with its own Retry.
- * A tap on the selected section of several legs shows them under it (#200), after a line that
- * opens the section's details: figures, access and warning icons, and a tap that zooms to the
- * leg. Retry and the details stay on the section.
+ * A tap on the selected section of several legs shows them under it (#200): figures, access and
+ * warning icons, a tap that zooms to the leg and a button to its own details. Retry stays on the
+ * section.
  */
 export default function SectionsList({
   summary,
@@ -52,6 +51,7 @@ export default function SectionsList({
   onSelect,
   onSelectLeg,
   onShowDetails,
+  onShowLegDetails,
   onRetry,
 }: SectionsListProps) {
   const list = useRef<HTMLOListElement>(null);
@@ -71,6 +71,7 @@ export default function SectionsList({
         const routing = indices.some((leg) => !legs[leg].route || legs[leg].route.status === "pending");
         const legsLabel = strings.planner.sectionLegs(i + 1);
         const legsOpen = open.includes(section.firstLeg);
+        const failed = indices.filter((leg) => legs[leg].route?.status === "failed");
         return (
           <TripRow
             key={i}
@@ -83,32 +84,31 @@ export default function SectionsList({
             selected={i === selected}
             onSelect={() => onSelect(i)}
             {...(indices.length > 1 && { open: legsOpen })}
-          >
-            {routing && <RoutingStatus />}
-            {indices.map((leg) => {
-              const route = legs[leg].route;
-              return (
-                route?.status === "failed" && (
-                  <RoutingFailure
-                    key={leg}
-                    mode={section.mode}
-                    failure={route.failure}
-                    {...(indices.length > 1 && { leg: leg + 1 })}
-                    onRetry={() => onRetry(leg)}
-                  />
-                )
-              );
+            {...(indices.some((leg) => hasLegDetails(access, aire, leg)) && {
+              details: { label: strings.planner.sectionDetailsButton(i + 1), onShow: () => onShowDetails(i) },
             })}
-            {indices.length > 1 && legsOpen && indices.some((leg) => hasLegDetails(access, aire, leg)) && (
-              <Button
-                className="planner-section-details"
-                aria-label={strings.planner.sectionDetailsButton(i + 1)}
-                onClick={() => onShowDetails(i)}
-              >
-                <Icon icon={icons.legDetails} />
-                {strings.planner.sectionDetailsLine}
-              </Button>
-            )}
+            {...((routing || failed.length > 0) && {
+              status: (
+                <>
+                  {routing && <RoutingStatus />}
+                  {failed.map((leg) => {
+                    const route = legs[leg].route;
+                    return (
+                      route?.status === "failed" && (
+                        <RoutingFailure
+                          key={leg}
+                          mode={section.mode}
+                          failure={route.failure}
+                          {...(indices.length > 1 && { leg: leg + 1 })}
+                          onRetry={() => onRetry(leg)}
+                        />
+                      )
+                    );
+                  })}
+                </>
+              ),
+            })}
+          >
             {indices.length > 1 && legsOpen && (
               <ol className="planner-section-legs" aria-label={legsLabel}>
                 {indices.map((leg) => (
@@ -122,6 +122,9 @@ export default function SectionsList({
                     aire={aire.filter((warning) => warning.leg === leg)}
                     selected={leg === selectedLeg}
                     onSelect={() => onSelectLeg(leg)}
+                    {...(hasLegDetails(access, aire, leg) && {
+                      details: { label: strings.planner.legDetailsButton(leg + 1), onShow: () => onShowLegDetails(leg) },
+                    })}
                   />
                 ))}
               </ol>

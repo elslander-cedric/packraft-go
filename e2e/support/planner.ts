@@ -387,19 +387,11 @@ export async function holdWater(page: Page, id: string) {
 /** The open details dialog (#158): a day chip's leg's, or a section's with each leg's under its number. */
 export const legDetailsDialog = (page: Page) => page.getByRole("dialog", { name: /^(Leg|Section) \d+ · / });
 
-/** Opens section `n`'s details dialog: a second tap on a section of one leg, else from its details line. */
+/** Opens section `n`'s details dialog from the button on its row. */
 export async function openSectionDetails(page: Page, n: number) {
-  const row = sectionRowButton(page, n);
-  const expanded = await row.getAttribute("aria-expanded");
-  if (expanded === "false") await toggleSection(page, n);
-  if (expanded === null) {
-    await selectSection(page, n);
-    await row.click();
-  } else {
-    await tripPanel(page)
-      .getByRole("button", { name: text.sectionDetailsButton(n) })
-      .click();
-  }
+  await tripPanel(page)
+    .getByRole("button", { name: text.sectionDetailsButton(n) })
+    .click();
   await expect(legDetailsDialog(page)).toBeVisible();
   return legDetailsDialog(page);
 }

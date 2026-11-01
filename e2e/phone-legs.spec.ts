@@ -27,6 +27,8 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
 const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
 const legRows = (page: Page) => sheet(page).getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows);
+const detailsButton = (page: Page, n: number) =>
+  page.getByRole("button", { name: text.sectionDetailsButton(n) });
 const rowButton = (page: Page, n: number) =>
   legRows(page)
     .nth(n - 1)
@@ -176,22 +178,20 @@ test("rows have no tint of their own and keep their background when tapped", asy
   expect(await background(1)).toBe(plain);
 });
 
-test("a row is one button, and a second tap shows details only on a row that has them (#200)", async ({ page }) => {
+test("a row is one button, with a second for its details when it has them, and a second tap opens no dialog (#200)", async ({ page }) => {
   await serveOffline(page);
   await seed(page, { points: [start, putIn, end], legs: [{ mode: "hike", geometry: [start, putIn] }, { mode: "paddle", geometry: [putIn, end] }] });
   await openPhone(page);
   await openLegsTab(page);
   await expect(legRows(page).nth(1).locator(".leg-access-icons")).toBeVisible();
   await expect(legRows(page).nth(0).getByRole("button")).toHaveCount(1);
-  await expect(legRows(page).nth(1).getByRole("button")).toHaveCount(1);
-
-  await rowButton(page, 1).click();
-  await rowButton(page, 1).click();
-  await expect(detailsDialog(page)).toHaveCount(0);
+  await expect(legRows(page).nth(1).getByRole("button")).toHaveCount(2);
 
   await rowButton(page, 2).click();
-  await expect(detailsDialog(page)).toHaveCount(0);
   await rowButton(page, 2).click();
+  await expect(detailsDialog(page)).toHaveCount(0);
+
+  await detailsButton(page, 2).click();
   await expect(detailsDialog(page)).toBeVisible();
 });
 
@@ -302,11 +302,7 @@ test("a paddle row's info button opens its details dialog with the access and th
   await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
   await expect(legRows(page).nth(0).locator('.leg-access-icons svg[data-icon="flag"]')).toHaveCount(1);
   await expect(legRows(page).nth(0).locator(".leg-access-icons")).toContainText(strings.tripAccess.chipKind.aire);
-  await rowButton(page, 1).click();
-  await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
-  await expect(detailsDialog(page)).toHaveCount(0);
-
-  await rowButton(page, 1).click();
+  await detailsButton(page, 1).click();
   const dialog = detailsDialog(page);
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAccessibleName(new RegExp(`^${strings.sectionLabel(1)} · ${strings.legModePaddle} · \\S`));
@@ -318,14 +314,14 @@ test("a paddle row's info button opens its details dialog with the access and th
 
   await dialog.getByRole("button", { name: text.legDetailsClose }).click();
   await expect(detailsDialog(page)).toHaveCount(0);
-  await expect(rowButton(page, 1)).toBeFocused();
+  await expect(detailsButton(page, 1)).toBeFocused();
 
   // Escape closes it too.
-  await rowButton(page, 1).click();
+  await detailsButton(page, 1).click();
   await expect(detailsDialog(page)).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(detailsDialog(page)).toHaveCount(0);
-  await expect(rowButton(page, 1)).toBeFocused();
+  await expect(detailsButton(page, 1)).toBeFocused();
 });
 
 test("the sheet lets Escape through to the page, so it reaches a dialog opened from the sheet before focus moves in", async ({
@@ -384,8 +380,7 @@ test("a paddle leg's details dialog dated today shows the live flow figures", as
   });
   await openPhone(page);
   await openLegsTab(page);
-  await rowButton(page, 1).click();
-  await rowButton(page, 1).click();
+  await detailsButton(page, 1).click();
   const dialog = detailsDialog(page);
   await expect(dialog).toContainText("Closed today: low flow");
   await expect(dialog).toContainText(strings.flow.gaugeAssumed("Membre"));
@@ -557,8 +552,7 @@ test.describe("held sideways", () => {
     const panel = page.getByRole("complementary", { name: text.sheetLabel });
     await panel.getByRole("tab", { name: text.tabs.sections }).click();
     const row = page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
-    await row.getByRole("button").click();
-    await row.getByRole("button").click();
+    await row.getByRole("button", { name: text.sectionDetailsButton(1) }).click();
     const dialog = detailsDialog(page);
     await expect(dialog).toContainText("Closed today: low flow");
     await expect(dialog).toBeInViewport({ ratio: 1 });

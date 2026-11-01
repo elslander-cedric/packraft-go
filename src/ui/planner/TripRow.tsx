@@ -62,15 +62,31 @@ export type TripRowProps = {
   onSelect: () => void;
   /** Whether a section of several legs shows them under it; none on a leg or a one-leg section. */
   open?: boolean;
-  /** The row's routing state and, on an open section, its details line and legs. */
+  /** The button to the row's details; none when it has no details to show. */
+  details?: { label: string; onShow: () => void };
+  /** The row's routing state, if there is any to show. */
+  status?: ReactNode;
+  /** An open section's legs. */
   children?: ReactNode;
 };
+
+/** The button to a row's details; a tap only opens them, the row stays as it is. */
+function DetailsButton({ details }: { details: NonNullable<TripRowProps["details"]> }) {
+  return (
+    <Button className="planner-row-details" aria-label={details.label} onClick={details.onShow}>
+      <Icon icon={icons.legDetails} />
+      {strings.planner.rowDetailsLine}
+    </Button>
+  );
+}
 
 /**
  * One row of the Sections tab (#121), a section or one of its legs: its mode icon and distance as a headline with
  * the time on the right, and under it the climb and descent (drop on a paddle row), each
- * after its icon, then icons for the access and each kind of warning. The row is one button:
- * a tap zooms the map, and on a selected section also opens it or shows its details (#200).
+ * after its icon, then icons for the access and each kind of warning, with the button to its
+ * details at the right of that last line, or under the routing state while there is one.
+ * The rest of the row is one button: a tap zooms the map, and on a selected section of several
+ * legs also opens it (#200).
  */
 export function TripRow({
   row,
@@ -82,6 +98,8 @@ export function TripRow({
   selected,
   onSelect,
   open,
+  details,
+  status,
   children,
 }: TripRowProps) {
   const [time, ...elevation] = figures(row);
@@ -112,7 +130,10 @@ export function TripRow({
           )}
           <LegAccessIcons state={state} access={access} aire={aire} className="planner-row-access" />
         </Button>
+        {details && !status && <DetailsButton details={details} />}
       </div>
+      {status}
+      {details && status && <DetailsButton details={details} />}
       {children}
     </li>
   );

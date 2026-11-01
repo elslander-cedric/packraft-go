@@ -160,8 +160,8 @@ test.describe("#27 leg rows at 1280×800", () => {
     await expectFiguresUnbroken(hike, ["3.2 km", "100 m", "59 m", "49 min"]);
     await expectFiguresUnbroken(paddle, ["5.9 km", "7 m", "1 h 11 min"]);
     // Distance and time, then climb/descent/drop: at most two lines.
-    expect(await textLineCount(hike)).toBeLessThanOrEqual(2);
-    expect(await textLineCount(paddle)).toBeLessThanOrEqual(2);
+    expect(await textLineCount(hike.locator(".planner-row-toggle"))).toBeLessThanOrEqual(2);
+    expect(await textLineCount(paddle.locator(".planner-row-toggle"))).toBeLessThanOrEqual(2);
     // The distance and the time share the first line.
     for (const row of [hike, paddle]) {
       const distance = (await row.locator(".planner-row-distance").boundingBox())!;
@@ -180,7 +180,7 @@ test.describe("#27 leg rows at 1280×800", () => {
     const rise = "5 m?";
     await expect(row).toContainText(`${strings.planner.legFigures.rise} ${rise}`);
     await expectFiguresUnbroken(row, [rise, "1 h 11 min"]);
-    expect(await textLineCount(row)).toBeLessThanOrEqual(2);
+    expect(await textLineCount(row.locator(".planner-row-toggle"))).toBeLessThanOrEqual(2);
   });
 
   test("a pending leg row stays tidy while snapping", async ({ page }) => {
