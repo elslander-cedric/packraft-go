@@ -4,13 +4,15 @@ import type { LegRoute } from "@/core/router";
 import type { LegSummary } from "@/core/summarise";
 import type { AccessSummary } from "@/core/tripAccess";
 import type { LegMode } from "@/core/trip";
-import type { ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
 import { Button } from "../components/Button";
 import { formatDistance, formatElevation, formatTimeEstimate } from "../format";
 import { Icon } from "../icons/Icon";
 import { icons, type IconDefinition } from "../icons/icons";
 import { strings } from "../strings";
 import { LegAccessIcons } from "../TripAccessView";
+import { opensOnSecondTap, RowVariantContext } from "../prototype/sectionRow/variants";
+import "../prototype/sectionRow/sectionRow.css";
 
 type Figure = { key: string; icon: IconDefinition; label: string; value: string };
 
@@ -65,6 +67,8 @@ export type TripRowProps = {
   onShowDetails?: () => void;
   /** The button that shows a section's legs under it; none on a leg or a one-leg section. */
   expand?: { label: string; open: boolean; controls: string; onToggle: () => void };
+  /** PROTOTYPE: a second tap would show something under this row; whether it does now. */
+  opens?: { open: boolean };
   /** The row's routing state and, on an open section, its legs. */
   children?: ReactNode;
 };
@@ -89,13 +93,45 @@ export function TripRow({
   detailsLabel,
   onShowDetails,
   expand,
+  opens,
   children,
 }: TripRowProps) {
   const [time, ...elevation] = figures(row);
+  // PROTOTYPE: the variants of where the chevron and the info button go.
+  const variant = useContext(RowVariantContext);
+  const accessIcons = <LegAccessIcons state={state} access={access} aire={aire} className="planner-row-access" />;
+  const inFoot = variant === "C" || variant === "D";
+  const secondTap = opensOnSecondTap(variant);
+  const legsInFigures = legs && !(variant === "C" && expand) && !(variant === "E" && expand);
+  const toggleProps = expand && {
+    "aria-label": expand.label,
+    "aria-expanded": expand.open,
+    "aria-controls": expand.open ? expand.controls : undefined,
+    onClick: expand.onToggle,
+  };
+  const details = detailsLabel && (
+    <Button className="planner-row-details-button" aria-label={detailsLabel} onClick={onShowDetails}>
+      <Icon icon={icons.legDetails} />
+    </Button>
+  );
   return (
-    <li className={`planner-row planner-row-${row.mode}`}>
+    <li className={`planner-row planner-row-${row.mode} proto-${variant}`}>
       <div className="planner-row-head">
-        <Button className="planner-row-toggle" aria-current={selected || undefined} onClick={onSelect}>
+        {variant === "B" && (
+          <span className="proto-gutter">
+            {expand && (
+              <Button className="planner-row-expand-button proto-gutter-button" {...toggleProps}>
+                <Icon icon={icons.sectionLegs} />
+              </Button>
+            )}
+          </span>
+        )}
+        <Button
+          className="planner-row-toggle"
+          aria-current={selected || undefined}
+          aria-expanded={secondTap && opens ? opens.open : undefined}
+          onClick={onSelect}
+        >
           <span className="visually-hidden">{`${label} `}</span>
           <span className="planner-row-headline">
             <FigureView
@@ -109,37 +145,81 @@ export function TripRow({
             />
             <FigureView figure={time} className="planner-row-time" />
           </span>
-          {(elevation.length > 0 || legs) && (
+          {(elevation.length > 0 || legsInFigures) && (
             <span className="planner-row-figures">
               {elevation.map((figure) => (
                 <FigureView key={figure.key} figure={figure} />
               ))}
-              {legs && <span>{legs}</span>}
+              {legsInFigures && <span>{legs}</span>}
+              {variant === "G" && opens && (
+                <span className={`proto-cue${opens.open ? " proto-cue-open" : ""}`}>
+                  <Icon icon={icons.sectionLegs} />
+                </span>
+              )}
             </span>
           )}
-          <LegAccessIcons state={state} access={access} aire={aire} className="planner-row-access" />
+          {!inFoot && accessIcons}
         </Button>
-        {(expand || detailsLabel) && (
+        {variant === "A" && (expand || detailsLabel) && (
           <div className="planner-row-actions">
             {expand && (
-              <Button
-                className="planner-row-expand-button"
-                aria-label={expand.label}
-                aria-expanded={expand.open}
-                aria-controls={expand.open ? expand.controls : undefined}
-                onClick={expand.onToggle}
-              >
+              <Button className="planner-row-expand-button" {...toggleProps}>
                 <Icon icon={icons.sectionLegs} />
               </Button>
             )}
-            {detailsLabel && (
-              <Button className="planner-row-details-button" aria-label={detailsLabel} onClick={onShowDetails}>
-                <Icon icon={icons.legDetails} />
-              </Button>
-            )}
+            {details}
           </div>
         )}
+        {variant === "B" && detailsLabel && <div className="planner-row-actions">{details}</div>}
       </div>
+      {variant === "C" && (accessIcons || detailsLabel || expand) && (
+        <div className="proto-foot">
+          {accessIcons}
+          {detailsLabel && (
+            <Button className="proto-foot-info" aria-label={detailsLabel} onClick={onShowDetails}>
+              <Icon icon={icons.legDetails} />
+            </Button>
+          )}
+          {expand && (
+            <Button className="proto-legs-label proto-foot-end" {...toggleProps}>
+              <span>{legs}</span>
+              <Icon icon={icons.sectionLegs} />
+            </Button>
+          )}
+        </div>
+      )}
+      {variant === "D" && (
+        <div className="proto-foot">
+          {detailsLabel ? (
+            <Button className="proto-access-pill" aria-label={detailsLabel} onClick={onShowDetails}>
+              {accessIcons}
+            </Button>
+          ) : (
+            accessIcons
+          )}
+          {expand && (
+            <Button className="planner-row-expand-button proto-chevron-end proto-foot-end" {...toggleProps}>
+              <Icon icon={icons.sectionLegs} />
+            </Button>
+          )}
+        </div>
+      )}
+      {variant === "E" && (expand || detailsLabel) && (
+        <div className="proto-bar">
+          {detailsLabel && (
+            <Button className="proto-bar-button" aria-label={detailsLabel} onClick={onShowDetails}>
+              <Icon icon={icons.legDetails} />
+              <span>Details</span>
+            </Button>
+          )}
+          {expand && (
+            <Button className="proto-bar-button" {...toggleProps}>
+              <span>{legs}</span>
+              <Icon icon={icons.sectionLegs} />
+            </Button>
+          )}
+        </div>
+      )}
       {children}
     </li>
   );

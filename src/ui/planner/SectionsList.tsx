@@ -2,7 +2,11 @@ import type { AireWarning } from "@/core/aire";
 import type { TripSummary } from "@/core/summarise";
 import { legsAccess, type TripAccess } from "@/core/tripAccess";
 import type { Leg } from "@/core/trip";
-import { useId } from "react";
+import { useContext, useId } from "react";
+import { Button } from "../components/Button";
+import { Icon } from "../icons/Icon";
+import { icons } from "../icons/icons";
+import { opensOnSecondTap, RowVariantContext } from "../prototype/sectionRow/variants";
 import { strings } from "../strings";
 import { hasLegDetails } from "./LegDetailsDialog";
 import { RoutingFailure, RoutingStatus, TripRow } from "./TripRow";
@@ -54,6 +58,7 @@ export default function SectionsList({
   onRetry,
 }: SectionsListProps) {
   const listId = useId();
+  const secondTap = opensOnSecondTap(useContext(RowVariantContext));
   const { sections } = summary;
   if (sections.length === 0) return <p className="planner-empty">{strings.sectionsPanelEmpty}</p>;
   return (
@@ -65,6 +70,7 @@ export default function SectionsList({
         const legsLabel = strings.planner.sectionLegs(i + 1);
         const legsId = `${listId}-${i}`;
         const legsOpen = open.includes(section.firstLeg);
+        const withDetails = indices.some((leg) => hasLegDetails(access, aire, leg));
         return (
           <TripRow
             key={i}
@@ -76,11 +82,12 @@ export default function SectionsList({
             aire={aire.filter((warning) => indices.includes(warning.leg))}
             selected={i === selected}
             onSelect={() => onSelect(i)}
-            {...(indices.some((leg) => hasLegDetails(access, aire, leg)) && {
+            {...(!secondTap && withDetails && {
               detailsLabel: strings.planner.sectionDetailsButton(i + 1),
             })}
             onShowDetails={() => onShowDetails(i)}
-            {...(indices.length > 1 && {
+            {...(secondTap && indices.length > 1 && { opens: { open: legsOpen } })}
+            {...(!secondTap && indices.length > 1 && {
               expand: {
                 label: legsLabel,
                 open: legsOpen,
@@ -104,6 +111,12 @@ export default function SectionsList({
                 )
               );
             })}
+            {secondTap && withDetails && legsOpen && (
+              <Button className="proto-open-details" onClick={() => onShowDetails(i)}>
+                <Icon icon={icons.legDetails} />
+                <span>Access details</span>
+              </Button>
+            )}
             {indices.length > 1 && legsOpen && (
               <ol id={legsId} className="planner-section-legs" aria-label={legsLabel}>
                 {indices.map((leg) => (

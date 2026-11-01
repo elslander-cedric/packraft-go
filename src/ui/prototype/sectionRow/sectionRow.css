@@ -1,0 +1,165 @@
+/* PROTOTYPE (section row actions): throwaway, never merged. */
+
+/* B: the chevron leads the row, in a gutter every section row keeps so the mode icons line up. */
+.proto-gutter {
+  flex: 0 0 2.25rem;
+  align-self: stretch;
+  margin-left: calc(-1 * var(--space-2));
+}
+
+.planner-section-legs .proto-gutter {
+  display: none;
+}
+
+.button.proto-gutter-button {
+  min-width: 2.25rem;
+  min-height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.proto-B .planner-section-legs {
+  padding-left: 1.5rem;
+}
+
+/* C and D: a line of its own under the figures, its access icons and buttons side by side. */
+.proto-foot {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.proto-foot:has(button) {
+  min-height: 2rem;
+}
+
+.proto-foot:empty {
+  display: none;
+}
+
+/* The row's button loses its bottom padding: the foot follows straight on. */
+.proto-C .button.planner-row-toggle,
+.proto-D .button.planner-row-toggle {
+  padding-bottom: 0;
+}
+
+.button.proto-foot-info {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: -0.375rem 0 -0.375rem -0.6rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+/* C: the words the chevron belongs to, muted as the figures are. */
+.button.proto-legs-label {
+  min-height: 2.75rem;
+  margin: -0.375rem 0;
+  padding: 0 0 0 var(--space-2);
+  gap: var(--space-1);
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+}
+
+.proto-legs-label[aria-expanded="true"] .icon {
+  transform: rotate(180deg);
+}
+
+.button.proto-chevron-end {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: -0.375rem 0;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+/* After the buttons' own margins, so that it wins. */
+.button.proto-foot-end {
+  margin-left: auto;
+}
+
+/* D: the access icons are the button; the outline says they can be tapped. */
+.button.proto-access-pill {
+  min-height: 2rem;
+  padding: 0 var(--space-2);
+  gap: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.proto-access-pill .planner-row-access {
+  align-self: center;
+}
+
+/* E: two worded actions across the row, each half of it. */
+.proto-bar {
+  display: flex;
+  flex-basis: 100%;
+  min-width: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.button.proto-bar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 2.75rem;
+  margin-bottom: calc(-1 * var(--space-2));
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.proto-bar-button + .proto-bar-button {
+  border-left: 1px solid var(--color-border);
+}
+
+.proto-bar-button[aria-expanded="true"] .icon {
+  transform: rotate(180deg);
+}
+
+/* F and G: what a second tap shows, the details first as they are the section's. */
+.button.proto-open-details {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  margin-left: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* G: not a button, only a sign that the row opens, at the end of the figures. */
+.proto-cue {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.proto-cue-open .icon {
+  transform: rotate(180deg);
+}

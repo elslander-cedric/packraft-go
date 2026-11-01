@@ -1,6 +1,9 @@
 "use client";
 
 import { useId, useRef, useState, type CSSProperties } from "react";
+import "../prototype/sectionRow/seed";
+import { PrototypeSwitcher, useVariant } from "../prototype/PrototypeSwitcher";
+import { opensOnSecondTap, RowVariantContext, rowVariantNames, rowVariants } from "../prototype/sectionRow/variants";
 import type { Router } from "@/core/router";
 import { canGoBackToStart, canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
@@ -28,6 +31,7 @@ import SnapOffers from "../SnapOffers";
 import LegDetailsDialog from "./LegDetailsDialog";
 import SectionDetailsDialog from "./SectionDetailsDialog";
 import SectionsList from "./SectionsList";
+import { hasLegDetails } from "./LegDetailsDialog";
 import MapMenu from "./MapMenu";
 import PlannerMenu from "./PlannerMenu";
 import PlaceSearch from "./PlaceSearch";
@@ -81,6 +85,7 @@ function legsArea(trip: Trip, { firstLeg, lastLeg }: { firstLeg: number; lastLeg
  * planning rules.
  */
 export default function Planner({ router }: { router?: Router }) {
+  const [rowVariant, setRowVariant] = useVariant(rowVariants);
   const {
     session,
     dispatch,
@@ -194,7 +199,7 @@ export default function Planner({ router }: { router?: Router }) {
   // edit that leaves no section of several legs starting there closes it.
   const [openSections, setOpenSections] = useState<readonly number[]>([]);
   const stillOpen = openSections.filter((first) =>
-    summary.sections.some((section) => section.firstLeg === first && section.lastLeg > first),
+    summary.sections.some((section) => section.firstLeg === first && (opensOnSecondTap(rowVariant) || section.lastLeg > first)),
   );
   if (stillOpen.length !== openSections.length) setOpenSections(stillOpen);
   const toggleSection = (first: number) =>
@@ -202,6 +207,11 @@ export default function Planner({ router }: { router?: Router }) {
   const selectSectionRow = (index: number) => {
     const section = summary.sections[index];
     if (!section) return;
+    // PROTOTYPE: the map still goes back to the section, which may have been panned away from.
+    if (opensOnSecondTap(rowVariant) && index === selectedSection) {
+      if (section.lastLeg > section.firstLeg) toggleSection(section.firstLeg);
+      else if (hasLegDetails(waterAccess, aire, section.firstLeg)) setDetailsSection(index);
+    }
     setSelectedSection(index);
     setSelectedLeg(undefined);
     raise();
@@ -262,6 +272,7 @@ export default function Planner({ router }: { router?: Router }) {
   const sheetContent = (
     <div className="planner-tab-panels">
       <TabPanel value="sections">
+        <RowVariantContext.Provider value={rowVariant}>
         <SectionsList
           summary={summary}
           legs={trip.legs}
@@ -276,6 +287,7 @@ export default function Planner({ router }: { router?: Router }) {
           onShowDetails={setDetailsSection}
           onRetry={(index) => dispatch({ type: "retryLeg", index })}
         />
+        </RowVariantContext.Provider>
       </TabPanel>
       <TabPanel value="days">
         {summary.days.length === 0 && <p className="planner-empty">{strings.daysPanelEmpty}</p>}
@@ -529,6 +541,7 @@ export default function Planner({ router }: { router?: Router }) {
         )}
       </Tabs>
       <AccessPointDialog point={editing} onSave={access.update} onClose={() => setEditingId(null)} />
+      <PrototypeSwitcher keys={rowVariants} names={rowVariantNames} current={rowVariant} onChange={setRowVariant} />
     </div>
   );
 }
