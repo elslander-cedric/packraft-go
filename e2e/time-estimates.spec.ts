@@ -13,6 +13,7 @@ import {
   openPlanner,
   settingsDialog,
   totals,
+  showAllLegs,
 } from "./support/planner";
 
 const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".planner-row-time");
@@ -51,6 +52,8 @@ async function drawHikeThenPaddle(page: Page) {
   // Updated in round 2: the trip total waits for every leg to be routed.
   await expect(rows(page).nth(0)).toContainText(strings.climbLabel);
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("each leg and the trip show an estimated time, labelled as an estimate", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });

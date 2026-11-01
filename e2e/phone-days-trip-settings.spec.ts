@@ -161,7 +161,7 @@ test("an empty trip's Days tab says how days come about, like the Legs tab; the 
   await serveOffline(page);
   await page.goto("/");
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  await expect(panel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(panel(page)).toContainText(strings.sectionsPanelEmpty);
 
   await tab(page, text.tabs.days).click();
   // By name: while the tabs switch, the Legs panel is still there on its way out.
@@ -222,7 +222,7 @@ test("the sheet has no Trip or Settings tab; the menu's Settings opens a dialog 
 }) => {
   await serveOffline(page);
   await openWithTrip(page);
-  await expect(sheet(page).getByRole("tab")).toHaveText([text.tabs.legs, text.tabs.sections, text.tabs.days, text.tabs.accessPoints]);
+  await expect(sheet(page).getByRole("tab")).toHaveText([text.tabs.sections, text.tabs.days, text.tabs.accessPoints]);
 
   await openSettings(page);
   // The dialog's title is its only heading: it already names the fields.

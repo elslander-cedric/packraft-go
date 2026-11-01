@@ -1,11 +1,11 @@
-// The Sections tab (GLOSSARY: Section, ADR 0021): one row per section between the Legs and Days
-// tabs, like a leg row with the totals of its legs. Its warnings are its legs' (ADR 0029).
-import { expect, test, type Page } from "@playwright/test";
+// The Sections tab (GLOSSARY: Section, ADR 0021): one row per section, with the totals of its
+// legs and its legs' warnings (ADR 0029), and those legs shown under it on demand.
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { icons } from "../src/ui/icons/icons";
 import { strings } from "../src/ui/strings";
 import { iconIn } from "./support/icons";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { figure, legRowButton, legRows, mapRegion, openPlanner, panelTab, showTab, tripPanel } from "./support/planner";
+import { figure, legLines, openPlanner, panelTab, points, showTab, tripPanel } from "./support/planner";
 
 const text = strings.planner;
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
@@ -56,22 +56,34 @@ const canalTrip = {
 } as const;
 
 const sectionRows = (page: Page) =>
-  tripPanel(page).getByRole("list", { name: strings.sectionsPanelLabel }).getByRole("listitem");
+  tripPanel(page).getByRole("list", { name: strings.sectionsPanelLabel }).locator("> li");
+const legsOf = (page: Page, section: number) =>
+  tripPanel(page).getByRole("list", { name: text.sectionLegs(section) }).getByRole("listitem");
+const legsButton = (page: Page, section: number) =>
+  tripPanel(page).getByRole("button", { name: text.sectionLegs(section) });
+const rowButton = (row: Locator, name: string) => row.getByRole("button", { name, exact: false }).first();
+const marked = (page: Page) => tripPanel(page).locator(".planner-row-toggle[aria-current]");
+// Leaflet resets the map pane after a zoom, so a zoom shows in where a leg is drawn.
+const drawn = (page: Page) => legLines(page).first().getAttribute("d");
+async function deletePoint(page: Page, index: number) {
+  const point = (await points(page).nth(index).boundingBox())!;
+  await page.mouse.click(point.x + point.width / 2, point.y + point.height / 2);
+  await page.getByRole("button", { name: strings.deletePointButton }).click();
+}
 const sectionDialog = (page: Page) => page.getByRole("dialog", { name: /^Section \d+ · / });
 const showSections = (page: Page) => showTab(page, text.tabs.sections);
 
 test.use({ viewport: { width: 1400, height: 900 }, timezoneId: "Europe/Brussels" });
 
-test("the Sections tab sits between Legs and Days", async ({ page }) => {
+test("the Sections tab comes first and is the one shown", async ({ page }) => {
   await serveOffline(page);
   await openPlanner(page);
   await expect(tripPanel(page).getByRole("tab")).toHaveText([
-    text.tabs.legs,
     text.tabs.sections,
     text.tabs.days,
     text.tabs.accessPoints,
   ]);
-  await showSections(page);
+  await expect(panelTab(page, text.tabs.sections)).toHaveAttribute("aria-selected", "true");
   await expect(tripPanel(page).getByText(strings.sectionsPanelEmpty)).toBeVisible();
 });
 
@@ -90,8 +102,6 @@ test("a row per section, ending at a mode change or a camp, with the totals of i
 
   // Net drop from the first put-in to the last take-out: 30 m to 20 m.
   expect(await figure(paddle, text.legFigures.drop)).toBe("10 m");
-  await showTab(page, text.tabs.legs);
-  await expect(legRows(page)).toHaveCount(4);
 });
 
 test("a section shows its legs' warnings on the row, and each leg's details in a dialog", async ({ page }) => {
@@ -116,21 +126,118 @@ test("a section shows its legs' warnings on the row, and each leg's details in a
   await expect(sectionDialog(page)).toHaveCount(0);
 });
 
-test("tapping a row zooms the map to the section and marks it, apart from the Legs tab's selection", async ({ page }) => {
+test("tapping a row zooms the map to the section and marks it", async ({ page }) => {
   await serveOffline(page);
   await seed(page, canalTrip);
   await openPlanner(page);
 
-  await legRowButton(page, 1).click();
-  await showSections(page);
-  const button = sectionRows(page).nth(1).getByRole("button", { name: strings.sectionLabel(2), exact: false }).first();
-  await expect(button).not.toHaveAttribute("aria-current");
-  const pane = mapRegion(page).locator(".leaflet-map-pane");
-  const before = await pane.evaluate((el) => (el as HTMLElement).style.transform);
+  const button = rowButton(sectionRows(page).nth(1), strings.sectionLabel(2));
+  const before = await drawn(page);
   await button.click();
   await expect(button).toHaveAttribute("aria-current", "true");
-  await expect.poll(() => pane.evaluate((el) => (el as HTMLElement).style.transform)).not.toBe(before);
-  await expect(sectionRows(page).locator('.planner-row-toggle[aria-current]')).toHaveCount(1);
+  await expect.poll(() => drawn(page)).not.toBe(before);
+  await expect(marked(page)).toHaveCount(1);
+});
+
+test("only a section of several legs can show them, closed until asked", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, canalTrip);
+  await openPlanner(page);
+
+  await expect(tripPanel(page).locator(".planner-row-expand-button")).toHaveCount(1);
+  await expect(legsButton(page, 2)).toHaveAttribute("aria-expanded", "false");
+  await expect(legsOf(page, 2)).toHaveCount(0);
+
+  await legsButton(page, 2).click();
+  await expect(legsButton(page, 2)).toHaveAttribute("aria-expanded", "true");
+  await expect(legsOf(page, 2)).toHaveCount(2);
+  await expect(legsOf(page, 2).nth(0)).toContainText(strings.legLabel(2));
+  await expect(legsOf(page, 2).nth(1)).toContainText(strings.legLabel(3));
+
+  await legsButton(page, 2).click();
+  await expect(legsOf(page, 2)).toHaveCount(0);
+});
+
+test("a shown leg has its own figures and warning icons, but no details or Retry", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, canalTrip);
+  await openPlanner(page);
+  await legsButton(page, 2).click();
+
+  const [throughLock, after] = [legsOf(page, 2).nth(0), legsOf(page, 2).nth(1)];
+  // A leg's drop, not the section's net 10 m: 30 m to 24 m, then 24 m to 20 m.
+  expect(await figure(throughLock, text.legFigures.drop)).toBe("6 m");
+  expect(await figure(after, text.legFigures.drop)).toBe("4 m");
+  await expect(throughLock.locator('svg[data-icon="stairs"]')).toHaveCount(1);
+  await expect(after.locator('svg[data-icon="stairs"]')).toHaveCount(0);
+  await expect(throughLock.getByRole("button")).toHaveCount(1);
+});
+
+test("tapping a shown leg zooms to it, and one row stays marked between sections and legs", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, canalTrip);
+  await openPlanner(page);
+  await legsButton(page, 2).click();
+
+  const section = rowButton(sectionRows(page).nth(1), strings.sectionLabel(2));
+  const leg = rowButton(legsOf(page, 2).nth(1), strings.legLabel(3));
+  const start = await drawn(page);
+  await section.click();
+  await expect(section).toHaveAttribute("aria-current", "true");
+
+  await expect.poll(() => drawn(page)).not.toBe(start);
+  const before = await drawn(page);
+  await leg.click();
+  await expect(leg).toHaveAttribute("aria-current", "true");
+  await expect.poll(() => drawn(page)).not.toBe(before);
+  await expect(marked(page)).toHaveCount(1);
+  // Its left bar marks the leg alone, not the section around it too.
+  const bar = (row: Locator) => row.evaluate((el) => getComputedStyle(el).borderLeftColor);
+  expect(await bar(legsOf(page, 2).nth(1))).not.toBe(await bar(sectionRows(page).nth(1)));
+
+  await section.click();
+  await expect(section).toHaveAttribute("aria-current", "true");
+  await expect(marked(page)).toHaveCount(1);
+});
+
+test("shown legs stay open across tabs, side by side, and through an edit further on", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, {
+    points: [D, A, B, C, E],
+    legs: [
+      { mode: "hike", line: [D, A] },
+      { mode: "hike", line: [A, B] },
+      { mode: "paddle", line: [B, C] },
+      { mode: "paddle", line: [C, E] },
+    ],
+  });
+  await openPlanner(page);
+  await legsButton(page, 1).click();
+  await legsButton(page, 2).click();
+  await expect(legsOf(page, 1)).toHaveCount(2);
+  await expect(legsOf(page, 2)).toHaveCount(2);
+
+  await showTab(page, text.tabs.days);
+  await showTab(page, text.tabs.sections);
+  await expect(legsOf(page, 1)).toHaveCount(2);
+  await expect(legsOf(page, 2)).toHaveCount(2);
+
+  // Deleting the last point leaves section 2 with one leg, which closes it; section 1 is untouched.
+  await deletePoint(page, 4);
+  await expect(legsButton(page, 2)).toHaveCount(0);
+  await expect(legsOf(page, 1)).toHaveCount(2);
+});
+
+test("a section closes when no section of several legs starts at its first leg", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, canalTrip);
+  await openPlanner(page);
+  await legsButton(page, 2).click();
+
+  // Deleting the point between its two legs merges them into one.
+  await deletePoint(page, 2);
+  await expect(sectionRows(page)).toHaveCount(3);
+  await expect(tripPanel(page).locator(".planner-section-legs")).toHaveCount(0);
 });
 
 test("a section whose legs are waiting for routes says so once", async ({ page }) => {
@@ -163,13 +270,13 @@ test("each failed leg shows by number with its own Retry", async ({ page }) => {
 test.describe("on a 320 px phone", () => {
   test.use({ viewport: { width: 320, height: 640 }, isMobile: true, hasTouch: true });
 
-  test("the four tabs fit side by side, and no label is cut off (#70)", async ({ page }) => {
+  test("the three tabs fit side by side, and no label is cut off (#70)", async ({ page }) => {
     await serveOffline(page);
     await page.goto("/");
     await page.evaluate(() => document.fonts.ready);
     const sheet = page.getByRole("dialog", { name: text.sheetLabel });
     const tabs = sheet.getByRole("tab");
-    await expect(tabs).toHaveCount(4);
+    await expect(tabs).toHaveCount(3);
     for (const tab of await tabs.all()) {
       await expect(tab).toBeInViewport({ ratio: 1 });
       const fits = await tab.evaluate((el) => el.scrollWidth <= el.clientWidth);

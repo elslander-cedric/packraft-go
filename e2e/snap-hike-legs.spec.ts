@@ -2,12 +2,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { freeMapBox, openPlanner } from "./support/planner";
+import { freeMapBox, openPlanner, showAllLegs, leafRows } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const rows = (page: Page) => legsPanel(page).getByRole("listitem");
+const rows = (page: Page) => legsPanel(page).locator(leafRows);
 
 const SNAPPED: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 const NO_ROUTE: BRouterReply = { status: 400, body: brouterFixture("hiking-no-route-400.txt") };
@@ -25,6 +25,8 @@ function heldReply() {
   const reply = new Promise<BRouterReply>((r) => (release = r));
   return { reply, release };
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("a hike leg shows pending, then follows the trail with its distance, climb and descent", async ({ page }) => {
   const held = heldReply();

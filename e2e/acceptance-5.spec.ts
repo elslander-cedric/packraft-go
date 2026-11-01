@@ -5,7 +5,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { freeMapCentre, legLines, legRows as rows, mapClicker, mapRegion, nextLegMode, openPlanner } from "./support/planner";
+import { freeMapCentre, legLines, legRows as rows, mapClicker, mapRegion, nextLegMode, openPlanner, showAllLegs } from "./support/planner";
 
 const profiles = (urls: URL[]) => urls.map((u) => u.searchParams.get("profile"));
 
@@ -22,6 +22,8 @@ async function openMap(page: Page) {
 const centreX = async (page: Page) => (await freeMapCentre(page)).x;
 
 // Updated for ADR 0034: a leg's mode is picked with the next leg's mode toggle when it is drawn.
+test.beforeEach(({ page }) => showAllLegs(page));
+
 test("AC1/AC3: a leg is drawn with the next leg's mode; paddle legs look different in the panel and on the map", async ({
   page,
 }) => {

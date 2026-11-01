@@ -2,10 +2,10 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { initialMapView } from "../src/map/mapConfig";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { totals, tripPanel } from "./support/planner";
+import { totals, tripPanel, showAllLegs, leafRows } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 
 /** Ground distance per screen pixel for Web Mercator tiles at a latitude and zoom. */
 const kmPerPixel = (lat: number, zoom: number) =>
@@ -29,6 +29,8 @@ const kmShown = async (locator: Locator) => {
 const expectWithinOneKm = (shownKm: number, expectedKm: number) =>
   expect(Math.abs(shownKm - expectedKm)).toBeLessThan(1);
 
+test.beforeEach(({ page }) => showAllLegs(page));
+
 test("clicking three points draws two straight hike legs and shows their distances and total", async ({
   page,
 }) => {
@@ -39,7 +41,7 @@ test("clicking three points draws two straight hike legs and shows their distanc
 
   // Before any click: the panel is there but lists no legs.
   await expect(tripPanel(page)).toBeVisible();
-  await expect(legsPanel(page).getByRole("listitem")).toHaveCount(0);
+  await expect(legsPanel(page).locator(leafRows)).toHaveCount(0);
 
   const box = (await map.boundingBox())!;
   const cx = box.x + box.width / 2;
@@ -50,7 +52,7 @@ test("clicking three points draws two straight hike legs and shows their distanc
 
   await page.mouse.click(a.x, a.y);
   // The start point alone makes no leg.
-  await expect(legsPanel(page).getByRole("listitem")).toHaveCount(0);
+  await expect(legsPanel(page).locator(leafRows)).toHaveCount(0);
   await page.mouse.click(b.x, b.y);
   await page.mouse.click(c.x, c.y);
 
@@ -78,7 +80,7 @@ test("clicking three points draws two straight hike legs and shows their distanc
   const expectedFirst = 300 * kmPerPixel(latAB, zoom);
   const expectedSecond = 250 * kmPerPixel((latAB + latC) / 2, zoom);
 
-  const legs = legsPanel(page).getByRole("listitem");
+  const legs = legsPanel(page).locator(leafRows);
   await expect(legs).toHaveCount(2);
   await expect(legs.nth(0)).toContainText(strings.planner.legFigures.hike);
   await expect(legs.nth(1)).toContainText(strings.planner.legFigures.hike);

@@ -5,11 +5,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
+import { showAllLegs, leafRows } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const panel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const panel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const rows = (page: Page) => panel(page).getByRole("listitem");
+const rows = (page: Page) => panel(page).locator(leafRows);
 
 const SNAPPED: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 const NO_ROUTE: BRouterReply = { status: 400, body: brouterFixture("hiking-no-route-400.txt") };
@@ -42,6 +43,8 @@ function gate() {
   const reply = new Promise<BRouterReply>((r) => (open = r));
   return { reply, open };
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("#4: a snapped hike leg shows pending, then the trail with distance, climb and descent", async ({ page }) => {
   const live = watchLiveTraffic(page);
@@ -153,6 +156,6 @@ test("#4: one failing leg does not disturb its routed neighbours", async ({ page
   await expect(legLines(page).nth(2)).toHaveClass(/routed/);
 
   await expect(rows(page).nth(0)).toContainText(strings.climbLabel);
-  await expect(rows(page).nth(1).getByRole("alert")).toBeVisible();
+  await expect(panel(page).getByRole("alert")).toHaveCount(1);
   await expect(rows(page).nth(2)).toContainText(strings.climbLabel);
 });

@@ -62,17 +62,20 @@ export type TripRowProps = {
   onSelect: () => void;
   /** The details button's name; no button without one. */
   detailsLabel?: string;
-  onShowDetails: () => void;
-  /** The row's routing state. */
-  children: ReactNode;
+  onShowDetails?: () => void;
+  /** The button that shows a section's legs under it; none on a leg or a one-leg section. */
+  expand?: { label: string; open: boolean; controls: string; onToggle: () => void };
+  /** The row's routing state and, on an open section, its legs. */
+  children?: ReactNode;
 };
 
 /**
- * One row of the Legs or Sections tab (#121): its mode icon and distance as a headline with
+ * One row of the Sections tab (#121), a section or one of its legs: its mode icon and distance as a headline with
  * the time on the right, and under it the climb and descent (drop on a paddle row), each
- * after its icon, then icons for the access and each kind of warning. Rows don't open
- * (#158): a row with access details or aire warnings has an info button beside its access,
- * which shows them in full in a dialog.
+ * after its icon, then icons for the access and each kind of warning. A tap zooms the map
+ * and never opens the row (#158): a row with access details or aire warnings has an info
+ * button beside its access, which shows them in full in a dialog, and a section of several
+ * legs has a button that shows them under it.
  */
 export function TripRow({
   row,
@@ -85,6 +88,7 @@ export function TripRow({
   onSelect,
   detailsLabel,
   onShowDetails,
+  expand,
   children,
 }: TripRowProps) {
   const [time, ...elevation] = figures(row);
@@ -115,10 +119,25 @@ export function TripRow({
           )}
           <LegAccessIcons state={state} access={access} aire={aire} className="planner-row-access" />
         </Button>
-        {detailsLabel && (
-          <Button className="planner-row-details-button" aria-label={detailsLabel} onClick={onShowDetails}>
-            <Icon icon={icons.legDetails} />
-          </Button>
+        {(expand || detailsLabel) && (
+          <div className="planner-row-actions">
+            {expand && (
+              <Button
+                className="planner-row-expand-button"
+                aria-label={expand.label}
+                aria-expanded={expand.open}
+                aria-controls={expand.open ? expand.controls : undefined}
+                onClick={expand.onToggle}
+              >
+                <Icon icon={icons.sectionLegs} />
+              </Button>
+            )}
+            {detailsLabel && (
+              <Button className="planner-row-details-button" aria-label={detailsLabel} onClick={onShowDetails}>
+                <Icon icon={icons.legDetails} />
+              </Button>
+            )}
+          </div>
         )}
       </div>
       {children}

@@ -19,6 +19,7 @@ import {
   renameTrip,
   saveTripFile,
   tripPanel as panel,
+  showAllLegs,
 } from "./support/planner";
 
 const KEY = "packraft-go.trip";
@@ -67,6 +68,8 @@ async function drawMixedTrip(page: Page, name: string) {
   failNext = false;
   return { net, click };
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("#10: the saved file is exactly the autosave format, named after the trip", async ({ page }) => {
   await drawMixedTrip(page, "Ourthe: weekend");

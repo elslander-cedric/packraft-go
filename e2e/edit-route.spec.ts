@@ -1,13 +1,13 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { freeMapBox, openPlanner, totals } from "./support/planner";
+import { freeMapBox, openPlanner, totals, showAllLegs, leafRows } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const legRows = (page: Page) => legsPanel(page).getByRole("listitem");
+const legRows = (page: Page) => legsPanel(page).locator(leafRows);
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const deleteButton = (page: Page) => page.getByRole("button", { name: strings.deletePointButton });
 
@@ -57,6 +57,8 @@ async function drag(page: Page, from: Pixel, to: Pixel) {
   await page.mouse.move(to.x, to.y, { steps: 10 });
   await page.mouse.up();
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("draw, drag a point, delete a point, then undo everything back to an empty trip", async ({
   page,

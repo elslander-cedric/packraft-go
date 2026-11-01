@@ -5,6 +5,9 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline } from "./support/offline";
+import { showAllLegs, leafRows } from "./support/planner";
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -18,7 +21,7 @@ async function twoPoints(page: Page) {
   const box = (await map.boundingBox())!;
   await page.mouse.click(box.x + box.width / 2 - 150, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2 + 150, box.y + box.height / 2);
-  return page.getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem").first();
+  return page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
 }
 
 /** Lines the text `wanted` is laid out on inside `row`. */

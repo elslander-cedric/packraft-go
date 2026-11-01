@@ -14,6 +14,7 @@ import {
   openTripFile,
   renameTrip,
   saveTripFile,
+  showAllLegs,
 } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
@@ -58,6 +59,8 @@ async function openFile(page: Page, file: string | { name: string; mimeType: str
 }
 
 const linePaths = (page: Page) => legLines(page).evaluateAll((paths) => paths.map((p) => p.getAttribute("d")));
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("save file, start a new trip, open the file: the trip is restored without routing again", async ({ page }) => {
   const network = await serveOffline(page, {

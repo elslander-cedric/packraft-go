@@ -17,6 +17,7 @@ import {
   points as pointMarkers,
   renameTrip,
   settingsDialog,
+  showAllLegs,
 } from "./support/planner";
 
 const text = strings.planner;
@@ -43,6 +44,8 @@ async function chooseFile(page: Page, name: string, content: string) {
   ]);
   await chooser.setFiles({ name, mimeType: "application/json", buffer: Buffer.from(content, "utf8") });
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test.describe("confirmations are in-page Alert Dialogs", () => {
   test("New trip asks in the page: Escape and Cancel keep the trip, confirm clears it; focus returns to the menu button", async ({

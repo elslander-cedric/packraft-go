@@ -3,12 +3,12 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { freeMapBox, openPlanner } from "./support/planner";
+import { freeMapBox, openPlanner, showAllLegs, leafRows } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const legRows = (page: Page) => legsPanel(page).getByRole("listitem");
+const legRows = (page: Page) => legsPanel(page).locator(leafRows);
 const backButton = (page: Page) => page.getByRole("button", { name: strings.planner.backToStartButton });
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 
@@ -16,6 +16,8 @@ async function centreOf(shape: Locator) {
   const box = (await shape.boundingBox())!;
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("Back to start closes the route on the start point, is only offered when it can, and undoes", async ({ page }) => {
   await serveOffline(page);

@@ -5,14 +5,14 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { freeMapBox, openPlanner } from "./support/planner";
+import { freeMapBox, openPlanner, showAllLegs, leafRows } from "./support/planner";
 
 type Px = { x: number; y: number };
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const panel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const panel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const rows = (page: Page) => panel(page).getByRole("listitem");
+const rows = (page: Page) => panel(page).locator(leafRows);
 const undoBtn = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const deleteBtn = (page: Page) => page.getByRole("button", { name: strings.deletePointButton });
 
@@ -40,6 +40,8 @@ async function expectAllRouted(page: Page, n: number) {
     await expect(rows(page).nth(i).getByRole("status")).toHaveCount(0);
   }
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("drag re-requests only the two changed legs; undo restores the routes without a request", async ({ page }) => {
   const net = await serveOffline(page, { brouter: () => SNAPPED });

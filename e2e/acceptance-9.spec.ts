@@ -6,16 +6,16 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { expectTripName, freeMapBox, menuItem, renameTrip, tripDetailsDialog, tripPanel } from "./support/planner";
+import { expectTripName, freeMapBox, menuItem, renameTrip, tripDetailsDialog, tripPanel, showAllLegs, leafRows } from "./support/planner";
 
 type Px = { x: number; y: number };
 
 const KEY = "packraft-go.trip";
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const panel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const panel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const pointMarkers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const rows = (page: Page) => panel(page).getByRole("listitem");
+const rows = (page: Page) => panel(page).locator(leafRows);
 const undoBtn = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const deleteBtn = (page: Page) => page.getByRole("button", { name: strings.deletePointButton });
 
@@ -58,6 +58,8 @@ function gate() {
   const reply = new Promise<BRouterReply>((r) => (open = r));
   return { reply, open };
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("#9: every change is autosaved without a reload: add, move, delete, undo, rename", async ({ page }) => {
   await serveOffline(page, { brouter: () => SNAPPED });
@@ -103,7 +105,7 @@ test("#9: reload restores routed and failed legs, climb as stored, and makes no 
   await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
   reply = NO_ROUTE;
   await page.mouse.click(c.x + 200, c.y);
-  await expect(rows(page).nth(1)).toContainText(strings.retryRouting);
+  await expect(panel(page)).toContainText(strings.retryRouting);
   await renameTrip(page, "Restore me");
   // The map fits the trip when it opens, so the legs are compared by their shape's points, not pixels.
   const legsBefore = (await stored(page)).trip.legs;
@@ -118,7 +120,7 @@ test("#9: reload restores routed and failed legs, climb as stored, and makes no 
   await expect(legLines(page)).toHaveCount(2);
   await expectTripName(page, "Restore me");
   await expect(rows(page).nth(0)).toContainText(`${strings.climbLabel} 100 m`);
-  await expect(rows(page).nth(1)).toContainText(strings.retryRouting);
+  await expect(panel(page)).toContainText(strings.retryRouting);
   await expect(undoBtn(page)).toBeDisabled();
   await expect(panel(page).getByRole("status")).toHaveCount(0);
   expect((await stored(page)).trip.legs).toEqual(legsBefore);
@@ -200,14 +202,14 @@ test("#9: new trip clears everything; a late route answer does not bring legs ba
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect(legLines(page)).toHaveCount(0);
   await expectTripName(page, "");
-  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.sectionsPanelEmpty);
   expect((await stored(page)).trip).toMatchObject({ name: "", points: [], legs: [] });
 
   // Pressing it again on an empty trip is harmless.
   await menuItem(page, strings.planner.menu.newTrip);
   await reload(page);
   await expect(pointMarkers(page)).toHaveCount(0);
-  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.sectionsPanelEmpty);
   expect(net.brouter).toHaveLength(1);
 });
 
@@ -235,7 +237,7 @@ for (const [label, text] of [
     );
     const c = await openMap(page);
 
-    await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
+    await expect(tripPanel(page)).toContainText(strings.sectionsPanelEmpty);
     await expect(pointMarkers(page)).toHaveCount(0);
     await expectTripName(page, "");
 
@@ -266,7 +268,7 @@ test("#9: blocked browser storage does not crash the planner", async ({ page }) 
     };
   });
   const c = await openMap(page);
-  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.sectionsPanelEmpty);
   await page.mouse.click(c.x - 150, c.y);
   await page.mouse.click(c.x + 150, c.y);
   await renameTrip(page, "No storage");

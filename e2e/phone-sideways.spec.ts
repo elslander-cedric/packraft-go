@@ -6,8 +6,11 @@ import { SETTINGS_KEY } from "../src/persistence/settingsStorage";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { brouterFixture, serveOffline } from "./support/offline";
 import { touch } from "./support/touch";
+import { showAllLegs, leafRows } from "./support/planner";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
+test.beforeEach(({ page }) => showAllLegs(page));
+
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
 const PORTRAIT = viewport;
@@ -96,8 +99,8 @@ const sheetTab = (page: Page, name: string) => sheet(page).getByRole("tab", { na
 /** The open leg row's button, in whichever of the sheet or the panel shows the trip. */
 const rowButton = (page: Page, n: number) =>
   page
-    .getByRole("list", { name: strings.legsPanelLabel })
-    .getByRole("listitem")
+    .getByRole("list", { name: strings.sectionsPanelLabel })
+    .locator(leafRows)
     .nth(n - 1)
     .getByRole("button", { name: strings.legLabel(n), exact: false })
     .first();
@@ -144,7 +147,7 @@ test("rotating keeps the open tab, the tapped leg row and the selected point; th
   const middle = await centreOf(page, 1);
   await page.touchscreen.tap(middle.x, middle.y);
   await expect(points(page).nth(1)).toHaveClass(/point-selected/);
-  await sheetTab(page, text.tabs.legs).click();
+  await sheetTab(page, text.tabs.sections).click();
   await rowButton(page, 2).click();
   await expect.poll(() => sheetHeight(page)).toBeGreaterThan(screen * 0.45);
 
@@ -152,7 +155,7 @@ test("rotating keeps the open tab, the tapped leg row and the selected point; th
   await page.setViewportSize(SIDEWAYS);
   await expect(sheet(page)).toHaveCount(0);
   await expect(collapse(page)).toBeVisible();
-  await expect(panelTab(page, text.tabs.legs)).toHaveAttribute("aria-selected", "true");
+  await expect(panelTab(page, text.tabs.sections)).toHaveAttribute("aria-selected", "true");
   await expect(rowButton(page, 2)).toBeVisible();
   await expect(points(page).nth(1)).toHaveClass(/point-selected/);
 
@@ -163,7 +166,7 @@ test("rotating keeps the open tab, the tapped leg row and the selected point; th
   await settled(page);
   await expect.poll(() => sheetHeight(page)).toBeGreaterThan(screen * 0.45);
   expect(await sheetHeight(page)).toBeLessThan(screen * 0.55);
-  await expect(sheetTab(page, text.tabs.legs)).toHaveAttribute("aria-selected", "true");
+  await expect(sheetTab(page, text.tabs.sections)).toHaveAttribute("aria-selected", "true");
   await expect(rowButton(page, 2)).toBeVisible();
   await expect(points(page).nth(1)).toHaveClass(/point-selected/);
 
@@ -183,7 +186,7 @@ test("rotating keeps the open tab, the tapped leg row and the selected point; th
   await expect(expand(page)).toBeVisible();
   await expect(panel(page).locator(".planner-totals")).toBeVisible();
   await expand(page).click();
-  await expect(panelTab(page, text.tabs.legs)).toHaveAttribute("aria-selected", "true");
+  await expect(panelTab(page, text.tabs.sections)).toHaveAttribute("aria-selected", "true");
   // Opening the panel doesn't raise the sheet: back in portrait it is at its peek.
   await page.setViewportSize(PORTRAIT);
   await settled(page);

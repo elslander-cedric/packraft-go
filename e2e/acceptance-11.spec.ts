@@ -18,6 +18,7 @@ import {
   openTripFile,
   renameTrip,
   startGpxExport,
+  showAllLegs,
 } from "./support/planner";
 
 const KEY = "packraft-go.trip";
@@ -62,6 +63,8 @@ async function openSave(page: Page, trip: object) {
   const text = JSON.stringify({ format: "packraft-go-trip", version: 1, trip });
   await openTripFile(page, { name: "t.packraft.json", mimeType: "application/json", buffer: Buffer.from(text, "utf8") });
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("#11: hike + paddle legs and a camp export as GPX 1.1 with routed elevations, named after the trip", async ({ page }) => {
   const net = await serveOffline(page, { brouter: byProfile });

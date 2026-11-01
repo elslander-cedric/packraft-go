@@ -5,7 +5,7 @@
 import { expect, test } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { delayedKiwis, kiwisFixtures, serveOffline } from "./support/offline";
-import { openPlanner, showTab } from "./support/planner";
+import { openPlanner, showTab, showAllLegs, leafRows } from "./support/planner";
 
 const RECORDED_AT = new Date("2026-10-14T09:00:00+02:00");
 const RECORDED = kiwisFixtures("timeseries-list.json", "timeseries-values.json");
@@ -30,6 +30,8 @@ const save = (startDate: string) =>
       startDate,
     },
   });
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test.use({ viewport: { width: 1400, height: 900 }, timezoneId: "Europe/Brussels" });
 
@@ -56,7 +58,7 @@ test("status history is checking, then closed: open never appears; nothing leaks
   await watchStatuses(page);
   await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), save("2026-10-14"));
   await openPlanner(page);
-  const leg = page.getByRole("list", { name: strings.legsPanelLabel }).locator(".planner-row").first();
+  const leg = page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessChecking);
   await expect.poll(() => network.kiwis.length).toBeGreaterThan(0);
   // The day's chip makes no claim about the flow while checking: the two aire warnings stay
@@ -69,7 +71,7 @@ test("status history is checking, then closed: open never appears; nothing leaks
   held.release();
   await expect(chip).toContainText(chipKind.closed);
   await expect(chip).toContainText(chipMore(2));
-  await showTab(page, strings.planner.tabs.legs);
+  await showTab(page, strings.planner.tabs.sections);
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState["closed-today"]);
 
   const seen = await history(page);
@@ -86,7 +88,7 @@ test("a failing service ends unknown, never open, in the whole history (#85)", a
   await watchStatuses(page);
   await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), save("2026-10-14"));
   await openPlanner(page);
-  const leg = page.getByRole("list", { name: strings.legsPanelLabel }).locator(".planner-row").first();
+  const leg = page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessChecking);
   held.release();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState.unknown);
@@ -101,7 +103,7 @@ test("another date is never checking and asks no flows (#85)", async ({ page }) 
   await watchStatuses(page);
   await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), save("2026-10-20"));
   await openPlanner(page);
-  const leg = page.getByRole("list", { name: strings.legsPanelLabel }).locator(".planner-row").first();
+  const leg = page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState.open);
   expect((await history(page)).filter((s) => s.includes(strings.accessChecking))).toEqual([]);
   expect(network.kiwis).toHaveLength(0);

@@ -7,7 +7,7 @@ import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { expectInitialFocus } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
-import { freeMapCentre, legRows, openPlanner, points as pointMarkers } from "./support/planner";
+import { freeMapCentre, legRows, openPlanner, points as pointMarkers, showAllLegs } from "./support/planner";
 
 const text = strings.planner;
 const rows = legRows;
@@ -60,6 +60,8 @@ async function drawLeg(page: Page) {
   await expect(pointMarkers(page)).toHaveCount(2);
   await expect(rows(page)).toHaveCount(1);
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test.describe("#31: confirmations by keyboard alone", () => {
   test("New trip: the menu by Tab + Enter opens the dialog, focus is trapped inside, Escape cancels, confirm clears; focus returns to the menu button each time", async ({

@@ -14,7 +14,10 @@ import {
   showTab,
   totals,
   tripPanel,
+  showAllLegs,
 } from "./support/planner";
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -225,11 +228,12 @@ test.describe("#27 Retry on a failed leg at 1280×800", () => {
     const { click } = await openMap(page);
     for (const dx of [-250, -150, -50, 50, 150, 250]) await click(dx);
     await expect(legRows(page)).toHaveCount(5);
-    for (let i = 0; i < 5; i++) await expect(legRows(page).nth(i).getByRole("alert")).toBeVisible();
-    const last = legRows(page).nth(4);
+    // One section: its row lists each failed leg by number, with its own Retry.
+    await expect(tripPanel(page).getByRole("alert")).toHaveCount(5);
+    const last = tripPanel(page).locator(".planner-row-failed").nth(4);
     await expectRetryUsable(page, last, net);
 
-    const retry = legRows(page).nth(2).getByRole("button", { name: strings.retryRouting });
+    const retry = tripPanel(page).locator(".planner-row-failed").nth(2).getByRole("button", { name: strings.retryRouting });
     await expect(retry).toBeVisible(); // still failed after a retry of another leg
     await retry.focus();
     const before = net.brouter.length;
@@ -297,7 +301,7 @@ test.describe("#27 hike and paddle rows, totals at 1280×800", () => {
       const value = await shownValue(figure, label);
       expect(await linesOfText(figure, value), `"${label} ${value}" breaks`).toBe(1);
     }
-    await showTab(page, strings.planner.tabs.legs);
+    await showTab(page, strings.planner.tabs.sections);
     const firstLeg = (await legRows(page).first().boundingBox())!;
     const totalsBox = (await totals(page).boundingBox())!;
     expect(firstLeg.y - (totalsBox.y + totalsBox.height), "totals touch the leg rows").toBeGreaterThanOrEqual(8);

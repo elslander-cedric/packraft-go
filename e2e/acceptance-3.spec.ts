@@ -4,7 +4,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { figure, freeMapCentre, legLines, legRows, openPlanner, points, totals } from "./support/planner";
+import { figure, freeMapCentre, legLines, legRows, openPlanner, points, totals, showAllLegs } from "./support/planner";
 
 const markers = points;
 const rows = legRows;
@@ -43,6 +43,8 @@ async function lineEnds(path: Locator) {
 
 const near = (p: { x: number; y: number }, q: { x: number; y: number }, tol = 2) =>
   Math.hypot(p.x - q.x, p.y - q.y) < tol;
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("AC1: the first click places only a start point; no leg, total stays 0", async ({ page }) => {
   const { network, cx, cy } = await openMap(page);
