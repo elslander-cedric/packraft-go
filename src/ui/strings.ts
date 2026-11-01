@@ -159,6 +159,7 @@ export const strings = {
     legDetailsClose: "Close",
     // A section row's icon-only buttons: its details, and showing its legs under it.
     sectionDetailsButton: (n: number) => `Access details, section ${n}`,
+    sectionDetailsLine: "Access details",
     sectionLegs: (n: number) => `Legs of section ${n}`,
     sectionDetailsTitle: (n: number, mode: string, distance: string) => `Section ${n} · ${mode} · ${distance}`,
     // A failed leg on a section's row, by its number.

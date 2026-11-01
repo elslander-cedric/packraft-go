@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { addAccessPoint, serialiseAccessPoints, updateAccessPoint } from "../src/core/accessPoints";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { freeMapCentre, legDetailsDialog, legLines, openPlanner, pickNextMode, saveTripFile, showTab } from "./support/planner";
+import { freeMapCentre, legDetailsDialog, legLines, openPlanner, openSectionDetails, pickNextMode, saveTripFile, showTab } from "./support/planner";
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
@@ -87,8 +87,7 @@ test("a Walloon put-in without an official aire nearby shows the warning on the 
   await drawPaddleLeg(page);
 
   // The leg's details dialog (#158) holds the warning.
-  const legs = page.getByRole("list", { name: strings.sectionsPanelLabel });
-  await legs.getByRole("button", { name: strings.planner.sectionDetailsButton(1) }).click();
+  await openSectionDetails(page, 1);
   await expect(legDetails(page).locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
   await legDetails(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();
   // The day only points at the leg (ADR 0029); the paddle leg is also forbidden here or not, but it has a chip.
@@ -107,8 +106,7 @@ test("an official aire of yours within 200 m of the put-in removes that warning"
   await seed(page, "official-aire");
   await drawPaddleLeg(page);
 
-  const legs = page.getByRole("list", { name: strings.sectionsPanelLabel });
-  await legs.getByRole("button", { name: strings.planner.sectionDetailsButton(1) }).click();
+  await openSectionDetails(page, 1);
   // The take-out at the leg's end is still not at an aire; the put-in is.
   await expect(legDetails(page).locator(".access-warning-aire")).toHaveCount(1);
   await expect(legDetails(page).locator(".access-warning-aire")).toContainText("take-out");

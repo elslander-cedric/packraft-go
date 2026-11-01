@@ -26,11 +26,54 @@ export const legRows = (page: Page) =>
  */
 export async function showAllLegs(page: Page) {
   await page.addInitScript(() => {
+    // A closed row takes a tap to select it and another to open it, one row at a time. Those taps
+    // zoom the map, which would move it from under specs that click it by pixel, so that zoom is
+    // skipped: only a row's focus sets a right padding.
+    let opening = 0;
+    let patched = false;
     new MutationObserver(() => {
-      for (const button of document.querySelectorAll<HTMLElement>('.planner-row-expand-button[aria-expanded="false"]'))
-        button.click();
+      const map = (window as unknown as { L?: { Map: { prototype: { fitBounds(...args: unknown[]): unknown } } } }).L?.Map
+        .prototype;
+      if (map && !patched) {
+        patched = true;
+        const { fitBounds } = map;
+        map.fitBounds = function (this: unknown, bounds, options) {
+          if (opening > 0 && (options as { paddingBottomRight?: unknown })?.paddingBottomRight) return this;
+          return fitBounds.call(this, bounds, options);
+        };
+      }
+      const row = document.querySelector<HTMLElement>('.planner-row-toggle[aria-expanded="false"]');
+      if (!row) return;
+      opening += 1;
+      row.click();
+      setTimeout(() => (opening -= 1), 100);
     }).observe(document, { childList: true, subtree: true, attributes: true });
   });
+}
+
+/** Section `n`'s row button (1-based). */
+export const sectionRowButton = (page: Page, n: number) =>
+  tripPanel(page)
+    .getByRole("list", { name: strings.sectionsPanelLabel })
+    .locator("> li")
+    .nth(n - 1)
+    .getByRole("button", { name: strings.sectionLabel(n), exact: false })
+    .first();
+
+/** Taps section `n`'s row so that the next tap acts on the selected row. */
+export async function selectSection(page: Page, n: number) {
+  const row = sectionRowButton(page, n);
+  if ((await row.getAttribute("aria-current")) === null) await row.click();
+  await expect(row).toHaveAttribute("aria-current", "true");
+}
+
+/** Opens or closes section `n`, of several legs, by tapping its selected row. */
+export async function toggleSection(page: Page, n: number) {
+  await selectSection(page, n);
+  const row = sectionRowButton(page, n);
+  const expanded = await row.getAttribute("aria-expanded");
+  await row.click();
+  await expect(row).toHaveAttribute("aria-expanded", expanded === "true" ? "false" : "true");
 }
 
 /** Leg `n`'s row button (1-based), which zooms the map to its leg. */
@@ -344,11 +387,19 @@ export async function holdWater(page: Page, id: string) {
 /** The open details dialog (#158): a day chip's leg's, or a section's with each leg's under its number. */
 export const legDetailsDialog = (page: Page) => page.getByRole("dialog", { name: /^(Leg|Section) \d+ · / });
 
-/** Opens section `n`'s details dialog from its row's info button. */
+/** Opens section `n`'s details dialog: a second tap on a section of one leg, else from its details line. */
 export async function openSectionDetails(page: Page, n: number) {
-  await tripPanel(page)
-    .getByRole("button", { name: text.sectionDetailsButton(n) })
-    .click();
+  const row = sectionRowButton(page, n);
+  const expanded = await row.getAttribute("aria-expanded");
+  if (expanded === "false") await toggleSection(page, n);
+  if (expanded === null) {
+    await selectSection(page, n);
+    await row.click();
+  } else {
+    await tripPanel(page)
+      .getByRole("button", { name: text.sectionDetailsButton(n) })
+      .click();
+  }
   await expect(legDetailsDialog(page)).toBeVisible();
   return legDetailsDialog(page);
 }

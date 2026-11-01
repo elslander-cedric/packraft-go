@@ -65,7 +65,6 @@ export const icons = {
   collapsePanel: faChevronRight,
   // A leg row's button that opens its access details (#158).
   legDetails: faCircleInfo,
-  sectionLegs: faChevronDown,
   // A leg's access status (rows and details), in the status's colour.
   accessOpen: faCircleCheck,
   accessClosedToday: faCalendarXmark,

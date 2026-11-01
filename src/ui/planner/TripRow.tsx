@@ -60,22 +60,17 @@ export type TripRowProps = {
   selected: boolean;
   /** The row was tapped. */
   onSelect: () => void;
-  /** The details button's name; no button without one. */
-  detailsLabel?: string;
-  onShowDetails?: () => void;
-  /** The button that shows a section's legs under it; none on a leg or a one-leg section. */
-  expand?: { label: string; open: boolean; controls: string; onToggle: () => void };
-  /** The row's routing state and, on an open section, its legs. */
+  /** Whether a section of several legs shows them under it; none on a leg or a one-leg section. */
+  open?: boolean;
+  /** The row's routing state and, on an open section, its details line and legs. */
   children?: ReactNode;
 };
 
 /**
  * One row of the Sections tab (#121), a section or one of its legs: its mode icon and distance as a headline with
  * the time on the right, and under it the climb and descent (drop on a paddle row), each
- * after its icon, then icons for the access and each kind of warning. A tap zooms the map
- * and never opens the row (#158): a row with access details or aire warnings has an info
- * button beside its access, which shows them in full in a dialog, and a section of several
- * legs has a button that shows them under it.
+ * after its icon, then icons for the access and each kind of warning. The row is one button:
+ * a tap zooms the map, and on a selected section also opens it or shows its details (#200).
  */
 export function TripRow({
   row,
@@ -86,16 +81,14 @@ export function TripRow({
   aire,
   selected,
   onSelect,
-  detailsLabel,
-  onShowDetails,
-  expand,
+  open,
   children,
 }: TripRowProps) {
   const [time, ...elevation] = figures(row);
   return (
     <li className={`planner-row planner-row-${row.mode}`}>
       <div className="planner-row-head">
-        <Button className="planner-row-toggle" aria-current={selected || undefined} onClick={onSelect}>
+        <Button className="planner-row-toggle" aria-current={selected || undefined} aria-expanded={open} onClick={onSelect}>
           <span className="visually-hidden">{`${label} `}</span>
           <span className="planner-row-headline">
             <FigureView
@@ -119,26 +112,6 @@ export function TripRow({
           )}
           <LegAccessIcons state={state} access={access} aire={aire} className="planner-row-access" />
         </Button>
-        {(expand || detailsLabel) && (
-          <div className="planner-row-actions">
-            {expand && (
-              <Button
-                className="planner-row-expand-button"
-                aria-label={expand.label}
-                aria-expanded={expand.open}
-                aria-controls={expand.open ? expand.controls : undefined}
-                onClick={expand.onToggle}
-              >
-                <Icon icon={icons.sectionLegs} />
-              </Button>
-            )}
-            {detailsLabel && (
-              <Button className="planner-row-details-button" aria-label={detailsLabel} onClick={onShowDetails}>
-                <Icon icon={icons.legDetails} />
-              </Button>
-            )}
-          </div>
-        )}
       </div>
       {children}
     </li>

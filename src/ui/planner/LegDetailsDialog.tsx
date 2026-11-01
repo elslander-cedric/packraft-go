@@ -39,8 +39,8 @@ export type LegDetailsDialogProps = {
 };
 
 /**
- * A leg's access details (#158), in a dialog opened from the leg row's info button or
- * a day card's warning chip. Closed while no leg is given, or once that leg is gone.
+ * A leg's access details (#158), in a dialog opened from a day card's warning chip.
+ * Closed while no leg is given, or once that leg is gone.
  */
 export default function LegDetailsDialog({ leg, summary, access, aire, onClose }: LegDetailsDialogProps) {
   const legSummary = leg === null ? undefined : summary.legs[leg];

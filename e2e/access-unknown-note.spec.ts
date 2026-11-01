@@ -3,7 +3,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { legDetailsDialog, openPlanner, showTab, showAllLegs, leafRows } from "./support/planner";
+import { legDetailsDialog, openPlanner, openSectionDetails, showTab, showAllLegs, leafRows } from "./support/planner";
 
 type P = { lat: number; lng: number };
 const canal: P[] = [
@@ -59,7 +59,7 @@ test("a leg in the Netherlands shows a neutral note and its day gets no warning 
   // Wait for the access to render before checking what is absent.
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState.unknown);
   // The note is in the leg's details dialog (#158).
-  await leg.getByRole("button", { name: strings.planner.sectionDetailsButton(1) }).click();
+  await openSectionDetails(page, 1);
   await expect(legDetails(page).locator(".access-note")).toHaveText(strings.tripAccess.noRule);
   await expect(legDetails(page).locator(".access-warning")).toHaveCount(0);
   await legDetails(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();
