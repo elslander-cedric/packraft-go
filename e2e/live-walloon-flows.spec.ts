@@ -5,7 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { delayedKiwis, kiwisFixtures, serveOffline } from "./support/offline";
 import { toggleAccessLayer } from "./support/mapMenu";
-import { accessWater, closeLegDetails, holdWater, openLegDetails, openPlanner, showTab } from "./support/planner";
+import { accessWater, closeLegDetails, holdWater, openSectionDetails, openPlanner, showTab } from "./support/planner";
 
 /** Just after the recording (see src/hydrometry/fixtures/README.md), in Belgian time. */
 const RECORDED_AT = new Date("2026-10-14T09:00:00+02:00");
@@ -121,7 +121,7 @@ test("a paddle leg dated today uses the live flow: closed on low flow, with the 
   await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
   await openPlanner(page);
 
-  const leg = await openLegDetails(page, 1);
+  const leg = await openSectionDetails(page, 1);
   await expect(leg.locator(".leg-access-status")).toHaveText(
     strings.tripAccess.legStatusOn("Wed 14 Oct 2026", strings.accessState["closed-today"]),
   );
@@ -152,7 +152,7 @@ test("a leg dated today shows Checking flow first, then closed; never open in be
   await seedSemoisToday(page);
   await openPlanner(page);
 
-  const leg = await openLegDetails(page, 1);
+  const leg = await openSectionDetails(page, 1);
   const status = leg.locator(".leg-access-status");
   // The answer is held: the leg must be checking, and the request must really be in flight.
   await expect(status).toHaveText(
@@ -191,7 +191,7 @@ test("a failing flow service still ends in unknown after checking (#85)", async 
   await seedSemoisToday(page);
   await openPlanner(page);
 
-  const leg = await openLegDetails(page, 1);
+  const leg = await openSectionDetails(page, 1);
   await expect(leg.locator(".leg-access-status")).toContainText(strings.accessChecking);
   held.release();
   await expect(leg.locator(".leg-access-status")).toHaveText(
@@ -229,9 +229,11 @@ test("a day with one held flow-dependent leg and one open leg claims nothing abo
   await openPlanner(page);
 
   // The open leg settles at once; the Semois leg still reads checking.
-  await expect((await openLegDetails(page, 2)).locator(".leg-access-status")).toContainText(strings.accessState.open);
-  await closeLegDetails(page);
-  await expect((await openLegDetails(page, 1)).locator(".leg-access-status")).toContainText(strings.accessChecking);
+  const details = await openSectionDetails(page, 1);
+  const legStatus = (n: number) =>
+    details.locator("section").filter({ hasText: strings.legLabel(n) }).locator(".leg-access-status");
+  await expect(legStatus(2)).toContainText(strings.accessState.open);
+  await expect(legStatus(1)).toContainText(strings.accessChecking);
   await closeLegDetails(page);
 
   await showTab(page, strings.planner.tabs.days);

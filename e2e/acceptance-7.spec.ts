@@ -13,6 +13,7 @@ import {
   openPlanner,
   settingsDialog,
   tripPanel as legsPanel,
+  showAllLegs,
 } from "./support/planner";
 
 const paceField = (page: Page) => settingsDialog(page).getByLabel(strings.paceFactorLabel);
@@ -55,6 +56,8 @@ async function drawHikeThenPaddle(page: Page) {
   await expect(rows(page).nth(1)).toContainText(strings.dropLabel);
   await expect(rows(page).nth(0)).toContainText(strings.climbLabel);
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("AC1: every leg row and the trip total show a time that is labelled as an estimate", async ({ page }) => {
   const network = await serveOffline(page, { brouter: byProfile });
@@ -205,7 +208,7 @@ test("R2: a pending hike leg shows … for its time, and so does the trip total;
   await expect(legsPanel(page)).not.toContainText("no climb data");
 });
 
-test("R2: a pending paddle leg keeps its own time but the trip total shows … until it is routed", async ({ page }) => {
+test("R2: while a paddle leg is pending its section and the trip total show … until it is routed", async ({ page }) => {
   let release: () => void = () => {};
   const gate = new Promise<void>((r) => (release = r));
   await serveOffline(page, {
@@ -219,7 +222,7 @@ test("R2: a pending paddle leg keeps its own time but the trip total shows … u
   await clickMap(0, 0);
   await expect(rows(page).nth(0)).toContainText(strings.climbLabel);
   await clickMap(150, 0, "paddle");
-  await expect(rows(page).nth(1)).toContainText(new RegExp(`${legTimeLabel} (\\d+ h )?\\d+ min`));
+  await expect(rows(page).nth(1)).toContainText(`${legTimeLabel} …`);
   await expect(tripLine(page)).toHaveText(`${tripTimeLabel} …`);
   release();
   await expect(rows(page).nth(1)).toContainText(strings.dropLabel);

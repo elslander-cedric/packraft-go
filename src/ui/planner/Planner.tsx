@@ -27,7 +27,6 @@ import AccessPoints from "./AccessPoints";
 import SnapOffers from "../SnapOffers";
 import LegDetailsDialog from "./LegDetailsDialog";
 import SectionDetailsDialog from "./SectionDetailsDialog";
-import LegsList from "./LegsList";
 import SectionsList from "./SectionsList";
 import MapMenu from "./MapMenu";
 import PlannerMenu from "./PlannerMenu";
@@ -101,7 +100,7 @@ export default function Planner({ router }: { router?: Router }) {
   const undoReasonId = useId();
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
-  const [tab, setTab] = useState<PlannerTab>("legs");
+  const [tab, setTab] = useState<PlannerTab>("sections");
   // The sheet's last stop; kept while sideways, so turning back to portrait restores it (#126).
   const [stop, setStop] = useState<SheetStop>("peek");
   // The peek's height, so the bottom buttons sit just above it.
@@ -178,22 +177,33 @@ export default function Planner({ router }: { router?: Router }) {
       dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points });
     }
   };
-  // A leg row tap shows its leg above the half-raised sheet and marks the row; rows don't open (#158).
+  // A leg row tap shows its leg above the half-raised sheet and marks the row; the tap doesn't open it (#158).
   const [selectedLeg, setSelectedLeg] = useState<number | undefined>(undefined);
   const selectLegRow = (index: number) => {
     const route = trip.legs[index]?.route;
     const area = route?.status === "routed" ? route.geometry : trip.points.slice(index, index + 2);
     setSelectedLeg(index);
+    setSelectedSection(undefined);
     raise();
     setFocus({ area, ...covered() });
   };
   // A section row tap does the same for the whole section.
   const [selectedSection, setSelectedSection] = useState<number | undefined>(undefined);
   const [detailsSection, setDetailsSection] = useState<number | null>(null);
+  // The sections showing their legs, by first leg as sections have no identity of their own: an
+  // edit that leaves no section of several legs starting there closes it.
+  const [openSections, setOpenSections] = useState<readonly number[]>([]);
+  const stillOpen = openSections.filter((first) =>
+    summary.sections.some((section) => section.firstLeg === first && section.lastLeg > first),
+  );
+  if (stillOpen.length !== openSections.length) setOpenSections(stillOpen);
+  const toggleSection = (first: number) =>
+    setOpenSections((open) => (open.includes(first) ? open.filter((leg) => leg !== first) : [...open, first]));
   const selectSectionRow = (index: number) => {
     const section = summary.sections[index];
     if (!section) return;
     setSelectedSection(index);
+    setSelectedLeg(undefined);
     raise();
     setFocus({ area: legsArea(trip, section), ...covered() });
   };
@@ -251,26 +261,18 @@ export default function Planner({ router }: { router?: Router }) {
   );
   const sheetContent = (
     <div className="planner-tab-panels">
-      <TabPanel value="legs">
-        <LegsList
+      <TabPanel value="sections">
+        <SectionsList
           summary={summary}
           legs={trip.legs}
           access={waterAccess}
           aire={aire}
-          selected={selectedLeg}
-          onSelect={selectLegRow}
-          onShowDetails={setDetailsLeg}
-          onRetry={(index) => dispatch({ type: "retryLeg", index })}
-        />
-      </TabPanel>
-      <TabPanel value="sections">
-        <SectionsList
-          sections={summary.sections}
-          legs={trip.legs}
-          access={waterAccess}
-          aire={aire}
           selected={selectedSection}
+          selectedLeg={selectedLeg}
+          open={stillOpen}
           onSelect={selectSectionRow}
+          onSelectLeg={selectLegRow}
+          onToggle={toggleSection}
           onShowDetails={setDetailsSection}
           onRetry={(index) => dispatch({ type: "retryLeg", index })}
         />

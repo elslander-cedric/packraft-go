@@ -245,11 +245,11 @@ test.describe("keyboard alone", () => {
       strings.legModeHike,
       strings.planner.resizePanelHandle,
       strings.planner.collapsePanelButton,
-      strings.planner.tabs.legs,
+      strings.planner.tabs.sections,
     ]) {
       expect(reached, name).toContain(name);
     }
-    expect(reached.some((name) => name.startsWith(strings.legLabel(1)))).toBe(true);
+    expect(reached.some((name) => name.startsWith(strings.sectionLabel(1)))).toBe(true);
   });
 
   test("route, trip, settings, map, panel and search work with the keys alone; the shortcuts still work", async ({
@@ -280,7 +280,7 @@ test.describe("keyboard alone", () => {
     await expect(modes.getByRole("button", { name: strings.legModePaddle })).toHaveAttribute("aria-pressed", "true");
 
     // A leg row: Enter marks it and shows its leg.
-    const row = panel(page).getByRole("button", { name: new RegExp(`^${strings.legLabel(1)} `) });
+    const row = panel(page).getByRole("button", { name: new RegExp(`^${strings.sectionLabel(1)} `) });
     await tabTo(page, row);
     await page.keyboard.press("Enter");
     await expect(row).toHaveAttribute("aria-current", "true");
@@ -326,8 +326,7 @@ test.describe("keyboard alone", () => {
 
     // The panel's tabs: arrows move, Enter shows the tab.
     const tabs = panel(page).getByRole("tablist");
-    await tabTo(page, tabs.getByRole("tab", { name: strings.planner.tabs.legs }));
-    await page.keyboard.press("ArrowRight");
+    await tabTo(page, tabs.getByRole("tab", { name: strings.planner.tabs.sections }));
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("Enter");
     await expect(tabs.getByRole("tab", { name: strings.planner.tabs.days })).toHaveAttribute("aria-selected", "true");
@@ -373,7 +372,7 @@ test.describe("keyboard alone on a portrait phone", () => {
     await page.goto("/");
     await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
     await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
-    const row = sheet(page).getByRole("button", { name: new RegExp(`^${strings.legLabel(1)} `) });
+    const row = sheet(page).getByRole("button", { name: new RegExp(`^${strings.sectionLabel(1)} `) });
 
     // At the peek the leg rows are off screen, and Tab never lands on them.
     for (let i = 0; i < 30; i++) {
@@ -382,7 +381,7 @@ test.describe("keyboard alone on a portrait phone", () => {
     }
 
     // Enter on a tab raises the sheet to half; then the rows are reachable and usable.
-    const legsTab = sheet(page).getByRole("tab", { name: strings.planner.tabs.legs });
+    const legsTab = sheet(page).getByRole("tab", { name: strings.planner.tabs.sections });
     await legsTab.focus();
     await page.keyboard.press("Enter");
     await expect(sheet(page)).toHaveAttribute("data-stop", "half");

@@ -3,13 +3,13 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { expectTripName, freeMapBox, menuItem, pickNextMode, renameTrip, tripPanel } from "./support/planner";
+import { expectTripName, freeMapBox, menuItem, pickNextMode, renameTrip, tripPanel, showAllLegs, leafRows } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const pointMarkers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const rows = (page: Page) => legsPanel(page).getByRole("listitem");
+const rows = (page: Page) => legsPanel(page).locator(leafRows);
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 
 const SNAPPED: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
@@ -26,6 +26,8 @@ async function openMap(page: Page) {
   const box = (await freeMapBox(page));
   return (dx: number, dy: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("a drawn trip is restored on reload with its snapped routes, and no routing requests", async ({ page }) => {
   const network = await serveOffline(page, { brouter: () => SNAPPED });
@@ -149,7 +151,7 @@ test("new trip, once confirmed, clears to an empty trip, which stays empty after
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect(legLines(page)).toHaveCount(0);
   await expectTripName(page, "");
-  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.sectionsPanelEmpty);
   await expect(undoButton(page)).toBeDisabled();
 
   await page.reload();
@@ -209,7 +211,7 @@ test("unreadable stored data opens an empty trip without crashing", async ({ pag
 
   await page.reload();
   await waitForMap(page);
-  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.sectionsPanelEmpty);
   await expect(pointMarkers(page)).toHaveCount(0);
   await expectTripName(page, "");
   expect(errors).toEqual([]);

@@ -3,12 +3,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { freeMapBox, openPlanner } from "./support/planner";
+import { freeMapBox, openPlanner, showAllLegs, leafRows } from "./support/planner";
 
 const HIKE = "rgb(181, 73, 27)"; // #b5491b, --color-hike in both themes
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 
 async function drawHikeLeg(page: Page) {
   await openPlanner(page);
@@ -28,6 +28,8 @@ const brightness = (rgb: string) => {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 };
 
+test.beforeEach(({ page }) => showAllLegs(page));
+
 test.describe("with the system set to dark", () => {
   test.use({ colorScheme: "dark" });
 
@@ -44,7 +46,7 @@ test.describe("with the system set to dark", () => {
 
     expect(await style(page, ".leaflet-overlay-pane path.leg", "stroke")).toBe(HIKE);
     // A hike row's distance icon has the hike colour.
-    const icon = legsPanel(page).getByRole("listitem").first().locator(".planner-row-distance .planner-row-figure-icon");
+    const icon = legsPanel(page).locator(leafRows).first().locator(".planner-row-distance .planner-row-figure-icon");
     expect(await icon.evaluate((el) => getComputedStyle(el).color)).toBe(HIKE);
 
     // Native inputs and the phone's status bar follow the theme.

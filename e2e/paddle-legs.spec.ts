@@ -4,12 +4,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { freeMapBox, mapClicker, nextLegMode, openPlanner } from "./support/planner";
+import { freeMapBox, mapClicker, nextLegMode, openPlanner, showAllLegs, leafRows } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const rows = (page: Page) => legsPanel(page).getByRole("listitem");
+const rows = (page: Page) => legsPanel(page).locator(leafRows);
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.geojson") };
@@ -19,6 +19,8 @@ async function openMap(page: Page) {
   await openPlanner(page);
   return mapClicker(page);
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("a hike → paddle → hike trip: the middle leg follows the river, shows its drop, and put-in and take-out are marked", async ({
   page,

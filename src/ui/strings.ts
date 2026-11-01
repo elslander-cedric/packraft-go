@@ -9,10 +9,8 @@ export const strings = {
   mapLabel: "Trip map",
   mapLoading: "Loading map…",
   plannerLoading: "Loading trip…",
-  legsPanelLabel: "Legs",
-  legsPanelEmpty: "Click the map to place the start point, then click again to add legs.",
   sectionsPanelLabel: "Sections",
-  sectionsPanelEmpty: "Add legs to see the trip's sections.",
+  sectionsPanelEmpty: "Click the map to place the start point, then click again to add legs.",
   tripNameLabel: "Trip name",
   tripNamePlaceholder: "Untitled trip",
   // The trip's optional start date (#52, GLOSSARY "Start date"); days get dates from it.
@@ -134,7 +132,7 @@ export const strings = {
     // The planner's sheet and tabs (#118, ADR 0026).
     sheetLabel: "Trip",
     tabsLabel: "Trip details",
-    tabs: { legs: "Legs", sections: "Sections", days: "Days", accessPoints: "Access points" },
+    tabs: { sections: "Sections", days: "Days", accessPoints: "Access points" },
     // The trip's totals in the sheet's peek: each figure after its icon, named for screen readers.
     totals: {
       labels: {
@@ -156,11 +154,12 @@ export const strings = {
       // A paddle leg that ends higher than it starts (ADR 0018).
       rise: "Rise, upstream?",
     },
-    // A leg row's icon-only button and the dialog it opens with the leg's access and warnings (#158).
-    legDetailsButton: (n: number) => `Access details, leg ${n}`,
+    // The dialog with a leg's access and warnings (#158), from a day card's chip.
     legDetailsTitle: (n: number, mode: string, distance: string) => `Leg ${n} · ${mode} · ${distance}`,
     legDetailsClose: "Close",
+    // A section row's icon-only buttons: its details, and showing its legs under it.
     sectionDetailsButton: (n: number) => `Access details, section ${n}`,
+    sectionLegs: (n: number) => `Legs of section ${n}`,
     sectionDetailsTitle: (n: number, mode: string, distance: string) => `Section ${n} · ${mode} · ${distance}`,
     // A failed leg on a section's row, by its number.
     sectionLegFailed: (leg: number, message: string) => `Leg ${leg}: ${message}`,

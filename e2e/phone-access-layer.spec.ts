@@ -189,7 +189,7 @@ test("holding a water off a leg opens its details in a dialog; the sheet stays w
   await toggleAccessLayer(page);
   await settled(page, water(page, LESSE));
   await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
-  await expect(tab(page, plannerText.tabs.legs)).toHaveAttribute("aria-selected", "true");
+  await expect(tab(page, plannerText.tabs.sections)).toHaveAttribute("aria-selected", "true");
 
   await (await touch(page)).hold(await middleOf(water(page, LESSE)), 550);
 
@@ -201,7 +201,7 @@ test("holding a water off a leg opens its details in a dialog; the sheet stays w
   await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
   // Holding opened details; it added no point.
   await expect(points(page)).toHaveCount(2);
-  await expect(tab(page, plannerText.tabs.legs)).toHaveAttribute("aria-selected", "true");
+  await expect(tab(page, plannerText.tabs.sections)).toHaveAttribute("aria-selected", "true");
 });
 
 test("a tap on a lock opens its details in a dialog", async ({ page }) => {

@@ -3,7 +3,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { legDetailsDialog, openPlanner, showTab } from "./support/planner";
+import { legDetailsDialog, openPlanner, showTab, showAllLegs, leafRows } from "./support/planner";
 
 // The Anderlecht lock is at 4.30174 E, 50.81956 N, on the Brussels canal (open).
 const throughLock = [
@@ -36,13 +36,15 @@ async function seed(page: Page, water: { lat: number; lng: number }[]) {
 }
 
 const legRow = (page: Page) =>
-  page.getByRole("list", { name: strings.legsPanelLabel }).locator(".planner-row").first();
+  page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
 const legDetails = legDetailsDialog;
 const dayRow = (page: Page) =>
   page.getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem").first();
 const dayChip = (page: Page) =>
   dayRow(page).getByRole("group", { name: strings.tripAccess.dayWarningsLabel }).getByRole("button");
 const showDays = (page: Page) => showTab(page, strings.planner.tabs.days);
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
@@ -55,7 +57,7 @@ test("a paddle leg through a lock shows the warning on the leg, and a Lock chip 
 
   // The leg's details dialog (#158) holds the warning, a lock's own, with its rule source.
   const text = strings.tripAccess.lockWarning("Écluse d'Anderlecht - Sluis van Anderlecht");
-  await legRow(page).getByRole("button", { name: strings.planner.legDetailsButton(1) }).click();
+  await legRow(page).getByRole("button", { name: strings.planner.sectionDetailsButton(1) }).click();
   await expect(legDetails(page).locator(".access-warning-lock")).toContainText(text);
   await expect(legDetails(page).locator(".access-warning-lock").getByRole("link", { name: /Brussels police regulation/ })).toBeVisible();
   await legDetails(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();
@@ -73,7 +75,7 @@ test("a paddle leg away from any lock has no lock warning", async ({ page }) => 
   // Wait for the access content before checking what is absent.
   await expect(legRow(page).locator(".leg-access-icons")).toBeVisible();
   await expect(legRow(page).locator('svg[data-icon="stairs"]')).toHaveCount(0);
-  await legRow(page).getByRole("button", { name: strings.planner.legDetailsButton(1) }).click();
+  await legRow(page).getByRole("button", { name: strings.planner.sectionDetailsButton(1) }).click();
   await expect(legDetails(page)).toBeVisible();
   await expect(page.locator(".access-warning-lock")).toHaveCount(0);
   await legDetails(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();
@@ -89,8 +91,8 @@ test.describe("on the phone", () => {
     await seed(page, throughLock);
     await page.goto("/");
     const sheet = page.getByRole("dialog", { name: strings.planner.sheetLabel });
-    await sheet.getByRole("tab", { name: strings.planner.tabs.legs }).click();
-    const icons = sheet.getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem").first().locator(".leg-access-icons");
+    await sheet.getByRole("tab", { name: strings.planner.tabs.sections }).click();
+    const icons = sheet.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first().locator(".leg-access-icons");
     await expect(icons.locator('svg[data-icon="stairs"]')).toHaveCount(1);
     await expect(icons).toContainText(strings.tripAccess.chipKind.lock);
   });

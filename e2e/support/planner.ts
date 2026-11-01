@@ -13,9 +13,25 @@ export const tripPanel = (page: Page) => page.getByRole("complementary", { name:
 /** One of the panel's tabs. */
 export const panelTab = (page: Page, name: string) => tripPanel(page).getByRole("tab", { name });
 
-/** The Legs tab's rows. */
+/** A row for one leg: a one-leg section's, or a leg's under its open section. */
+export const leafRows = ".planner-row:not(:has(.planner-section-legs))";
+
+/** The rows of the trip's legs, once `showAllLegs` has opened their sections. */
 export const legRows = (page: Page) =>
-  tripPanel(page).getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem");
+  tripPanel(page).getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows);
+
+/**
+ * Opens every section as soon as it appears, for specs about legs rather than sections. A section
+ * row's own behaviour, closed by default, is in `sections-tab.spec.ts`. Call before `openPlanner`.
+ */
+export async function showAllLegs(page: Page) {
+  await page.addInitScript(() => {
+    new MutationObserver(() => {
+      for (const button of document.querySelectorAll<HTMLElement>('.planner-row-expand-button[aria-expanded="false"]'))
+        button.click();
+    }).observe(document, { childList: true, subtree: true, attributes: true });
+  });
+}
 
 /** Leg `n`'s row button (1-based), which zooms the map to its leg. */
 export const legRowButton = (page: Page, n: number) =>
@@ -325,20 +341,19 @@ export async function holdWater(page: Page, id: string) {
   await mouseHold(page, await pointOnPath(page, accessWater(page, id)));
 }
 
-/** The open leg's details dialog (#158), titled "Leg n · mode · distance" (`strings.planner.legDetailsTitle`). */
-export const legDetailsDialog = (page: Page) => page.getByRole("dialog", { name: /^Leg \d+ · / });
+/** The open details dialog (#158): a day chip's leg's, or a section's with each leg's under its number. */
+export const legDetailsDialog = (page: Page) => page.getByRole("dialog", { name: /^(Leg|Section) \d+ · / });
 
-/** Opens leg `n`'s details dialog from its row's info button. */
-export async function openLegDetails(page: Page, n: number) {
-  await legRows(page)
-    .nth(n - 1)
-    .getByRole("button", { name: text.legDetailsButton(n) })
+/** Opens section `n`'s details dialog from its row's info button. */
+export async function openSectionDetails(page: Page, n: number) {
+  await tripPanel(page)
+    .getByRole("button", { name: text.sectionDetailsButton(n) })
     .click();
   await expect(legDetailsDialog(page)).toBeVisible();
   return legDetailsDialog(page);
 }
 
-/** Closes the leg's details dialog. */
+/** Closes the details dialog. */
 export async function closeLegDetails(page: Page) {
   await legDetailsDialog(page).getByRole("button", { name: text.legDetailsClose }).click();
   await expect(legDetailsDialog(page)).toHaveCount(0);

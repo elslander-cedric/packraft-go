@@ -53,7 +53,7 @@ test("a newer-version autosave is kept, with a warning, while the planner edits"
 
   await expect(warning(page)).toBeVisible();
   await expect(pointMarkers(page)).toHaveCount(0);
-  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.sectionsPanelEmpty);
   expect(await storedTrip(page)).toBe(NEWER);
 
   // Edits happen in memory but do not overwrite the kept save.
@@ -153,7 +153,7 @@ test("corrupt autosave data gives an empty trip, without the version warning", a
   page.on("pageerror", (error) => errors.push(error.message));
   await openWithStored(page, "{corrupt");
 
-  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.sectionsPanelEmpty);
   await expect(pointMarkers(page)).toHaveCount(0);
   await expect(warning(page)).toHaveCount(0);
   expect(errors).toEqual([]);

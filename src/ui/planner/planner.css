@@ -209,8 +209,21 @@
 }
 
 /* Like the access point rows, the left bar marks the selected leg; the mode shows in its icon. */
-.planner-legs .planner-row:has(.planner-row-toggle[aria-current]) {
+.planner-legs .planner-row:has(> .planner-row-head > .planner-row-toggle[aria-current]) {
   border-left-color: var(--color-focus);
+}
+
+/* A section's legs, indented under its row; the row's bottom padding and border close the list. */
+.planner-section-legs {
+  flex-basis: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 0 var(--space-3);
+  list-style: none;
+}
+
+.planner-section-legs .planner-row:last-child {
+  border-bottom: 0;
 }
 
 /* A short state line with its action, e.g. "Placing an access point · Cancel". */
@@ -372,7 +385,7 @@
   font-size: 0.8rem;
 }
 
-/* The Legs tab (#121): a row's head is the button that shows its leg on the map. */
+/* A row's head (#121) is the button that shows its leg or section on the map. */
 .planner-row-head {
   display: flex;
   flex-basis: 100%;
@@ -467,14 +480,19 @@
 
 /* A row's icon-only button for its access details (#158), at the row's right with its icon's
    bottom level with the access icons'; out of the flow, so the time stays lined up with the other rows'. */
-.planner-row-head:has(.planner-row-details-button) {
+.planner-row-head:has(.planner-row-actions) {
   position: relative;
 }
 
-.button.planner-row-details-button {
+.planner-row-actions {
   position: absolute;
   right: 0;
   bottom: 0;
+  display: flex;
+}
+
+.button.planner-row-details-button,
+.button.planner-row-expand-button {
   min-width: 2.75rem;
   min-height: 2.75rem;
   display: inline-flex;
@@ -490,6 +508,14 @@
 /* Larger than the row's other icons, its right edge in line with the time's. */
 .planner-legs .planner-row-details-button .icon {
   font-size: 1.35rem;
+}
+
+.planner-legs .planner-row-expand-button .icon {
+  font-size: 1rem;
+}
+
+.planner-row-expand-button[aria-expanded="true"] .icon {
+  transform: rotate(180deg);
 }
 
 /* A section's details name each leg above that leg's details. */

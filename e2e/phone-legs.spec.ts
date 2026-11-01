@@ -11,8 +11,11 @@ import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
 import { iconIn } from "./support/icons";
 import { brouterFixture, kiwisFixtures, serveOffline, type BRouterReply } from "./support/offline";
+import { showAllLegs, leafRows } from "./support/planner";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
+test.beforeEach(({ page }) => showAllLegs(page));
+
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, timezoneId: "Europe/Brussels" });
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
@@ -23,7 +26,7 @@ const text = strings.planner;
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
 const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
-const legRows = (page: Page) => sheet(page).getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem");
+const legRows = (page: Page) => sheet(page).getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows);
 const rowButton = (page: Page, n: number) =>
   legRows(page)
     .nth(n - 1)
@@ -32,8 +35,8 @@ const rowButton = (page: Page, n: number) =>
 const detailsButton = (page: Page, n: number) =>
   legRows(page)
     .nth(n - 1)
-    .getByRole("button", { name: text.legDetailsButton(n) });
-const detailsDialog = (page: Page) => page.getByRole("dialog", { name: /^Leg \d+ · / });
+    .getByRole("button", { name: text.sectionDetailsButton(n) });
+const detailsDialog = (page: Page) => page.getByRole("dialog", { name: /^Section \d+ · / });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const modeSwitch = (page: Page, n: number) =>
   legRows(page)
@@ -85,7 +88,7 @@ async function openPhone(page: Page) {
 }
 
 async function openLegsTab(page: Page) {
-  await tab(page, text.tabs.legs).click();
+  await tab(page, text.tabs.sections).click();
   await expect(legRows(page).first()).toBeVisible();
 }
 
@@ -192,7 +195,7 @@ test("only a row with access details or aire warnings has the info button", asyn
   expect(box.height).toBeGreaterThanOrEqual(44);
 });
 
-test("a row shows its figures after their icons, without a visible leg number; tapped, it has no mode switch and keeps its headline", async ({
+test("a row shows its figures after their icons, without a visible section number; tapped, it has no mode switch and keeps its headline", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -202,8 +205,8 @@ test("a row shows its figures after their icons, without a visible leg number; t
   const labels = text.legFigures;
 
   const hike = rowButton(page, 1);
-  // The leg's number names the row for screen readers only.
-  await expect(hike.getByText(strings.legLabel(1))).toHaveClass("visually-hidden");
+  // The section's number names the row for screen readers only.
+  await expect(hike.getByText(strings.sectionLabel(1))).toHaveClass("visually-hidden");
   for (const icon of [icons.hike, icons.time, icons.climb, icons.descent]) await expect(iconIn(hike, icon)).toBeVisible();
   await expect(hike).toContainText(`${labels.climb} 0 m`);
   await expect(hike).toContainText(`${labels.descent} 0 m`);
@@ -306,7 +309,7 @@ test("a paddle row's info button opens its details dialog with the access and th
   await detailsButton(page, 1).click();
   const dialog = detailsDialog(page);
   await expect(dialog).toBeVisible();
-  await expect(dialog).toHaveAccessibleName(new RegExp(`^${strings.legLabel(1)} · ${strings.legModePaddle} · \\S`));
+  await expect(dialog).toHaveAccessibleName(new RegExp(`^${strings.sectionLabel(1)} · ${strings.legModePaddle} · \\S`));
   await expect(dialog.locator(".leg-access-status")).toBeVisible();
   await expect(dialog.locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
   await expect(dialog.locator(".access-warning-aire .access-icon svg").first()).toBeVisible();
@@ -551,9 +554,9 @@ test.describe("held sideways", () => {
     await openPhone(page);
     // The panel opens on first load (ADR 0034).
     const panel = page.getByRole("complementary", { name: text.sheetLabel });
-    await panel.getByRole("tab", { name: text.tabs.legs }).click();
-    const row = page.getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem").first();
-    await row.getByRole("button", { name: text.legDetailsButton(1) }).click();
+    await panel.getByRole("tab", { name: text.tabs.sections }).click();
+    const row = page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
+    await row.getByRole("button", { name: text.sectionDetailsButton(1) }).click();
     const dialog = detailsDialog(page);
     await expect(dialog).toContainText("Closed today: low flow");
     await expect(dialog).toBeInViewport({ ratio: 1 });

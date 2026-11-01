@@ -4,16 +4,18 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { mapClicker, openPlanner, totals, tripPanel } from "./support/planner";
+import { mapClicker, openPlanner, totals, tripPanel, showAllLegs, leafRows } from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
-const rows = (page: Page) => legsPanel(page).locator(".planner-row");
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
+const rows = (page: Page) => legsPanel(page).locator(leafRows);
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.geojson") };
 const byProfile = (url: URL) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL);
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test.use({ viewport: { width: 1280, height: 800 } });
 

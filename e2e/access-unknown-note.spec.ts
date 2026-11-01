@@ -3,7 +3,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { legDetailsDialog, openPlanner, showTab } from "./support/planner";
+import { legDetailsDialog, openPlanner, showTab, showAllLegs, leafRows } from "./support/planner";
 
 type P = { lat: number; lng: number };
 const canal: P[] = [
@@ -35,7 +35,7 @@ async function seed(page: Page, waters: P[][]) {
   }, JSON.stringify(save));
 }
 
-const legsPanel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 /** The Days tab's warning chips; shows the tab first. */
 const dayChips = async (page: Page) => {
   await showTab(page, strings.planner.tabs.days);
@@ -46,6 +46,8 @@ const dayChips = async (page: Page) => {
 };
 const legDetails = legDetailsDialog;
 
+test.beforeEach(({ page }) => showAllLegs(page));
+
 test.use({ viewport: { width: 1400, height: 900 } });
 
 test("a leg in the Netherlands shows a neutral note and its day gets no warning chip (#78)", async ({ page }) => {
@@ -53,11 +55,11 @@ test("a leg in the Netherlands shows a neutral note and its day gets no warning 
   await seed(page, [netherlands]);
   await openPlanner(page);
 
-  const leg = legsPanel(page).locator(".planner-row").first();
+  const leg = legsPanel(page).locator(leafRows).first();
   // Wait for the access to render before checking what is absent.
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState.unknown);
   // The note is in the leg's details dialog (#158).
-  await leg.getByRole("button", { name: strings.planner.legDetailsButton(1) }).click();
+  await leg.getByRole("button", { name: strings.planner.sectionDetailsButton(1) }).click();
   await expect(legDetails(page).locator(".access-note")).toHaveText(strings.tripAccess.noRule);
   await expect(legDetails(page).locator(".access-warning")).toHaveCount(0);
   await legDetails(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();

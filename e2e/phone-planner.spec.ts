@@ -9,9 +9,12 @@ import { strings } from "../src/ui/strings";
 import { iconIn } from "./support/icons";
 import { brouterFixture, serveOffline } from "./support/offline";
 import { touch } from "./support/touch";
+import { showAllLegs, leafRows } from "./support/planner";
 
 // A phone (the browser itself can't be chosen per file).
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
+test.beforeEach(({ page }) => showAllLegs(page));
+
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
 const routed = { brouter: () => ({ status: 200, body: brouterFixture("hiking-success.geojson") }) };
@@ -22,7 +25,7 @@ const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name })
 const showPosition = (page: Page) => page.getByRole("button", { name: strings.planner.showPositionButton });
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const legRows = (page: Page) => sheet(page).getByRole("list", { name: strings.legsPanelLabel }).getByRole("listitem");
+const legRows = (page: Page) => sheet(page).getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows);
 const positionMarker = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.my-position");
 
 const AT_HOTTON = { latitude: 50.268, longitude: 5.446 };
@@ -85,7 +88,7 @@ test("tapping the map adds points, routes the legs, updates the totals; undo rem
   await expect.poll(() => sheet(page).locator(".planner-totals").textContent()).not.toBe(before);
 
   // The legs tab lists compact rows: mode, distance, time.
-  await tab(page, strings.planner.tabs.legs).click();
+  await tab(page, strings.planner.tabs.sections).click();
   await expect(legRows(page)).toHaveCount(2);
   await expect(legRows(page).first()).toContainText(strings.legModeHike);
   await expect(legRows(page).first()).toContainText(strings.kilometreUnit);
@@ -165,7 +168,7 @@ test("the sheet settles at peek, half or 90% by drag distance, never closes, and
   await dragSheet(page, screen);
   await expect.poll(() => sheetHeight(page)).toBeLessThan(peek + 4);
   await expect(sheet(page)).toBeVisible();
-  await expect(tab(page, strings.planner.tabs.legs)).toBeVisible();
+  await expect(tab(page, strings.planner.tabs.sections)).toBeVisible();
   // And it stays there: the drawer doesn't bounce back to 90% once its animations end (#126).
   await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   await page.waitForTimeout(300);
@@ -197,7 +200,7 @@ test("a finger drag on the sheet settles at peek, half or 90% and never closes i
   await fingerDrag(screen);
   await expect.poll(() => sheetHeight(page)).toBeLessThan(peek + 4);
   await expect(sheet(page)).toBeVisible();
-  await expect(tab(page, strings.planner.tabs.legs)).toBeVisible();
+  await expect(tab(page, strings.planner.tabs.sections)).toBeVisible();
 });
 
 test("a double tap neither zooms nor adds two points", async ({ page }) => {
@@ -317,7 +320,7 @@ test("offline, the planner opens from the app cache with the stored trip; an unr
   // The stored trip's one leg is back on the map.
   await expect(legLines(page)).toHaveCount(1);
   await expect(legLines(page)).toHaveAttribute("stroke-dasharray", "8 8");
-  await tab(page, strings.planner.tabs.legs).click();
+  await tab(page, strings.planner.tabs.sections).click();
   await expect(legRows(page).first().getByRole("button", { name: strings.retryRouting })).toBeVisible();
   // No offline banner.
   await expect(page.getByText(/offline/i)).toHaveCount(0);
@@ -399,7 +402,7 @@ test.describe("a narrowed desktop window with a mouse", () => {
     await page.mouse.click(box.x + box.width / 2 - 60, box.y + 150);
     await page.mouse.click(box.x + box.width / 2 + 60, box.y + 150);
     await expect(legLines(page)).toHaveCount(1);
-    await tab(page, strings.planner.tabs.legs).click();
+    await tab(page, strings.planner.tabs.sections).click();
     await expect(legRows(page)).toHaveCount(1);
     await undoButton(page).click();
     await expect(legLines(page)).toHaveCount(0);

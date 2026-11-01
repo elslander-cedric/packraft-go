@@ -4,15 +4,15 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { freeMapBox, openPlanner, tripPanel } from "./support/planner";
+import { freeMapBox, openPlanner, tripPanel, showAllLegs, leafRows } from "./support/planner";
 
 type Px = { x: number; y: number };
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
-const panel = (page: Page) => page.getByRole("list", { name: strings.legsPanelLabel });
+const panel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const markers = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
-const rows = (page: Page) => panel(page).getByRole("listitem");
+const rows = (page: Page) => panel(page).locator(leafRows);
 const undoBtn = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const deleteBtn = (page: Page) => page.getByRole("button", { name: strings.deletePointButton });
 const total = async (page: Page) => (await tripPanel(page).locator(".planner-totals").textContent()) ?? "";
@@ -57,6 +57,8 @@ async function markerCentres(page: Page) {
   for (const m of await markers(page).all()) out.push(await centre(m));
   return out;
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("AC1: dragging a point moves it, the adjacent legs follow, nothing is added", async ({ page }) => {
   const { network, cx, cy } = await openMap(page);
@@ -172,7 +174,7 @@ test("AC3/AC6: draw, drag, delete, then undo repeatedly back to an empty trip", 
   await expect(markers(page)).toHaveCount(0);
   await expect(legLines(page)).toHaveCount(0);
   await expect(undoBtn(page)).toBeDisabled();
-  await expect(tripPanel(page)).toContainText(strings.legsPanelEmpty);
+  await expect(tripPanel(page)).toContainText(strings.sectionsPanelEmpty);
 
   // The map still works after all that: a click adds a point again.
   await page.mouse.click(cx, cy);

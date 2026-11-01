@@ -154,7 +154,7 @@ for (const [label, text, unknownVersion] of [
     await seedAutosave(page, text);
     await page.goto("/");
     await waitForMap(page);
-    await expect(legsPanel(page)).toContainText(strings.legsPanelEmpty);
+    await expect(legsPanel(page)).toContainText(strings.sectionsPanelEmpty);
     await expect(pointMarkers(page)).toHaveCount(0);
     await expect(campMarkers(page)).toHaveCount(0);
     await expectTripName(page, "");

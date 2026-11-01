@@ -15,11 +15,12 @@ import {
   pickNextMode,
   saveTripFile,
   showTab,
+  showAllLegs,
 } from "./support/planner";
 
 // The trip panel shows one tab at a time (ADR 0034): each list shows its tab first.
 const legRows = async (page: Page) => {
-  await showTab(page, strings.planner.tabs.legs);
+  await showTab(page, strings.planner.tabs.sections);
   return legCards(page);
 };
 const dayRows = async (page: Page) => {
@@ -64,6 +65,8 @@ async function campAtMiddle(page: Page, middle: { x: number; y: number }) {
   await expect(campButton(page)).toBeEnabled();
   await campButton(page).click();
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("a trip without camps is one day with the trip's totals", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });

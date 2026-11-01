@@ -99,6 +99,6 @@ test.describe("sheet stops by drag distance", () => {
     await expect(sheet(page)).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(sheet(page)).toBeVisible();
-    await expect(page.getByRole("tab", { name: strings.planner.tabs.legs })).toBeVisible();
+    await expect(page.getByRole("tab", { name: strings.planner.tabs.sections })).toBeVisible();
   });
 });

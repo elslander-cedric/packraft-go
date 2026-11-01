@@ -20,11 +20,13 @@ import {
   pickNextMode,
   showTab,
   totals,
+  showAllLegs,
+  tripPanel,
 } from "./support/planner";
 
 const KEY = "packraft-go.trip";
 const showDays = (page: Page) => showTab(page, strings.planner.tabs.days);
-const showLegs = (page: Page) => showTab(page, strings.planner.tabs.legs);
+const showLegs = (page: Page) => showTab(page, strings.planner.tabs.sections);
 const dayLabels = strings.planner.dayFigures;
 const pointMarkers = (page: Page) =>
   mapRegion(page).locator(".leaflet-overlay-pane path.point");
@@ -111,6 +113,8 @@ async function toggleCampAt(page: Page, click: Click, point: number) {
   await expect(campButton(page)).toBeEnabled();
   await campButton(page).click();
 }
+
+test.beforeEach(({ page }) => showAllLegs(page));
 
 test("AC1: the Camp action needs a selected point; marking shows a distinct marker and unmarking removes it", async ({
   page,
@@ -237,7 +241,7 @@ test("AC3: a day with a hike leg that failed to route shows '(no climb data)'; t
   await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
   failHike = true;
   await click(XS[2]);
-  await expect(legRows(page).nth(1)).toContainText(strings.retryRouting);
+  await expect(tripPanel(page)).toContainText(strings.retryRouting);
   const legTime = (await legRows(page).nth(1).locator(".planner-row-time").textContent())!
     .replace(`${strings.planner.legFigures.time} `, "")
     .replace(" (no climb data)", "");
