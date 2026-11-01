@@ -4,7 +4,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { closeLegDetails, exportGpxFile, freeMapCentre, legDetailsDialog, legLines, openSectionDetails, openPlanner, saveTripFile, showTab, showAllLegs, leafRows } from "./support/planner";
+import { closeLegDetails, exportGpxFile, freeMapCentre, legDetailsDialog, legLines, openSectionDetails, openPlanner, saveTripFile, sectionRowButton, showTab, showAllLegs, leafRows } from "./support/planner";
 
 /** Along the Ghent–Terneuzen canal, from the built-in data's geometry. */
 const canal = [
@@ -74,7 +74,9 @@ test("a paddle leg on a forbidden Flemish canal shows a warning with its reason;
 
   // The hike leg has no access status, and no details to show.
   await expect(legRow(page, 0).locator(".leg-access-icons")).toHaveCount(0);
-  await expect(legRow(page, 0).getByRole("button", { name: strings.planner.sectionDetailsButton(1) })).toHaveCount(0);
+  await sectionRowButton(page, 1).click();
+  await sectionRowButton(page, 1).click();
+  await expect(legDetailsDialog(page)).toHaveCount(0);
 
   // The day card only points at the leg: one chip, no warning text, and no trip summary (ADR 0029).
   await showTab(page, strings.planner.tabs.days);

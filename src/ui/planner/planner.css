@@ -478,44 +478,20 @@
   display: flex;
 }
 
-/* A row's icon-only button for its access details (#158), at the row's right with its icon's
-   bottom level with the access icons'; out of the flow, so the time stays lined up with the other rows'. */
-.planner-row-head:has(.planner-row-actions) {
-  position: relative;
-}
-
-.planner-row-actions {
-  position: absolute;
-  right: 0;
-  bottom: 0;
+/* An open section's line to its details, as muted as the figures (#200). */
+.button.planner-section-details {
   display: flex;
-}
-
-.button.planner-row-details-button,
-.button.planner-row-expand-button {
-  min-width: 2.75rem;
+  flex-basis: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2);
   min-height: 2.75rem;
-  display: inline-flex;
-  /* Its icon's bottom level with the access icons' (the row button's bottom padding). */
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding: 0 0 var(--space-1);
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--color-muted);
-}
-
-/* Larger than the row's other icons, its right edge in line with the time's. */
-.planner-legs .planner-row-details-button .icon {
-  font-size: 1.35rem;
-}
-
-.planner-legs .planner-row-expand-button .icon {
-  font-size: 1rem;
-}
-
-.planner-row-expand-button[aria-expanded="true"] .icon {
-  transform: rotate(180deg);
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 /* A section's details name each leg above that leg's details. */

@@ -2,7 +2,10 @@ import type { AireWarning } from "@/core/aire";
 import type { TripSummary } from "@/core/summarise";
 import { legsAccess, type TripAccess } from "@/core/tripAccess";
 import type { Leg } from "@/core/trip";
-import { useId } from "react";
+import { useEffect, useRef } from "react";
+import { Button } from "../components/Button";
+import { Icon } from "../icons/Icon";
+import { icons } from "../icons/icons";
 import { strings } from "../strings";
 import { hasLegDetails } from "./LegDetailsDialog";
 import { RoutingFailure, RoutingStatus, TripRow } from "./TripRow";
@@ -19,7 +22,7 @@ export type SectionsListProps = {
   onSelect: (section: number) => void;
   /** A leg's row was tapped. */
   onSelectLeg: (legIndex: number) => void;
-  /** A row's details button was tapped. */
+  /** An open section's details line was tapped. */
   onShowDetails: (section: number) => void;
   onRetry: (legIndex: number) => void;
   /** The section last tapped, marked by the row's left bar. */
@@ -28,16 +31,15 @@ export type SectionsListProps = {
   selectedLeg?: number;
   /** The first legs of the sections whose legs are shown. */
   open: readonly number[];
-  /** A section's button showed or hid its legs. */
-  onToggle: (firstLeg: number) => void;
 };
 
 /**
  * The Sections tab: one row per section (GLOSSARY), like a leg row with the totals of its legs
  * and which legs those are. The warnings and routing state are its legs', gathered (ADR 0029):
  * one "Routing" line while any leg waits, and each failed leg, by number when there are several, with its own Retry.
- * A section of several legs can show them under it: figures, access and warning icons, and a
- * tap that zooms to the leg. Retry and the details stay on the section.
+ * A tap on the selected section of several legs shows them under it (#200), after a line that
+ * opens the section's details: figures, access and warning icons, and a tap that zooms to the
+ * leg. Retry and the details stay on the section.
  */
 export default function SectionsList({
   summary,
@@ -49,21 +51,25 @@ export default function SectionsList({
   open,
   onSelect,
   onSelectLeg,
-  onToggle,
   onShowDetails,
   onRetry,
 }: SectionsListProps) {
-  const listId = useId();
+  const list = useRef<HTMLOListElement>(null);
   const { sections } = summary;
+
+  // Keep the row just tapped in view, with what it opened: the tap lowers a raised sheet.
+  useEffect(() => {
+    list.current?.querySelector("[aria-current]")?.closest("li")?.scrollIntoView?.({ block: "nearest" });
+  }, [selected, selectedLeg, open]);
+
   if (sections.length === 0) return <p className="planner-empty">{strings.sectionsPanelEmpty}</p>;
   return (
-    <ol className="planner-legs" aria-label={strings.sectionsPanelLabel}>
+    <ol ref={list} className="planner-legs" aria-label={strings.sectionsPanelLabel}>
       {sections.map((section, i) => {
         const indices = legs.flatMap((_, leg) => (leg >= section.firstLeg && leg <= section.lastLeg ? [leg] : []));
         const together = access ? legsAccess(access, section) : undefined;
         const routing = indices.some((leg) => !legs[leg].route || legs[leg].route.status === "pending");
         const legsLabel = strings.planner.sectionLegs(i + 1);
-        const legsId = `${listId}-${i}`;
         const legsOpen = open.includes(section.firstLeg);
         return (
           <TripRow
@@ -76,18 +82,7 @@ export default function SectionsList({
             aire={aire.filter((warning) => indices.includes(warning.leg))}
             selected={i === selected}
             onSelect={() => onSelect(i)}
-            {...(indices.some((leg) => hasLegDetails(access, aire, leg)) && {
-              detailsLabel: strings.planner.sectionDetailsButton(i + 1),
-            })}
-            onShowDetails={() => onShowDetails(i)}
-            {...(indices.length > 1 && {
-              expand: {
-                label: legsLabel,
-                open: legsOpen,
-                controls: legsId,
-                onToggle: () => onToggle(section.firstLeg),
-              },
-            })}
+            {...(indices.length > 1 && { open: legsOpen })}
           >
             {routing && <RoutingStatus />}
             {indices.map((leg) => {
@@ -104,8 +99,18 @@ export default function SectionsList({
                 )
               );
             })}
+            {indices.length > 1 && legsOpen && indices.some((leg) => hasLegDetails(access, aire, leg)) && (
+              <Button
+                className="planner-section-details"
+                aria-label={strings.planner.sectionDetailsButton(i + 1)}
+                onClick={() => onShowDetails(i)}
+              >
+                <Icon icon={icons.legDetails} />
+                {strings.planner.sectionDetailsLine}
+              </Button>
+            )}
             {indices.length > 1 && legsOpen && (
-              <ol id={legsId} className="planner-section-legs" aria-label={legsLabel}>
+              <ol className="planner-section-legs" aria-label={legsLabel}>
                 {indices.map((leg) => (
                   <TripRow
                     key={leg}

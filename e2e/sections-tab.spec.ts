@@ -1,11 +1,11 @@
 // The Sections tab (GLOSSARY: Section, ADR 0021): one row per section, with the totals of its
-// legs and its legs' warnings (ADR 0029), and those legs shown under it on demand.
+// legs and its legs' warnings (ADR 0029). A tap on the selected row opens it (#200).
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { icons } from "../src/ui/icons/icons";
 import { strings } from "../src/ui/strings";
 import { iconIn } from "./support/icons";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { figure, legLines, openPlanner, panelTab, points, showTab, tripPanel } from "./support/planner";
+import { figure, freeMapCentre, legLines, openPlanner, openSectionDetails, panelTab, points, sectionRowButton, showTab, toggleSection, tripPanel } from "./support/planner";
 
 const text = strings.planner;
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
@@ -59,8 +59,6 @@ const sectionRows = (page: Page) =>
   tripPanel(page).getByRole("list", { name: strings.sectionsPanelLabel }).locator("> li");
 const legsOf = (page: Page, section: number) =>
   tripPanel(page).getByRole("list", { name: text.sectionLegs(section) }).getByRole("listitem");
-const legsButton = (page: Page, section: number) =>
-  tripPanel(page).getByRole("button", { name: text.sectionLegs(section) });
 const rowButton = (row: Locator, name: string) => row.getByRole("button", { name, exact: false }).first();
 const marked = (page: Page) => tripPanel(page).locator(".planner-row-toggle[aria-current]");
 // Leaflet resets the map pane after a zoom, so a zoom shows in where a leg is drawn.
@@ -112,10 +110,8 @@ test("a section shows its legs' warnings on the row, and each leg's details in a
 
   const paddle = sectionRows(page).nth(1);
   await expect(paddle.locator('svg[data-icon="stairs"]')).toHaveCount(1);
-  await expect(sectionRows(page).nth(0).getByRole("button", { name: text.sectionDetailsButton(1) })).toHaveCount(0);
 
-  await paddle.getByRole("button", { name: text.sectionDetailsButton(2) }).click();
-  const dialog = sectionDialog(page);
+  const dialog = await openSectionDetails(page, 2);
   await expect(dialog.getByRole("heading", { name: strings.legLabel(2), exact: true })).toBeVisible();
   await expect(dialog.getByRole("heading", { name: strings.legLabel(3), exact: true })).toBeVisible();
   await expect(dialog.locator(".access-warning-lock")).toHaveCount(1);
@@ -139,30 +135,147 @@ test("tapping a row zooms the map to the section and marks it", async ({ page })
   await expect(marked(page)).toHaveCount(1);
 });
 
-test("only a section of several legs can show them, closed until asked", async ({ page }) => {
+test("a tap on the selected section opens and closes it, and zooms back each time", async ({ page }) => {
   await serveOffline(page);
   await seed(page, canalTrip);
   await openPlanner(page);
 
-  await expect(tripPanel(page).locator(".planner-row-expand-button")).toHaveCount(1);
-  await expect(legsButton(page, 2)).toHaveAttribute("aria-expanded", "false");
+  const row = sectionRowButton(page, 2);
+  await expect(row).toHaveAttribute("aria-expanded", "false");
   await expect(legsOf(page, 2)).toHaveCount(0);
 
-  await legsButton(page, 2).click();
-  await expect(legsButton(page, 2)).toHaveAttribute("aria-expanded", "true");
+  await row.click();
+  await expect(row).toHaveAttribute("aria-current", "true");
+  await expect(row).toHaveAttribute("aria-expanded", "false");
+
+  await row.click();
+  await expect(row).toHaveAttribute("aria-expanded", "true");
   await expect(legsOf(page, 2)).toHaveCount(2);
   await expect(legsOf(page, 2).nth(0)).toContainText(strings.legLabel(2));
   await expect(legsOf(page, 2).nth(1)).toContainText(strings.legLabel(3));
 
-  await legsButton(page, 2).click();
+  await row.click();
   await expect(legsOf(page, 2)).toHaveCount(0);
+  await expect(row).toHaveAttribute("aria-expanded", "false");
+});
+
+test("the map goes back to the selected section as it opens", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, canalTrip);
+  await openPlanner(page);
+  await sectionRowButton(page, 2).click();
+  await expect(sectionRowButton(page, 2)).toHaveAttribute("aria-current", "true");
+
+  const centre = await freeMapCentre(page);
+  await page.mouse.move(centre.x, centre.y);
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => drawn(page)).toBeTruthy();
+  const zoomedOut = await drawn(page);
+
+  // By keyboard, which works as a tap does.
+  await sectionRowButton(page, 2).focus();
+  await page.keyboard.press("Enter");
+  await expect(sectionRowButton(page, 2)).toHaveAttribute("aria-expanded", "true");
+  await expect.poll(() => drawn(page)).not.toBe(zoomedOut);
+});
+
+test("an open section's details line opens the dialog, and goes when it closes", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, canalTrip);
+  await openPlanner(page);
+  await expect(sectionRows(page).nth(1).locator('svg[data-icon="stairs"]')).toHaveCount(1);
+  await toggleSection(page, 2);
+
+  const line = tripPanel(page).getByRole("button", { name: text.sectionDetailsButton(2) });
+  await expect(line).toHaveText(text.sectionDetailsLine);
+  await line.click();
+  await expect(sectionDialog(page)).toBeVisible();
+  await sectionDialog(page).getByRole("button", { name: text.legDetailsClose }).click();
+
+  await toggleSection(page, 2);
+  await expect(line).toHaveCount(0);
+});
+
+test("a section of hike legs opens to its legs alone", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, { points: [D, A, B], legs: [{ mode: "hike", line: [D, A] }, { mode: "hike", line: [A, B] }] });
+  await openPlanner(page);
+  await toggleSection(page, 1);
+  await expect(legsOf(page, 1)).toHaveCount(2);
+  await expect(tripPanel(page).getByRole("button", { name: text.sectionDetailsButton(1) })).toHaveCount(0);
+});
+
+test("a tap on a selected section of one leg shows its details, or nothing without any", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, canalTrip);
+  await openPlanner(page);
+  await expect(sectionRows(page).nth(2).locator(".leg-access-icons")).toBeVisible();
+
+  // The hike has no details and nothing to open.
+  await expect(sectionRows(page).nth(0).locator('[aria-expanded]')).toHaveCount(0);
+  await sectionRowButton(page, 1).click();
+  await sectionRowButton(page, 1).click();
+  await expect(sectionDialog(page)).toHaveCount(0);
+
+  // The first tap only selects.
+  await sectionRowButton(page, 3).click();
+  await expect(sectionRowButton(page, 3)).toHaveAttribute("aria-current", "true");
+  await expect(sectionDialog(page)).toHaveCount(0);
+  await sectionRowButton(page, 3).click();
+  await expect(sectionDialog(page)).toBeVisible();
+  await expect(sectionRows(page).nth(2).locator('[aria-expanded]')).toHaveCount(0);
+});
+
+test("a second tap on a shown leg only zooms", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, canalTrip);
+  await openPlanner(page);
+  await toggleSection(page, 2);
+
+  const leg = rowButton(legsOf(page, 2).nth(1), strings.legLabel(3));
+  await leg.click();
+  await expect(leg).toHaveAttribute("aria-current", "true");
+  await leg.click();
+  await expect(legsOf(page, 2)).toHaveCount(2);
+  await expect(sectionDialog(page)).toHaveCount(0);
+  await expect(leg).not.toHaveAttribute("aria-expanded");
+});
+
+test.describe("on a phone with the sheet raised", () => {
+  test.use({ viewport: { width: 390, height: 640 }, hasTouch: true });
+
+  test("the row tapped stays in view, with the legs it opened", async ({ page }) => {
+    await serveOffline(page);
+    await seed(page, {
+      points: [D, A, LOCK, B, C, E],
+      legs: [
+        { mode: "hike", line: [D, A] },
+        { mode: "paddle", line: [A, LOCK] },
+        { mode: "hike", line: [LOCK, B] },
+        { mode: "paddle", line: [B, C] },
+        { mode: "paddle", line: [C, E] },
+      ],
+    });
+    await page.goto("/");
+    const handle = page.getByRole("slider", { name: text.resizeSheetHandle });
+    await handle.focus();
+    await page.keyboard.press("ArrowUp");
+    await page.keyboard.press("ArrowUp");
+
+    const list = page.getByRole("list", { name: strings.sectionsPanelLabel });
+    const row = list.locator("> li").last().getByRole("button").first();
+    await row.click();
+    await expect(row).toBeInViewport({ ratio: 1 });
+    await row.click();
+    await expect(page.getByRole("list", { name: text.sectionLegs(4) }).getByRole("listitem").last()).toBeInViewport();
+  });
 });
 
 test("a shown leg has its own figures and warning icons, but no details or Retry", async ({ page }) => {
   await serveOffline(page);
   await seed(page, canalTrip);
   await openPlanner(page);
-  await legsButton(page, 2).click();
+  await toggleSection(page, 2);
 
   const [throughLock, after] = [legsOf(page, 2).nth(0), legsOf(page, 2).nth(1)];
   // A leg's drop, not the section's net 10 m: 30 m to 24 m, then 24 m to 20 m.
@@ -177,15 +290,12 @@ test("tapping a shown leg zooms to it, and one row stays marked between sections
   await serveOffline(page);
   await seed(page, canalTrip);
   await openPlanner(page);
-  await legsButton(page, 2).click();
+  await toggleSection(page, 2);
 
   const section = rowButton(sectionRows(page).nth(1), strings.sectionLabel(2));
   const leg = rowButton(legsOf(page, 2).nth(1), strings.legLabel(3));
-  const start = await drawn(page);
-  await section.click();
   await expect(section).toHaveAttribute("aria-current", "true");
 
-  await expect.poll(() => drawn(page)).not.toBe(start);
   const before = await drawn(page);
   await leg.click();
   await expect(leg).toHaveAttribute("aria-current", "true");
@@ -212,8 +322,8 @@ test("shown legs stay open across tabs, side by side, and through an edit furthe
     ],
   });
   await openPlanner(page);
-  await legsButton(page, 1).click();
-  await legsButton(page, 2).click();
+  await toggleSection(page, 1);
+  await toggleSection(page, 2);
   await expect(legsOf(page, 1)).toHaveCount(2);
   await expect(legsOf(page, 2)).toHaveCount(2);
 
@@ -224,7 +334,7 @@ test("shown legs stay open across tabs, side by side, and through an edit furthe
 
   // Deleting the last point leaves section 2 with one leg, which closes it; section 1 is untouched.
   await deletePoint(page, 4);
-  await expect(legsButton(page, 2)).toHaveCount(0);
+  await expect(sectionRowButton(page, 2)).not.toHaveAttribute("aria-expanded");
   await expect(legsOf(page, 1)).toHaveCount(2);
 });
 
@@ -232,7 +342,7 @@ test("a section closes when no section of several legs starts at its first leg",
   await serveOffline(page);
   await seed(page, canalTrip);
   await openPlanner(page);
-  await legsButton(page, 2).click();
+  await toggleSection(page, 2);
 
   // Deleting the point between its two legs merges them into one.
   await deletePoint(page, 2);

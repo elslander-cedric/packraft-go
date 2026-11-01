@@ -32,10 +32,6 @@ const rowButton = (page: Page, n: number) =>
     .nth(n - 1)
     .getByRole("button", { name: strings.legLabel(n), exact: false })
     .first();
-const detailsButton = (page: Page, n: number) =>
-  legRows(page)
-    .nth(n - 1)
-    .getByRole("button", { name: text.sectionDetailsButton(n) });
 const detailsDialog = (page: Page) => page.getByRole("dialog", { name: /^Section \d+ · / });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const modeSwitch = (page: Page, n: number) =>
@@ -118,7 +114,7 @@ const P0 = { lat: 50.3, lng: 5.45 };
 const P1 = { lat: 50.31, lng: 5.45 };
 const P2 = { lat: 50.45, lng: 5.65 };
 
-test("tapping a row zooms the map to its leg and doesn't open the row (#158)", async ({ page }) => {
+test("tapping a leg's row zooms the map to it and doesn't open the row", async ({ page }) => {
   await serveOffline(page);
   await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "hike", geometry: [P1, P2] }] });
   await openPhone(page);
@@ -180,19 +176,23 @@ test("rows have no tint of their own and keep their background when tapped", asy
   expect(await background(1)).toBe(plain);
 });
 
-test("only a row with access details or aire warnings has the info button", async ({ page }) => {
+test("a row is one button, and a second tap shows details only on a row that has them (#200)", async ({ page }) => {
   await serveOffline(page);
   await seed(page, { points: [start, putIn, end], legs: [{ mode: "hike", geometry: [start, putIn] }, { mode: "paddle", geometry: [putIn, end] }] });
   await openPhone(page);
   await openLegsTab(page);
-  await expect(detailsButton(page, 2)).toBeVisible();
-  await expect(iconIn(detailsButton(page, 2), icons.legDetails)).toBeVisible();
-  await expect(detailsButton(page, 1)).toHaveCount(0);
+  await expect(legRows(page).nth(1).locator(".leg-access-icons")).toBeVisible();
   await expect(legRows(page).nth(0).getByRole("button")).toHaveCount(1);
-  // A big enough target, level with the access line.
-  const box = (await detailsButton(page, 2).boundingBox())!;
-  expect(box.width).toBeGreaterThanOrEqual(44);
-  expect(box.height).toBeGreaterThanOrEqual(44);
+  await expect(legRows(page).nth(1).getByRole("button")).toHaveCount(1);
+
+  await rowButton(page, 1).click();
+  await rowButton(page, 1).click();
+  await expect(detailsDialog(page)).toHaveCount(0);
+
+  await rowButton(page, 2).click();
+  await expect(detailsDialog(page)).toHaveCount(0);
+  await rowButton(page, 2).click();
+  await expect(detailsDialog(page)).toBeVisible();
 });
 
 test("a row shows its figures after their icons, without a visible section number; tapped, it has no mode switch and keeps its headline", async ({
@@ -306,26 +306,26 @@ test("a paddle row's info button opens its details dialog with the access and th
   await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
   await expect(detailsDialog(page)).toHaveCount(0);
 
-  await detailsButton(page, 1).click();
+  await rowButton(page, 1).click();
   const dialog = detailsDialog(page);
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAccessibleName(new RegExp(`^${strings.sectionLabel(1)} · ${strings.legModePaddle} · \\S`));
   await expect(dialog.locator(".leg-access-status")).toBeVisible();
   await expect(dialog.locator(".access-warning-aire").first()).toContainText(strings.aire.warningKind);
   await expect(dialog.locator(".access-warning-aire .access-icon svg").first()).toBeVisible();
-  // The row still doesn't open behind it.
+  // The row itself stays closed behind it.
   await expect(legRows(page).nth(0).locator(".access-warning-aire")).toHaveCount(0);
 
   await dialog.getByRole("button", { name: text.legDetailsClose }).click();
   await expect(detailsDialog(page)).toHaveCount(0);
-  await expect(detailsButton(page, 1)).toBeFocused();
+  await expect(rowButton(page, 1)).toBeFocused();
 
   // Escape closes it too.
-  await detailsButton(page, 1).click();
+  await rowButton(page, 1).click();
   await expect(detailsDialog(page)).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(detailsDialog(page)).toHaveCount(0);
-  await expect(detailsButton(page, 1)).toBeFocused();
+  await expect(rowButton(page, 1)).toBeFocused();
 });
 
 test("the sheet lets Escape through to the page, so it reaches a dialog opened from the sheet before focus moves in", async ({
@@ -384,7 +384,8 @@ test("a paddle leg's details dialog dated today shows the live flow figures", as
   });
   await openPhone(page);
   await openLegsTab(page);
-  await detailsButton(page, 1).click();
+  await rowButton(page, 1).click();
+  await rowButton(page, 1).click();
   const dialog = detailsDialog(page);
   await expect(dialog).toContainText("Closed today: low flow");
   await expect(dialog).toContainText(strings.flow.gaugeAssumed("Membre"));
@@ -556,7 +557,8 @@ test.describe("held sideways", () => {
     const panel = page.getByRole("complementary", { name: text.sheetLabel });
     await panel.getByRole("tab", { name: text.tabs.sections }).click();
     const row = page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
-    await row.getByRole("button", { name: text.sectionDetailsButton(1) }).click();
+    await row.getByRole("button").click();
+    await row.getByRole("button").click();
     const dialog = detailsDialog(page);
     await expect(dialog).toContainText("Closed today: low flow");
     await expect(dialog).toBeInViewport({ ratio: 1 });

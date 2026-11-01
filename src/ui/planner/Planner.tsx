@@ -25,7 +25,7 @@ import AccessDetailsDialog from "./AccessDetailsDialog";
 import AccessPointDialog from "./AccessPointDialog";
 import AccessPoints from "./AccessPoints";
 import SnapOffers from "../SnapOffers";
-import LegDetailsDialog from "./LegDetailsDialog";
+import LegDetailsDialog, { hasLegDetails } from "./LegDetailsDialog";
 import SectionDetailsDialog from "./SectionDetailsDialog";
 import SectionsList from "./SectionsList";
 import MapMenu from "./MapMenu";
@@ -177,7 +177,7 @@ export default function Planner({ router }: { router?: Router }) {
       dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points });
     }
   };
-  // A leg row tap shows its leg above the half-raised sheet and marks the row; the tap doesn't open it (#158).
+  // A leg row tap shows its leg above the half-raised sheet and marks the row.
   const [selectedLeg, setSelectedLeg] = useState<number | undefined>(undefined);
   const selectLegRow = (index: number) => {
     const route = trip.legs[index]?.route;
@@ -187,7 +187,9 @@ export default function Planner({ router }: { router?: Router }) {
     raise();
     setFocus({ area, ...covered() });
   };
-  // A section row tap does the same for the whole section.
+  // A section row tap does the same for the whole section, and a tap on the selected one also
+  // opens it, or shows the details of a section of one leg (#200). It always zooms, as the map
+  // may have been panned away.
   const [selectedSection, setSelectedSection] = useState<number | undefined>(undefined);
   const [detailsSection, setDetailsSection] = useState<number | null>(null);
   // The sections showing their legs, by first leg as sections have no identity of their own: an
@@ -202,6 +204,10 @@ export default function Planner({ router }: { router?: Router }) {
   const selectSectionRow = (index: number) => {
     const section = summary.sections[index];
     if (!section) return;
+    if (index === selectedSection) {
+      if (section.lastLeg > section.firstLeg) toggleSection(section.firstLeg);
+      else if (hasLegDetails(waterAccess, aire, section.firstLeg)) setDetailsSection(index);
+    }
     setSelectedSection(index);
     setSelectedLeg(undefined);
     raise();
@@ -272,7 +278,6 @@ export default function Planner({ router }: { router?: Router }) {
           open={stillOpen}
           onSelect={selectSectionRow}
           onSelectLeg={selectLegRow}
-          onToggle={toggleSection}
           onShowDetails={setDetailsSection}
           onRetry={(index) => dispatch({ type: "retryLeg", index })}
         />
