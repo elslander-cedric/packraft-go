@@ -25,7 +25,7 @@ import AccessDetailsDialog from "./AccessDetailsDialog";
 import AccessPointDialog from "./AccessPointDialog";
 import AccessPoints from "./AccessPoints";
 import SnapOffers from "../SnapOffers";
-import LegDetailsDialog, { hasLegDetails } from "./LegDetailsDialog";
+import LegDetailsDialog from "./LegDetailsDialog";
 import SectionDetailsDialog from "./SectionDetailsDialog";
 import SectionsList from "./SectionsList";
 import MapMenu from "./MapMenu";
@@ -187,9 +187,8 @@ export default function Planner({ router }: { router?: Router }) {
     raise();
     setFocus({ area, ...covered() });
   };
-  // A section row tap does the same for the whole section, and a tap on the selected one also
-  // opens it, or shows the details of a section of one leg (#200). It always zooms, as the map
-  // may have been panned away.
+  // A section row tap does the same for the whole section, and a tap on the selected one of
+  // several legs also opens it (#200). It always zooms, as the map may have been panned away.
   const [selectedSection, setSelectedSection] = useState<number | undefined>(undefined);
   const [detailsSection, setDetailsSection] = useState<number | null>(null);
   // The sections showing their legs, by first leg as sections have no identity of their own: an
@@ -204,10 +203,7 @@ export default function Planner({ router }: { router?: Router }) {
   const selectSectionRow = (index: number) => {
     const section = summary.sections[index];
     if (!section) return;
-    if (index === selectedSection) {
-      if (section.lastLeg > section.firstLeg) toggleSection(section.firstLeg);
-      else if (hasLegDetails(waterAccess, aire, section.firstLeg)) setDetailsSection(index);
-    }
+    if (index === selectedSection && section.lastLeg > section.firstLeg) toggleSection(section.firstLeg);
     setSelectedSection(index);
     setSelectedLeg(undefined);
     raise();
@@ -279,6 +275,7 @@ export default function Planner({ router }: { router?: Router }) {
           onSelect={selectSectionRow}
           onSelectLeg={selectLegRow}
           onShowDetails={setDetailsSection}
+          onShowLegDetails={setDetailsLeg}
           onRetry={(index) => dispatch({ type: "retryLeg", index })}
         />
       </TabPanel>

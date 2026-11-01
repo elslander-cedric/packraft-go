@@ -154,12 +154,13 @@ export const strings = {
       // A paddle leg that ends higher than it starts (ADR 0018).
       rise: "Rise, upstream?",
     },
-    // The dialog with a leg's access and warnings (#158), from a day card's chip.
+    // The dialog with a leg's access and warnings (#158), from a day card's chip or its row.
     legDetailsTitle: (n: number, mode: string, distance: string) => `Leg ${n} · ${mode} · ${distance}`,
     legDetailsClose: "Close",
-    // A section row's icon-only buttons: its details, and showing its legs under it.
+    // The button to a section's or a leg's details, on its row.
     sectionDetailsButton: (n: number) => `Access details, section ${n}`,
-    sectionDetailsLine: "Access details",
+    legDetailsButton: (n: number) => `Access details, leg ${n}`,
+    rowDetailsLine: "Access details",
     sectionLegs: (n: number) => `Legs of section ${n}`,
     sectionDetailsTitle: (n: number, mode: string, distance: string) => `Section ${n} · ${mode} · ${distance}`,
     // A failed leg on a section's row, by its number.

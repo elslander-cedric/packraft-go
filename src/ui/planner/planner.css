@@ -213,13 +213,19 @@
   border-left-color: var(--color-focus);
 }
 
-/* A section's legs, indented under its row; the row's bottom padding and border close the list. */
+/* A section's legs, in line with its row on a grey band from the section's left bar to its edge, down to its border. */
 .planner-section-legs {
-  flex-basis: 100%;
+  flex-basis: calc(100% + var(--space-2) + var(--space-3));
   min-width: 0;
-  margin: 0;
-  padding: 0 0 0 var(--space-3);
+  margin: 0 calc(-1 * var(--space-3)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2));
+  padding: 0;
+  background: var(--color-surface-hover);
   list-style: none;
+}
+
+/* A leg's own left bar takes the place of the section's padding, so their text lines up. */
+.planner-legs .planner-section-legs .planner-row {
+  padding-left: calc(var(--space-2) - 4px);
 }
 
 .planner-section-legs .planner-row:last-child {
@@ -468,7 +474,7 @@
 
 /* A paddle leg's access icons, on a line of their own under the figures, their bottoms on the line's. */
 .planner-row-access {
-  align-self: flex-start;
+  flex-wrap: wrap;
   align-items: flex-end;
   font-size: 0.85rem;
 }
@@ -478,12 +484,12 @@
   display: flex;
 }
 
-/* An open section's line to its details, as muted as the figures (#200). */
-.button.planner-section-details {
+/* A row's button to its details, as muted as the figures, right-aligned on a line of its own under the routing state. */
+.button.planner-row-details {
   display: flex;
   flex-basis: 100%;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: var(--space-2);
   min-height: 2.75rem;
   padding: 0;
@@ -492,6 +498,35 @@
   color: var(--color-muted);
   font-size: 0.85rem;
   font-weight: 500;
+  white-space: nowrap;
+}
+
+.button.planner-row-details:hover:not([data-disabled]) {
+  background: transparent;
+}
+
+/* Without a routing state it lies over the row's last line, level with its bottom. */
+.planner-row-head {
+  position: relative;
+}
+
+.planner-row-head > .button.planner-row-details {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  align-items: flex-end;
+  padding-bottom: var(--space-1);
+}
+
+/* That last line keeps clear of the button, so a row's many access icons wrap beside it. */
+.planner-row-head:has(> .planner-row-details) > .planner-row-toggle > :last-child {
+  padding-right: 7.5rem;
+}
+
+/* A row with only its headline gets a last line for the button. */
+.planner-row-head:has(> .planner-row-details) > .planner-row-toggle > .planner-row-headline:last-child {
+  padding-right: 0;
+  padding-bottom: 1.5rem;
 }
 
 /* A section's details name each leg above that leg's details. */

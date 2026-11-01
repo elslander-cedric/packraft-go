@@ -39,7 +39,7 @@ export type LegDetailsDialogProps = {
 };
 
 /**
- * A leg's access details (#158), in a dialog opened from a day card's warning chip.
+ * A leg's access details (#158), in a dialog opened from a day card's warning chip or the leg's row.
  * Closed while no leg is given, or once that leg is gone.
  */
 export default function LegDetailsDialog({ leg, summary, access, aire, onClose }: LegDetailsDialogProps) {
