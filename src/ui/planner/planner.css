@@ -213,13 +213,19 @@
   border-left-color: var(--color-focus);
 }
 
-/* A section's legs, indented under its row; the row's bottom padding and border close the list. */
+/* A section's legs, in line with its row on a grey band from the section's left bar to its edge, down to its border. */
 .planner-section-legs {
-  flex-basis: 100%;
+  flex-basis: calc(100% + var(--space-2) + var(--space-3));
   min-width: 0;
-  margin: 0;
-  padding: 0 0 0 var(--space-3);
+  margin: 0 calc(-1 * var(--space-3)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2));
+  padding: 0;
+  background: var(--color-surface-hover);
   list-style: none;
+}
+
+/* A leg's own left bar takes the place of the section's padding, so their text lines up. */
+.planner-legs .planner-section-legs .planner-row {
+  padding-left: calc(var(--space-2) - 4px);
 }
 
 .planner-section-legs .planner-row:last-child {
