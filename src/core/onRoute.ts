@@ -1,8 +1,10 @@
 // Your access points by the trip's route (#156, GLOSSARY "On the route"): the
 // ones on the route in route order, then the rest nearest to you. Pure: your
-// position is passed in by the caller.
+// position is passed in by the caller. Official aires on the route (#208) are worked out
+// apart, so `accessPointsByRoute` stays about your points, and merged in for the list.
 import type { AccessPoint, AccessPoints } from "./accessPoints";
 import { distanceM, projectOntoLine } from "./geo";
+import type { OfficialAire } from "./officialAire";
 import { SNAP_DISTANCE_M } from "./snap";
 import { putInsAndTakeOuts, type LatLng, type Trip } from "./trip";
 
@@ -17,6 +19,14 @@ export type OnRoute = {
   /** How far along the route from the trip's start, in km. */
   readonly alongKm: number;
   /** The trip's put-in or take-out is at this access point. */
+  readonly role: "put-in" | "take-out" | null;
+};
+
+export type OnRouteAire = {
+  readonly aire: OfficialAire;
+  /** How far along the route from the trip's start, in km. */
+  readonly alongKm: number;
+  /** The trip's put-in or take-out is at this aire. */
   readonly role: "put-in" | "take-out" | null;
 };
 
@@ -50,6 +60,32 @@ function routeLine(trip: Trip): LatLng[] {
   });
 }
 
+/** Whether the trip's put-in or take-out is at a position. */
+function roleAt(trip: Trip, position: LatLng): OnRoute["role"] {
+  return putInsAndTakeOuts(trip).find((c) => distanceM(trip.points[c.point], position) <= AT_M)?.kind ?? null;
+}
+
+/** The official aires on the trip's route, in route order; none without a route. */
+export function officialAiresOnRoute(trip: Trip, aires: readonly OfficialAire[]): readonly OnRouteAire[] {
+  const line = routeLine(trip);
+  if (line.length < 2) return [];
+  return aires
+    .flatMap((aire) => {
+      const position = { lat: aire.position[1], lng: aire.position[0] };
+      const { offM, alongM } = projectOntoLine(position, line);
+      return offM <= ON_ROUTE_M ? [{ aire, alongKm: alongM / 1000, role: roleAt(trip, position) }] : [];
+    })
+    .sort((a, b) => a.alongKm - b.alongKm);
+}
+
+/** Your on-route points and the on-route official aires as one list in route order; your point first at the same spot. */
+export function mergeInRouteOrder(
+  points: readonly OnRoute[],
+  aires: readonly OnRouteAire[],
+): readonly (OnRoute | OnRouteAire)[] {
+  return [...points, ...aires].sort((a, b) => a.alongKm - b.alongKm);
+}
+
 /** Your access points split by the trip's route, given your position (null when not shown). */
 export function accessPointsByRoute(trip: Trip, points: AccessPoints, you: LatLng | null): AccessPointsByRoute {
   const line = routeLine(trip);
@@ -60,15 +96,12 @@ export function accessPointsByRoute(trip: Trip, points: AccessPoints, you: LatLn
     if (you) notOnRoute.sort((a, b) => a.fromYouKm! - b.fromYouKm!);
     return { hasRoute, onRoute: [], notOnRoute };
   }
-  const changes = putInsAndTakeOuts(trip);
   const onRoute: OnRoute[] = [];
   const rest: (NotOnRoute & { offM: number })[] = [];
   for (const point of points) {
     const { offM, alongM } = projectOntoLine(point.position, line);
-    if (offM <= ON_ROUTE_M) {
-      const change = changes.find((c) => distanceM(trip.points[c.point], point.position) <= AT_M);
-      onRoute.push({ point, alongKm: alongM / 1000, role: change?.kind ?? null });
-    } else rest.push({ point, fromYouKm: fromYouKm(point), offM });
+    if (offM <= ON_ROUTE_M) onRoute.push({ point, alongKm: alongM / 1000, role: roleAt(trip, point.position) });
+    else rest.push({ point, fromYouKm: fromYouKm(point), offM });
   }
   onRoute.sort((a, b) => a.alongKm - b.alongKm);
   rest.sort((a, b) => (you ? a.fromYouKm! - b.fromYouKm! : a.offM - b.offM));
