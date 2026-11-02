@@ -911,10 +911,13 @@
   pointer-events: auto;
 }
 
-/* The map runs under the side panel; its credits stay clear of it, or the last ones can't be read. */
-.planner-sideways .leaflet-bottom.leaflet-right {
-  right: var(--panel-cover);
-  transition: right 250ms;
+/* The map runs under the side panel; its credits stay clear of it, or the last ones can't be read.
+   Only where they have the room: on a short phone sideways they would wrap up under the buttons. */
+@media (min-width: 60rem) {
+  .planner-sideways .leaflet-bottom.leaflet-right {
+    right: var(--panel-cover);
+    transition: right 250ms;
+  }
 }
 
 .planner-access-chip {
