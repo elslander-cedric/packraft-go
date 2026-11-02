@@ -3,7 +3,7 @@
 Date: 2026-10-12
 
 ## Status
-Accepted. Supersedes ADR 0010 (no legal checks in v1).
+Accepted. Supersedes ADR 0010 (no legal checks in v1). Amended by ADR 0035: KiWIS is no longer the only live source (official status and incidents come live from the SPW too), and the Wanlin gauge note changes: the Lesse from Han to Houyet uses L6610 Hérock, marked as SPW practice. The rest stands.
 
 ## Context
 v2 shows access status on the map (ADR 0022). Rules are known from the research in `docs/research/`. Stretch geometry has to be derived from OpenStreetMap, because the official Walloon geometry is restricted. Live Walloon flows are available from a public KiWIS service that allows browser calls, and the SPW has no objection to showing them. Some gauges are ambiguous, and the legal 08:00 flow forecast isn't public.

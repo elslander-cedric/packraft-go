@@ -3,7 +3,7 @@
 Date: 2026-10-12
 
 ## Status
-Accepted
+Accepted. The SPW's agreement below covers flows and a computed status; ADR 0035 records its wider permission of 2026-11-02 (live official status, built-in aires and stretch lines).
 
 ## Context
 v1 plans hike and paddle legs, but it can't tell whether a paddle leg is on water you may legally use (ADR 0010). Research (`docs/research/`) shows the rules are knowable: Flemish exceptions and ports, the Walloon AGW whitelist with seasons, hours and flow thresholds. Live Walloon flows are also available. Other v2 candidates were a field companion (phone and GPS) and smarter planning (route-finding, GPX import).

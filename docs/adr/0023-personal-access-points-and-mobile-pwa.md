@@ -3,7 +3,7 @@
 Date: 2026-10-12
 
 ## Status
-Accepted. Makes one exception to ADR 0001 (planning at home) and ADR 0005 (desktop-first). Its phone scope ("Planning stays desktop") is replaced by ADR 0026 (the full planner on the phone), and its access points file by ADR 0034 (no export or import); the rest stands.
+Accepted. Makes one exception to ADR 0001 (planning at home) and ADR 0005 (desktop-first). Its phone scope ("Planning stays desktop") is replaced by ADR 0026 (the full planner on the phone), its access points file by ADR 0034 (no export or import), and "Official aire locations come only from your own marks" by ADR 0035, so the aire warning and snap offers also count the built-in official aires; the rest stands.
 
 ## Context
 There's no open dataset of access points in Belgium. The Walloon aire dataset is restricted, OSM coverage is sparse, and Flemish route put-ins aren't openly licensed (`docs/research/data-sources.md`). The person who knows where you can actually get on the water is the paddler standing on the bank, often without signal.
