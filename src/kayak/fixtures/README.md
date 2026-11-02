@@ -9,6 +9,8 @@ these and never call the live service (ADR 0019, ADR 0035).
 | --- | --- | --- |
 | `layer5-stretches.json` | Layer 5 `query`, `where=1=1`, `returnGeometry=false`, `f=json` | 200, the 21 official stretches |
 | `layer0-incidents.json` | Layer 0 `query`, the app's exact `incidentsUrl()`, recorded the same day at about 13:58 | 200, the 3 current incidents |
+| `layer3-aires.json` | Layer 3 `query`, `prepare:spw-data`'s exact query, recorded the same day at about 14:14 | 200, the 92 aires |
+| `layer1-obstacles.json` | Layer 1 `query`, `prepare:spw-data`'s exact query, recorded the same day at about 14:14 | 200, the 96 obstacles |
 
 `layer5-stretches.json` isn't byte for byte: the recording used `outFields=*`, and
 the file was then trimmed to the four fields the app asks for (`nomtro`, `stapub`,
@@ -33,6 +35,11 @@ What the recording shows, and the tests rely on:
 - No incident has an expiry (`datexp` is null on all 3).
 - All 3 have French (`commen`) and English (`commene`) text.
 - Id 2003 says the river is closed, which never changes an access state.
+
+`layer3-aires.json` and `layer1-obstacles.json` are byte for byte, in GeoJSON (`f=geojson`),
+so they list no `fields`. Only `npm run check:kayak` reads them (`src/kayak/liveCheck.ts`):
+the app ships these layers as snapshots and never queries them. They show the aire types
+`E`, `D`, `ED` and `NA`, and the obstacle codes `2`, `8`, `15`, `21` and `22`.
 
 Not recorded (synthesised in the tests instead): codes 2 to 5 and unknown codes,
 an English reason, an incident with an expiry or only French text, and failures
