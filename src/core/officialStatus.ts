@@ -49,6 +49,9 @@ export type OfficialVerdict =
 /** What the app asks the SPW for today and may have to go without (#211): the note names each one. */
 export type OfficialCheck = "closures";
 
+/** A stretch the SPW has closed today, with its reason if it gives one. */
+export type OfficialClosedVerdict = Extract<OfficialVerdict, { kind: "closed" }>;
+
 function closed(cause: OfficialClosure, { reasonEn, reasonFr }: OfficialReading): OfficialVerdict {
   const reason = reasonEn ?? reasonFr;
   return { kind: "closed", cause, ...(reason !== undefined && { reason }) };

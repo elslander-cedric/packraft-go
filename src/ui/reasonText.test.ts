@@ -72,6 +72,20 @@ describe("a reason's text", () => {
     expect(reasonText(reason("open", { kind: "none" }))).toBe("Rule text. The SPW publishes no official status for this stretch.");
   });
 
+  it("adds the note after the rule text on a future date, with the SPW's reason", () => {
+    const text = reasonText(
+      reason("open", undefined, { closedToday: { kind: "closed", cause: "too-low-or-stated", reason: "Arrêté ministériel" } }),
+    );
+    expect(text).toBe("Rule text. Officially closed today, says the SPW: Arrêté ministériel");
+  });
+
+  it("words the note's cause like a closure's, when the SPW gives no reason", () => {
+    const low = reason("open", undefined, { closedToday: { kind: "closed", cause: "too-low-or-stated" } });
+    expect(reasonText(low)).toBe("Rule text. Officially closed today, says the SPW: the water is too low.");
+    const high = reason("open", undefined, { closedToday: { kind: "closed", cause: "high-water", reason: "Crue" } });
+    expect(reasonText(high)).toBe("Rule text. Officially closed today, says the SPW: high water. Crue");
+  });
+
   it("leaves an unavailable official status to the note that goes with it", () => {
     expect(reasonText(reason("open", { kind: "unavailable" }))).toBe("Rule text.");
   });
