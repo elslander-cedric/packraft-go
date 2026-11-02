@@ -77,6 +77,14 @@ describe("the Walloon stretches in the built-in rules", () => {
   };
   const stateOn = (id: string, date: string) => accessAt(on(id), builtInAccessRules, { date });
 
+  it("the Semois from Chassepierre to Linglé follows SEMOIS2-3, the SPW's stretch (#210)", () => {
+    const today = "2026-11-02";
+    const official = { status: "ok", stretches: { "SEMOIS2-3": { code: "3" }, "SEMOIS4-5": { code: "1" } } } as const;
+    for (const id of ["walloon-1B4c", "walloon-1A4-1"]) {
+      expect(accessAt(on(id), builtInAccessRules, { date: today, today, official }).state).toBe("closed-today");
+    }
+  });
+
   it("every stretch is in the built-in rules and drawn as a feature", () => {
     const ids = accessFeatures(builtInAccessRules, { date: "2026-12-15" }).map((f) => f.record.id);
     for (const r of walloon) expect(ids).toContain(r.id);

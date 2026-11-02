@@ -1,0 +1,82 @@
+// Official status (ADR 0035, #210, GLOSSARY "Official status"): the SPW's own
+// status per official stretch for today, and what each of its codes means. Pure:
+// readings are passed in by whoever asked the source.
+
+/** What the SPW publishes for one official stretch. `code` is its status code, as published. */
+export type OfficialReading = {
+  readonly code: string;
+  /** The SPW's reason in English, when it gives one. */
+  readonly reasonEn?: string;
+  /** The SPW's reason in French, when it gives one. */
+  readonly reasonFr?: string;
+};
+
+/**
+ * Today's readings, keyed by official stretch id. `failed` means the service
+ * could not be reached or answered with an error.
+ */
+export type OfficialReadings =
+  | { readonly status: "ok"; readonly stretches: Readonly<Record<string, OfficialReading>> }
+  | { readonly status: "failed" };
+
+/**
+ * Gives today's reading of every official stretch. The real implementation (the
+ * PKAYAK adapter) is injected; tests pass a fake. Implementations never throw: a
+ * failure is a `failed` result.
+ */
+export interface OfficialStatusSource {
+  readings(): Promise<OfficialReadings>;
+}
+
+/** Why the SPW closed a stretch: code 0 means too low, or whatever reason it gives. */
+export type OfficialClosure = "too-low-or-stated" | "high-water" | "out-of-season";
+
+/**
+ * What the official status says about one stretch for today:
+ * - `open`: paddling allowed; `soon` when the SPW warns it may soon be forbidden.
+ * - `closed`: forbidden today, with the SPW's reason if it gives one.
+ * - `unrecognised`: a code the app doesn't know, which never reads as open.
+ * - `unavailable`: no reading for this stretch, so the computed status stands.
+ * - `none`: the SPW lists no official stretch here, so no official status exists.
+ */
+export type OfficialVerdict =
+  | { readonly kind: "open"; readonly soon?: true }
+  | { readonly kind: "closed"; readonly cause: OfficialClosure; readonly reason?: string }
+  | { readonly kind: "unrecognised"; readonly code: string }
+  | { readonly kind: "unavailable" }
+  | { readonly kind: "none" };
+
+function closed(cause: OfficialClosure, { reasonEn, reasonFr }: OfficialReading): OfficialVerdict {
+  const reason = reasonEn ?? reasonFr;
+  return { kind: "closed", cause, ...(reason !== undefined && { reason }) };
+}
+
+function verdictOf(reading: OfficialReading): OfficialVerdict {
+  switch (reading.code) {
+    case "0":
+      return closed("too-low-or-stated", reading);
+    case "1":
+    case "5":
+      return { kind: "open" };
+    case "2":
+      return { kind: "open", soon: true };
+    case "3":
+      return closed("high-water", reading);
+    case "4":
+      return closed("out-of-season", reading);
+    default:
+      return { kind: "unrecognised", code: reading.code };
+  }
+}
+
+/** A stretch's official verdict for today; undefined while its readings haven't arrived. */
+export function officialCheck(
+  officialStretch: string | undefined,
+  readings: OfficialReadings | undefined,
+): OfficialVerdict | undefined {
+  if (officialStretch === undefined) return { kind: "none" };
+  if (!readings) return undefined;
+  if (readings.status === "failed") return { kind: "unavailable" };
+  const reading = readings.stretches[officialStretch];
+  return reading ? verdictOf(reading) : { kind: "unavailable" };
+}

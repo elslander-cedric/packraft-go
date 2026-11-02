@@ -9,6 +9,7 @@ import { FlowFiguresView } from "./FlowFiguresView";
 import { formatDayDate } from "./format";
 import { Icon } from "./icons/Icon";
 import { icons, type IconDefinition } from "./icons/icons";
+import { reasonText } from "./reasonText";
 import { accessStateLabel, strings } from "./strings";
 import "./TripAccessView.css";
 
@@ -68,7 +69,7 @@ function Warning({ warning }: { warning: AccessWarning }) {
       <strong>{`${strings.tripAccess.warningKind[warning.kind]}: `}</strong>
       {reason.kind === "no-rule" ? null : (
         <>
-          {`${reason.name}. ${reason.ruleText} `}
+          {`${reason.name}. ${reasonText(reason)} `}
           <a href={reason.source.url} target="_blank" rel="noreferrer">
             {reason.source.title}
           </a>
@@ -87,7 +88,7 @@ function Note({ note }: { note: AccessNote }) {
         strings.tripAccess.noRule
       ) : (
         <>
-          {`${reason.name}. ${reason.ruleText} `}
+          {`${reason.name}. ${reasonText(reason)} `}
           <a href={reason.source.url} target="_blank" rel="noreferrer">
             {reason.source.title}
           </a>
@@ -132,9 +133,14 @@ export function LegAccessView({ access }: { access: LegAccess }) {
   const extraRules = status.reasons.flatMap((reason) =>
     reason.kind === "rule" && (reason.conditions?.length || reason.link) ? [reason] : [],
   );
-  // Without a date, the rules that allow paddling are shown in general terms too (warnings show the others).
+  // Without a date, the rules that allow paddling are shown in general terms too (warnings show the others);
+  // on open water today, so is what the SPW adds: a closure coming, or no official status at all (#210).
   const generalRules = status.reasons.flatMap((reason) =>
-    date === undefined && reason.kind === "rule" && reason.state === "open" ? [reason] : [],
+    reason.kind === "rule" &&
+    reason.state === "open" &&
+    (date === undefined || reason.official?.kind === "none" || (reason.official?.kind === "open" && reason.official.soon))
+      ? [reason]
+      : [],
   );
   return (
     <div className="leg-access">
@@ -147,7 +153,7 @@ export function LegAccessView({ access }: { access: LegAccess }) {
       {generalRules.length > 0 && (
         <div className="leg-access-rules">
           {generalRules.map((reason) => (
-            <p key={reason.recordId}>{`${reason.name}. ${reason.ruleText}`}</p>
+            <p key={reason.recordId}>{`${reason.name}. ${reasonText(reason)}`}</p>
           ))}
         </div>
       )}

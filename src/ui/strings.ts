@@ -261,8 +261,19 @@ export const strings = {
     forbidden: "Forbidden",
     unknown: "Unknown",
   },
-  // Transient status while today's live Walloon flow loads (#85); not one of the legend's states.
-  accessChecking: "Checking flow…",
+  // Transient status while today's live Walloon flow or official status loads (#85, #210); not one of the legend's states.
+  accessChecking: "Checking status…",
+  // The SPW's official status for today (#210, ADR 0035).
+  official: {
+    closed: (why: string) => `Closed today by the SPW: ${why}`,
+    tooLow: "the water is too low.",
+    causes: { "high-water": "high water.", "out-of-season": "out of season." },
+    open: "Open today, says the SPW.",
+    openSoon: "Open today, says the SPW, but kayaks may soon be forbidden.",
+    unrecognised: (code: string) =>
+      `The SPW gives a status the app doesn't know (code ${code}); check today's official status on kayak.spw.wallonie.be.`,
+    none: "The SPW publishes no official status for this stretch.",
+  },
   accessLegendNote:
     "In Flanders, water that isn't marked is open by default. In Wallonia, only the listed stretches may be paddled; other water is treated as not allowed, but isn't painted red. " +
     "In Brussels, only the canal is known to be open; other water is unknown.",

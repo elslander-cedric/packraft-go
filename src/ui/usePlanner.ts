@@ -16,6 +16,7 @@ import { strings } from "./strings";
 import { useAccessPoints } from "./useAccessPoints";
 import { localToday, useAccessRules, useBuiltInLocks, useBuiltInOfficialAires } from "./useAccessRules";
 import { useSettings } from "./useSettings";
+import { useOfficialStatus } from "./useOfficialStatus";
 import { useWalloonFlows } from "./useWalloonFlows";
 
 /** True when a key press is meant for a text field, not for the planner. */
@@ -111,15 +112,25 @@ export function usePlanner(router?: Router) {
   const locks = useBuiltInLocks(hasPaddle) ?? undefined; // Lock warnings (#60).
   const today = localToday();
   const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today, locks }) : null), [trip, rules, today, locks]);
-  // Paddle legs dated today use the live Walloon flows (#61), asked for only when there are some.
-  const flows = useWalloonFlows(rules, rulesAccess?.legs.some((leg) => leg?.date === today) ?? false);
-  const flowsPending = flows === undefined && (rulesAccess?.legs.some((leg) => leg?.date === today) ?? false);
+  // Paddle legs dated today use the live Walloon flows (#61) and the official status (#210), asked for only when there are some.
+  const legToday = rulesAccess?.legs.some((leg) => leg?.date === today) ?? false;
+  const flows = useWalloonFlows(rules, legToday);
+  const official = useOfficialStatus(rules, legToday);
+  const flowsPending = flows === undefined && legToday;
+  const officialPending = official === undefined && legToday;
   const waterAccess = useMemo(
     () =>
-      rules && (flows || flowsPending)
-        ? tripAccess(trip, rules, { today, ...(flows && { flows }), flowsPending, locks })
+      rules && legToday
+        ? tripAccess(trip, rules, {
+            today,
+            ...(flows && { flows }),
+            flowsPending,
+            ...(official && { official }),
+            officialPending,
+            locks,
+          })
         : rulesAccess,
-    [trip, rules, today, flows, flowsPending, locks, rulesAccess],
+    [trip, rules, today, flows, flowsPending, official, officialPending, locks, rulesAccess, legToday],
   );
   // Wanted from the first point, not the first paddle leg: that leg's own put-in may be offered one.
   const officialAires = useBuiltInOfficialAires(trip.points.length > 0)?.aires;

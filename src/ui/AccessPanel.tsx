@@ -7,6 +7,7 @@ import { Button } from "./components/Button";
 import { FlowFiguresView } from "./FlowFiguresView";
 import { Icon } from "./icons/Icon";
 import { icons, obstacleIcons } from "./icons/icons";
+import { reasonText } from "./reasonText";
 import { accessStateLabel, strings } from "./strings";
 import { StatusIcon } from "./TripAccessView";
 import "./AccessPanel.css";
@@ -121,7 +122,7 @@ function Reason({ reason }: { reason: AccessReason }) {
   return (
     <li>
       {reason.category && <p className="access-category">{strings.accessCategory(reason.category)}</p>}
-      <p>{reason.ruleText}</p>
+      <p>{reasonText(reason)}</p>
       {reason.flow && <FlowFiguresView figures={reason.flow} />}
       {reason.conditions && reason.conditions.length > 0 && (
         <>

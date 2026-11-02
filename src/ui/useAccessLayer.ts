@@ -14,6 +14,7 @@ import {
   useBuiltInObstacles,
   useBuiltInOfficialAires,
 } from "./useAccessRules";
+import { useOfficialStatus } from "./useOfficialStatus";
 import { useWalloonFlows } from "./useWalloonFlows";
 
 export type AccessLayer = {
@@ -49,7 +50,7 @@ const NO_AIRES: readonly OfficialAire[] = [];
 /**
  * The access layer's state for the planner: on or off,
  * the date (today unless another is picked, #59), the coloured waters and locks for that
- * date (with live Walloon flows for today, #61), and the water or lock whose details are open.
+ * date (with live Walloon flows, #61, and the official status, #210, for today), and the water or lock whose details are open.
  * An official aire's details also open with the layer off, from the Access points tab: pass
  * `wantAires` while that tab shows.
  */
@@ -58,18 +59,27 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const [selectedId, select] = useState<string | null>(null);
   const rules = useAccessRules(on);
   const locks = useBuiltInLocks(on);
-  const official = useBuiltInOfficialAires(on || wantAires);
+  const builtInAires = useBuiltInOfficialAires(on || wantAires);
   const obstacles = useBuiltInObstacles(on);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const today = localToday();
   const date = pickedDate ?? today;
-  const flows = useWalloonFlows(rules, on && date === today);
+  const shownToday = on && date === today;
+  const flows = useWalloonFlows(rules, shownToday);
+  const official = useOfficialStatus(rules, shownToday);
   const features = useMemo(
     () =>
       rules
-        ? accessFeatures(rules, { date, today, ...(flows && { flows }), flowsPending: on && date === today && !flows })
+        ? accessFeatures(rules, {
+            date,
+            today,
+            ...(flows && { flows }),
+            flowsPending: shownToday && !flows,
+            ...(official && { official }),
+            officialPending: shownToday && !official,
+          })
         : [],
-    [rules, date, today, flows, on],
+    [rules, date, today, flows, official, shownToday],
   );
   const tripDays = useMemo<AccessTripDay[]>(
     () =>
@@ -78,7 +88,7 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
         : summarise(trip).days.flatMap((d, i) => (d.date === undefined ? [] : [{ day: i + 1, date: d.date }])),
     [trip],
   );
-  const selectedAire = official?.aires.find((a) => a.id === selectedId);
+  const selectedAire = builtInAires?.aires.find((a) => a.id === selectedId);
   const setOn = (next: boolean) => {
     setOnState(next);
     if (!next) select(null);
@@ -89,14 +99,14 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
     date,
     isToday: pickedDate === null,
     dateSelector: { date, isToday: pickedDate === null, onDate: setPickedDate, onToday: () => setPickedDate(null), tripDays },
-    shown: on && rules ? { features, locks: locks ?? [], aires: official?.aires ?? [], obstacles: obstacles ?? [] } : null,
+    shown: on && rules ? { features, locks: locks ?? [], aires: builtInAires?.aires ?? [], obstacles: obstacles ?? [] } : null,
     selectedId,
     select,
     selectedWater: on ? features.find((f) => f.record.id === selectedId) : undefined,
     selectedLock: on ? locks?.find((l) => l.id === selectedId) : undefined,
     selectedAire,
-    selectedAireStretch: official?.stretches.find((s) => s.id === selectedAire?.officialStretch),
+    selectedAireStretch: builtInAires?.stretches.find((s) => s.id === selectedAire?.officialStretch),
     selectedObstacle: on ? obstacles?.find((o) => o.id === selectedId) : undefined,
-    officialAires: official?.aires ?? NO_AIRES,
+    officialAires: builtInAires?.aires ?? NO_AIRES,
   };
 }

@@ -13,6 +13,7 @@ import {
 import { addDays, type CalendarDate } from "./calendarDate";
 import type { FlowReadings } from "./flow";
 import { locksOnLine, type LockWarning } from "./locks";
+import type { OfficialReadings } from "./officialStatus";
 import { dayRanges } from "./summarise";
 import type { LatLng, Trip } from "./trip";
 
@@ -112,6 +113,10 @@ export type TripAccessOptions = {
   readonly flows?: FlowReadings;
   /** True while today's flows are loading: legs dated today on flow-dependent water are "checking" (#85). */
   readonly flowsPending?: boolean;
+  /** Today's official status (#210), once known: legs dated today use it. */
+  readonly official?: OfficialReadings;
+  /** True while today's official status is loading: legs dated today on water it decides are "checking". */
+  readonly officialPending?: boolean;
   /** Lock markers (#57): a paddle leg passing one gets a lock warning (#60). */
   readonly locks?: readonly LockMarker[];
 };
@@ -152,7 +157,11 @@ function legAccess(
 }
 
 /** Access status and warnings for every paddle leg, day and the whole trip. */
-export function tripAccess(trip: Trip, rules: AccessRules, { today, flows, flowsPending, locks = [] }: TripAccessOptions): TripAccess {
+export function tripAccess(
+  trip: Trip,
+  rules: AccessRules,
+  { today, flows, flowsPending, official, officialPending, locks = [] }: TripAccessOptions,
+): TripAccess {
   const legs: (LegAccess | undefined)[] = trip.legs.map(() => undefined);
   const days = dayRanges(trip).map(([first, last], day): DayAccess => {
     const date = trip.startDate === undefined ? undefined : addDays(trip.startDate, day);
@@ -161,7 +170,14 @@ export function tripAccess(trip: Trip, rules: AccessRules, { today, flows, flows
       if (trip.legs[leg].mode !== "paddle") continue;
       const line = legLine(trip, leg);
       if (!line) continue;
-      const status = accessAlong(line, rules, { ...(date !== undefined && { date }), today, ...(flows && { flows }), ...(flowsPending && { flowsPending }) });
+      const status = accessAlong(line, rules, {
+        ...(date !== undefined && { date }),
+        today,
+        ...(flows && { flows }),
+        ...(flowsPending && { flowsPending }),
+        ...(official && { official }),
+        ...(officialPending && { officialPending }),
+      });
       const when = { leg, day, ...(date !== undefined && { date }) };
       const lockWarnings = locksOnLine(line, locks).map((lock): LockWarning => ({ lock, ...when }));
       dayLegs.push((legs[leg] = legAccess(when, status, today, lockWarnings)));
