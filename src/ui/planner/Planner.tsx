@@ -474,6 +474,7 @@ export default function Planner({ router }: { router?: Router }) {
         lock={layer.selectedLock}
         aire={layer.selectedAire}
         aireStretch={layer.selectedAireStretch}
+        aireStatus={layer.selectedAireStatus}
         obstacle={layer.selectedObstacle}
         {...(layer.selectedIncident && { incident: layer.selectedIncident })}
         date={layer.date}

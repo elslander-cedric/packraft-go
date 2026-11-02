@@ -41,6 +41,13 @@ describe("built-in official aires", () => {
     expect(builtInOfficialAires.filter((a) => !stretchIds.has(a.officialStretch))).toEqual([]);
   });
 
+  it("every aire's stretch has access rules, so its dialog can give a status", () => {
+    const ruled = new Set(
+      builtInAccessRules.records.flatMap(({ rule }) => (rule.type === "agw" && rule.officialStretch ? [rule.officialStretch] : [])),
+    );
+    expect(builtInOfficialAires.filter((a) => !ruled.has(a.officialStretch))).toEqual([]);
+  });
+
   it("every aire has a position in Wallonia", () => {
     const outside = builtInOfficialAires.filter(
       ({ position: [lng, lat] }) => !regionsAt({ lat, lng }, builtInAccessRules).includes("wallonia"),

@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { AccessReason, AccessState } from "@/core/access";
 import type { OfficialVerdict } from "@/core/officialStatus";
-import { notCheckedText, reasonText } from "./reasonText";
+import { notCheckedText, reasonText, statusReasonTexts } from "./reasonText";
 
 type RuleReason = Extract<AccessReason, { kind: "rule" }>;
 
@@ -16,6 +16,33 @@ const reason = (state: AccessState, official?: OfficialVerdict, extra: Partial<R
   researched: "2026-11-02",
   ...(official && { official }),
   ...extra,
+});
+
+describe("a status's reasons in words (#213)", () => {
+  const closure: OfficialVerdict = { kind: "closed", cause: "too-low-or-stated", reason: "Arrêté ministériel" };
+  const closedBySpw = (recordId: string) => reason("closed-today", closure, { closedBy: "official", recordId });
+
+  it("says a shared reason once, for a stretch of several records", () => {
+    const status = { state: "closed-today" as const, reasons: [closedBySpw("a"), closedBySpw("b")] };
+    expect(statusReasonTexts(status)).toEqual(["Closed today by the SPW: Arrêté ministériel"]);
+  });
+
+  it("gives only the reasons behind the status, not an open record's beside a closed one", () => {
+    const status = {
+      state: "closed-today" as const,
+      reasons: [closedBySpw("a"), reason("open", undefined, { recordId: "b", ruleText: "Open all year." })],
+    };
+    expect(statusReasonTexts(status)).toEqual(["Closed today by the SPW: Arrêté ministériel"]);
+  });
+
+  it("says nothing more while checking: the status already says so", () => {
+    expect(statusReasonTexts({ state: "checking", reasons: [reason("checking")] })).toEqual([]);
+  });
+
+  it("says when no rules are known", () => {
+    const status = { state: "unknown" as const, reasons: [{ kind: "no-rule", state: "unknown" } as const] };
+    expect(statusReasonTexts(status)).toEqual(["No access rules are known for this place."]);
+  });
 });
 
 describe("a reason's text", () => {

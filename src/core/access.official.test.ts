@@ -6,6 +6,7 @@ import {
   accessFeatures,
   combineAccess,
   officialNotChecked,
+  officialStretchAccess,
   type AccessReason,
   type AccessRecord,
   type AccessStatus,
@@ -535,5 +536,70 @@ describe("while the official status loads", () => {
 
   it("a later date doesn't wait for it", () => {
     expect(accessAt(onWalloonAllYear, rules, { date: "2026-11-03", today, officialPending: true }).state).toBe("open");
+  });
+});
+
+describe("an official stretch's status (#213)", () => {
+  const closedReading = { code: "0", reasonFr: "Arrêté ministériel" };
+
+  it("is closed, with the SPW's reason, when the SPW closes it", () => {
+    const status = officialStretchAccess("TEST-1", rules, { date: today, today, official: official(closedReading) });
+    expect(status.state).toBe("closed-today");
+    expect(rule(status).official).toEqual({ kind: "closed", cause: "too-low-or-stated", reason: "Arrêté ministériel" });
+  });
+
+  it("carries none of the SPW's old text when the stretch is open", () => {
+    const status = officialStretchAccess("TEST-1", rules, {
+      date: today,
+      today,
+      official: official({ code: "1", reasonFr: "Fermé en 2021" }),
+    });
+    expect(status.state).toBe("open");
+    expect(JSON.stringify(status)).not.toContain("Fermé en 2021");
+  });
+
+  it("takes the most restrictive of the records on the stretch", () => {
+    // In June the 1.C record is out of season; the 1.B record on the same stretch isn't.
+    const june = "2026-06-15";
+    const status = officialStretchAccess("TEST-1", rules, {
+      date: june,
+      today: june,
+      official: official({ code: "1" }),
+    });
+    expect(status.state).toBe("closed-today");
+    expect(rule(status).closedBy).toBe("season");
+  });
+
+  it("falls back to the computed status when the service fails", () => {
+    const status = officialStretchAccess("TEST-1", rules, {
+      date: today,
+      today,
+      flows: flows(1, 10),
+      official: { status: "failed" },
+    });
+    expect(status.state).toBe("closed-today");
+    expect(rule(status)).toMatchObject({ closedBy: "low-flow", official: { kind: "unavailable" } });
+  });
+
+  it("is checking while the official status loads", () => {
+    const status = officialStretchAccess("TEST-1", rules, { date: today, today, officialPending: true });
+    expect(status.state).toBe("checking");
+  });
+
+  it("stays rule-based on a later date, whatever the SPW says today", () => {
+    const status = officialStretchAccess("TEST-1", rules, {
+      date: "2026-11-03",
+      today,
+      official: official(closedReading),
+    });
+    expect(status.state).toBe("open");
+    expect(rule(status).closedToday).toEqual({ kind: "closed", cause: "too-low-or-stated", reason: "Arrêté ministériel" });
+  });
+
+  it("has no rule for a stretch no record lies on", () => {
+    expect(officialStretchAccess("NOWHERE", rules, { date: today, today })).toEqual({
+      state: "unknown",
+      reasons: [{ kind: "no-rule", state: "unknown" }],
+    });
   });
 });

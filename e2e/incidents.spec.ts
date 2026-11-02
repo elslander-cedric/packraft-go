@@ -8,7 +8,7 @@ import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { toggleAccessLayer } from "./support/mapMenu";
 import { kayakFixture, serveOffline, type OfflineOptions } from "./support/offline";
-import { accessWater, holdWater, mapRegion, openPlanner, openSectionDetails } from "./support/planner";
+import { accessWater, holdWater, mapRegion, openPlanner, openSectionDetails, showTab, tripPanel } from "./support/planner";
 
 const RECORDED_AT = new Date("2026-11-02T14:00:00+01:00");
 const KAYAK = kayakFixture("layer5-stretches.json");
@@ -177,6 +177,27 @@ test.describe("at desktop size", () => {
     await openWith(page, { incidents: FAILING });
 
     const note = (await openSectionDetails(page, 1)).locator(".access-not-checked");
+    await expect(note).toContainText(INCIDENTS_NOTE);
+    await expect(note).not.toContainText(CLOSURES_NOTE);
+  });
+
+  test("an official aire's details name them too, with the access layer off", async ({ page }) => {
+    // Aire 39, on `AMBLEVE1`, which the recording has open, and on this trip's route.
+    const name = 'Aire "Plopsa" à Coo';
+    const trip = {
+      name: "",
+      points: [
+        { lat: 50.39462, lng: 5.87677 },
+        { lat: 50.39772, lng: 5.82264 },
+      ],
+      legs: [{ mode: "hike" as const }],
+    };
+    await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, serialiseTrip(trip)]);
+    await openWith(page, { incidents: FAILING });
+
+    await showTab(page, strings.planner.tabs.accessPoints);
+    await tripPanel(page).getByRole("button", { name }).click();
+    const note = page.getByRole("dialog", { name }).locator(".access-not-checked");
     await expect(note).toContainText(INCIDENTS_NOTE);
     await expect(note).not.toContainText(CLOSURES_NOTE);
   });
