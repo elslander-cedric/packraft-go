@@ -350,6 +350,8 @@ export const strings = {
     noRule: "No access rules known here.",
     // Lock warning (#60): the lock's name is the lock's own, from the data.
     lockWarning: (name: string) => `Lock at ${name}: portage required.`,
+    // Obstacle warning (#215): one line per kind, whose meaning is strings.obstacles.meanings.
+    obstacleWarning: (name: string, count: number) => (count === 1 ? `${name}.` : `${name}, ${count} on this leg.`),
     // A day card's chips: one per leg with warnings, its most serious kind; the text is on the leg.
     dayWarningsLabel: "Access warnings",
     chipKind: {
@@ -357,6 +359,7 @@ export const strings = {
       closed: "Closed",
       "check-flow": "Check flow",
       lock: "Lock",
+      obstacle: "Obstacle",
       aire: "No aire",
     },
     chip: (leg: number, kind: string) => `Leg ${leg} · ${kind}`,

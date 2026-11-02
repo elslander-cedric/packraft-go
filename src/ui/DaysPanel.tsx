@@ -13,7 +13,7 @@ import { DayWarningChips } from "./TripAccessView";
  * Totals for each day (ADR 0008): the trip is split into days at camps.
  * Renders the core's day summaries; no domain logic. Each day is a card titled by a
  * calendar tile with its date (#52), its figures shown after icons. A day with access,
- * lock or aire warnings shows one chip per leg that has any; the warnings themselves
+ * lock, obstacle or aire warnings shows one chip per leg that has any; the warnings themselves
  * are on the leg, which a chip shows (#58).
  */
 export default function DaysPanel({
