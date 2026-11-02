@@ -41,8 +41,11 @@ export type PkayakOptions = {
 
 const FAILED = { status: "failed" } as const;
 
-/** One refresh: two requests, each answering by itself, so a slow one doesn't hold the other back. */
-type Refresh = { readonly readings: Promise<OfficialReadings>; readonly incidents: Promise<OfficialIncidents> };
+/**
+ * One refresh: at most two requests, each answering by itself, so a slow one doesn't hold the
+ * other back. Each is only made when it's asked for: a past date wants incidents but no status.
+ */
+type Refresh = { at: number; readings?: Promise<OfficialReadings>; incidents?: Promise<OfficialIncidents> };
 
 /** The request for every official stretch's id (`nomtro`), status code (`stapub`) and reason (`justie`, `justif`). */
 export function stretchesUrl(serviceUrl = PKAYAK_URL): string {
@@ -144,7 +147,7 @@ async function getJson(fetchFn: Fetch, setTimer: SetTimer, url: string): Promise
 /**
  * The live official status source. One refresh per 15 minutes, of at most two requests:
  * a failure, a timeout included, is cached too, so a failing service isn't asked again
- * and again. Concurrent callers share one refresh.
+ * and again. Callers within those 15 minutes share one refresh.
  */
 export function createPkayakStatusSource(options: PkayakOptions = {}): OfficialStatusSource {
   const fetchFn: Fetch = options.fetch ?? ((input, init) => fetch(input, init));
@@ -156,7 +159,7 @@ export function createPkayakStatusSource(options: PkayakOptions = {}): OfficialS
       return () => clearTimeout(timer);
     });
   const serviceUrl = options.serviceUrl ?? PKAYAK_URL;
-  let cached: { at: number; refresh: Refresh } | null = null;
+  let cached: Refresh | null = null;
 
   async function loadReadings(): Promise<OfficialReadings> {
     try {
@@ -176,18 +179,13 @@ export function createPkayakStatusSource(options: PkayakOptions = {}): OfficialS
     }
   }
 
-  function load(): Refresh {
-    return { readings: loadReadings(), incidents: loadIncidents() };
-  }
-
   function current(): Refresh {
-    if (cached && now() - cached.at < CACHE_MS) return cached.refresh;
-    cached = { at: now(), refresh: load() };
-    return cached.refresh;
+    if (!cached || now() - cached.at >= CACHE_MS) cached = { at: now() };
+    return cached;
   }
 
   return {
-    readings: () => current().readings,
-    incidents: () => current().incidents,
+    readings: () => (current().readings ??= loadReadings()),
+    incidents: () => (current().incidents ??= loadIncidents()),
   };
 }

@@ -181,6 +181,12 @@ describe("the 15-minute cache", () => {
     expect(server.requests.map((url) => url.pathname.split("/").at(-2))).toEqual(["5", "0"]);
   });
 
+  it("asks only for what's wanted: incidents alone leave the status unasked", async () => {
+    const server = fakeServer();
+    await server.source().incidents();
+    expect(server.requests.map((url) => url.pathname.split("/").at(-2))).toEqual(["0"]);
+  });
+
   it("reuses an answer for 15 minutes, then asks again", async () => {
     const server = fakeServer();
     const source = server.source();
@@ -200,11 +206,11 @@ describe("the 15-minute cache", () => {
     server.advance(REQUEST_TIMEOUT_MS);
     await first;
     expect((await source.readings()).status).toBe("failed");
-    expect(server.requests).toHaveLength(2);
+    expect(server.requests).toHaveLength(1);
     server.answerWith({ status: 200, body: RECORDED });
     server.advance(CACHE_MS);
     expect((await source.readings()).status).toBe("ok");
-    expect(server.requests).toHaveLength(4);
+    expect(server.requests).toHaveLength(2);
   });
 
   it("caches a failure of the incidents too, then recovers", async () => {
@@ -212,11 +218,11 @@ describe("the 15-minute cache", () => {
     const source = server.source();
     expect(await source.incidents()).toEqual(FAILED);
     expect(await source.incidents()).toEqual(FAILED);
-    expect(server.requests).toHaveLength(2);
+    expect(server.requests).toHaveLength(1);
     server.answerIncidentsWith({ status: 200, body: RECORDED_INCIDENTS });
     server.advance(CACHE_MS);
     expect((await source.incidents()).status).toBe("ok");
-    expect(server.requests).toHaveLength(4);
+    expect(server.requests).toHaveLength(2);
   });
 });
 
