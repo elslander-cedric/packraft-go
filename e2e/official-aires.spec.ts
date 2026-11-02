@@ -113,14 +113,17 @@ test.describe("on a desktop", () => {
     expect(stored).not.toContain(CHANLY.name);
   });
 
-  test("a far-out map keeps small aires, so a click on a river isn't taken for an aire", async ({ page }) => {
+  test("a far-out map shows small aires that leave clicks to the river beneath", async ({ page }) => {
     await serveOffline(page);
     await page.goto("/");
     await toggleAccessLayer(page);
     await expect(aires(page)).toHaveCount(92);
 
-    const box = (await aires(page).first().boundingBox())!;
+    const box = (await chanly(page).boundingBox())!;
     expect(box.width).toBeLessThan(20);
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(points(page)).toHaveCount(1);
+    await expect(details(page)).toHaveCount(0);
   });
 
   test("aires show with the network off, after one visit", async ({ page, context }) => {

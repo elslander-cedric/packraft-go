@@ -47,7 +47,17 @@ function aireIcon(aire: OfficialAire, small: boolean) {
 function AireMarker({ aire, small, onSelect }: { aire: OfficialAire; small: boolean; onSelect: () => void }) {
   const icon = useMemo(() => aireIcon(aire, small), [aire, small]);
   const [lng, lat] = aire.position;
-  return <Marker position={[lat, lng]} icon={icon} eventHandlers={{ click: onSelect }} />;
+  // Leaflet reads `interactive` only when a marker is created: the key makes a new one.
+  return (
+    <Marker
+      key={String(small)}
+      position={[lat, lng]}
+      icon={icon}
+      interactive={!small}
+      keyboard={!small}
+      eventHandlers={{ click: onSelect }}
+    />
+  );
 }
 
 export type OfficialAireLayerProps = {
@@ -56,8 +66,9 @@ export type OfficialAireLayerProps = {
 };
 
 /**
- * Every aire at any zoom. Further out they are small: at finger size they would
- * cover the rivers, and a tap on a river would open an aire.
+ * Every aire at any zoom. Further out they are small and only show where the aires
+ * are: at finger size they would cover the rivers, and a tap on a river would open
+ * an aire instead of planning. Zoomed in, each is a finger-sized target.
  */
 export default function OfficialAireLayer({ aires, onSelect }: OfficialAireLayerProps) {
   const map = useMap();

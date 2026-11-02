@@ -22,7 +22,7 @@ test("with the layer on, planning still works off the coloured waters; on them i
   const at = await pointOnPath(page, water(page, "flanders-vmm-kleine-nete"));
   // 60px away from the line: a point is added.
   await page.mouse.click(at.x, at.y - 60);
-  const pts = map.locator("path.point, .leaflet-marker-icon");
+  const pts = map.locator("path.point, .leaflet-marker-icon:not(.official-aire-marker)");
   await expect(pts).toHaveCount(1);
   // Held on the line: details open, no further point.
   await mouseHold(page, at);

@@ -173,8 +173,11 @@ export const overlays: readonly Overlay[] = [
  */
 export const lockMarkersMinZoom = 11;
 
-/** Official aires are finger-sized from this zoom on, and small further out, for the same reason. */
-export const aireFullMarkersMinZoom = 11;
+/**
+ * Official aires are finger-sized and tappable from this zoom on. There are 92 on about
+ * 450 km of river, so further out their targets would take the taps meant for the river.
+ */
+export const aireFullMarkersMinZoom = 13;
 
 /**
  * The z-index of each of our Leaflet panes, in one place, so their order reads at a glance.
