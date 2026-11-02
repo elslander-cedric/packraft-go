@@ -6,6 +6,23 @@ import "./SnapOffers.css";
 const text = strings.snap;
 const accessText = strings.accessPoints;
 
+/** The offer's question, naming its target. */
+function offerText({ change, target, distanceM }: SnapOffer) {
+  const kind = text.kinds[change.kind];
+  const metres = Math.round(distanceM);
+  if (target.kind === "official-aire") {
+    return text.offerAire(kind, metres, target.aire.name, accessText.uses[target.aire.use].toLowerCase());
+  }
+  const { name, use, kind: accessKind } = target.accessPoint;
+  return text.offer(
+    kind,
+    metres,
+    name.trim() || null,
+    accessText.uses[use].toLowerCase(),
+    accessText.kinds[accessKind].toLowerCase(),
+  );
+}
+
 type SnapOffersProps = {
   offers: readonly SnapOffer[];
   onAccept: (offer: SnapOffer) => void;
@@ -13,32 +30,23 @@ type SnapOffersProps = {
 };
 
 /**
- * Offers to snap a new put-in or take-out to a nearby access point of yours
- * (#62). Declining changes nothing; accepting is an undoable move. Renders the
+ * Offers to snap a new put-in or take-out to a nearby access point of yours or
+ * official aire (#62, ADR 0035). Declining changes nothing; accepting is an undoable move. Renders the
  * core's offers; no domain logic.
  */
 export default function SnapOffers({ offers, onAccept, onDecline }: SnapOffersProps) {
   if (offers.length === 0) return null;
   return (
     <section className="snap-offers" role="region" aria-label={text.label}>
-      {offers.map((offer) => {
-        const name = offer.accessPoint.name.trim();
-        return (
-          <div key={`${offer.change.kind}-${offer.change.point}`} className="snap-offer">
-            <p>
-              {text.offer(
-                text.kinds[offer.change.kind],
-                Math.round(offer.distanceM),
-                name || null,
-                accessText.uses[offer.accessPoint.use].toLowerCase(),
-                accessText.kinds[offer.accessPoint.kind].toLowerCase(),
-              )}
-            </p>
-            <Button onClick={() => onAccept(offer)}>{text.accept}</Button>
-            <Button onClick={() => onDecline(offer)}>{text.decline}</Button>
-          </div>
-        );
-      })}
+      {offers.map((offer) => (
+        <div key={`${offer.change.kind}-${offer.change.point}`} className="snap-offer">
+          <p>{offerText(offer)}</p>
+          <Button onClick={() => onAccept(offer)}>
+            {offer.target.kind === "official-aire" ? text.acceptAire : text.accept}
+          </Button>
+          <Button onClick={() => onDecline(offer)}>{text.decline}</Button>
+        </div>
+      ))}
     </section>
   );
 }

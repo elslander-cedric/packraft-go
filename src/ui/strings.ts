@@ -349,15 +349,20 @@ export const strings = {
     // The SPW's legal notice asks for this credit, in French, with a link.
     credit: "Sources des données : Service public de Wallonie",
   },
-  // Snapping a new put-in or take-out to one of your access points (#62, ADR 0023).
+  // Snapping a new put-in or take-out to one of your access points or an official aire
+  // (#62, ADR 0023, ADR 0035).
   snap: {
-    label: "Snap to an access point",
+    label: "Snap to an access point or aire",
     // `name` is the access point's name (#136), or null when it has none.
     offer: (kind: string, metres: number, name: string | null, use: string, accessKind: string) =>
       name === null
         ? `The new ${kind} is ${metres} m from your access point (${use}, ${accessKind}). Snap it there?`
         : `The new ${kind} is ${metres} m from your access point ${name} (${use}, ${accessKind}). Snap it there?`,
+    // `use` is the aire's use, lower-case, e.g. "put-in".
+    offerAire: (kind: string, metres: number, name: string, use: string) =>
+      `The new ${kind} is ${metres} m from the official aire ${name} (${use}). Snap it there?`,
     accept: "Snap to access point",
+    acceptAire: "Snap to aire",
     decline: "Keep where it is",
     kinds: { "put-in": "put-in", "take-out": "take-out" },
   },
@@ -365,8 +370,9 @@ export const strings = {
   aire: {
     warningKind: "No official aire",
     text: (kind: string, point: number) =>
-      `Point ${point}, the ${kind}, is in Wallonia but not within 200 m of an access point of yours marked as an ` +
-      "official aire. In Wallonia you may only get on or off the water at an aire (AGW art. 5).",
+      `Point ${point}, the ${kind}, is in Wallonia but not within 200 m of an official aire you can use as a ${kind}, ` +
+      "or an access point of yours marked as an official aire. " +
+      "In Wallonia you may only get on or off the water at an aire (AGW art. 5).",
     kinds: { "put-in": "put-in", "take-out": "take-out" },
   },
   // Place search (#173, ADR 0030): the bar over the map, its dropdown and the result's pin.

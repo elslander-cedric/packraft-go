@@ -1,38 +1,56 @@
-// Snapping a put-in or take-out to one of your access points (#62, ADR 0023,
-// GLOSSARY "Access point"). Pure: the planner offers, and only an accepted
-// offer changes the trip, as an ordinary undoable move.
-import type { AccessPoint, AccessPoints } from "./accessPoints";
+// Snapping a put-in or take-out to one of your access points or an official aire
+// (#62, ADR 0023, ADR 0035, GLOSSARY "Snap offer"). Pure: the planner offers, and
+// only an accepted offer changes the trip, as an ordinary undoable move.
+import type { AccessPoint, AccessPoints, AccessPointUse } from "./accessPoints";
 import { distanceM } from "./geo";
-import { applyEdit, putInsAndTakeOuts, type ModeChange, type Trip } from "./trip";
+import { airePosition, type OfficialAire } from "./officialAire";
+import { applyEdit, putInsAndTakeOuts, type LatLng, type ModeChange, type Trip } from "./trip";
 
-/** How close an access point must be to be offered, in metres. */
+/** How close a target must be to be offered, in metres. */
 export const SNAP_DISTANCE_M = 200;
 
-/** A put-in or take-out and the access point it could snap to. */
+/** What a put-in or take-out can snap to. */
+export type SnapTarget =
+  | { readonly kind: "access-point"; readonly accessPoint: AccessPoint }
+  | { readonly kind: "official-aire"; readonly aire: OfficialAire };
+
+/** A put-in or take-out and the target it could snap to. */
 export type SnapOffer = {
   readonly change: ModeChange;
-  readonly accessPoint: AccessPoint;
+  readonly target: SnapTarget;
   readonly distanceM: number;
 };
 
-/** Whether an access point's use fits the put-in or take-out. */
-const fits = (accessPoint: AccessPoint, kind: ModeChange["kind"]) =>
-  accessPoint.use === "both" || accessPoint.use === kind;
+const targetPosition = (target: SnapTarget): LatLng =>
+  target.kind === "access-point" ? target.accessPoint.position : airePosition(target.aire);
+
+/** Whether a use fits the put-in or take-out. */
+export const fitsUse = (use: AccessPointUse, kind: ModeChange["kind"]) => use === "both" || use === kind;
 
 /**
- * The nearest access point within `SNAP_DISTANCE_M` that fits the mode change
- * (a put-in needs use put-in or both, a take-out take-out or both), or
- * undefined. A point already at the access point's position needs no offer.
+ * The nearest of your access points and the official aires within `SNAP_DISTANCE_M`
+ * that fits the mode change (a put-in needs use put-in or both, a take-out take-out
+ * or both), or undefined. Your own point wins a tie. A point already at the nearest
+ * target needs no offer.
  */
-export function snapCandidate(trip: Trip, change: ModeChange, points: AccessPoints): SnapOffer | undefined {
+export function snapCandidate(
+  trip: Trip,
+  change: ModeChange,
+  points: AccessPoints,
+  officialAires: readonly OfficialAire[],
+): SnapOffer | undefined {
   const at = trip.points[change.point];
   if (!at) return undefined;
+  const targets: { readonly use: AccessPointUse; readonly target: SnapTarget }[] = [
+    ...points.map((accessPoint) => ({ use: accessPoint.use, target: { kind: "access-point", accessPoint } as const })),
+    ...officialAires.map((aire) => ({ use: aire.use, target: { kind: "official-aire", aire } as const })),
+  ];
   let best: SnapOffer | undefined;
-  for (const accessPoint of points) {
-    if (!fits(accessPoint, change.kind)) continue;
-    const metres = distanceM(at, accessPoint.position);
+  for (const { use, target } of targets) {
+    if (!fitsUse(use, change.kind)) continue;
+    const metres = distanceM(at, targetPosition(target));
     if (metres > SNAP_DISTANCE_M || (best && metres >= best.distanceM)) continue;
-    best = { change, accessPoint, distanceM: metres };
+    best = { change, target, distanceM: metres };
   }
   return best && best.distanceM > 0 ? best : undefined;
 }
@@ -51,12 +69,17 @@ export function newModeChanges(before: Trip, after: Trip): ModeChange[] {
  * The offers to snap the new put-ins and take-outs after an edit from `before` to `after`:
  * a mode change or an added point. An edit that shifts or drops points offers nothing.
  */
-export function snapOffers(before: Trip, after: Trip, points: AccessPoints): SnapOffer[] {
+export function snapOffers(
+  before: Trip,
+  after: Trip,
+  points: AccessPoints,
+  officialAires: readonly OfficialAire[],
+): SnapOffer[] {
   if (!before.points.every((point, i) => after.points[i] === point)) return [];
-  return newModeChanges(before, after).flatMap((change) => snapCandidate(after, change, points) ?? []);
+  return newModeChanges(before, after).flatMap((change) => snapCandidate(after, change, points, officialAires) ?? []);
 }
 
-/** Moves the offer's point onto its access point: one undoable edit. */
-export function snapToAccessPoint(trip: Trip, offer: SnapOffer): Trip {
-  return applyEdit(trip, { type: "movePoint", index: offer.change.point, to: offer.accessPoint.position });
+/** Moves the offer's point onto its target: one undoable edit of the trip, and nothing else. */
+export function acceptSnap(trip: Trip, offer: SnapOffer): Trip {
+  return applyEdit(trip, { type: "movePoint", index: offer.change.point, to: targetPosition(offer.target) });
 }

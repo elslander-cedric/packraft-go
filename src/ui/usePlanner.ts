@@ -14,7 +14,7 @@ import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
 import { strings } from "./strings";
 import { useAccessPoints } from "./useAccessPoints";
-import { localToday, useAccessRules, useBuiltInLocks } from "./useAccessRules";
+import { localToday, useAccessRules, useBuiltInLocks, useBuiltInOfficialAires } from "./useAccessRules";
 import { useSettings } from "./useSettings";
 import { useWalloonFlows } from "./useWalloonFlows";
 
@@ -121,7 +121,13 @@ export function usePlanner(router?: Router) {
         : rulesAccess,
     [trip, rules, today, flows, flowsPending, locks, rulesAccess],
   );
-  const aire = useMemo(() => (rules ? aireWarnings(trip, rules, access.points) : []), [trip, rules, access.points]);
+  // Wanted from the first point, not the first paddle leg: that leg's own put-in may be offered one.
+  const officialAires = useBuiltInOfficialAires(trip.points.length > 0)?.aires;
+  // No warnings until the aires are in: a put-in at one must not warn for a moment.
+  const aire = useMemo(
+    () => (rules && officialAires ? aireWarnings(trip, rules, access.points, officialAires) : []),
+    [trip, rules, access.points, officialAires],
+  );
 
   return {
     session,
@@ -133,6 +139,7 @@ export function usePlanner(router?: Router) {
     access,
     waterAccess,
     aire,
+    officialAires: officialAires ?? [],
     saveFile,
     exportGpx,
     openFile,

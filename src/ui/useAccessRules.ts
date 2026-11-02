@@ -57,7 +57,7 @@ export function useBuiltInOfficialAires(wanted: boolean): BuiltInOfficialAires |
   useEffect(() => {
     if (!wanted || official) return;
     let cancelled = false;
-    void import("@/access/builtInRules").then(({ builtInOfficialAires, builtInOfficialStretches }) => {
+    void import("@/access/builtInOfficialAires").then(({ builtInOfficialAires, builtInOfficialStretches }) => {
       if (!cancelled) setOfficial({ aires: builtInOfficialAires, stretches: builtInOfficialStretches.stretches });
     });
     return () => {

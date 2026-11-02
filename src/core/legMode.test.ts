@@ -87,7 +87,7 @@ describe("routing after a mode switch", () => {
     const autoRouter = createAutoRouter(router, state.dispatch);
     await autoRouter.sync(state.trip);
 
-    state.dispatch({ type: "setLegMode", index: 0, mode: "paddle", accessPoints: [] });
+    state.dispatch({ type: "setLegMode", index: 0, mode: "paddle", accessPoints: [], officialAires: [] });
     await autoRouter.sync(state.trip);
 
     expect(router.calls.map((call) => call.mode)).toEqual(["hike", "hike", "paddle"]);
@@ -100,7 +100,7 @@ describe("routing after a mode switch", () => {
     const state = heldSession(through(A, B));
     const autoRouter = createAutoRouter(router, state.dispatch);
     await autoRouter.sync(state.trip);
-    state.dispatch({ type: "setLegMode", index: 0, mode: "paddle", accessPoints: [] });
+    state.dispatch({ type: "setLegMode", index: 0, mode: "paddle", accessPoints: [], officialAires: [] });
     await autoRouter.sync(state.trip);
 
     state.dispatch({ type: "undo" });
