@@ -1,24 +1,23 @@
 import type { AccessReason, AccessStatus } from "@/core/access";
-import type { OfficialVerdict } from "@/core/officialStatus";
+import type { OfficialClosedVerdict } from "@/core/officialStatus";
 import { strings } from "./strings";
 
-function closedText(verdict: Extract<OfficialVerdict, { kind: "closed" }>): string {
+type RuleReason = Extract<AccessReason, { kind: "rule" }>;
+
+/** Why the SPW closed a stretch, in words. */
+function closedWhy({ cause, reason }: OfficialClosedVerdict): string {
   const text = strings.official;
-  const { cause, reason } = verdict;
   // Code 0 is "too low, or the reason given": the SPW's own words replace the default.
-  if (cause === "too-low-or-stated") return text.closed(reason ?? text.tooLow);
-  return text.closed(reason ? `${text.causes[cause]} ${reason}` : text.causes[cause]);
+  if (cause === "too-low-or-stated") return reason ?? text.tooLow;
+  return reason ? `${text.causes[cause]} ${reason}` : text.causes[cause];
 }
 
-/**
- * Why a stretch has its status, in words: the rule text, with what the SPW says
- * today. The SPW's reason only ever comes with a closure (ADR 0035).
- */
-export function reasonText(reason: Extract<AccessReason, { kind: "rule" }>): string {
-  const { official, ruleText, state, closedBy } = reason;
+function statusText({ official, ruleText, state, closedBy }: RuleReason): string {
   switch (official?.kind) {
-    case "closed":
-      return closedBy === "official" ? closedText(official) : `${ruleText} ${closedText(official)}`;
+    case "closed": {
+      const closed = strings.official.closed(closedWhy(official));
+      return closedBy === "official" ? closed : `${ruleText} ${closed}`;
+    }
     case "open":
       if (state !== "open") return ruleText;
       return `${official.soon ? strings.official.openSoon : strings.official.open} ${ruleText}`;
@@ -29,6 +28,16 @@ export function reasonText(reason: Extract<AccessReason, { kind: "rule" }>): str
     default:
       return ruleText;
   }
+}
+
+/**
+ * Why a stretch has its status, in words: the rule text, with what the SPW says
+ * today. The SPW's reason only ever comes with a closure (ADR 0035). On a future
+ * date that is a note after the rule text (#212).
+ */
+export function reasonText(reason: RuleReason): string {
+  const text = statusText(reason);
+  return reason.closedToday ? `${text} ${strings.official.closedTodayNote(closedWhy(reason.closedToday))}` : text;
 }
 
 /**

@@ -31,6 +31,16 @@ const nearChanly: Trip = {
   legs: [{ mode: "hike" }],
 };
 
+/** A trip that starts at the aire, so the Access points tab lists it. */
+const fromChanly: Trip = {
+  name: "",
+  points: [
+    { lat: 50.07847, lng: 5.15324 },
+    { lat: 50.083, lng: 5.163 },
+  ],
+  legs: [{ mode: "hike" }],
+};
+
 /** Aire 39, a put-in on `AMBLEVE1`, which the recording has open. On this trip's route. */
 const PLOPSA = 'Aire "Plopsa" à Coo';
 const throughCoo: Trip = {
@@ -149,4 +159,22 @@ test("on a later date the status is for that date, and rule-based", async ({ pag
   await expect(status(page, CHANLY)).toContainText(strings.accessState.open);
   await expect(details(page, CHANLY)).toContainText(strings.accessStatusOn("2026-11-20"));
   await expect(status(page, CHANLY)).not.toContainText(strings.accessState["closed-today"]);
+  // Today's closure may still apply then: a note, through the same reason path (#212).
+  await expect(details(page, CHANLY)).toContainText(DROUGHT);
+});
+
+test("an aire opened with the layer off on a later date still notes today's closure", async ({ page }) => {
+  await serveOffline(page, { kayak: RECORDED, kiwis: KIWIS });
+  await open(page, fromChanly);
+  await toggleAccessLayer(page);
+  await page.getByRole("button", { name: /^Access · / }).click();
+  await page.getByLabel(strings.accessDateLabel).fill("2026-11-20");
+  await page.getByRole("button", { name: strings.planner.accessDialogClose }).click();
+  await toggleAccessLayer(page);
+
+  await showTab(page, strings.planner.tabs.accessPoints);
+  await page.getByRole("button", { name: new RegExp(`^${CHANLY}`) }).click();
+
+  await expect(status(page, CHANLY)).toContainText(strings.accessState.open);
+  await expect(details(page, CHANLY)).toContainText(DROUGHT);
 });

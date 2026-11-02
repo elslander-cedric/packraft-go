@@ -78,7 +78,8 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const date = pickedDate ?? today;
   const shownToday = statusShown && date === today;
   const flows = useWalloonFlows(rules, shownToday);
-  const official = useOfficialStatus(rules, shownToday);
+  // A future date notes today's closures (#212); a past date has no use for them.
+  const official = useOfficialStatus(rules, statusShown && date >= today);
   const context = useMemo<AccessContext>(
     () => ({
       date,
@@ -102,7 +103,7 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
         : summarise(trip).days.flatMap((d, i) => (d.date === undefined ? [] : [{ day: i + 1, date: d.date }])),
     [trip],
   );
-  const setOn =(next: boolean) => {
+  const setOn = (next: boolean) => {
     setOnState(next);
     if (!next) select(null);
   };

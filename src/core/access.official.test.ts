@@ -185,6 +185,90 @@ describe("official status against the rest", () => {
   });
 });
 
+describe("on a future date", () => {
+  const tomorrow = "2026-11-03";
+  const later = (reading: OfficialReading, date = tomorrow) =>
+    accessAt(onWalloonAllYear, rules, { date, today, official: official(reading) });
+
+  it("the state stays rule-based, and a stretch closed today carries the note with the SPW's reason", () => {
+    const status = later({ code: "0", reasonFr: "Arrêté ministériel" });
+    expect(status.state).toBe("open");
+    expect(rule(status)).not.toHaveProperty("closedBy");
+    expect(rule(status).closedToday).toEqual({ kind: "closed", cause: "too-low-or-stated", reason: "Arrêté ministériel" });
+  });
+
+  it.each([
+    ["3", "high-water"],
+    ["4", "out-of-season"],
+  ])("code %s carries the note with its cause", (code, cause) => {
+    expect(rule(later({ code })).closedToday).toEqual({ kind: "closed", cause });
+  });
+
+  it.each(["1", "2", "5", "9"])("a stretch with code %s today has no note", (code) => {
+    expect(rule(later({ code }))).not.toHaveProperty("closedToday");
+  });
+
+  it("a stretch with no reading, a failed service or no official stretch has no note", () => {
+    const context = { date: tomorrow, today };
+    expect(rule(accessAt(onWalloonAllYear, rules, context))).not.toHaveProperty("closedToday");
+    expect(rule(accessAt(onWalloonAllYear, rules, { ...context, official: { status: "failed" } }))).not.toHaveProperty(
+      "closedToday",
+    );
+    expect(rule(accessAt(onWalloonAllYear, unlistedRules, { ...context, official: official({ code: "0" }) }))).not.toHaveProperty(
+      "closedToday",
+    );
+  });
+
+  it("nothing waits for the official status", () => {
+    const status = accessAt(onWalloonAllYear, rules, { date: tomorrow, today, officialPending: true });
+    expect(status.state).toBe("open");
+  });
+
+  it("a calendar closure on that date keeps its own reason, and the note stands beside it", () => {
+    const fishingDay = "2027-03-20"; // 3rd Saturday of March.
+    const status = later({ code: "0", reasonFr: "Travaux" }, fishingDay);
+    expect(status.state).toBe("closed-today");
+    expect(rule(status).closedBy).toBe("fishing-day");
+    expect(rule(status).closedToday).toMatchObject({ reason: "Travaux" });
+  });
+
+  it("today and past dates have no note: today the status itself says so, and a past date isn't asked", () => {
+    expect(rule(later({ code: "0" }, today))).not.toHaveProperty("closedToday");
+    expect(rule(later({ code: "0" }, "2026-11-01"))).not.toHaveProperty("closedToday");
+  });
+
+  it("the note goes by calendar days, so the day after today is future whatever the time zone", () => {
+    const lateTonight = accessAt(onWalloonAllYear, rules, { date: "2026-11-01", today: "2026-10-31", official: official({ code: "0" }) });
+    expect(rule(lateTonight).closedToday).toBeDefined();
+    const newMonth = accessAt(onWalloonAllYear, rules, { date: "2027-01-01", today: "2026-12-31", official: official({ code: "0" }) });
+    expect(rule(newMonth).closedToday).toBeDefined();
+  });
+
+  it("an undated status has no note", () => {
+    expect(rule(accessAt(onWalloonAllYear, rules, { today, official: official({ code: "0" }) }))).not.toHaveProperty("closedToday");
+  });
+
+  it("the map's waters carry it", () => {
+    const [feature] = accessFeatures(rules, { date: tomorrow, today, official: official({ code: "0" }) });
+    expect(feature.status.state).toBe("open");
+    expect(rule(feature.status).closedToday).toBeDefined();
+  });
+
+  it("a paddle leg on that date gets check-flow with the note on its reason, and never a closure", () => {
+    const points = [onWalloonAllYear, { ...onWalloonAllYear, lng: onWalloonAllYear.lng + 0.001 }];
+    const leg: Leg = { mode: "paddle", route: { status: "routed", geometry: points.map((p) => ({ ...p, elevation: 0 })) } };
+    const trip: Trip = { name: "Test", points, legs: [leg], startDate: tomorrow };
+    const access = tripAccess(trip, rules, { today, official: official({ code: "0", reasonFr: "Travaux" }) });
+    expect(access.legs[0]!.status.state).toBe("open");
+    expect(access.legs[0]!.warnings).toEqual([
+      expect.objectContaining({
+        kind: "check-flow",
+        reason: expect.objectContaining({ closedToday: expect.objectContaining({ reason: "Travaux" }) }),
+      }),
+    ]);
+  });
+});
+
 describe("a paddle leg dated today", () => {
   const points = [onWalloonAllYear, { ...onWalloonAllYear, lng: onWalloonAllYear.lng + 0.001 }];
   const leg: Leg = { mode: "paddle", route: { status: "routed", geometry: points.map((p) => ({ ...p, elevation: 0 })) } };
@@ -324,6 +408,7 @@ describe("an official stretch's status (#213)", () => {
       official: official(closedReading),
     });
     expect(status.state).toBe("open");
+    expect(rule(status).closedToday).toEqual({ kind: "closed", cause: "too-low-or-stated", reason: "Arrêté ministériel" });
   });
 
   it("has no rule for a stretch no record lies on", () => {

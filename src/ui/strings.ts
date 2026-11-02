@@ -266,6 +266,8 @@ export const strings = {
   // The SPW's official status for today (#210, ADR 0035).
   official: {
     closed: (why: string) => `Closed today by the SPW: ${why}`,
+    // On a future date (#212): the status stays rule-based, but an order "until further notice" may still apply.
+    closedTodayNote: (why: string) => `Officially closed today, says the SPW: ${why}`,
     tooLow: "the water is too low.",
     causes: { "high-water": "high water.", "out-of-season": "out of season." },
     open: "Open today, says the SPW.",

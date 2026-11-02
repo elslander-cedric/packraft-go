@@ -46,6 +46,9 @@ export type OfficialVerdict =
   | { readonly kind: "unavailable" }
   | { readonly kind: "none" };
 
+/** A stretch the SPW has closed today, with its reason if it gives one. */
+export type OfficialClosedVerdict = Extract<OfficialVerdict, { kind: "closed" }>;
+
 function closed(cause: OfficialClosure, { reasonEn, reasonFr }: OfficialReading): OfficialVerdict {
   const reason = reasonEn ?? reasonFr;
   return { kind: "closed", cause, ...(reason !== undefined && { reason }) };

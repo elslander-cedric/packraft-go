@@ -13,7 +13,7 @@ import {
   type Geometry,
   type Position,
 } from "./geo";
-import { officialCheck, type OfficialReadings, type OfficialVerdict } from "./officialStatus";
+import { officialCheck, type OfficialClosedVerdict, type OfficialReadings, type OfficialVerdict } from "./officialStatus";
 import type { LatLng } from "./trip";
 
 export type { Geometry, Position } from "./geo";
@@ -132,7 +132,10 @@ export type AccessContext = {
   readonly flows?: FlowReadings;
   /** True while today's live flows are being fetched: flow-dependent stretches are "checking", not open (#85). */
   readonly flowsPending?: boolean;
-  /** Today's official status (ADR 0035, #210), once asked for; it only applies when `date` is `today`. */
+  /**
+   * Today's official status (ADR 0035, #210), once asked for. It decides only when `date` is
+   * `today`; on a later date a closure today is a note beside the rules (#212).
+   */
   readonly official?: OfficialReadings;
   /** True while today's official status is being fetched: stretches it decides are "checking", not open. */
   readonly officialPending?: boolean;
@@ -165,6 +168,8 @@ export type AccessReason =
       readonly flow?: FlowFigures;
       /** Walloon stretches on today's date: what the official status says, once known (ADR 0035, #210). */
       readonly official?: OfficialVerdict;
+      /** Walloon stretches on a future date: the SPW has closed it today, which may still apply then (#212). */
+      readonly closedToday?: OfficialClosedVerdict;
     }
   /** The place is outside every region with rules. */
   | { readonly kind: "no-rule"; readonly state: "unknown" };
@@ -242,6 +247,7 @@ function calendarText(category: AgwCategory): string {
  * A Walloon stretch's status on a date: season, fishing opening days and hours
  * (AGW art. 4), and on today's date the official status (ADR 0035, #210) or, where
  * there's no reading, the live flow (art. 6, #61). A calendar closure always stands.
+ * A future date stays rule-based, with a note when the SPW has closed the stretch today (#212).
  */
 function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext): AccessStatus {
   const { category } = rule;
@@ -259,6 +265,10 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
   const verdict: FlowVerdict = isToday ? flowCheck(rule, context.flows, today) : { kind: "not-checked" };
   const official = isToday ? officialCheck(rule.officialStretch, context.official) : undefined;
   const officialPending = isToday && official === undefined && context.officialPending === true;
+  // YYYY-MM-DD strings order as calendar days, so no time zone can move this.
+  const isFuture = date !== undefined && today !== undefined && date > today;
+  const verdictToday = isFuture ? officialCheck(rule.officialStretch, context.official) : undefined;
+  const closedToday = verdictToday?.kind === "closed" ? verdictToday : undefined;
   // With a reading (or one on its way), the official status replaces the flow check; the figures stay on show.
   const flowDecides = !officialPending && (!official || official.kind === "none" || official.kind === "unavailable");
   const figures = verdict.kind === "not-checked" ? undefined : verdict.figures;
@@ -328,6 +338,7 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     flowDependent: true,
     ...(figures && { flow: figures }),
     ...(official && { official }),
+    ...(closedToday && { closedToday }),
   };
   return { state, reasons: [reason] };
 }
