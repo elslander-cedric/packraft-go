@@ -15,6 +15,8 @@ const KIWIS = kiwisFixtures("timeseries-list.json", "timeseries-values.json");
 const FAILING = () => ({ status: 503, body: "" });
 
 const ON_KAYAK_DAY = "Mon 2 Nov 2026";
+const FUTURE = "2026-11-20";
+const PAST = "2026-10-20";
 const NOTE = strings.official.notChecked.closures;
 const { title: LINK, url: SPW } = strings.official.notCheckedLink;
 
@@ -28,19 +30,21 @@ const salm = [
   { lat: 50.28777, lng: 5.91393 },
 ];
 
-async function seedSalmToday(page: Page) {
+async function seedSalmOn(page: Page, startDate: string) {
   const save = {
     format: "packraft-go-trip",
     version: 1,
     trip: {
-      name: "Salm today",
+      name: "Salm",
       points: salm,
       legs: [{ mode: "paddle", route: { status: "routed", geometry: salm.map((p) => ({ ...p, elevation: 300 })) } }],
-      startDate: "2026-11-02",
+      startDate,
     },
   };
   await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
 }
+
+const seedSalmToday = (page: Page) => seedSalmOn(page, "2026-11-02");
 
 test.use({ timezoneId: "Europe/Brussels" });
 
@@ -58,6 +62,31 @@ test.describe("at desktop size", () => {
     await expect(leg.getByRole("link", { name: LINK })).toHaveAttribute("href", SPW);
     await expect(leg.locator(".leg-access-status")).not.toContainText(strings.accessChecking);
     expect(network.kayak).toHaveLength(1);
+    expect(network.blocked).toEqual([]);
+  });
+
+  test("a leg on a future date gets the note too, as a closure today can't be known then", async ({ page }) => {
+    await page.clock.setFixedTime(KAYAK_RECORDED_AT);
+    const network = await serveOffline(page, { kayak: FAILING });
+    await seedSalmOn(page, FUTURE);
+    await openPlanner(page);
+
+    const leg = await openSectionDetails(page, 1);
+    await expect(leg.locator(".access-not-checked")).toContainText(NOTE);
+    await expect(leg.getByRole("link", { name: LINK })).toHaveAttribute("href", SPW);
+    expect(network.blocked).toEqual([]);
+  });
+
+  test("a leg on a past date has no note, and asks the SPW nothing", async ({ page }) => {
+    await page.clock.setFixedTime(KAYAK_RECORDED_AT);
+    const network = await serveOffline(page, { kayak: FAILING });
+    await seedSalmOn(page, PAST);
+    await openPlanner(page);
+
+    const leg = await openSectionDetails(page, 1);
+    await expect(leg.locator(".leg-access-status")).toBeVisible();
+    await expect(leg.locator(".access-not-checked")).toHaveCount(0);
+    expect(network.kayak).toEqual([]);
     expect(network.blocked).toEqual([]);
   });
 
@@ -112,6 +141,22 @@ test.describe("at phone size", () => {
     const link = leg.getByRole("link", { name: LINK });
     await expect(link).toHaveAttribute("href", SPW);
     await expect(link).toBeInViewport({ ratio: 1 });
+    expect(network.blocked).toEqual([]);
+  });
+
+  test("a leg on a future date gets the note too", async ({ page }) => {
+    await page.clock.setFixedTime(KAYAK_RECORDED_AT);
+    const network = await serveOffline(page, { kayak: FAILING });
+    await seedSalmOn(page, FUTURE);
+    await page.goto("/");
+
+    const sheet = page.getByRole("dialog", { name: strings.planner.sheetLabel });
+    await sheet.getByRole("tab", { name: strings.planner.tabs.sections }).click();
+    await sheet.getByRole("button", { name: strings.planner.sectionDetailsButton(1) }).click();
+
+    const leg = legDetailsDialog(page);
+    await expect(leg.locator(".access-not-checked")).toContainText(NOTE);
+    await expect(leg.getByRole("link", { name: LINK })).toBeInViewport({ ratio: 1 });
     expect(network.blocked).toEqual([]);
   });
 });
