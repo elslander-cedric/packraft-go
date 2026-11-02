@@ -379,6 +379,18 @@ export function accessAlong(line: readonly LatLng[], rules: AccessRules, context
   return combineAccess(samples.map((point) => accessAt(point, rules, context)));
 }
 
+/**
+ * The access status of an official stretch, such as an official aire's: every record
+ * on it is evaluated and the most restrictive wins. One official stretch can hold
+ * several records, of different categories. Unknown when no record lies on it.
+ */
+export function officialStretchAccess(officialStretch: string, rules: AccessRules, context: AccessContext): AccessStatus {
+  const records = rules.records.filter(
+    ({ rule }) => rule.type === "agw" && rule.officialStretch === officialStretch,
+  );
+  return combineAccess(records.map((record) => evaluateRecord(record, context)));
+}
+
 /** A water record with its status, for drawing on the map. */
 export type AccessFeature = { readonly record: AccessRecord; readonly status: AccessStatus };
 

@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { accessFeatures, type AccessFeature, type LockMarker } from "@/core/access";
+import {
+  accessFeatures,
+  officialStretchAccess,
+  type AccessContext,
+  type AccessFeature,
+  type AccessStatus,
+  type LockMarker,
+} from "@/core/access";
 import type { Obstacle } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
 import { summarise } from "@/core/summarise";
@@ -40,6 +47,8 @@ export type AccessLayer = {
   selectedLock: LockMarker | undefined;
   selectedAire: OfficialAire | undefined;
   selectedAireStretch: OfficialStretch | undefined;
+  /** The access status of the selected aire's stretch on the date; undefined until the rules have loaded. */
+  selectedAireStatus: AccessStatus | undefined;
   selectedObstacle: Obstacle | undefined;
   /** The official aires once loaded, on or off: the Access points tab lists the ones on the route (#208). */
   officialAires: readonly OfficialAire[];
@@ -57,29 +66,34 @@ const NO_AIRES: readonly OfficialAire[] = [];
 export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const [on, setOnState] = useState(false);
   const [selectedId, select] = useState<string | null>(null);
-  const rules = useAccessRules(on);
-  const locks = useBuiltInLocks(on);
   const builtInAires = useBuiltInOfficialAires(on || wantAires);
+  const selectedAire = builtInAires?.aires.find((a) => a.id === selectedId);
+  // An aire's details show its stretch's status, also with the layer off (#213).
+  const statusShown = on || selectedAire !== undefined;
+  const rules = useAccessRules(statusShown);
+  const locks = useBuiltInLocks(on);
   const obstacles = useBuiltInObstacles(on);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const today = localToday();
   const date = pickedDate ?? today;
-  const shownToday = on && date === today;
+  const shownToday = statusShown && date === today;
   const flows = useWalloonFlows(rules, shownToday);
   const official = useOfficialStatus(rules, shownToday);
-  const features = useMemo(
-    () =>
-      rules
-        ? accessFeatures(rules, {
-            date,
-            today,
-            ...(flows && { flows }),
-            flowsPending: shownToday && !flows,
-            ...(official && { official }),
-            officialPending: shownToday && !official,
-          })
-        : [],
-    [rules, date, today, flows, official, shownToday],
+  const context = useMemo<AccessContext>(
+    () => ({
+      date,
+      today,
+      ...(flows && { flows }),
+      flowsPending: shownToday && !flows,
+      ...(official && { official }),
+      officialPending: shownToday && !official,
+    }),
+    [date, today, flows, official, shownToday],
+  );
+  const features = useMemo(() => (rules ? accessFeatures(rules, context) : []), [rules, context]);
+  const selectedAireStatus = useMemo(
+    () => (rules && selectedAire ? officialStretchAccess(selectedAire.officialStretch, rules, context) : undefined),
+    [rules, selectedAire, context],
   );
   const tripDays = useMemo<AccessTripDay[]>(
     () =>
@@ -88,8 +102,7 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
         : summarise(trip).days.flatMap((d, i) => (d.date === undefined ? [] : [{ day: i + 1, date: d.date }])),
     [trip],
   );
-  const selectedAire = builtInAires?.aires.find((a) => a.id === selectedId);
-  const setOn = (next: boolean) => {
+  const setOn =(next: boolean) => {
     setOnState(next);
     if (!next) select(null);
   };
@@ -106,6 +119,7 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
     selectedLock: on ? locks?.find((l) => l.id === selectedId) : undefined,
     selectedAire,
     selectedAireStretch: builtInAires?.stretches.find((s) => s.id === selectedAire?.officialStretch),
+    selectedAireStatus,
     selectedObstacle: on ? obstacles?.find((o) => o.id === selectedId) : undefined,
     officialAires: builtInAires?.aires ?? NO_AIRES,
   };

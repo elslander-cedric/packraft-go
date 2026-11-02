@@ -1,4 +1,4 @@
-import type { AccessReason } from "@/core/access";
+import type { AccessReason, AccessStatus } from "@/core/access";
 import type { OfficialVerdict } from "@/core/officialStatus";
 import { strings } from "./strings";
 
@@ -29,4 +29,17 @@ export function reasonText(reason: Extract<AccessReason, { kind: "rule" }>): str
     default:
       return ruleText;
   }
+}
+
+/**
+ * Why a place has its overall status, in words, for a view that shows one status for
+ * several records: only the reasons behind that status, each once. Nothing while
+ * checking, where the status says all there is.
+ */
+export function statusReasonTexts({ state, reasons }: AccessStatus): string[] {
+  if (state === "checking") return [];
+  const texts = reasons
+    .filter((reason) => reason.state === state)
+    .map((reason) => (reason.kind === "no-rule" ? strings.accessNoRule : reasonText(reason)));
+  return [...new Set(texts)];
 }

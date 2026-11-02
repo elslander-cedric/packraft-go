@@ -1,4 +1,4 @@
-import type { AccessFeature, AccessReason, AccessState, LockMarker } from "@/core/access";
+import type { AccessFeature, AccessReason, AccessState, AccessStatus, LockMarker } from "@/core/access";
 import { accessPointUses, type AccessPointUse } from "@/core/accessPoints";
 import { obstacleKinds, type Obstacle, type ObstacleKind } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
@@ -7,7 +7,7 @@ import { Button } from "./components/Button";
 import { FlowFiguresView } from "./FlowFiguresView";
 import { Icon } from "./icons/Icon";
 import { icons, obstacleIcons } from "./icons/icons";
-import { reasonText } from "./reasonText";
+import { reasonText, statusReasonTexts } from "./reasonText";
 import { accessStateLabel, strings } from "./strings";
 import { StatusIcon } from "./TripAccessView";
 import "./AccessPanel.css";
@@ -176,8 +176,34 @@ export function LockDetail({ lock }: { lock: LockMarker }) {
   );
 }
 
-/** An official aire (ADR 0035): read-only, with how old the SPW's data on it is. */
-export function OfficialAireDetail({ aire, stretch }: { aire: OfficialAire; stretch: OfficialStretch | undefined }) {
+/** A status and the date it is for. */
+function StatusLine({ state, date, className = "" }: { state: AccessState; date: string; className?: string }) {
+  return (
+    <>
+      <p className={`access-status access-status-${state} ${className}`.trim()}>
+        <StatusIcon state={state} />
+        {accessStateLabel(state)}
+      </p>
+      <p className="access-legend-note access-status-date">{strings.accessStatusOn(date)}</p>
+    </>
+  );
+}
+
+/**
+ * An official aire (ADR 0035): read-only, with its stretch's access status on the
+ * date (#213) and how old the SPW's data on it is. No `status` yet means checking.
+ */
+export function OfficialAireDetail({
+  aire,
+  stretch,
+  status,
+  date,
+}: {
+  aire: OfficialAire;
+  stretch: OfficialStretch | undefined;
+  status: AccessStatus | undefined;
+  date: string;
+}) {
   const text = strings.officialAires;
   return (
     <div className="access-detail">
@@ -190,6 +216,8 @@ export function OfficialAireDetail({ aire, stretch }: { aire: OfficialAire; stre
           {text.stretchLabel}: {stretch.name}
         </p>
       )}
+      <StatusLine state={status?.state ?? "checking"} date={date} className="access-aire-status" />
+      {status && statusReasonTexts(status).map((reason) => <p key={reason}>{reason}</p>)}
       <p>{text.lastChanged(aire.lastChanged)}</p>
       <p className="access-source">
         {strings.accessSourceLabel}{" "}
@@ -241,11 +269,7 @@ export function AccessDetail({
   const { status } = feature;
   return (
     <div className="access-detail">
-      <p className={`access-status access-status-${status.state}`}>
-        <StatusIcon state={status.state} />
-        {accessStateLabel(status.state)}
-      </p>
-      <p className="access-legend-note access-status-date">{strings.accessStatusOn(date)}</p>
+      <StatusLine state={status.state} date={date} />
       <ul className="access-reasons">
         {status.reasons.map((reason, i) => (
           <Reason key={i} reason={reason} />

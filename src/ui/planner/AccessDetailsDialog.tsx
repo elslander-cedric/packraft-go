@@ -1,4 +1,4 @@
-import type { AccessFeature, LockMarker } from "@/core/access";
+import type { AccessFeature, AccessStatus, LockMarker } from "@/core/access";
 import type { Obstacle } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
 import { AccessDetail, LockDetail, ObstacleDetail, OfficialAireDetail } from "../AccessPanel";
@@ -10,12 +10,13 @@ export type AccessDetailsDialogProps = {
   water?: AccessFeature;
   /** The lock whose details are open, if any. */
   lock?: LockMarker;
-  /** The official aire whose details are open, if any, and its official stretch. */
+  /** The official aire whose details are open, if any, its official stretch and that stretch's access status. */
   aire?: OfficialAire;
   aireStretch?: OfficialStretch;
+  aireStatus?: AccessStatus;
   /** The obstacle whose details are open, if any. */
   obstacle?: Obstacle;
-  /** The date the water's status is for. */
+  /** The date the water's or the aire's status is for. */
   date: string;
   onClose: () => void;
 };
@@ -26,6 +27,7 @@ export default function AccessDetailsDialog({
   lock,
   aire,
   aireStretch,
+  aireStatus,
   obstacle,
   date,
   onClose,
@@ -43,7 +45,7 @@ export default function AccessDetailsDialog({
       ) : lock ? (
         <LockDetail lock={lock} />
       ) : aire ? (
-        <OfficialAireDetail aire={aire} stretch={aireStretch} />
+        <OfficialAireDetail aire={aire} stretch={aireStretch} status={aireStatus} date={date} />
       ) : (
         obstacle && <ObstacleDetail obstacle={obstacle} />
       )}
