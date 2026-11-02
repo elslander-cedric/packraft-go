@@ -174,7 +174,27 @@
       "action": "confirm",
       "lat": 49.76346,
       "lng": 5.39605
+    },
+    "1A3c-1.to": {
+      "action": "confirm",
+      "lat": 50.46606,
+      "lng": 5.57872
+    },
+    "1A4-1.to": {
+      "action": "confirm",
+      "lat": 49.80359,
+      "lng": 5.21537
+    },
+    "1B2b-1.to": {
+      "action": "confirm",
+      "lat": 50.21146,
+      "lng": 4.96328
+    },
+    "1C2b-1.to": {
+      "action": "confirm",
+      "lat": 50.16193,
+      "lng": 5.0586
     }
   },
-  "reviewedAt": "2026-10-13"
+  "reviewedAt": "2026-11-02"
 }
