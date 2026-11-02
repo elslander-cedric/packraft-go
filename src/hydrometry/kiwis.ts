@@ -1,8 +1,9 @@
 // KiWIS adapter: implements the core's FlowSource with the SPW's public
 // hydrometry service (ADR 0024, #61). The browser calls it directly (it allows
 // any origin): one batched request resolves the series, one batched request
-// reads their values, and the answer is cached for 15 minutes. It is the only
-// module that talks to KiWIS. See docs/research/hydrometry.md.
+// reads their values, and the answer is cached for 15 minutes. A request that
+// doesn't answer in time counts as a failure. It is the only module that talks
+// to KiWIS. See docs/research/hydrometry.md.
 import type { FlowReading, FlowReadings, FlowSource, GaugeReadings } from "@/core/flow";
 
 export const KIWIS_URL = "https://hydrometrie.wallonie.be/services/KiWIS/KiWIS";
@@ -14,13 +15,21 @@ export const HOURLY_SERIES = "10-Debit.1h.Moyen";
 /** How long an answer (or a failure) is reused: about 15 minutes (ADR 0024). */
 export const CACHE_MS = 15 * 60 * 1000;
 
-type Fetch = (input: string) => Promise<Response>;
+/** How long one request may take, body included, before it counts as a failure (#205). */
+export const REQUEST_TIMEOUT_MS = 15 * 1000;
+
+type Fetch = (input: string, init?: { signal: AbortSignal }) => Promise<Response>;
+
+/** Starts a timer and returns what cancels it. */
+type SetTimer = (fire: () => void, ms: number) => () => void;
 
 export type KiwisOptions = {
   /** Injected for tests; defaults to the browser's fetch. */
   fetch?: Fetch;
   /** The clock, in milliseconds; injected for tests. */
   now?: () => number;
+  /** The timer behind the request timeout; injected for tests. */
+  setTimer?: SetTimer;
   serviceUrl?: string;
 };
 
@@ -97,30 +106,51 @@ function parseValues(body: unknown, series: Map<string, Series>): Record<string,
   return gauges;
 }
 
-async function getJson(fetchFn: Fetch, url: string): Promise<unknown> {
-  const response = await fetchFn(url);
-  if (!response.ok) throw new Error(`KiWIS answered ${response.status}`);
-  return JSON.parse(await response.text());
+async function getJson(fetchFn: Fetch, setTimer: SetTimer, url: string): Promise<unknown> {
+  const request = new AbortController();
+  let cancelTimer = () => {};
+  const timedOut = new Promise<never>((_, reject) => {
+    cancelTimer = setTimer(() => {
+      request.abort();
+      reject(new Error("KiWIS didn't answer in time"));
+    }, REQUEST_TIMEOUT_MS);
+  });
+  const answer = async () => {
+    const response = await fetchFn(url, { signal: request.signal });
+    if (!response.ok) throw new Error(`KiWIS answered ${response.status}`);
+    return JSON.parse(await response.text()) as unknown;
+  };
+  try {
+    return await Promise.race([answer(), timedOut]);
+  } finally {
+    cancelTimer();
+  }
 }
 
 /**
  * The live flow source. At most two requests per refresh, and one refresh per
- * 15 minutes: a failure is cached too, so a failing service isn't asked again
- * and again. Concurrent callers share one refresh.
+ * 15 minutes: a failure, a timeout included, is cached too, so a failing service
+ * isn't asked again and again. Concurrent callers share one refresh.
  */
 export function createKiwisFlowSource(options: KiwisOptions = {}): FlowSource {
-  const fetchFn: Fetch = options.fetch ?? ((input) => fetch(input));
+  const fetchFn: Fetch = options.fetch ?? ((input, init) => fetch(input, init));
   const now = options.now ?? (() => Date.now());
+  const setTimer: SetTimer =
+    options.setTimer ??
+    ((fire, ms) => {
+      const timer = setTimeout(fire, ms);
+      return () => clearTimeout(timer);
+    });
   const serviceUrl = options.serviceUrl ?? KIWIS_URL;
   const cache = new Map<string, { at: number; answer: Promise<FlowReadings> }>();
 
   async function load(stationNos: readonly string[]): Promise<FlowReadings> {
     try {
-      const series = parseSeriesList(await getJson(fetchFn, seriesListUrl(stationNos, serviceUrl)));
+      const series = parseSeriesList(await getJson(fetchFn, setTimer, seriesListUrl(stationNos, serviceUrl)));
       if (!series) return FAILED;
       // No series at all: every gauge is missing, and there are no values to ask for.
       if (series.size === 0) return { status: "ok", gauges: {} };
-      const gauges = parseValues(await getJson(fetchFn, valuesUrl([...series.keys()], serviceUrl)), series);
+      const gauges = parseValues(await getJson(fetchFn, setTimer, valuesUrl([...series.keys()], serviceUrl)), series);
       return gauges ? { status: "ok", gauges } : FAILED;
     } catch {
       return FAILED;
