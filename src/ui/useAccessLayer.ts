@@ -10,6 +10,7 @@ import {
   type LockMarker,
 } from "@/core/access";
 import { incidentsOn, type Incident, type OfficialIncidents } from "@/core/incident";
+import { checksFailed, type OfficialCheck } from "@/core/officialStatus";
 import type { Obstacle } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
 import { summarise } from "@/core/summarise";
@@ -55,12 +56,15 @@ export type AccessLayer = {
   selectedIncident: Incident | undefined;
   /** Today's incidents, once asked for and answered: the details say if they failed (#216). */
   incidents: OfficialIncidents | undefined;
+  /** What the SPW couldn't answer for the map, while the layer is on: the map says so (#211, #216). */
+  notChecked: readonly OfficialCheck[];
   /** The official aires once loaded, on or off: the Access points tab lists the ones on the route (#208). */
   officialAires: readonly OfficialAire[];
 };
 
 const NO_AIRES: readonly OfficialAire[] = [];
 const NO_INCIDENTS: readonly Incident[] = [];
+const ALL_CHECKED: readonly OfficialCheck[] = [];
 
 /**
  * The access layer's state for the planner: on or off,
@@ -144,6 +148,7 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
     selectedObstacle: on ? obstacles?.find((o) => o.id === selectedId) : undefined,
     selectedIncident: on ? shownIncidents.find((i) => i.id === selectedId) : undefined,
     incidents,
+    notChecked: on ? checksFailed(official, incidents) : ALL_CHECKED,
     officialAires: builtInAires?.aires ?? NO_AIRES,
   };
 }

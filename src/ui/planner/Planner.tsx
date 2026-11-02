@@ -25,6 +25,7 @@ import AccessDetailsDialog from "./AccessDetailsDialog";
 import AccessPointDialog from "./AccessPointDialog";
 import AccessPoints from "./AccessPoints";
 import SnapOffers from "../SnapOffers";
+import { MapNotCheckedNote } from "../TripAccessView";
 import LegDetailsDialog from "./LegDetailsDialog";
 import SectionDetailsDialog from "./SectionDetailsDialog";
 import SectionsList from "./SectionsList";
@@ -349,6 +350,7 @@ export default function Planner({ router }: { router?: Router }) {
       {layer.on && (
         <div className="planner-access-chip-slot">
           <AccessChip dateSelector={layer.dateSelector} />
+          <MapNotCheckedNote checks={layer.notChecked} />
         </div>
       )}
       <div className="planner-buttons planner-buttons-top planner-buttons-left">

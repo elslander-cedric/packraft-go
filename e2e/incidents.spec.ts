@@ -72,7 +72,7 @@ async function openWith(page: Page, options: OfflineOptions) {
 }
 
 /** A paddle leg on the Salm below Vielsalm, an official stretch, on a date. */
-async function seedSalm(page: Page, startDate: string) {
+async function seedSalm(page: Page, startDate: string | undefined) {
   const salm = [
     { lat: 50.28756, lng: 5.9139 },
     { lat: 50.28777, lng: 5.91393 },
@@ -214,14 +214,36 @@ test.describe("at desktop size", () => {
     await expect(note).not.toContainText(CLOSURES_NOTE);
   });
 
-  test("a leg on a past date asks for no incidents and has no note", async ({ page }) => {
+  test("a leg on a past date asks for them too, and names them when they fail", async ({ page }) => {
     await seedSalm(page, "2026-10-20");
     const network = await openWith(page, { incidents: FAILING });
 
-    const leg = await openSectionDetails(page, 1);
-    await expect(leg.locator(".leg-access-status")).toBeVisible();
-    await expect(leg.locator(".access-not-checked")).toHaveCount(0);
-    expect(network.incidents).toEqual([]);
+    const note = (await openSectionDetails(page, 1)).locator(".access-not-checked");
+    await expect(note).toContainText(INCIDENTS_NOTE);
+    await expect(note).not.toContainText(CLOSURES_NOTE);
+    expect(network.incidents).toHaveLength(1);
+    expect(network.kayak).toEqual([]);
+  });
+
+  test("a leg with no date asks for them too, and names them when they fail", async ({ page }) => {
+    await seedSalm(page, undefined);
+    const network = await openWith(page, { incidents: FAILING });
+
+    const note = (await openSectionDetails(page, 1)).locator(".access-not-checked");
+    await expect(note).toContainText(INCIDENTS_NOTE);
+    await expect(note).not.toContainText(CLOSURES_NOTE);
+    expect(network.incidents).toHaveLength(1);
+    expect(network.kayak).toEqual([]);
+  });
+
+  test("the map says they failed without a tap", async ({ page }) => {
+    await openWith(page, { incidents: FAILING });
+    await toggleAccessLayer(page);
+
+    const note = page.locator(".planner-map-not-checked");
+    await expect(note).toContainText(strings.official.mapNotChecked.incidents);
+    await expect(note).not.toContainText(strings.official.mapNotChecked.closures);
+    await expect(note.getByRole("link", { name: LINK })).toHaveAttribute("href", SPW);
   });
 });
 
@@ -278,6 +300,32 @@ test.describe("on a paddle leg (#217)", () => {
 
     await openSectionDetails(page, 1);
     await expect(warnings(page)).toContainText(strings.incidents.until("Fri 20 Nov 2026"));
+  });
+
+  test("a leg with no date warns of what applies today", async ({ page }) => {
+    await seedSalm(page, undefined);
+    await openWith(page, { incidents: onTheSalm({ commene: "Tree across the river", datexp: Date.UTC(2026, 10, 2, 12) }) });
+
+    await openSectionDetails(page, 1);
+    await expect(warnings(page)).toContainText("Tree across the river");
+  });
+
+  test("a leg with no date doesn't warn of what ended before today", async ({ page }) => {
+    await seedSalm(page, undefined);
+    const network = await openWith(page, { incidents: onTheSalm({ datexp: Date.UTC(2026, 9, 31, 12) }) });
+
+    await openSectionDetails(page, 1);
+    await expect.poll(() => network.incidents.length).toBeGreaterThan(0);
+    await expect(legDetailsDialog(page).locator(".leg-access-status")).toBeVisible();
+    await expect(warnings(page)).toHaveCount(0);
+  });
+
+  test("a leg on a past date warns of what still applied then", async ({ page }) => {
+    await seedSalm(page, "2026-10-20");
+    await openWith(page, { incidents: onTheSalm({ commene: "Tree across the river" }) });
+
+    await openSectionDetails(page, 1);
+    await expect(warnings(page)).toContainText("Tree across the river");
   });
 
   test("an expiry before the leg's date doesn't apply", async ({ page }) => {

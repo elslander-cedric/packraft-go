@@ -3,10 +3,11 @@ import type { OfficialCheck, OfficialClosedVerdict } from "@/core/officialStatus
 import { strings } from "./strings";
 
 type RuleReason = Extract<AccessReason, { kind: "rule" }>;
+type Words = Readonly<Record<OfficialCheck, string>>;
 
 /** What wasn't checked with the SPW, in words (#211); empty when everything was. */
-export function notCheckedText(checks: readonly OfficialCheck[]): string {
-  return checks.map((check) => strings.official.notChecked[check]).join(" ");
+export function notCheckedText(checks: readonly OfficialCheck[], words = strings.official.notChecked as Words): string {
+  return checks.map((check) => words[check]).join(" ");
 }
 
 /** Why the SPW closed a stretch, in words. */

@@ -78,6 +78,20 @@ function verdictOf(reading: OfficialReading): OfficialVerdict {
   }
 }
 
+/**
+ * What the SPW couldn't answer at all, whatever the water: for a note on the whole map.
+ * Empty before an answer, and when something isn't asked for (undefined).
+ */
+export function checksFailed(
+  readings: OfficialReadings | undefined,
+  incidents: OfficialIncidents | undefined,
+): readonly OfficialCheck[] {
+  return [
+    ...(readings?.status === "failed" ? (["closures"] as const) : []),
+    ...(incidents?.status === "failed" ? (["incidents"] as const) : []),
+  ];
+}
+
 /** A stretch's official verdict for today; undefined while its readings haven't arrived. */
 export function officialCheck(
   officialStretch: string | undefined,

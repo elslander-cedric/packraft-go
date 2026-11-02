@@ -3,7 +3,7 @@
 // or fails, and the page's clock is set to the recording's morning. No test calls a live service.
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
-import { toggleAccessLayer } from "./support/mapMenu";
+import { mapMenuButton, toggleAccessLayer } from "./support/mapMenu";
 import { kayakFixture, kiwisFixtures, serveOffline } from "./support/offline";
 import { accessWater, holdWater, legDetailsDialog, openPlanner, openSectionDetails } from "./support/planner";
 
@@ -45,6 +45,7 @@ async function seedSalmOn(page: Page, startDate: string) {
 }
 
 const seedSalmToday = (page: Page) => seedSalmOn(page, "2026-11-02");
+const mapNote = (page: Page) => page.locator(".planner-map-not-checked");
 
 test.use({ timezoneId: "Europe/Brussels" });
 
@@ -77,7 +78,7 @@ test.describe("at desktop size", () => {
     expect(network.blocked).toEqual([]);
   });
 
-  test("a leg on a past date has no note, and asks the SPW nothing", async ({ page }) => {
+  test("a leg on a past date has no closures note, and doesn't ask for today's status", async ({ page }) => {
     await page.clock.setFixedTime(KAYAK_RECORDED_AT);
     const network = await serveOffline(page, { kayak: FAILING });
     await seedSalmOn(page, PAST);
@@ -88,6 +89,43 @@ test.describe("at desktop size", () => {
     await expect(leg.locator(".access-not-checked")).toHaveCount(0);
     expect(network.kayak).toEqual([]);
     expect(network.blocked).toEqual([]);
+  });
+
+  test("with the access layer on, the map itself says what wasn't checked, and links to the SPW", async ({ page }) => {
+    await page.clock.setFixedTime(KIWIS_RECORDED_AT);
+    const network = await serveOffline(page, { kayak: FAILING, kiwis: KIWIS });
+    await openPlanner(page);
+    await expect(mapNote(page)).toHaveCount(0);
+
+    await toggleAccessLayer(page);
+    await expect(mapNote(page)).toContainText(strings.official.mapNotChecked.closures);
+    await expect(mapNote(page).getByRole("link", { name: LINK })).toHaveAttribute("href", SPW);
+    await expect(mapNote(page)).toBeInViewport({ ratio: 1 });
+    expect(network.blocked).toEqual([]);
+
+    await toggleAccessLayer(page);
+    await expect(mapNote(page)).toHaveCount(0);
+  });
+
+  test("with the official answers in, the map has no note", async ({ page }) => {
+    await page.clock.setFixedTime(KAYAK_RECORDED_AT);
+    await serveOffline(page, { kayak: KAYAK, kiwis: KIWIS });
+    await openPlanner(page);
+    await toggleAccessLayer(page);
+
+    await expect(page.locator(".planner-access-chip")).toBeVisible();
+    await expect(accessWater(page, SEMOIS)).toBeAttached();
+    await expect(mapNote(page)).toHaveCount(0);
+  });
+
+  test("only the note's link takes taps: the map works through the rest of it", async ({ page }) => {
+    await page.clock.setFixedTime(KIWIS_RECORDED_AT);
+    await serveOffline(page, { kayak: FAILING, kiwis: KIWIS });
+    await openPlanner(page);
+    await toggleAccessLayer(page);
+
+    await expect(mapNote(page)).toBeVisible();
+    expect(await mapNote(page).evaluate((note) => getComputedStyle(note).pointerEvents)).toBe("none");
   });
 
   test("with the SPW down the flows still decide on the map, under the same note", async ({ page }) => {
@@ -125,6 +163,24 @@ test.describe("at desktop size", () => {
 
 test.describe("at phone size", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("the map's note and its link fit the screen, under the chip and clear of the buttons", async ({ page }) => {
+    await page.clock.setFixedTime(KAYAK_RECORDED_AT);
+    await serveOffline(page, { kayak: FAILING, kiwis: KIWIS, incidents: FAILING });
+    await page.goto("/");
+    await toggleAccessLayer(page);
+
+    await expect(mapNote(page)).toContainText(strings.official.mapNotChecked.closures);
+    await expect(mapNote(page)).toContainText(strings.official.mapNotChecked.incidents);
+    await expect(mapNote(page)).toBeInViewport({ ratio: 1 });
+    await expect(mapNote(page).getByRole("link", { name: LINK })).toBeInViewport({ ratio: 1 });
+
+    const note = (await mapNote(page).boundingBox())!;
+    const chip = (await page.locator(".planner-access-chip").boundingBox())!;
+    const layers = (await mapMenuButton(page).boundingBox())!;
+    expect(note.y).toBeGreaterThanOrEqual(chip.y + chip.height);
+    expect(note.x + note.width).toBeLessThanOrEqual(layers.x);
+  });
 
   test("the note and its link are there and fit the screen", async ({ page }) => {
     await page.clock.setFixedTime(KAYAK_RECORDED_AT);

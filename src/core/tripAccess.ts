@@ -130,7 +130,7 @@ export type TripAccessOptions = {
   readonly official?: OfficialReadings;
   /** True while today's official status is loading: legs dated today on water it decides are "checking". */
   readonly officialPending?: boolean;
-  /** Today's incidents (#216), once known: a paddle leg passing one gets a warning (#217). They never change a leg's status. */
+  /** The SPW's incidents (#216), once known: a paddle leg passing one on any date gets a warning (#217). They never change a leg's status. */
   readonly incidents?: OfficialIncidents;
   /** Lock markers (#57): a paddle leg passing one gets a lock warning (#60). */
   readonly locks?: readonly LockMarker[];
@@ -173,9 +173,7 @@ function legAccess(
     ? status.reasons.filter((reason) => reason.kind === "rule" && reason.flowDependent && reason.state === "open")
     : [];
   for (const reason of flowReasons) warnings.push({ kind: "check-flow", ...when, reason });
-  // Only a leg dated today or later asks for incidents; another leg's failure says nothing about it.
-  const upcoming = when.date !== undefined && when.date >= today;
-  const notChecked = officialNotChecked(status, upcoming ? incidents : undefined);
+  const notChecked = officialNotChecked(status, incidents);
   return { ...when, status, notChecked, checkFlowOnTheDay: flowReasons.length > 0, warnings, notes, lockWarnings, obstacleWarnings, incidentWarnings };
 }
 

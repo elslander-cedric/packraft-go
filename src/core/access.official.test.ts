@@ -13,7 +13,7 @@ import {
   type AgwRule,
 } from "./access";
 import type { FlowReadings } from "./flow";
-import type { OfficialReading, OfficialReadings } from "./officialStatus";
+import { checksFailed, type OfficialReading, type OfficialReadings } from "./officialStatus";
 import {
   fakeAccessRules,
   onWalloonAllYear,
@@ -280,17 +280,22 @@ describe("a paddle leg dated today", () => {
     const loaded = { today, official: official({ code: "1" }) };
     const options = { ...loaded, incidents: { status: "failed" } } as const;
 
-    it("says so on a leg dated today or later", () => {
+    it("says so on a leg on any date, and on one with no date", () => {
       expect(tripAccess(paddle, rules, options).legs[0]!.notChecked).toEqual(["incidents"]);
       const later = { ...paddle, startDate: "2026-11-20" };
       expect(tripAccess(later, rules, options).legs[0]!.notChecked).toEqual(["incidents"]);
+      const past = { ...paddle, startDate: "2026-10-20" };
+      expect(tripAccess(past, rules, options).legs[0]!.notChecked).toEqual(["incidents"]);
+      const undated = { name: paddle.name, points: paddle.points, legs: paddle.legs };
+      expect(tripAccess(undated, rules, options).legs[0]!.notChecked).toEqual(["incidents"]);
     });
 
-    it("says nothing on a past or undated leg, which doesn't ask the SPW", () => {
+    it("names only the incidents on a past or undated leg: closures are for today or later", () => {
+      const down = { today, official: { status: "failed" }, incidents: { status: "failed" } } as const;
       const past = { ...paddle, startDate: "2026-10-20" };
-      expect(tripAccess(past, rules, options).legs[0]!.notChecked).toEqual([]);
+      expect(tripAccess(past, rules, down).legs[0]!.notChecked).toEqual(["incidents"]);
       const undated = { name: paddle.name, points: paddle.points, legs: paddle.legs };
-      expect(tripAccess(undated, rules, options).legs[0]!.notChecked).toEqual([]);
+      expect(tripAccess(undated, rules, down).legs[0]!.notChecked).toEqual(["incidents"]);
     });
 
     it("leaves the closures note as it is", () => {
@@ -312,6 +317,21 @@ describe("a paddle leg dated today", () => {
       expect(failing.legs[0]!.status).toEqual(without.legs[0]!.status);
       expect(reported.legs[0]!.status).toEqual(without.legs[0]!.status);
       expect(reported.legs[0]!.warnings).toEqual(without.legs[0]!.warnings);
+    });
+  });
+
+  describe("what the SPW couldn't answer at all, for the note on the map", () => {
+    const failed = { status: "failed" } as const;
+
+    it("is nothing with answers, or before any", () => {
+      expect(checksFailed(official({ code: "1" }), { status: "ok", incidents: [] })).toEqual([]);
+      expect(checksFailed(undefined, undefined)).toEqual([]);
+    });
+
+    it("names what failed, each apart", () => {
+      expect(checksFailed(failed, { status: "ok", incidents: [] })).toEqual(["closures"]);
+      expect(checksFailed(official({ code: "1" }), failed)).toEqual(["incidents"]);
+      expect(checksFailed(failed, failed)).toEqual(["closures", "incidents"]);
     });
   });
 

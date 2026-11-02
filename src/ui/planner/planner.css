@@ -887,9 +887,27 @@
   right: calc(var(--panel-cover, 0px) + var(--space-3) + 2.75rem + var(--space-2));
   z-index: var(--planner-z-floating);
   display: flex;
-  justify-content: flex-end;
-  /* The slot spans the row; only the chip takes taps. */
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  /* The slot spans the row; only the chip and the note's link take taps. */
   pointer-events: none;
+}
+
+/* The official data the map couldn't check (#211, #216): a small caveat under the chip, not in the way. */
+.planner-map-not-checked {
+  max-width: 100%;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+  color: var(--color-warning);
+  font-size: 0.8rem;
+}
+
+.planner-map-not-checked a {
+  pointer-events: auto;
 }
 
 .planner-access-chip {

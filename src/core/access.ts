@@ -365,7 +365,7 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
  * Empty with a reading, while one loads, on a past date, and on water with no official stretch.
  *
  * Incidents aren't part of a status (ADR 0035), so pass them in to have a failure named
- * too (#216), on water the SPW lists. Pass them only where they were asked for: today or later.
+ * too (#216), on water the SPW lists. Pass them only where they were asked for.
  */
 export function officialNotChecked(status: AccessStatus, incidents?: OfficialIncidents): readonly OfficialCheck[] {
   const rules = status.reasons.flatMap((reason) => (reason.kind === "rule" ? [reason] : []));

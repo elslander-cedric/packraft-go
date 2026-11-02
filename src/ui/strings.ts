@@ -280,6 +280,11 @@ export const strings = {
       closures: "Official closures weren't checked, so the SPW may have closed this stretch.",
       incidents: "The SPW's incidents couldn't be loaded, so there may be hazards here that aren't shown.",
     },
+    // The same, short, for the whole map while the access layer is on.
+    mapNotChecked: {
+      closures: "Official closures weren't checked.",
+      incidents: "The SPW's incidents couldn't be loaded.",
+    },
     notCheckedLink: { title: "See today's status on the SPW's site", url: "https://kayak.spw.wallonie.be/" },
   },
   accessLegendNote:

@@ -105,6 +105,23 @@ function Note({ note }: { note: AccessNote }) {
   );
 }
 
+/**
+ * What the map can't tell because the SPW didn't answer (#211, #216): always in view while the
+ * access layer is on, with a link to the SPW. Only the link takes taps; the map works through the rest.
+ */
+export function MapNotCheckedNote({ checks }: { checks: readonly OfficialCheck[] }) {
+  if (checks.length === 0) return null;
+  const { title, url } = strings.official.notCheckedLink;
+  return (
+    <p role="status" className="planner-map-not-checked">
+      {`${notCheckedText(checks, strings.official.mapNotChecked)} `}
+      <a href={url} target="_blank" rel="noreferrer">
+        {title}
+      </a>
+    </p>
+  );
+}
+
 /** How far to trust a status with no official reading behind it (#211), with a link to the SPW. */
 export function OfficialNotCheckedNote({ checks }: { checks: readonly OfficialCheck[] }) {
   if (checks.length === 0) return null;

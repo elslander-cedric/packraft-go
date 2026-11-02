@@ -119,12 +119,13 @@ export function usePlanner(router?: Router) {
   // A leg on a later date notes today's closures (#212).
   const legUpcoming = rulesAccess?.legs.some((leg) => leg?.date !== undefined && leg.date >= today) ?? false;
   const official = useOfficialStatus(rules, legUpcoming);
-  const incidents = useOfficialIncidents(rules, legUpcoming); // Incident warnings (#217), and the note when they fail (#216).
+  // Incident warnings (#217) on every paddle leg, dated or not, and the note when they fail (#216).
+  const incidents = useOfficialIncidents(rules, hasPaddle);
   const flowsPending = flows === undefined && legToday;
   const officialPending = official === undefined && legToday;
   const waterAccess = useMemo(
     () =>
-      rules && legUpcoming
+      rules && hasPaddle
         ? tripAccess(trip, rules, {
             today,
             ...(flows && { flows }),
@@ -136,7 +137,7 @@ export function usePlanner(router?: Router) {
             obstacles,
           })
         : rulesAccess,
-    [trip, rules, today, flows, flowsPending, official, officialPending, incidents, locks, obstacles, rulesAccess, legUpcoming],
+    [trip, rules, today, flows, flowsPending, official, officialPending, incidents, locks, obstacles, rulesAccess, hasPaddle],
   );
   // Wanted from the first point, not the first paddle leg: that leg's own put-in may be offered one.
   const officialAires = useBuiltInOfficialAires(trip.points.length > 0)?.aires;
