@@ -14,6 +14,7 @@ import {
   brusselsDate,
   buildObstacles,
   buildOfficialAires,
+  buildOfficialLines,
   buildOfficialStretches,
   OBSTACLE_FIELDS,
   PKAYAK_LAYERS,
@@ -23,6 +24,7 @@ import {
 } from "../src/access/prepare/spw";
 
 const OUT = path.resolve(import.meta.dirname, "..", "src", "access", "data");
+const LINES_OUT = path.resolve(import.meta.dirname, "..", "docs", "research", "data", "spw-stretch-lines.json");
 const USER_AGENT = "packraft-go (+https://github.com/elslander-cedric/packraft-go)";
 const PAUSE_MS = 2000;
 
@@ -40,10 +42,9 @@ async function layer(url: string): Promise<PkayakAnswer> {
 
 const today = brusselsDate(Date.now());
 
-const stretches = buildOfficialStretches(
-  await layer(pkayakQuery(PKAYAK_LAYERS.stretches, STRETCH_FIELDS, { geometry: false })),
-  today,
-);
+const stretchAnswer = await layer(pkayakQuery(PKAYAK_LAYERS.stretches, STRETCH_FIELDS));
+const stretches = buildOfficialStretches(stretchAnswer, today);
+const lines = buildOfficialLines(stretchAnswer, today);
 await sleep(PAUSE_MS);
 const aires = buildOfficialAires(await layer(pkayakQuery(PKAYAK_LAYERS.aires, AIRE_FIELDS)), stretches, today);
 await sleep(PAUSE_MS);
@@ -58,3 +59,6 @@ for (const { file, content, count } of outputs) {
   writeFileSync(path.join(OUT, file), content);
   console.log(`Wrote src/access/data/${file}: ${count} records`);
 }
+// Not shipped: what the Walloon stretch mapping is checked against and reviewed on (#209).
+writeFileSync(LINES_OUT, serialiseSnapshot(lines, "stretches"));
+console.log(`Wrote ${path.relative(process.cwd(), LINES_OUT)}: ${lines.stretches.length} lines`);

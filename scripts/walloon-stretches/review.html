@@ -6,7 +6,7 @@
 <title>Review: Walloon stretch end points</title>
 <link rel="stylesheet" href="/leaflet/leaflet.css" />
 <style>
-  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
+  body { margin: 0; background: #fff; color: #111; font: 14px/1.4 system-ui, sans-serif; display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
   aside { overflow: auto; border-right: 1px solid #ccc; padding: 12px; }
   #map { height: 100vh; }
   h1 { font-size: 17px; margin: 0 0 6px; }
@@ -29,6 +29,11 @@
   .popup .reason { font-size: 12px; color: #444; margin: 4px 0; }
   .popup button { margin: 4px 4px 0 0; padding: 4px 10px; font-size: 13px; cursor: pointer; }
   .popup input { width: 100%; box-sizing: border-box; margin-top: 4px; }
+  .spw-key { display: inline-block; width: 22px; border-top: 3px dashed #d81b60; vertical-align: 3px; margin: 0 4px 0 10px; }
+  .notes { font-size: 13px; color: #444; margin: 8px 0; }
+  .notes summary { cursor: pointer; font-weight: 600; }
+  .notes li { margin: 2px 0; }
+  .official { color: #555; font-size: 12px; margin-left: 8px; }
   .saving { position: fixed; top: 8px; right: 8px; background: #333; color: #fff; padding: 4px 10px; border-radius: 4px; display: none; z-index: 1000; }
 </style>
 </head>
@@ -46,7 +51,14 @@
     <span style="background:#e67e00"></span>needs review
     <span style="background:#2e8b57"></span>confident
     <span style="background:#1f6fd1"></span>reviewed
+    <span class="spw-key"></span>SPW line
   </div>
+  <p class="help">
+    <b>Official split (#209):</b> the orange points are where a record is cut at an SPW boundary. The dashed lines are the
+    SPW's own, changing colour from one official stretch to the next. Check each point sits where the colour changes.
+    Hover a stretch for its official stretch.
+  </p>
+  <details class="notes" id="notes"><summary>Where the mapping and the SPW's lines differ</summary><ul id="noteList"></ul></details>
   <label class="filter"><input type="checkbox" id="onlyReview" checked /> Only list stretches with points to review</label>
   <div class="problems" id="problems"></div>
   <div id="list"></div>
@@ -62,6 +74,11 @@
     maxZoom: 17,
     attribution: "Map data © OpenStreetMap contributors, SRTM | Map style © OpenTopoMap (CC-BY-SA)",
   }).addTo(map);
+  const SPW_COLOURS = ["#d81b60", "#111111", "#f4511e", "#6a1b9a"];
+  map.createPane("spw");
+  map.getPane("spw").style.zIndex = 450;
+  map.getPane("spw").style.pointerEvents = "none";
+  const spwLayer = L.layerGroup().addTo(map);
   const layer = L.layerGroup().addTo(map);
   const markers = new Map();
   let state = null;
@@ -119,19 +136,30 @@
     );
   }
 
+  /** The SPW's lines, above the records, in turn through a few colours so a boundary shows. */
+  function renderSpwLines() {
+    state.spwLines.forEach(({ parts }, i) => {
+      for (const part of parts) {
+        L.polyline(part.map(([lng, lat]) => [lat, lng]), { pane: "spw", interactive: false, color: SPW_COLOURS[i % SPW_COLOURS.length], weight: 3, dashArray: "6 6" }).addTo(spwLayer);
+      }
+    });
+    document.getElementById("noteList").innerHTML = state.mappingNotes.map((n) => `<li>${esc(n)}</li>`).join("");
+  }
+
   function render() {
     layer.clearLayers();
     markers.clear();
     const { draft, needingReview, problems, finalWritten } = state;
     document.getElementById("summary").innerHTML =
       `<strong>${needingReview.length}</strong> point(s) still need review, ${draft.stretches.length} stretches.` +
-      (finalWritten ? " All points are resolved: the shipped dataset has been written." : "");
+      (finalWritten && needingReview.length === 0 ? " All points are resolved: the shipped dataset has been written." : "") +
+      (finalWritten && needingReview.length > 0 ? " The shipped dataset has been written, with these still marked pending." : "");
     document.getElementById("problems").innerHTML = problems.map((p) => `<div>Problem: ${esc(p)}</div>`).join("");
     const only = document.getElementById("onlyReview").checked;
     const list = [];
     for (const s of draft.stretches) {
       L.polyline(s.line.map(([lng, lat]) => [lat, lng]), { color: CATEGORY_LINE[s.category], weight: 5, opacity: 0.8 })
-        .bindTooltip(`${s.id} ${s.river} (${s.category}, ${s.lengthKm} km)`)
+        .bindTooltip(`${s.id} ${s.river} (${s.category}, ${s.lengthKm} km), ${s.officialStretch ?? "no official stretch"}`)
         .addTo(layer);
       const ends = [];
       for (const endName of ["from", "to"]) {
@@ -175,7 +203,7 @@
       }
       const toReview = ["from", "to"].some((e) => needingReview.includes(`${s.id}.${e}`));
       if (!only || toReview)
-        list.push(`<div class="stretch"><h2 data-stretch="${s.id}">${esc(s.id)} ${esc(s.river)} <small>${esc(s.category)}, ${s.lengthKm} km</small></h2>${ends.join("")}</div>`);
+        list.push(`<div class="stretch"><h2 data-stretch="${s.id}">${esc(s.id)} ${esc(s.river)} <small>${esc(s.category)}, ${s.lengthKm} km</small></h2><div class="official">Official stretch: ${esc(s.officialStretch ?? "none")}</div>${ends.join("")}</div>`);
     }
     const listEl = document.getElementById("list");
     listEl.innerHTML = list.join("") || "<p>Nothing left to review.</p>";
@@ -203,6 +231,7 @@
     .then((s) => {
       if (s.error) throw new Error(s.error);
       state = s;
+      renderSpwLines();
       render();
     })
     .catch((e) => (document.getElementById("summary").textContent = "Could not load: " + e.message));

@@ -48,6 +48,8 @@ export type AgwRule = {
   readonly maxM3s: number;
   /** The Annex 2 gauge, or null when no gauge matches. */
   readonly gauge: AgwGauge | null;
+  /** The SPW stretch this record lies on (ADR 0035, #209); absent where the SPW lists none. */
+  readonly officialStretch?: string;
   readonly link?: AccessSource;
 };
 
