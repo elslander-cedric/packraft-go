@@ -90,6 +90,7 @@ export default function Planner({ router }: { router?: Router }) {
     access,
     waterAccess,
     aire,
+    officialAires,
     undo,
     deleteSelectedPoint,
     saveFile,
@@ -174,7 +175,7 @@ export default function Planner({ router }: { router?: Router }) {
     else if (selectedPoint !== null) dispatch({ type: "deselect" });
     else {
       if (held !== null && trip.points.length === 0) setPick({ ...held, carry: true });
-      dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points });
+      dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points, officialAires });
     }
   };
   // A leg row tap shows its leg above the half-raised sheet and marks the row.

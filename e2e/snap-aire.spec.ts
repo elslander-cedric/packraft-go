@@ -1,10 +1,24 @@
-// #62: snapping a new put-in to one of your access points (accept, undo and
-// decline), and the Walloon aire warning on the leg, the day and the trip summary.
+// #62, #207: snapping a new put-in to one of your access points or an official aire
+// (accept, undo and decline), and the Walloon aire warning on the leg, the day and the
+// trip summary.
 import { expect, test, type Page } from "@playwright/test";
 import { addAccessPoint, serialiseAccessPoints, updateAccessPoint } from "../src/core/accessPoints";
+import { serialiseTrip } from "../src/core/saveFile";
+import type { LatLng, Trip } from "../src/core/trip";
+import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { freeMapCentre, legDetailsDialog, legLines, openPlanner, openSectionDetails, pickNextMode, saveTripFile, showTab } from "./support/planner";
+import {
+  freeMapCentre,
+  legDetailsDialog,
+  legLines,
+  openPlanner,
+  openSectionDetails,
+  pickNextMode,
+  points,
+  saveTripFile,
+  showTab,
+} from "./support/planner";
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
@@ -110,4 +124,93 @@ test("an official aire of yours within 200 m of the put-in removes that warning"
   // The take-out at the leg's end is still not at an aire; the put-in is.
   await expect(legDetails(page).locator(".access-warning-aire")).toHaveCount(1);
   await expect(legDetails(page).locator(".access-warning-aire")).toContainText("take-out");
+});
+
+// Built-in official aires, in the data as of the 2026-11-02 snapshot.
+const MOYEN = { lat: 49.69942, lng: 5.37755, name: "Aire de Moyen (plaine de jeux)", use: "both" as const };
+const CHANLY_TAKE_OUT_ONLY = { lat: 50.07847, lng: 5.15324 };
+const ACCESS_POINTS_KEY = "packraft-go.access-points";
+
+const north = (at: LatLng, degrees: number): LatLng => ({ lat: at.lat + degrees, lng: at.lng });
+
+/** Starts the planner on a stored trip, once per test. */
+async function storeTripOnce(page: Page, trip: Trip) {
+  await page.addInitScript(
+    ([key, value]) => {
+      if (sessionStorage.getItem("seeded")) return;
+      sessionStorage.setItem("seeded", "1");
+      localStorage.setItem(key, value);
+    },
+    [TRIP_KEY, serialiseTrip(trip)],
+  );
+}
+
+const justTheStart = (at: LatLng): Trip => ({ name: "", points: [at], legs: [] });
+const aireWarnings = (page: Page) => legDetails(page).locator(".access-warning-aire");
+const closeLegDetails = (page: Page) =>
+  legDetails(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();
+
+test.describe("official aires (#207)", () => {
+  test("a new put-in near an official aire is offered it by name; accepting moves the trip point only", async ({ page }) => {
+    const network = await serveOffline(page);
+    const start = north(MOYEN, 0.001); // about 111 m from the aire
+    await storeTripOnce(page, justTheStart(start));
+    await openPlanner(page);
+    await page.waitForLoadState("networkidle"); // The built-in aires load once the trip has a point.
+    const pointsBefore = await page.evaluate((key) => localStorage.getItem(key), ACCESS_POINTS_KEY);
+    await drawPaddleLeg(page);
+
+    await expect(offer(page)).toContainText(MOYEN.name);
+    await expect(offer(page)).toContainText(strings.accessPoints.uses[MOYEN.use].toLowerCase());
+    await offer(page).getByRole("button", { name: strings.snap.acceptAire }).click();
+    await expect(offer(page)).toHaveCount(0);
+    await expect.poll(() => storedFirstPoint(page)).toEqual({ lat: MOYEN.lat, lng: MOYEN.lng });
+
+    // Your access points are as they were.
+    expect(await page.evaluate((key) => localStorage.getItem(key), ACCESS_POINTS_KEY)).toEqual(pointsBefore);
+
+    // One undoable edit.
+    await page.getByRole("button", { name: strings.undoButton }).click();
+    await expect.poll(() => storedFirstPoint(page)).toEqual(start);
+    expect(network.blocked).toEqual([]);
+  });
+
+  test("moving a put-in near an official aire clears its warning", async ({ page }) => {
+    await serveOffline(page);
+    const take = north(MOYEN, 0.0236); // Far from any aire.
+    await storeTripOnce(page, { name: "", points: [north(MOYEN, 0.0036), take], legs: [{ mode: "paddle" }] });
+    await openPlanner(page);
+    await expect(points(page)).toHaveCount(2);
+
+    await openSectionDetails(page, 1);
+    await expect(aireWarnings(page)).toHaveCount(2);
+    await closeLegDetails(page);
+
+    // Both points are on one meridian, so their distance on screen gives the map's scale.
+    const [putIn, takeOut] = await Promise.all([points(page).nth(0).boundingBox(), points(page).nth(1).boundingBox()]);
+    const pixelsPerDegree = (putIn!.y - takeOut!.y) / (take.lat - north(MOYEN, 0.0036).lat);
+    const x = putIn!.x + putIn!.width / 2;
+    const y = putIn!.y + putIn!.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + 0.0031 * pixelsPerDegree, { steps: 6 }); // To about 55 m from the aire.
+    await page.mouse.up();
+
+    await openSectionDetails(page, 1);
+    await expect(aireWarnings(page)).toHaveCount(1);
+    await expect(aireWarnings(page)).toContainText("take-out");
+  });
+
+  test("a put-in at a take-out-only official aire still warns", async ({ page }) => {
+    await serveOffline(page);
+    await storeTripOnce(page, {
+      name: "",
+      points: [north(CHANLY_TAKE_OUT_ONLY, 0.001), north(CHANLY_TAKE_OUT_ONLY, 0.02)],
+      legs: [{ mode: "paddle" }],
+    });
+    await openPlanner(page);
+    await openSectionDetails(page, 1);
+    await expect(aireWarnings(page).first()).toContainText("put-in");
+    await expect(aireWarnings(page)).toHaveCount(2);
+  });
 });

@@ -3,9 +3,11 @@
 // piece of state, one row per action saying cleared / kept / set.
 import { describe, expect, it } from "vitest";
 import { addAccessPoint, updateAccessPoint, type AccessPoints } from "./accessPoints";
+import type { OfficialAire } from "./officialAire";
 import { firstSession, plannerSession, type PlannerAction, type PlannerSession } from "./plannerSession";
 import type { LegRoute } from "./router";
 import type { RouteRequest } from "./routing";
+import type { SnapOffer } from "./snap";
 import { applyEdit, emptyTrip, type LatLng, type Trip } from "./trip";
 
 const T = "2026-10-14T08:00:00.000Z";
@@ -28,6 +30,22 @@ const requestOfLeg = (trip: Trip, i: number): RouteRequest => ({
 });
 const routed: LegRoute = { status: "routed", geometry: [{ ...A, elevation: 100 }, { ...B, elevation: 120 }] };
 const access = slipway("near", nearA);
+const officialAire: OfficialAire = {
+  id: "official-aire-1",
+  number: 1,
+  name: "Aire de test",
+  use: "both",
+  officialStretch: "OURTHE1",
+  position: [nearA.lng, nearA.lat],
+  lastChanged: "2016-05-02",
+  source: { title: "SPW", url: "https://example.test" },
+  snapshot: "2026-11-02",
+};
+const accessPointOf = ({ target }: SnapOffer) => {
+  if (target.kind !== "access-point") throw new Error("not an access point");
+  return target.accessPoint;
+};
+const targetId = (offer: SnapOffer) => accessPointOf(offer).id;
 
 /**
  * A session with something in every piece of state: point 1 selected, one snap
@@ -35,7 +53,7 @@ const access = slipway("near", nearA);
  */
 const busy = (): PlannerSession => {
   const first = firstSession({ trip: through(A, B, C), unknownVersion: true });
-  const withOffer = plannerSession(first, { type: "setLegMode", index: 0, mode: "paddle", accessPoints: access });
+  const withOffer = plannerSession(first, { type: "setLegMode", index: 0, mode: "paddle", accessPoints: access, officialAires: [] });
   expect(withOffer.offers).toHaveLength(1);
   return { ...withOffer, selectedPoint: 1, fileError: "invalid" };
 };
@@ -45,12 +63,12 @@ const build = (make: Make, session: PlannerSession) => (typeof make === "functio
 
 // Every action that applies to a busy session while no question is open.
 const actions: [name: string, make: Make][] = [
-  ["add point", { type: "addPoint", at: { lat: 50.4, lng: 5.5 }, accessPoints: [] }],
+  ["add point", { type: "addPoint", at: { lat: 50.4, lng: 5.5 }, accessPoints: [], officialAires: [] }],
   ["move point", { type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 } }],
   ["delete selected point", { type: "deleteSelectedPoint" }],
   ["back to start", { type: "backToStart" }],
   ["insert point", { type: "insertPoint", index: 0, near: { lat: 50.3577, lng: 5.4563 } }],
-  ["set leg mode", { type: "setLegMode", index: 1, mode: "paddle", accessPoints: [] }],
+  ["set leg mode", { type: "setLegMode", index: 1, mode: "paddle", accessPoints: [], officialAires: [] }],
   ["access points changed", { type: "accessPointsChanged", accessPoints: access }],
   ["toggle camp", { type: "toggleCampOnSelectedPoint" }],
   ["undo", { type: "undo" }],
@@ -222,20 +240,20 @@ describe("rule table: replacing the trip", () => {
 describe("snap offers from set leg mode", () => {
   it("are worked out from the trip the change produced", () => {
     const session = firstSession({ trip: through(A, B) });
-    const after = plannerSession(session, { type: "setLegMode", index: 0, mode: "paddle", accessPoints: access });
-    expect(after.offers.map((o) => [o.change, o.accessPoint.id])).toEqual([[{ kind: "put-in", point: 0 }, "near"]]);
+    const after = plannerSession(session, { type: "setLegMode", index: 0, mode: "paddle", accessPoints: access, officialAires: [] });
+    expect(after.offers.map((o) => [o.change, targetId(o)])).toEqual([[{ kind: "put-in", point: 0 }, "near"]]);
   });
 
   it("are the right ones after a route arrived first", () => {
     const session = firstSession({ trip: through(A, B, C) });
     const request = requestOfLeg(session.trip, 0);
     const arrived = plannerSession(session, { type: "routeArrived", request, route: routed });
-    const after = plannerSession(arrived, { type: "setLegMode", index: 0, mode: "paddle", accessPoints: access });
+    const after = plannerSession(arrived, { type: "setLegMode", index: 0, mode: "paddle", accessPoints: access, officialAires: [] });
     expect(after.offers.map((o) => o.change)).toEqual([{ kind: "put-in", point: 0 }]);
   });
 
   it("replace the earlier offers", () => {
-    const after = plannerSession(busy(), { type: "setLegMode", index: 1, mode: "paddle", accessPoints: [] });
+    const after = plannerSession(busy(), { type: "setLegMode", index: 1, mode: "paddle", accessPoints: [], officialAires: [] });
     expect(after.offers).toEqual([]);
   });
 });
@@ -247,8 +265,8 @@ describe("snap offers from add point", () => {
 
   it("offer to snap the put-in a new paddle leg after a hike leg makes", () => {
     const session = firstSession({ trip: through(A, B) });
-    const after = plannerSession(session, { type: "addPoint", at: C, mode: "paddle", accessPoints: atB });
-    expect(after.offers.map((o) => [o.change, o.accessPoint.id])).toEqual([[{ kind: "put-in", point: 1 }, "b"]]);
+    const after = plannerSession(session, { type: "addPoint", at: C, mode: "paddle", accessPoints: atB, officialAires: [] });
+    expect(after.offers.map((o) => [o.change, targetId(o)])).toEqual([[{ kind: "put-in", point: 1 }, "b"]]);
   });
 
   it("offer to snap the paddle leg's new end, the trip's take-out", () => {
@@ -257,13 +275,14 @@ describe("snap offers from add point", () => {
       at: nearB,
       mode: "paddle",
       accessPoints: [],
+      officialAires: [],
     });
-    const after = plannerSession(paddling, { type: "addPoint", at: B, mode: "paddle", accessPoints: atB });
+    const after = plannerSession(paddling, { type: "addPoint", at: B, mode: "paddle", accessPoints: atB, officialAires: [] });
     expect(after.offers.map((o) => o.change)).toEqual([{ kind: "take-out", point: 2 }]);
   });
 
   it("replace the earlier offers; a point that makes no put-in or take-out offers nothing", () => {
-    const after = plannerSession(busy(), { type: "addPoint", at: nearA, mode: "hike", accessPoints: access });
+    const after = plannerSession(busy(), { type: "addPoint", at: nearA, mode: "hike", accessPoints: access, officialAires: [] });
     expect(after.offers).toEqual([]);
   });
 });
@@ -276,10 +295,11 @@ describe("snap offers from access points changed", () => {
       index: 0,
       mode: "paddle",
       accessPoints: both,
+      officialAires: [],
     });
-    expect(withOffers.offers.map((o) => o.accessPoint.id).sort()).toEqual(["c", "near"]);
+    expect(withOffers.offers.map((o) => targetId(o)).sort()).toEqual(["c", "near"]);
     const after = plannerSession(withOffers, { type: "accessPointsChanged", accessPoints: both.slice(1) });
-    expect(after.offers.map((o) => o.accessPoint.id)).toEqual(["c"]);
+    expect(after.offers.map((o) => targetId(o))).toEqual(["c"]);
   });
 
   it("makes the offer to a moved access point follow it; accepting moves the point there", () => {
@@ -288,6 +308,7 @@ describe("snap offers from access points changed", () => {
       index: 0,
       mode: "paddle",
       accessPoints: access,
+      officialAires: [],
     });
     const to: LatLng = { lat: 50.3537, lng: 5.4563 }; // about 111 m from A
     const moved = plannerSession(offered, {
@@ -295,10 +316,24 @@ describe("snap offers from access points changed", () => {
       accessPoints: updateAccessPoint(access, "near", { position: to }, T),
     });
     expect(moved.offers).toHaveLength(1);
-    expect(moved.offers[0].accessPoint.position).toEqual(to);
+    expect(accessPointOf(moved.offers[0]).position).toEqual(to);
     expect(moved.offers[0].distanceM).toBeGreaterThan(100);
     expect(moved.offers[0].distanceM).toBeLessThan(120);
     expect(plannerSession(moved, { type: "acceptOffer", offer: moved.offers[0] }).trip.points[0]).toEqual(to);
+  });
+
+  it("leaves an offer to an official aire alone; accepting moves the point onto it", () => {
+    const offered = plannerSession(firstSession({ trip: through(A, B) }), {
+      type: "setLegMode",
+      index: 0,
+      mode: "paddle",
+      accessPoints: [],
+      officialAires: [officialAire],
+    });
+    expect(offered.offers.map((o) => o.target)).toEqual([{ kind: "official-aire", aire: officialAire }]);
+    const after = plannerSession(offered, { type: "accessPointsChanged", accessPoints: access });
+    expect(after.offers).toEqual(offered.offers);
+    expect(plannerSession(after, { type: "acceptOffer", offer: after.offers[0] }).trip.points[0]).toEqual(nearA);
   });
 
   it("keeps the trip and the selected point", () => {
@@ -380,7 +415,7 @@ describe("stored save kept", () => {
   it("is cleared only by a replace", () => {
     let session = firstSession({ trip: through(A, B), unknownVersion: true });
     const others: PlannerAction[] = [
-      { type: "addPoint", at: C, accessPoints: [] },
+      { type: "addPoint", at: C, accessPoints: [], officialAires: [] },
       { type: "undo" },
       { type: "rename", name: "x" },
       { type: "fileRejected", reason: "invalid" },

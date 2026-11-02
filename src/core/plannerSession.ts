@@ -10,7 +10,8 @@
 // - snap offers: set leg mode and add point replace them with the offers worked
 //   out from the trip they produced; move, insert, delete, back to start, undo and replace drop them; accept and
 //   decline remove that one offer; access points changed drops the offers to a
-//   deleted access point and makes the offers to a moved one follow it.
+//   deleted access point, makes the offers to a moved one follow it and leaves
+//   the offers to official aires alone.
 // - file error: set by file rejected; cleared by every other action except a
 //   route being requested or arriving.
 // - stored save kept (#28): cleared when the trip is replaced.
@@ -20,9 +21,10 @@
 // Actions that can't apply return the same session.
 import type { AccessPoints } from "./accessPoints";
 import type { CalendarDate } from "./calendarDate";
+import type { OfficialAire } from "./officialAire";
 import { applyRoutingAction, retryLeg, type RoutingAction } from "./routing";
 import { distanceM } from "./geo";
-import { snapOffers, snapToAccessPoint, type SnapOffer } from "./snap";
+import { acceptSnap, snapOffers, type SnapOffer } from "./snap";
 import {
   applyEdit,
   canGoBackToStart,
@@ -55,15 +57,18 @@ export type PlannerSession = {
   readonly pendingTrip: Trip | null;
 };
 
+/** What the new put-ins and take-outs of an edit may be offered: your access points and the official aires. */
+type SnapTargets = { readonly accessPoints: AccessPoints; readonly officialAires: readonly OfficialAire[] };
+
 export type PlannerAction =
-  | { readonly type: "addPoint"; readonly at: LatLng; readonly mode?: LegMode; readonly accessPoints: AccessPoints }
+  | ({ readonly type: "addPoint"; readonly at: LatLng; readonly mode?: LegMode } & SnapTargets)
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   /** Adds a leg from the last point back to the start (GLOSSARY "Loop"), in `mode` when given. */
   | { readonly type: "backToStart"; readonly mode?: LegMode }
   | { readonly type: "deleteSelectedPoint" }
   /** Inserts a point on leg `leg` of the route, nearest to `near` (#122). */
   | { readonly type: "insertPoint"; readonly index: number; readonly near: LatLng }
-  | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode; readonly accessPoints: AccessPoints }
+  | ({ readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode } & SnapTargets)
   | { readonly type: "accessPointsChanged"; readonly accessPoints: AccessPoints }
   | { readonly type: "toggleCampOnSelectedPoint" }
   | { readonly type: "undo" }
@@ -121,14 +126,16 @@ const edited = (session: PlannerSession, trip: Trip, offers: readonly SnapOffer[
   fileError: null,
 });
 
-/** Offers after your access points changed: deleted ones drop, moved ones follow. */
+/** Offers after your access points changed: deleted ones drop, moved ones follow; official aires never change. */
 const followAccessPoints = (trip: Trip, offers: readonly SnapOffer[], accessPoints: AccessPoints): SnapOffer[] =>
   offers.flatMap((offer) => {
-    const accessPoint = accessPoints.find((a) => a.id === offer.accessPoint.id);
+    if (offer.target.kind !== "access-point") return [offer];
+    const { id } = offer.target.accessPoint;
+    const accessPoint = accessPoints.find((a) => a.id === id);
     const at = trip.points[offer.change.point];
     if (!accessPoint || !at) return [];
-    if (accessPoint === offer.accessPoint) return [offer];
-    return [{ ...offer, accessPoint, distanceM: distanceM(at, accessPoint.position) }];
+    if (accessPoint === offer.target.accessPoint) return [offer];
+    return [{ ...offer, target: { kind: "access-point", accessPoint }, distanceM: distanceM(at, accessPoint.position) }];
   });
 
 const routing = (session: PlannerSession, action: RoutingAction): PlannerSession => {
@@ -146,7 +153,7 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
   switch (action.type) {
     case "addPoint": {
       const after = applyEdit(trip, { type: "addPoint", at: action.at, mode: action.mode });
-      return edited(session, after, snapOffers(trip, after, action.accessPoints));
+      return edited(session, after, snapOffers(trip, after, action.accessPoints, action.officialAires));
     }
     case "movePoint":
       return edited(session, applyEdit(trip, action));
@@ -167,7 +174,7 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
         : edited(session, applyEdit(trip, { type: "deletePoint", index: session.selectedPoint }));
     case "setLegMode": {
       const after = applyEdit(trip, { type: "setLegMode", index: action.index, mode: action.mode });
-      return edited(session, after, snapOffers(trip, after, action.accessPoints));
+      return edited(session, after, snapOffers(trip, after, action.accessPoints, action.officialAires));
     }
     case "accessPointsChanged":
       return { ...session, offers: followAccessPoints(trip, session.offers, action.accessPoints), fileError: null };
@@ -195,7 +202,7 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
       return session.offers.includes(action.offer)
         ? {
             ...session,
-            trip: snapToAccessPoint(trip, action.offer),
+            trip: acceptSnap(trip, action.offer),
             selectedPoint: null,
             offers: session.offers.filter((o) => o !== action.offer),
             fileError: null,
