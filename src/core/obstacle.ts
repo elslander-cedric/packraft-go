@@ -5,8 +5,7 @@
 // lock (#215). Information only: it never blocks and never changes the access status.
 import type { AccessSource, Position } from "./access";
 import type { CalendarDate } from "./calendarDate";
-import { projectOntoLine } from "./geo";
-import { LOCK_TOLERANCE_M } from "./locks";
+import { passedInOrder } from "./locks";
 import type { LatLng } from "./trip";
 
 export const obstacleKinds = ["dam", "impassable", "rocks", "drossage", "low-bridge"] as const;
@@ -37,13 +36,7 @@ export type ObstacleWarning = {
 
 /** The obstacles a leg's line passes within the lock tolerance, in the order the leg meets them. */
 export function obstaclesOnLine(line: readonly LatLng[], obstacles: readonly Obstacle[]): Obstacle[] {
-  return obstacles
-    .flatMap((obstacle) => {
-      const { offM, alongM } = projectOntoLine({ lat: obstacle.position[1], lng: obstacle.position[0] }, line);
-      return offM <= LOCK_TOLERANCE_M ? [{ obstacle, alongM }] : [];
-    })
-    .sort((a, b) => a.alongM - b.alongM)
-    .map(({ obstacle }) => obstacle);
+  return passedInOrder(line, obstacles);
 }
 
 /** The obstacles of one kind among a leg's warnings. */

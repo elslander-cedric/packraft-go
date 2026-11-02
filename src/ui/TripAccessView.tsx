@@ -1,5 +1,6 @@
 import type { AccessState } from "@/core/access";
 import type { AireWarning } from "@/core/aire";
+import { incidentText, type IncidentWarning } from "@/core/incident";
 import type { LockWarning } from "@/core/locks";
 import type { LegWarnings } from "@/core/dayWarnings";
 import { obstacleGroups, type ObstacleWarning } from "@/core/obstacle";
@@ -32,6 +33,7 @@ const warningIcon: Record<LegWarnings["kind"], IconDefinition> = {
   closed: icons.warningClosed,
   "check-flow": icons.warningCheckFlow,
   lock: icons.warningLock,
+  incident: icons.warningIncident,
   obstacle: icons.warningObstacle,
   aire: icons.warningAire,
 };
@@ -42,6 +44,7 @@ const warningColour: Record<LegWarnings["kind"], AccessState> = {
   closed: "closed-today",
   "check-flow": "closed-today",
   lock: "closed-today",
+  incident: "closed-today",
   obstacle: "closed-today",
   aire: "closed-today",
 };
@@ -154,6 +157,31 @@ function ObstacleWarnings({ warnings }: { warnings: readonly ObstacleWarning[] }
   );
 }
 
+/**
+ * Incident warnings (#217): one line each, in the SPW's words, as each can ask something different.
+ * The date always shows, as an incident can be years old (ADR 0035). Never blocks.
+ */
+function IncidentWarnings({ warnings }: { warnings: readonly IncidentWarning[] }) {
+  if (warnings.length === 0) return null;
+  const text = strings.incidents;
+  const { title, url } = strings.official.notCheckedLink;
+  return (
+    <div className="access-warnings incident-warnings">
+      {warnings.map(({ incident, leg }) => (
+        <p key={`${leg}-${incident.id}`} className="access-warning access-warning-incident">
+          <WarningIcon kind="incident" />
+          <strong>{strings.tripAccess.incidentWarning(incidentText(incident) ?? text.noText)}</strong>{" "}
+          {`${incident.created ? text.reported(formatDayDate(incident.created)) : text.reportedUndated}. `}
+          {incident.expires && `${text.until(formatDayDate(incident.expires))}. `}
+          <a href={url} target="_blank" rel="noreferrer">
+            {title}
+          </a>
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function WarningList({ warnings }: { warnings: readonly AccessWarning[] }) {
   if (warnings.length === 0) return null;
   return (
@@ -200,6 +228,7 @@ export function LegAccessView({ access }: { access: LegAccess }) {
       {access.checkFlowOnTheDay && <p className="leg-access-flow">{strings.tripAccess.checkFlowOnTheDay}</p>}
       <WarningList warnings={access.warnings} />
       <LockWarnings warnings={access.lockWarnings} />
+      <IncidentWarnings warnings={access.incidentWarnings} />
       <ObstacleWarnings warnings={access.obstacleWarnings} />
       {access.notes.map((note, i) => (
         <Note key={i} note={note} />
@@ -259,7 +288,7 @@ export function DayWarningChips({ legs, onShowLeg }: { legs: readonly LegWarning
 
 /**
  * A leg or section row's access at a glance: its status's icon, then one icon per kind of
- * warning it has (access, lock, obstacle, aire), each icon once. Their names are only read out; the text
+ * warning it has (access, lock, incident, obstacle, aire), each icon once. Their names are only read out; the text
  * is in the row's dialog.
  */
 export function LegAccessIcons({
@@ -269,13 +298,14 @@ export function LegAccessIcons({
   className,
 }: {
   state: AccessState | undefined;
-  access: Pick<AccessSummary, "warnings" | "lockWarnings" | "obstacleWarnings"> | undefined;
+  access: Pick<AccessSummary, "warnings" | "lockWarnings" | "incidentWarnings" | "obstacleWarnings"> | undefined;
   aire: readonly AireWarning[];
   className?: string;
 }) {
   const kinds: LegWarnings["kind"][] = [
     ...(access?.warnings ?? []).map((warning) => warning.kind),
     ...(access?.lockWarnings ?? []).map(() => "lock" as const),
+    ...(access?.incidentWarnings ?? []).map(() => "incident" as const),
     ...(access?.obstacleWarnings ?? []).map(() => "obstacle" as const),
     ...aire.map(() => "aire" as const),
   ];

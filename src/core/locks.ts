@@ -1,8 +1,8 @@
 // Lock warnings on paddle legs (#60, GLOSSARY: Lock). A paddle leg whose line
 // passes a lock must portage there. Information only: it never blocks.
-import type { LockMarker } from "./access";
+import type { LockMarker, Position } from "./access";
 import type { CalendarDate } from "./calendarDate";
-import { distanceToLineM } from "./geo";
+import { distanceToLineM, projectOntoLine } from "./geo";
 import type { LatLng } from "./trip";
 
 /**
@@ -11,6 +11,17 @@ import type { LatLng } from "./trip";
  * while the lock itself is up to a few hundred metres long.
  */
 export const LOCK_TOLERANCE_M = 100;
+
+/** The markers a leg's line passes within `LOCK_TOLERANCE_M`, in the order the leg meets them. */
+export function passedInOrder<T extends { readonly position: Position }>(line: readonly LatLng[], markers: readonly T[]): T[] {
+  return markers
+    .flatMap((marker) => {
+      const { offM, alongM } = projectOntoLine({ lat: marker.position[1], lng: marker.position[0] }, line);
+      return offM <= LOCK_TOLERANCE_M ? [{ marker, alongM }] : [];
+    })
+    .sort((a, b) => a.alongM - b.alongM)
+    .map(({ marker }) => marker);
+}
 
 /** Locks of the same name closer than this are one lock complex (e.g. two chambers side by side): warned once. */
 const SAME_COMPLEX_M = 400;

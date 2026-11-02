@@ -50,6 +50,7 @@
 }
 .access-warning-aire strong,
 .access-warning-lock strong,
+.access-warning-incident strong,
 .access-warning-obstacle strong {
   color: var(--color-warning);
 }

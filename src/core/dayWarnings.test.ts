@@ -19,7 +19,7 @@ const lock: LockMarker = {
 const aire = (kind: AireWarning["kind"], leg: number, day = 0): AireWarning => ({ kind, point: leg, leg, day });
 
 function day(parts: Partial<DayAccess> = {}): DayAccess {
-  return { day: 0, warnings: [], notes: [], lockWarnings: [], obstacleWarnings: [], legsWithoutRules: 0, ...parts };
+  return { day: 0, warnings: [], notes: [], lockWarnings: [], obstacleWarnings: [], incidentWarnings: [], legsWithoutRules: 0, ...parts };
 }
 
 describe("a day's warnings per leg", () => {

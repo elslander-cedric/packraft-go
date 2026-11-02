@@ -14,7 +14,7 @@ import {
 import { addDays, type CalendarDate } from "./calendarDate";
 import type { FlowReadings } from "./flow";
 import { locksOnLine, type LockWarning } from "./locks";
-import type { OfficialIncidents } from "./incident";
+import { incidentsOn, incidentsOnLine, type IncidentWarning, type OfficialIncidents } from "./incident";
 import type { OfficialCheck, OfficialReadings } from "./officialStatus";
 import { obstaclesOnLine, type Obstacle, type ObstacleWarning } from "./obstacle";
 import { dayRanges } from "./summarise";
@@ -40,6 +40,8 @@ export type LegAccess = {
   readonly lockWarnings: readonly LockWarning[];
   /** Obstacles this leg passes, in the order it meets them (#215). Independent of date and flow. */
   readonly obstacleWarnings: readonly ObstacleWarning[];
+  /** Incidents that apply on the leg's date and that it passes, in the order it meets them (#217). They never change `status`. */
+  readonly incidentWarnings: readonly IncidentWarning[];
 };
 
 /**
@@ -103,6 +105,8 @@ export type AccessSummary = {
   readonly lockWarnings: readonly LockWarning[];
   /** Obstacle warnings of these legs, in leg order (#215). */
   readonly obstacleWarnings: readonly ObstacleWarning[];
+  /** Incident warnings of these legs, in leg order (#217). */
+  readonly incidentWarnings: readonly IncidentWarning[];
   /** How many of these legs have water without known rules. */
   readonly legsWithoutRules: number;
 };
@@ -126,7 +130,7 @@ export type TripAccessOptions = {
   readonly official?: OfficialReadings;
   /** True while today's official status is loading: legs dated today on water it decides are "checking". */
   readonly officialPending?: boolean;
-  /** Today's incidents (#216), once known. They never change a leg's status. */
+  /** Today's incidents (#216), once known: a paddle leg passing one gets a warning (#217). They never change a leg's status. */
   readonly incidents?: OfficialIncidents;
   /** Lock markers (#57): a paddle leg passing one gets a lock warning (#60). */
   readonly locks?: readonly LockMarker[];
@@ -156,6 +160,7 @@ function legAccess(
   incidents: OfficialIncidents | undefined,
   lockWarnings: readonly LockWarning[],
   obstacleWarnings: readonly ObstacleWarning[],
+  incidentWarnings: readonly IncidentWarning[],
 ): LegAccess {
   const warnings = status.reasons.flatMap((reason): AccessWarning[] => {
     const kind = warningKind[reason.state];
@@ -171,7 +176,7 @@ function legAccess(
   // Only a leg dated today or later asks for incidents; another leg's failure says nothing about it.
   const upcoming = when.date !== undefined && when.date >= today;
   const notChecked = officialNotChecked(status, upcoming ? incidents : undefined);
-  return { ...when, status, notChecked, checkFlowOnTheDay: flowReasons.length > 0, warnings, notes, lockWarnings, obstacleWarnings };
+  return { ...when, status, notChecked, checkFlowOnTheDay: flowReasons.length > 0, warnings, notes, lockWarnings, obstacleWarnings, incidentWarnings };
 }
 
 /** Access status and warnings for every paddle leg, day and the whole trip. */
@@ -199,7 +204,9 @@ export function tripAccess(
       const when = { leg, day, ...(date !== undefined && { date }) };
       const lockWarnings = locksOnLine(line, locks).map((lock): LockWarning => ({ lock, ...when }));
       const obstacleWarnings = obstaclesOnLine(line, obstacles).map((obstacle): ObstacleWarning => ({ obstacle, ...when }));
-      dayLegs.push((legs[leg] = legAccess(when, status, today, incidents, lockWarnings, obstacleWarnings)));
+      const reported = incidents?.status === "ok" ? incidentsOn(incidents.incidents, date ?? today) : [];
+      const incidentWarnings = incidentsOnLine(line, reported).map((incident): IncidentWarning => ({ incident, ...when }));
+      dayLegs.push((legs[leg] = legAccess(when, status, today, incidents, lockWarnings, obstacleWarnings, incidentWarnings)));
     }
     return { day, ...(date !== undefined && { date }), ...summary(dayLegs) };
   });
@@ -225,8 +232,10 @@ function summary(legs: readonly LegAccess[]): AccessSummary {
   const notes = legs.flatMap((leg) => leg.notes);
   const lockWarnings = legs.flatMap((leg) => leg.lockWarnings);
   const obstacleWarnings = legs.flatMap((leg) => leg.obstacleWarnings);
+  const incidentWarnings = legs.flatMap((leg) => leg.incidentWarnings);
   const legsWithoutRules = legs.filter((leg) => leg.notes.length > 0).length;
-  if (legs.length === 0) return { warnings, notes, lockWarnings, obstacleWarnings, legsWithoutRules };
+  const gathered = { warnings, notes, lockWarnings, obstacleWarnings, incidentWarnings, legsWithoutRules };
+  if (legs.length === 0) return gathered;
   // A leg still checking its flow keeps the summary from reading open (#85); a worse state wins as usual.
-  return { state: combineAccess(legs.map((leg) => leg.status)).state, warnings, notes, lockWarnings, obstacleWarnings, legsWithoutRules };
+  return { state: combineAccess(legs.map((leg) => leg.status)).state, ...gathered };
 }

@@ -1,9 +1,12 @@
 // Incidents (ADR 0035, GLOSSARY "Incident"): the temporary hazards the SPW reports on a
 // river. They come live and need signal. Kept apart from the access status on purpose:
 // nothing here reaches `accessAt`, so an incident never changes an access state, even
-// when its text says the river is closed.
+// when its text says the river is closed. A paddle leg that passes one gets a warning
+// with its text (#217), as for an obstacle. Information only: it never blocks.
 import type { Position } from "./access";
 import type { CalendarDate } from "./calendarDate";
+import { passedInOrder } from "./locks";
+import type { LatLng } from "./trip";
 
 export type Incident = {
   /** Unique among everything the access layer can select. */
@@ -29,6 +32,20 @@ export type Incident = {
 export type OfficialIncidents =
   | { readonly status: "ok"; readonly incidents: readonly Incident[] }
   | { readonly status: "failed" };
+
+/** One incident a paddle leg passes. */
+export type IncidentWarning = {
+  readonly incident: Incident;
+  readonly leg: number;
+  /** Index of the leg's day, counted from 0. */
+  readonly day: number;
+  readonly date?: CalendarDate;
+};
+
+/** The incidents a leg's line passes, within the same tolerance as obstacles, in the order the leg meets them. */
+export function incidentsOnLine(line: readonly LatLng[], incidents: readonly Incident[]): Incident[] {
+  return passedInOrder(line, incidents);
+}
 
 /** The incidents that apply on a date: all but those whose expiry is before it. */
 export function incidentsOn(incidents: readonly Incident[], date: CalendarDate): readonly Incident[] {

@@ -119,7 +119,7 @@ export function usePlanner(router?: Router) {
   // A leg on a later date notes today's closures (#212).
   const legUpcoming = rulesAccess?.legs.some((leg) => leg?.date !== undefined && leg.date >= today) ?? false;
   const official = useOfficialStatus(rules, legUpcoming);
-  const incidents = useOfficialIncidents(rules, legUpcoming); // Only for the note when they fail (#216); #217 adds warnings.
+  const incidents = useOfficialIncidents(rules, legUpcoming); // Incident warnings (#217), and the note when they fail (#216).
   const flowsPending = flows === undefined && legToday;
   const officialPending = official === undefined && legToday;
   const waterAccess = useMemo(

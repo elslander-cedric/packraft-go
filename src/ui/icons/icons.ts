@@ -15,6 +15,7 @@ import {
   faBridgeWater,
   faCalendarXmark,
   faCircleCheck,
+  faCircleExclamation,
   faChevronDown,
   faChevronLeft,
   faChevronRight,
@@ -101,6 +102,7 @@ export const icons = {
   warningCheckFlow: faGaugeHigh,
   warningLock: faStairs,
   warningObstacle: faTriangleExclamation,
+  warningIncident: faCircleExclamation,
   // An incident's marker and legend (ADR 0035).
   incident: faTriangleExclamation,
   warningAire: faFlag,

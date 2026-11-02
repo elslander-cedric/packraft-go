@@ -343,6 +343,8 @@ export const strings = {
     marker: (text: string) => `Incident: ${text}`,
     noText: "The SPW gives no description.",
     reported: (date: string) => `Reported by the SPW on ${date}`,
+    reportedUndated: "Reported by the SPW",
+    until: (date: string) => `Ends ${date}`,
   },
   accessDetailClose: "Close",
   accessNoRule: "No access rules are known for this place.",
@@ -368,6 +370,8 @@ export const strings = {
     lockWarning: (name: string) => `Lock at ${name}: portage required.`,
     // Obstacle warning (#215): one line per kind, whose meaning is strings.obstacles.meanings.
     obstacleWarning: (name: string, count: number) => (count === 1 ? `${name}.` : `${name}, ${count} on this leg.`),
+    // Incident warning (#217): the text is the SPW's own.
+    incidentWarning: (text: string) => `Incident: ${text}`,
     // A day card's chips: one per leg with warnings, its most serious kind; the text is on the leg.
     dayWarningsLabel: "Access warnings",
     chipKind: {
@@ -375,6 +379,7 @@ export const strings = {
       closed: "Closed",
       "check-flow": "Check flow",
       lock: "Lock",
+      incident: "Incident",
       obstacle: "Obstacle",
       aire: "No aire",
     },

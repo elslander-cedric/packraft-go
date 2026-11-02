@@ -53,7 +53,7 @@ export type TripRowProps = {
   /** The access status to show; none for a hike row or while it isn't known. */
   state: AccessState | undefined;
   /** Where the warnings' icons come from; a leg's own, or a section's legs' together. */
-  access: Pick<AccessSummary, "warnings" | "lockWarnings" | "obstacleWarnings"> | undefined;
+  access: Pick<AccessSummary, "warnings" | "lockWarnings" | "incidentWarnings" | "obstacleWarnings"> | undefined;
   /** Walloon aire warnings of this row's legs. */
   aire: readonly AireWarning[];
   /** Marked by the row's left bar. */
