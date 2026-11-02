@@ -1,7 +1,7 @@
 // #60: lock warnings on paddle legs, with tolerance for the line passing near a lock.
 import { describe, expect, it } from "vitest";
 import type { LockMarker } from "./access";
-import { LOCK_TOLERANCE_M, locksOnLine } from "./locks";
+import { PASSING_TOLERANCE_M, locksOnLine } from "./locks";
 import type { LegRoute } from "./router";
 import type { LatLng, Trip } from "./trip";
 import { tripAccess } from "./tripAccess";
@@ -30,7 +30,7 @@ describe("locks on a leg's line", () => {
   it("tolerates a line passing near the lock, but not far from it", () => {
     const near = lock("near", 4.05, 51.1 + 0.0005); // about 55 m
     const far = lock("far", 4.05, 51.1 + 0.002); // about 220 m
-    expect(LOCK_TOLERANCE_M).toBeGreaterThan(55);
+    expect(PASSING_TOLERANCE_M).toBeGreaterThan(55);
     expect(locksOnLine(line, [near, far]).map((l) => l.id)).toEqual(["near"]);
   });
 

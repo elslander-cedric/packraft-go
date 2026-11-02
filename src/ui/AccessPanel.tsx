@@ -210,6 +210,23 @@ function StatusLine({ state, date, className = "" }: { state: AccessState; date:
   );
 }
 
+/** How old the SPW's snapshot of something is, and where it comes from (ADR 0035). */
+function SpwSnapshotSource({ item }: { item: OfficialAire | Obstacle }) {
+  return (
+    <>
+      <p>{strings.spwData.lastChanged(item.lastChanged)}</p>
+      <p className="access-source">
+        {strings.accessSourceLabel}{" "}
+        <a href={item.source.url} target="_blank" rel="noreferrer">
+          {item.source.title}
+        </a>
+        {" · "}
+        {strings.spwData.snapshot(item.snapshot)}
+      </p>
+    </>
+  );
+}
+
 /**
  * An official aire (ADR 0035): read-only, with its stretch's access status on the
  * date (#213) and how old the SPW's data on it is. No `status` yet means checking.
@@ -243,15 +260,7 @@ export function OfficialAireDetail({
       <StatusLine state={status?.state ?? "checking"} date={date} className="access-aire-status" />
       {status && <OfficialNotCheckedNote checks={officialNotChecked(status, incidents)} />}
       {status && statusReasonTexts(status).map((reason) => <p key={reason}>{reason}</p>)}
-      <p>{text.lastChanged(aire.lastChanged)}</p>
-      <p className="access-source">
-        {strings.accessSourceLabel}{" "}
-        <a href={aire.source.url} target="_blank" rel="noreferrer">
-          {aire.source.title}
-        </a>
-        {" · "}
-        {text.snapshot(aire.snapshot)}
-      </p>
+      <SpwSnapshotSource item={aire} />
       <p className="access-legend-note">{strings.flow.credit}</p>
     </div>
   );
@@ -267,15 +276,7 @@ export function ObstacleDetail({ obstacle }: { obstacle: Obstacle }) {
         {text.names[obstacle.kind]}
       </p>
       <p>{text.meanings[obstacle.kind]}</p>
-      <p>{strings.officialAires.lastChanged(obstacle.lastChanged)}</p>
-      <p className="access-source">
-        {strings.accessSourceLabel}{" "}
-        <a href={obstacle.source.url} target="_blank" rel="noreferrer">
-          {obstacle.source.title}
-        </a>
-        {" · "}
-        {strings.officialAires.snapshot(obstacle.snapshot)}
-      </p>
+      <SpwSnapshotSource item={obstacle} />
       <p className="access-legend-note">{text.incomplete}</p>
       <p className="access-legend-note">{strings.flow.credit}</p>
     </div>

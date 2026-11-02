@@ -9,9 +9,9 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { serialiseSnapshot } from "../src/access/prepare/serialise";
+import { dateInBrussels } from "../src/core/calendarDate";
 import {
   AIRE_FIELDS,
-  brusselsDate,
   buildObstacles,
   buildOfficialAires,
   buildOfficialLines,
@@ -40,7 +40,7 @@ async function layer(url: string): Promise<PkayakAnswer> {
   return answer;
 }
 
-const today = brusselsDate(Date.now());
+const today = dateInBrussels(Date.now());
 
 const stretchAnswer = await layer(pkayakQuery(PKAYAK_LAYERS.stretches, STRETCH_FIELDS));
 const stretches = buildOfficialStretches(stretchAnswer, today);

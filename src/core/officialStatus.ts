@@ -93,7 +93,7 @@ export function checksFailed(
 }
 
 /** A stretch's official verdict for today; undefined while its readings haven't arrived. */
-export function officialCheck(
+export function officialVerdict(
   officialStretch: string | undefined,
   readings: OfficialReadings | undefined,
 ): OfficialVerdict | undefined {

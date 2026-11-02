@@ -5,7 +5,7 @@
 // with its text (#217), as for an obstacle. Information only: it never blocks.
 import type { Position } from "./access";
 import type { CalendarDate } from "./calendarDate";
-import { passedInOrder } from "./locks";
+import { markersPassedInOrder } from "./locks";
 import type { LatLng } from "./trip";
 
 export type Incident = {
@@ -42,9 +42,9 @@ export type IncidentWarning = {
   readonly date?: CalendarDate;
 };
 
-/** The incidents a leg's line passes, within the same tolerance as obstacles, in the order the leg meets them. */
+/** The incidents a leg's line passes, in the order the leg meets them. */
 export function incidentsOnLine(line: readonly LatLng[], incidents: readonly Incident[]): Incident[] {
-  return passedInOrder(line, incidents);
+  return markersPassedInOrder(line, incidents);
 }
 
 /** The incidents that apply on a date: all but those whose expiry is before it. */

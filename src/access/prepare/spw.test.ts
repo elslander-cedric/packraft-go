@@ -255,8 +255,4 @@ describe("the PKAYAK query", () => {
       f: "geojson",
     });
   });
-
-  it("can leave the geometry out", () => {
-    expect(new URL(pkayakQuery(5, ["nomtro"], { geometry: false })).searchParams.get("returnGeometry")).toBe("false");
-  });
 });

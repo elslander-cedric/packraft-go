@@ -199,6 +199,17 @@ function IncidentWarnings({ warnings }: { warnings: readonly IncidentWarning[] }
   );
 }
 
+/** The SPW's credit on warnings its data gives (ADR 0035), as for its other data. */
+function SpwCredit() {
+  return (
+    <p className="leg-access-credit">
+      <a href={strings.official.notCheckedLink.url} target="_blank" rel="noreferrer">
+        {strings.flow.credit}
+      </a>
+    </p>
+  );
+}
+
 function WarningList({ warnings }: { warnings: readonly AccessWarning[] }) {
   if (warnings.length === 0) return null;
   return (
@@ -247,6 +258,7 @@ export function LegAccessView({ access }: { access: LegAccess }) {
       <LockWarnings warnings={access.lockWarnings} />
       <IncidentWarnings warnings={access.incidentWarnings} />
       <ObstacleWarnings warnings={access.obstacleWarnings} />
+      {access.incidentWarnings.length + access.obstacleWarnings.length > 0 && <SpwCredit />}
       {access.notes.map((note, i) => (
         <Note key={i} note={note} />
       ))}

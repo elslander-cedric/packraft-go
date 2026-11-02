@@ -6,7 +6,7 @@ type RuleReason = Extract<AccessReason, { kind: "rule" }>;
 type Words = Readonly<Record<OfficialCheck, string>>;
 
 /** What wasn't checked with the SPW, in words (#211); empty when everything was. */
-export function notCheckedText(checks: readonly OfficialCheck[], words = strings.official.notChecked as Words): string {
+export function notCheckedText(checks: readonly OfficialCheck[], words: Words = strings.official.notChecked): string {
   return checks.map((check) => words[check]).join(" ");
 }
 
@@ -18,7 +18,15 @@ function closedWhy({ cause, reason }: OfficialClosedVerdict): string {
   return reason ? `${text.causes[cause]} ${reason}` : text.causes[cause];
 }
 
-function statusText({ official, ruleText, state, closedBy }: RuleReason): string {
+/** What the rules alone say, whether the core words it or it's only the state and the category. */
+function ruleWords({ ruleText, state, category }: RuleReason): string {
+  if (state === "checking") return strings.accessChecking;
+  return ruleText ?? (category ? strings.accessCalendar[category] : "");
+}
+
+function statusText(reason: RuleReason): string {
+  const { official, state, closedBy } = reason;
+  const ruleText = ruleWords(reason);
   switch (official?.kind) {
     case "closed": {
       const closed = strings.official.closed(closedWhy(official));

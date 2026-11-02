@@ -263,6 +263,13 @@ export const strings = {
   },
   // Transient status while today's live Walloon flow or official status loads (#85, #210); not one of the legend's states.
   accessChecking: "Checking status…",
+  // What a Walloon category's calendar allows, in one sentence.
+  accessCalendar: {
+    "1.A": "Category 1.A (navigable): open all year, within the permitted hours.",
+    "1.B": "Category 1.B: open all year, except on the fishing opening days (3rd Saturday of March, 1st Saturday of June).",
+    "1.C":
+      "Category 1.C: open from 1 October to 15 March only, except on the fishing opening days (3rd Saturday of March, 1st Saturday of June).",
+  },
   // The SPW's official status for today (#210, ADR 0035).
   official: {
     closed: (why: string) => `Closed today by the SPW: ${why}`,
@@ -311,11 +318,14 @@ export const strings = {
       both: "Official aire: both ways",
     },
     stretchLabel: "Stretch",
+  },
+  // The SPW's kayak data (ADR 0035), whatever kind it is.
+  spwData: {
     lastChanged: (date: string) => `Last changed by the SPW: ${date}`,
     snapshot: (date: string) => `Snapshot of ${date}`,
     // Shown in the map's attribution control while the access layer is on. Contains an HTML link.
     attribution:
-      'Aires: <a href="https://kayak.spw.wallonie.be/">Sources des données : Service public de Wallonie</a>',
+      'Aires, obstacles and incidents: <a href="https://kayak.spw.wallonie.be/">Sources des données : Service public de Wallonie</a>',
   },
   // Obstacles (ADR 0035, GLOSSARY "Obstacle"). The SPW publishes only a position and a code,
   // so all of this is the app's own wording and stays cautious. The drossage text follows the

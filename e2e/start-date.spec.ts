@@ -5,7 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
-import { todayInBrussels } from "../src/core/calendarDate";
+import { dateInBrussels } from "../src/core/calendarDate";
 import {
   dayCardDates,
   dayCards,
@@ -92,7 +92,7 @@ test("the start date survives save to file and open file", async ({ page }) => {
   // Updated for ADR 0034: a new trip starts on today in Brussels.
   await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
-  expect(await shownStartDate(page)).toBe(todayInBrussels(new Date()));
+  expect(await shownStartDate(page)).toBe(dateInBrussels(new Date()));
   await expect(await dayRows(page)).toHaveCount(0);
 
   await openTripFile(page, path);

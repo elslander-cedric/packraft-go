@@ -138,7 +138,7 @@ export default function AccessLayer({
       <Pane name="access-locks" style={{ zIndex: paneZIndex.accessLocks }}>
         <LockMarkers locks={locks} selectedId={selectedId} onSelect={onSelect} />
         {/* Its own group, so the SPW's credit comes and goes with its data. */}
-        <LayerGroup attribution={strings.officialAires.attribution}>
+        <LayerGroup attribution={strings.spwData.attribution}>
           <OfficialAireLayer aires={aires} onSelect={onSelect} />
           <ObstacleLayer obstacles={obstacles} onSelect={onSelect} />
           <IncidentLayer incidents={incidents} onSelect={onSelect} />

@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { accessAlong } from "./access";
 import { dayWarnings } from "./dayWarnings";
-import { LOCK_TOLERANCE_M } from "./locks";
+import { PASSING_TOLERANCE_M } from "./locks";
 import { obstacleGroups, obstaclesOnLine, type Obstacle, type ObstacleKind } from "./obstacle";
 import type { LegRoute } from "./router";
 import { fakeAccessRules, flandersSquare, forbiddenCanal, nearForbiddenCanal, onForbiddenCanal } from "./testing/fakeAccessRules";
@@ -30,10 +30,10 @@ describe("obstacles on a leg's line", () => {
     expect(ids(obstaclesOnLine([west, east], [obstacle(1, 4.05, 51.1)]))).toEqual([1]);
   });
 
-  it("uses the lock tolerance: an obstacle just inside it counts and one just outside doesn't", () => {
+  it("uses the passing tolerance: an obstacle just inside it counts and one just outside doesn't", () => {
     const degrees = (m: number) => m / 111_195;
-    const inside = obstacle(1, 4.05, 51.1 + degrees(LOCK_TOLERANCE_M - 5));
-    const outside = obstacle(2, 4.06, 51.1 + degrees(LOCK_TOLERANCE_M + 5));
+    const inside = obstacle(1, 4.05, 51.1 + degrees(PASSING_TOLERANCE_M - 5));
+    const outside = obstacle(2, 4.06, 51.1 + degrees(PASSING_TOLERANCE_M + 5));
     expect(ids(obstaclesOnLine([west, east], [inside, outside]))).toEqual([1]);
   });
 

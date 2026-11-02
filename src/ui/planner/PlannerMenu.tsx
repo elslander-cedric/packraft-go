@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { todayInBrussels } from "@/core/calendarDate";
+import { dateInBrussels } from "@/core/calendarDate";
 import type { FileError, PlannerAction, ReplaceQuestion } from "@/core/plannerSession";
 import type { Settings } from "@/core/settings";
 import type { Trip } from "@/core/trip";
@@ -85,7 +85,7 @@ export default function PlannerMenu({
           {
             label: text.newTrip,
             icon: <Icon icon={icons.newTrip} />,
-            onSelect: () => dispatch({ type: "newTrip", startDate: todayInBrussels(new Date()) }),
+            onSelect: () => dispatch({ type: "newTrip", startDate: dateInBrussels(new Date()) }),
           },
           { label: text.tripDetails, icon: <Icon icon={icons.editTrip} />, onSelect: () => setDetailsOpen(true) },
           { label: text.saveFile, icon: <Icon icon={icons.saveTrip} />, onSelect: () => askName("save") },

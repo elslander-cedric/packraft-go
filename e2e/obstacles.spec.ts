@@ -97,8 +97,8 @@ test.describe("on a desktop", () => {
       const dialog = page.getByRole("dialog", { name: text.names[sample.kind] });
       await expect(dialog).toBeVisible();
       await expect(dialog).toContainText(sample.says);
-      await expect(dialog).toContainText(strings.officialAires.lastChanged(sample.lastChanged));
-      await expect(dialog).toContainText(strings.officialAires.snapshot("2026-11-02"));
+      await expect(dialog).toContainText(strings.spwData.lastChanged(sample.lastChanged));
+      await expect(dialog).toContainText(strings.spwData.snapshot("2026-11-02"));
       await expect(dialog.getByRole("link", { name: /SPW/ })).toHaveAttribute("href", /PKAYAK\/MapServer\/1$/);
       await expect(dialog).toContainText(strings.flow.credit);
       // Read-only: nothing to edit, only Close.

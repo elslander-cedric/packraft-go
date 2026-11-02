@@ -4,7 +4,7 @@
 // function here, and an entry in that script's list.
 import type { AccessSource } from "@/core/access";
 import type { AccessPointUse } from "@/core/accessPoints";
-import type { CalendarDate } from "@/core/calendarDate";
+import { dateInBrussels, type CalendarDate } from "@/core/calendarDate";
 import type { ObstacleKind } from "@/core/obstacle";
 import { simplify } from "@/dataprep/walloonStretches/geo";
 import {
@@ -23,11 +23,11 @@ const PKAYAK = "https://geoservices3.wallonie.be/arcgis/rest/services/APP_KAYAK/
 export const PKAYAK_LAYERS = { obstacles: 1, aires: 3, stretches: 5 } as const;
 
 /** A query for every record of a layer: only the fields it names, in WGS84 GeoJSON. */
-export function pkayakQuery(layer: number, fields: readonly string[], { geometry = true } = {}): string {
+export function pkayakQuery(layer: number, fields: readonly string[]): string {
   const query = new URLSearchParams({
     where: "1=1",
     outFields: fields.join(","),
-    returnGeometry: String(geometry),
+    returnGeometry: "true",
     outSR: "4326",
     f: "geojson",
   });
@@ -70,10 +70,6 @@ export const OBSTACLE_KINDS: Readonly<Record<string, ObstacleKind>> = {
   "21": "drossage",
   "22": "low-bridge",
 };
-
-/** An epoch time as the calendar date in Brussels, where the SPW works. */
-export const brusselsDate = (epochMs: number): CalendarDate =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date(epochMs));
 
 const round = (value: number) => Math.round(value * 100000) / 100000;
 
@@ -168,7 +164,7 @@ export function buildOfficialAires(
     if (typeof properties.datmod !== "number") throw fail("no last-changed date");
     const position = positionOf(geometry);
     if (position === null) throw fail("no position");
-    return { number, name, use, officialStretch, position, lastChanged: brusselsDate(properties.datmod) };
+    return { number, name, use, officialStretch, position, lastChanged: dateInBrussels(properties.datmod) };
   });
   aires.forEach(({ number }, i) => {
     if (aires.findIndex((a) => a.number === number) !== i) throw new Error(`Aire ${number} appears twice`);
@@ -199,7 +195,7 @@ export function buildObstacles(answer: PkayakAnswer, snapshot: CalendarDate): Ob
     if (typeof properties.datmod !== "number") throw fail("no last-changed date");
     const position = positionOf(geometry);
     if (position === null) throw fail("no position");
-    return { spwId, kind, position, lastChanged: brusselsDate(properties.datmod) };
+    return { spwId, kind, position, lastChanged: dateInBrussels(properties.datmod) };
   });
   obstacles.forEach(({ spwId }, i) => {
     if (obstacles.findIndex((o) => o.spwId === spwId) !== i) throw new Error(`Obstacle ${spwId} appears twice`);

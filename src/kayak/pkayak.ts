@@ -1,12 +1,12 @@
 // PKAYAK adapter: implements the core's OfficialStatusSource with the SPW's public
 // ArcGIS map service (ADR 0035, #210, #216). The browser calls it directly (it allows
 // any origin), with only the fields needed: layer 5 without geometry for the status,
-// layer 0 for the incidents. A refresh is those two requests, which fail apart. The
+// layer 0 for the incidents. A refresh is at most those two requests, which fail apart. The
 // answers are cached for 15 minutes, and a request that doesn't answer in time counts
 // as a failure. It is the only module that talks to this service. The REST API at
 // kayak.spw.wallonie.be has no CORS and isn't used. See
 // docs/research/kayak-spw-access-points.md.
-import { todayInBrussels, type CalendarDate } from "@/core/calendarDate";
+import { dateInBrussels, type CalendarDate } from "@/core/calendarDate";
 import type { Incident, OfficialIncidents } from "@/core/incident";
 import type { OfficialReading, OfficialReadings, OfficialStatusSource } from "@/core/officialStatus";
 
@@ -94,15 +94,15 @@ function parseStretches(body: unknown): Record<string, OfficialReading> | null {
 }
 
 /** One of the SPW's dates, milliseconds since the epoch, as the day it falls on in Brussels. */
-function day(value: unknown): CalendarDate | undefined {
-  return typeof value === "number" ? todayInBrussels(new Date(value)) : undefined;
+function spwDay(value: unknown): CalendarDate | undefined {
+  return typeof value === "number" ? dateInBrussels(value) : undefined;
 }
 
 function parseIncident({ attributes, geometry }: Feature): Incident | null {
   const [spwId, x, y] = [attributes?.id, geometry?.x, geometry?.y];
   if (typeof spwId !== "number" || typeof x !== "number" || typeof y !== "number") return null;
   const [officialStretch, textEn, textFr] = [text(attributes?.nomtro), text(attributes?.commene), text(attributes?.commen)];
-  const [created, changed, expires] = [day(attributes?.datcre), day(attributes?.datmod), day(attributes?.datexp)];
+  const [created, changed, expires] = [spwDay(attributes?.datcre), spwDay(attributes?.datmod), spwDay(attributes?.datexp)];
   return {
     id: `incident-${spwId}`,
     spwId,

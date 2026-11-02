@@ -14,7 +14,7 @@ import {
   type Position,
 } from "./geo";
 import {
-  officialCheck,
+  officialVerdict,
   type OfficialCheck,
   type OfficialClosedVerdict,
   type OfficialReadings,
@@ -158,8 +158,11 @@ export type AccessReason =
       readonly state: AccessState;
       readonly recordId: string;
       readonly name: string;
-      /** What the rules alone say. On a stretch with an `official` verdict, the UI words the two together. */
-      readonly ruleText: string;
+      /**
+       * What the rules alone say. Absent where there is nothing but the state and the category
+       * to say, which the UI words itself. On a stretch with an `official` verdict, the UI words the two together.
+       */
+      readonly ruleText?: string;
       readonly conditions?: readonly string[];
       readonly link?: AccessSource;
       readonly source: AccessSource;
@@ -235,8 +238,6 @@ const FISHING_DAYS = "the fishing opening days (3rd Saturday of March, 1st Satur
 
 const KAYAK_PAGE = "check today's official status on kayak.spw.wallonie.be";
 
-const CHECKING = "Checking status…";
-
 const m3s = (value: number) => `${value} m³/s`;
 
 /** Why today's flow can't decide, in one sentence. */
@@ -247,13 +248,6 @@ const flowUnknownText: Record<FlowUnknown, string> = {
   stale: "Flow unknown: the 72-hour mean flow isn't from today",
   "not-measured-yet": "Flow unknown: today's 08:00 flow isn't measured yet",
 };
-
-/** What a category's calendar allows, in one sentence. */
-function calendarText(category: AgwCategory): string {
-  if (category === "1.A") return "Category 1.A (navigable): open all year, within the permitted hours.";
-  if (category === "1.B") return `Category 1.B: open all year, except on ${FISHING_DAYS}.`;
-  return `Category 1.C: open from 1 October to 15 March only, except on ${FISHING_DAYS}.`;
-}
 
 /**
  * A Walloon stretch's status on a date: season, fishing opening days and hours
@@ -275,11 +269,11 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
   // Flow and official status are only known for today.
   const isToday = date !== undefined && date === today;
   const verdict: FlowVerdict = isToday ? flowCheck(rule, context.flows, today) : { kind: "not-checked" };
-  const official = isToday ? officialCheck(rule.officialStretch, context.official) : undefined;
+  const official = isToday ? officialVerdict(rule.officialStretch, context.official) : undefined;
   const officialPending = isToday && official === undefined && context.officialPending === true;
   // YYYY-MM-DD strings order as calendar days, so no time zone can move this.
   const isFuture = date !== undefined && today !== undefined && date > today;
-  const verdictToday = isFuture ? officialCheck(rule.officialStretch, context.official) : undefined;
+  const verdictToday = isFuture ? officialVerdict(rule.officialStretch, context.official) : undefined;
   const closedToday = verdictToday?.kind === "closed" ? verdictToday : undefined;
   // With no reading a closure today can't be known, so a future date is marked like today (#211).
   const unavailableToday = verdictToday?.kind === "unavailable" ? verdictToday : undefined;
@@ -296,7 +290,7 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
 
   let state: AccessState = "open";
   let closedBy: AccessClosure | undefined;
-  let ruleText: string;
+  let ruleText: string | undefined;
   if (day?.closure === "season") {
     state = "closed-today";
     closedBy = "season";
@@ -308,13 +302,10 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
   } else if (official?.kind === "closed") {
     state = "closed-today";
     closedBy = "official";
-    ruleText = calendarText(category);
   } else if (officialPending) {
     state = "checking";
-    ruleText = CHECKING;
   } else if (official?.kind === "unrecognised") {
     state = "unknown";
-    ruleText = calendarText(category);
   } else if (flowDecides && verdict.kind === "low") {
     state = "closed-today";
     closedBy = "low-flow";
@@ -325,14 +316,12 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     ruleText = `Closed today: high flow. The flow at 08:00 (${m3s(verdict.figures.at8!.m3s)}) is above the maximum of ${m3s(rule.maxM3s)}: based on measured flow; the official status may differ.`;
   } else if (flowDecides && verdict.kind === "not-checked" && context.flowsPending && isToday) {
     state = "checking";
-    ruleText = CHECKING;
   } else if (flowDecides && verdict.kind === "unknown") {
     state = "unknown";
     ruleText = `${flowUnknownText[verdict.why]}; ${KAYAK_PAGE}.`;
-  } else {
-    ruleText = calendarText(category);
+  } else if (category === "1.C" && !day) {
     // Without a date the 1.C season can't be told.
-    if (category === "1.C" && !day) state = "unknown";
+    state = "unknown";
   }
 
   const reason: AccessReason = {
@@ -340,7 +329,7 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     state,
     recordId: record.id,
     name: record.name,
-    ruleText,
+    ...(ruleText !== undefined && { ruleText }),
     conditions,
     ...(rule.link && { link: rule.link }),
     source: record.source,

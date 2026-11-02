@@ -257,6 +257,7 @@ test.describe("on a paddle leg (#217)", () => {
     return oneIncident({ nomtro: "SALM", ...attributes }, { x: lng, y: lat });
   };
   const warnings = (page: Page) => legDetailsDialog(page).locator(".access-warning-incident");
+  const credit = (page: Page) => legDetailsDialog(page).locator(".leg-access-credit");
   const legRow = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
   const REPORTED = strings.incidents.reported("Thu 1 Oct 2026");
 
@@ -289,6 +290,7 @@ test.describe("on a paddle leg (#217)", () => {
     await openSectionDetails(page, 1);
     await expect(warnings(page)).toContainText("Travaux au pont");
     await expect(warnings(page)).toContainText(REPORTED);
+    await expect(credit(page).getByRole("link", { name: strings.flow.credit })).toBeVisible();
   });
 
   // 23:30 UTC on 19 November is already 20 November in Brussels, and it's that day the SPW means.

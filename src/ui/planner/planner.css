@@ -907,7 +907,14 @@
 }
 
 .planner-map-not-checked a {
+  color: var(--color-link);
   pointer-events: auto;
+}
+
+/* The map runs under the side panel; its credits stay clear of it, or the last ones can't be read. */
+.planner-sideways .leaflet-bottom.leaflet-right {
+  right: var(--panel-cover);
+  transition: right 250ms;
 }
 
 .planner-access-chip {

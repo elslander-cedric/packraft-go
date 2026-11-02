@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AccessReason, AccessState } from "@/core/access";
 import type { OfficialVerdict } from "@/core/officialStatus";
 import { notCheckedText, reasonText, statusReasonTexts } from "./reasonText";
+import { strings } from "./strings";
 
 type RuleReason = Extract<AccessReason, { kind: "rule" }>;
 
@@ -42,6 +43,23 @@ describe("a status's reasons in words (#213)", () => {
   it("says when no rules are known", () => {
     const status = { state: "unknown" as const, reasons: [{ kind: "no-rule", state: "unknown" } as const] };
     expect(statusReasonTexts(status)).toEqual(["No access rules are known for this place."]);
+  });
+});
+
+describe("what the rules alone say", () => {
+  it("words a category's calendar where the core leaves it out", () => {
+    const calendar = reason("open", undefined, { ruleText: undefined, category: "1.B" });
+    expect(reasonText(calendar)).toBe(strings.accessCalendar["1.B"]);
+  });
+
+  it("says it's checking while it is", () => {
+    const checking = reason("checking", undefined, { ruleText: undefined, category: "1.C" });
+    expect(reasonText(checking)).toBe(strings.accessChecking);
+  });
+
+  it("puts the SPW's word before the calendar", () => {
+    const open = reason("open", { kind: "open" }, { ruleText: undefined, category: "1.A" });
+    expect(reasonText(open)).toBe(`${strings.official.open} ${strings.accessCalendar["1.A"]}`);
   });
 });
 

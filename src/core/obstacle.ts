@@ -5,7 +5,7 @@
 // lock (#215). Information only: it never blocks and never changes the access status.
 import type { AccessSource, Position } from "./access";
 import type { CalendarDate } from "./calendarDate";
-import { passedInOrder } from "./locks";
+import { markersPassedInOrder } from "./locks";
 import type { LatLng } from "./trip";
 
 export const obstacleKinds = ["dam", "impassable", "rocks", "drossage", "low-bridge"] as const;
@@ -34,9 +34,9 @@ export type ObstacleWarning = {
   readonly date?: CalendarDate;
 };
 
-/** The obstacles a leg's line passes within the lock tolerance, in the order the leg meets them. */
+/** The obstacles a leg's line passes, in the order the leg meets them. */
 export function obstaclesOnLine(line: readonly LatLng[], obstacles: readonly Obstacle[]): Obstacle[] {
-  return passedInOrder(line, obstacles);
+  return markersPassedInOrder(line, obstacles);
 }
 
 /** The obstacles of one kind among a leg's warnings. */

@@ -7,7 +7,7 @@ import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { accessLayerItem, mapMenuButton, toggleAccessLayer } from "./support/mapMenu";
 import { serveOffline } from "./support/offline";
-import { mapRegion, points } from "./support/planner";
+import { mapRegion, points, tripPanel } from "./support/planner";
 
 const text = strings.officialAires;
 
@@ -39,7 +39,7 @@ async function expectChanlyDetails(page: Page) {
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText(text.legend["take-out"]);
   await expect(dialog).toContainText("La Lesse, en aval du pont des Barbouillons à Daverdisse, jusqu'à Chanly");
-  await expect(dialog).toContainText(text.lastChanged("2016-05-02"));
+  await expect(dialog).toContainText(strings.spwData.lastChanged("2016-05-02"));
   await expect(dialog).toContainText(strings.flow.credit);
   // Read-only: nothing to edit, only Close.
   await expect(dialog.getByRole("button")).toHaveText([strings.accessDetailClose]);
@@ -61,6 +61,10 @@ test.describe("on a desktop", () => {
     await expect(aires(page)).toHaveCount(92);
     const attribution = page.locator(".leaflet-control-attribution");
     await expect(attribution).toContainText(strings.flow.credit);
+    // The credit's end isn't hidden under the side panel, which floats over the map.
+    const credit = (await attribution.boundingBox())!;
+    const panel = (await tripPanel(page).boundingBox())!;
+    expect(credit.x + credit.width).toBeLessThanOrEqual(panel.x);
 
     await toggleAccessLayer(page);
     await expect(aires(page)).toHaveCount(0);

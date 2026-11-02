@@ -5,7 +5,6 @@
 // re-recording stays a deliberate step.
 import {
   AIRE_FIELDS,
-  brusselsDate,
   buildObstacles,
   buildOfficialAires,
   OBSTACLE_FIELDS,
@@ -14,7 +13,8 @@ import {
   pkayakQuery,
   type PkayakAnswer,
 } from "@/access/prepare/spw";
-import { officialCheck } from "@/core/officialStatus";
+import { dateInBrussels } from "@/core/calendarDate";
+import { officialVerdict } from "@/core/officialStatus";
 import type { Finding, FindingLevel, RecordedResponse } from "@/routing/liveCheck";
 import { createPkayakStatusSource, incidentsUrl, stretchesUrl } from "./pkayak";
 
@@ -105,7 +105,7 @@ const stretchIds = ({ rows }: Layer) => rows.flatMap((row) => (typeof row.nomtro
 
 /** Whether the app has a meaning for a status code. It never reads an unknown one as open, but it loses the status. */
 function isKnownStatus(code: string): boolean {
-  const verdict = officialCheck("stretch", { status: "ok", stretches: { stretch: { code } } });
+  const verdict = officialVerdict("stretch", { status: "ok", stretches: { stretch: { code } } });
   return verdict?.kind !== "unrecognised";
 }
 
@@ -127,7 +127,7 @@ function compareStretches(live: Layer, recorded: Layer, report: Report) {
 }
 
 /** Any date: the snapshots built here are thrown away. */
-const snapshotDate = brusselsDate(0);
+const snapshotDate = dateInBrussels(0);
 
 /** Runs one snapshot's own checks: the app is fine, but `prepare:spw-data` would stop here. */
 function comparePreparation(title: string, build: () => unknown, report: Report) {

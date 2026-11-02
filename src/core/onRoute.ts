@@ -4,7 +4,7 @@
 // apart, so `accessPointsByRoute` stays about your points, and merged in for the list.
 import type { AccessPoint, AccessPoints } from "./accessPoints";
 import { distanceM, projectOntoLine } from "./geo";
-import type { OfficialAire } from "./officialAire";
+import { airePosition, type OfficialAire } from "./officialAire";
 import { SNAP_DISTANCE_M } from "./snap";
 import { putInsAndTakeOuts, type LatLng, type Trip } from "./trip";
 
@@ -71,7 +71,7 @@ export function officialAiresOnRoute(trip: Trip, aires: readonly OfficialAire[])
   if (line.length < 2) return [];
   return aires
     .flatMap((aire) => {
-      const position = { lat: aire.position[1], lng: aire.position[0] };
+      const position = airePosition(aire);
       const { offM, alongM } = projectOntoLine(position, line);
       return offM <= ON_ROUTE_M ? [{ aire, alongKm: alongM / 1000, role: roleAt(trip, position) }] : [];
     })

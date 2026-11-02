@@ -51,6 +51,7 @@ async function seed(page: Page, line: Place[]) {
 }
 
 const warnings = (page: Page) => legDetailsDialog(page).locator(".access-warning-obstacle");
+const credit = (page: Page) => legDetailsDialog(page).locator(".leg-access-credit");
 const legRow = (page: Page) =>
   page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
 const closeDetails = (page: Page) =>
@@ -77,6 +78,7 @@ test.describe("on a wide screen", () => {
     await expect(legRow(page).locator(".leg-access-icons")).toContainText(strings.tripAccess.chipKind.obstacle);
     await openSectionDetails(page, 1);
     await expect(warnings(page)).toHaveCount(1);
+    await expect(credit(page).getByRole("link", { name: strings.flow.credit })).toBeVisible();
     await expect(warnings(page)).toContainText(line(names.dam, meanings.dam));
     await expect(warnings(page).getByRole("link", { name: /SPW/ })).toBeVisible();
     await closeDetails(page);
