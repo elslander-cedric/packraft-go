@@ -2,7 +2,14 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import type { AccessPoint } from "@/core/accessPoints";
-import { accessPointsByRoute, type OnRoute } from "@/core/onRoute";
+import type { OfficialAire } from "@/core/officialAire";
+import {
+  accessPointsByRoute,
+  mergeInRouteOrder,
+  officialAiresOnRoute,
+  type OnRoute,
+  type OnRouteAire,
+} from "@/core/onRoute";
 import type { LatLng, Trip } from "@/core/trip";
 import { Button } from "../components/Button";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -20,16 +27,20 @@ type Props = {
   access: AccessPointsState;
   /** The trip, whose route splits the list (#156). */
   trip: Trip;
+  /** The official aires; the ones on the route are listed among your points (#208). */
+  officialAires: readonly OfficialAire[];
   /** Your position when shown, to order the points not on the route; null otherwise. */
   position: LatLng | null;
   /** A row was tapped: show that access point on the map. */
   onOpen: (id: string) => void;
+  /** An official aire's row was tapped: open its read-only details. */
+  onOpenAire: (id: string) => void;
   /** A row's edit button: open that point's details in the edit dialog. */
   onEdit: (id: string) => void;
 };
 
 /** How far along the route an on-route row is, and whether the trip's put-in or take-out is there. */
-function alongRoute({ alongKm, role }: OnRoute): string {
+function alongRoute({ alongKm, role }: OnRoute | OnRouteAire): string {
   const along = text.alongRoute(alongKm.toFixed(1));
   if (role === "put-in") return `${along} · ${text.yourPutIn}`;
   if (role === "take-out") return `${along} · ${text.yourTakeOut}`;
@@ -39,17 +50,22 @@ function alongRoute({ alongKm, role }: OnRoute): string {
 /**
  * The planner's Access points tab (#119, ADR 0026): your list, each row
  * with edit and delete buttons. While the trip has a route, the points on it
- * come first in route order, then the rest nearest to you (#156). Marking is
- * the floating button on the map; the details are a dialog. Every change is
- * saved on the device at once by `useAccessPoints`, with or without signal.
+ * come first in route order, then the rest nearest to you (#156). Official
+ * aires on the route sit among them, read-only (#208). Marking is the floating
+ * button on the map; the details are a dialog. Every change is saved on the
+ * device at once by `useAccessPoints`, with or without signal.
  */
-export default function AccessPoints({ access, trip, position, onOpen, onEdit }: Props) {
+export default function AccessPoints({ access, trip, officialAires, position, onOpen, onOpenAire, onEdit }: Props) {
   const { points, selected } = access;
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const lists = useRef<HTMLDivElement>(null);
   const onRouteId = useId();
   const notOnRouteId = useId();
   const split = useMemo(() => accessPointsByRoute(trip, points, position), [trip, points, position]);
+  const onRoute = useMemo(
+    () => mergeInRouteOrder(split.onRoute, officialAiresOnRoute(trip, officialAires)),
+    [split, trip, officialAires],
+  );
 
   // Bring the selected row into view, e.g. after a marker tap.
   useEffect(() => {
@@ -99,6 +115,16 @@ export default function AccessPoints({ access, trip, position, onOpen, onEdit }:
       </li>
     );
   };
+  // Read-only: the row only opens the details, with no edit or delete.
+  const aireRow = (entry: OnRouteAire): ReactNode => (
+    <li key={entry.aire.id} className="planner-access-point-item">
+      <Button className="planner-row planner-access-point-row" onClick={() => onOpenAire(entry.aire.id)}>
+        <span className="planner-row-heading">{entry.aire.name}</span>
+        <span className="planner-access-point-figure">{alongRoute(entry)}</span>
+        <span className="planner-access-point-detail">{strings.officialAires.legend[entry.aire.use]}</span>
+      </Button>
+    </li>
+  );
   const notOnRouteRows = split.notOnRoute.map(({ point, fromYouKm }) =>
     row(point, fromYouKm === null ? null : text.fromYou(formatDistance(fromYouKm))),
   );
@@ -107,7 +133,7 @@ export default function AccessPoints({ access, trip, position, onOpen, onEdit }:
     <section className="planner-access-points" aria-label={text.accessPointsLabel}>
       {savingPausedAlert}
       {backedUpNote}
-      {points.length === 0 ? (
+      {points.length === 0 && onRoute.length === 0 ? (
         <p className="planner-empty">{text.noAccessPoints}</p>
       ) : (
         <div ref={lists} className="planner-access-point-lists">
@@ -120,11 +146,11 @@ export default function AccessPoints({ access, trip, position, onOpen, onEdit }:
               <h3 id={onRouteId} className="planner-access-point-heading">
                 {text.onRouteHeading}
               </h3>
-              {split.onRoute.length === 0 ? (
+              {onRoute.length === 0 ? (
                 <p className="planner-empty planner-access-point-none">{text.noneOnRoute}</p>
               ) : (
                 <ul className="planner-access-point-list" aria-labelledby={onRouteId}>
-                  {split.onRoute.map((entry) => row(entry.point, alongRoute(entry)))}
+                  {onRoute.map((entry) => ("aire" in entry ? aireRow(entry) : row(entry.point, alongRoute(entry))))}
                 </ul>
               )}
               {notOnRouteRows.length > 0 && (
