@@ -63,7 +63,7 @@ const AIRE_USES: Readonly<Record<string, AccessPointUse>> = { E: "put-in", D: "t
  * The SPW's `codico` values the app shows as obstacles. The layer's legend lists many more
  * (bathing, camping, "Danger", "Obstacle temporaire"): one appearing in the data is a decision.
  */
-const OBSTACLE_KINDS: Readonly<Record<string, ObstacleKind>> = {
+export const OBSTACLE_KINDS: Readonly<Record<string, ObstacleKind>> = {
   "2": "dam",
   "15": "impassable",
   "8": "rocks",
@@ -149,7 +149,7 @@ export function buildOfficialStretches(answer: PkayakAnswer, snapshot: CalendarD
 /** The official aires, from layer 3. Fails on anything the app couldn't show truthfully. */
 export function buildOfficialAires(
   answer: PkayakAnswer,
-  { stretches }: OfficialStretchDataset,
+  { stretches }: Pick<OfficialStretchDataset, "stretches">,
   snapshot: CalendarDate,
 ): OfficialAireDataset {
   const known = new Set(stretches.map((s) => s.id));
