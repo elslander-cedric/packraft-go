@@ -138,6 +138,9 @@ test("with the service down the computed status stands, as on the rest of the ap
 
   await expect(status(page, CHANLY)).not.toContainText(strings.accessChecking);
   await expect(details(page, CHANLY)).not.toContainText(strings.official.closed(DROUGHT));
+  await expect(details(page, CHANLY)).toContainText(strings.official.notChecked.closures);
+  const { title, url } = strings.official.notCheckedLink;
+  await expect(details(page, CHANLY).getByRole("link", { name: title })).toHaveAttribute("href", url);
   const aireStatus = await status(page, CHANLY).textContent();
   await details(page, CHANLY).getByRole("button", { name: strings.accessDetailClose }).click();
 

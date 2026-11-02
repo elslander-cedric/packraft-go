@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   accessAt,
   accessFeatures,
+  combineAccess,
+  officialNotChecked,
   officialStretchAccess,
   type AccessReason,
   type AccessRecord,
@@ -322,6 +324,118 @@ describe("with no reading", () => {
     });
     expect(status.state).toBe("open");
     expect(rule(status).official).toEqual({ kind: "none" });
+  });
+});
+
+describe("official status and flows fail apart (#211)", () => {
+  const down = { status: "failed" } as const;
+
+  it("with the SPW down, the flows still decide", () => {
+    const low = accessAt(onWalloonAllYear, rules, { date: today, today, flows: flows(1, 10), official: down });
+    expect(low.state).toBe("closed-today");
+    expect(rule(low).closedBy).toBe("low-flow");
+    expect(rule(low).flow).toBeDefined();
+  });
+
+  it("with the flows down, the SPW still decides", () => {
+    const closed = accessAt(onWalloonAllYear, rules, {
+      date: today,
+      today,
+      flows: down,
+      official: official({ code: "0", reasonFr: "Travaux" }),
+    });
+    expect(closed.state).toBe("closed-today");
+    expect(rule(closed)).toMatchObject({ closedBy: "official", official: { kind: "closed", reason: "Travaux" } });
+
+    const open = accessAt(onWalloonAllYear, rules, { date: today, today, flows: down, official: official({ code: "1" }) });
+    expect(open.state).toBe("open");
+    expect(officialNotChecked(open)).toEqual([]);
+  });
+
+  it("with both down the status is unknown, and it says official closures weren't checked", () => {
+    const status = accessAt(onWalloonAllYear, rules, { date: today, today, flows: down, official: down });
+    expect(status.state).toBe("unknown");
+    expect(officialNotChecked(status)).toEqual(["closures"]);
+  });
+});
+
+describe("what wasn't checked with the SPW (#211)", () => {
+  const context = { date: today, today, flows: flows(5, 10) };
+
+  it("is the official closures when the service failed", () => {
+    expect(officialNotChecked(accessAt(onWalloonAllYear, rules, { ...context, official: { status: "failed" } }))).toEqual([
+      "closures",
+    ]);
+  });
+
+  it("is the official closures when the answer leaves the stretch out", () => {
+    const status = accessAt(onWalloonAllYear, rules, { ...context, official: { status: "ok", stretches: {} } });
+    expect(officialNotChecked(status)).toEqual(["closures"]);
+  });
+
+  it("names the closures once, however many stretches a status covers", () => {
+    const status = combineAccess([
+      accessAt(onWalloonAllYear, rules, { ...context, official: { status: "failed" } }),
+      accessAt(onWalloonWinter, rules, { ...context, official: { status: "failed" } }),
+    ]);
+    expect(status.reasons).toHaveLength(2);
+    expect(officialNotChecked(status)).toEqual(["closures"]);
+  });
+
+  it("is nothing with a reading", () => {
+    expect(officialNotChecked(onAllYear({ code: "1" }))).toEqual([]);
+  });
+
+  it("is nothing while the reading is on its way", () => {
+    expect(officialNotChecked(accessAt(onWalloonAllYear, rules, { ...context, officialPending: true }))).toEqual([]);
+  });
+
+  it("is nothing on a stretch the SPW doesn't list", () => {
+    const status = accessAt(onWalloonAllYear, unlistedRules, { ...context, official: { status: "failed" } });
+    expect(officialNotChecked(status)).toEqual([]);
+  });
+
+  it("is the official closures on a future date too, as a closure today can't be known then", () => {
+    const status = accessAt(onWalloonAllYear, rules, { ...context, date: "2026-11-20", official: { status: "failed" } });
+    expect(status.state).toBe("open");
+    expect(officialNotChecked(status)).toEqual(["closures"]);
+  });
+
+  it("is the official closures on a future date when the answer leaves the stretch out", () => {
+    const status = accessAt(onWalloonAllYear, rules, { today, date: "2026-11-20", official: { status: "ok", stretches: {} } });
+    expect(officialNotChecked(status)).toEqual(["closures"]);
+  });
+
+  it("is nothing on a future date with a reading", () => {
+    const open = accessAt(onWalloonAllYear, rules, { today, date: "2026-11-20", official: official({ code: "1" }) });
+    expect(officialNotChecked(open)).toEqual([]);
+    const closed = accessAt(onWalloonAllYear, rules, { today, date: "2026-11-20", official: official({ code: "0" }) });
+    expect(officialNotChecked(closed)).toEqual([]);
+  });
+
+  it("is nothing on a future date while the reading is on its way", () => {
+    const status = accessAt(onWalloonAllYear, rules, { today, date: "2026-11-20", officialPending: true });
+    expect(officialNotChecked(status)).toEqual([]);
+  });
+
+  it("is nothing on a future date on a stretch the SPW doesn't list", () => {
+    const status = accessAt(onWalloonAllYear, unlistedRules, { today, date: "2026-11-20", official: { status: "failed" } });
+    expect(officialNotChecked(status)).toEqual([]);
+  });
+
+  it("is nothing on a past date", () => {
+    const status = accessAt(onWalloonAllYear, rules, { today, date: "2026-10-20", official: { status: "failed" } });
+    expect(officialNotChecked(status)).toEqual([]);
+  });
+
+  it("leaves a future date's status rule-based", () => {
+    const status = accessAt(onWalloonAllYear, rules, { today, date: "2026-11-20", official: { status: "failed" } });
+    expect(rule(status).closedToday).toBeUndefined();
+    expect(rule(status).flow).toBeUndefined();
+  });
+
+  it("is nothing outside every region with rules", () => {
+    expect(officialNotChecked({ state: "unknown", reasons: [{ kind: "no-rule", state: "unknown" }] })).toEqual([]);
   });
 });
 

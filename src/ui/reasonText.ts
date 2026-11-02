@@ -1,8 +1,13 @@
 import type { AccessReason, AccessStatus } from "@/core/access";
-import type { OfficialClosedVerdict } from "@/core/officialStatus";
+import type { OfficialCheck, OfficialClosedVerdict } from "@/core/officialStatus";
 import { strings } from "./strings";
 
 type RuleReason = Extract<AccessReason, { kind: "rule" }>;
+
+/** What wasn't checked with the SPW, in words (#211); empty when everything was. */
+export function notCheckedText(checks: readonly OfficialCheck[]): string {
+  return checks.map((check) => strings.official.notChecked[check]).join(" ");
+}
 
 /** Why the SPW closed a stretch, in words. */
 function closedWhy({ cause, reason }: OfficialClosedVerdict): string {

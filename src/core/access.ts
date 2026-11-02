@@ -13,7 +13,13 @@ import {
   type Geometry,
   type Position,
 } from "./geo";
-import { officialCheck, type OfficialClosedVerdict, type OfficialReadings, type OfficialVerdict } from "./officialStatus";
+import {
+  officialCheck,
+  type OfficialCheck,
+  type OfficialClosedVerdict,
+  type OfficialReadings,
+  type OfficialVerdict,
+} from "./officialStatus";
 import type { LatLng } from "./trip";
 
 export type { Geometry, Position } from "./geo";
@@ -166,7 +172,10 @@ export type AccessReason =
       readonly flowDependent?: true;
       /** Walloon stretches on today's date: the live flow figures behind the status (#61). */
       readonly flow?: FlowFigures;
-      /** Walloon stretches on today's date: what the official status says, once known (ADR 0035, #210). */
+      /**
+       * Walloon stretches on today's date: what the official status says, once known (ADR 0035, #210).
+       * On a future date, only `unavailable`: there was no reading to note a closure today from (#211).
+       */
       readonly official?: OfficialVerdict;
       /** Walloon stretches on a future date: the SPW has closed it today, which may still apply then (#212). */
       readonly closedToday?: OfficialClosedVerdict;
@@ -269,6 +278,8 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
   const isFuture = date !== undefined && today !== undefined && date > today;
   const verdictToday = isFuture ? officialCheck(rule.officialStretch, context.official) : undefined;
   const closedToday = verdictToday?.kind === "closed" ? verdictToday : undefined;
+  // With no reading a closure today can't be known, so a future date is marked like today (#211).
+  const unavailableToday = verdictToday?.kind === "unavailable" ? verdictToday : undefined;
   // With a reading (or one on its way), the official status replaces the flow check; the figures stay on show.
   const flowDecides = !officialPending && (!official || official.kind === "none" || official.kind === "unavailable");
   const figures = verdict.kind === "not-checked" ? undefined : verdict.figures;
@@ -338,9 +349,20 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     flowDependent: true,
     ...(figures && { flow: figures }),
     ...(official && { official }),
+    ...(unavailableToday && { official: unavailableToday }),
     ...(closedToday && { closedToday }),
   };
   return { state, reasons: [reason] };
+}
+
+/**
+ * What this status couldn't check with the SPW (#211): the computed status stood in
+ * for a reading on today's date, or on a future date a closure today can't be known.
+ * Empty with a reading, while one loads, on a past date, and on water with no official stretch.
+ */
+export function officialNotChecked(status: AccessStatus): readonly OfficialCheck[] {
+  const unavailable = status.reasons.some((reason) => reason.kind === "rule" && reason.official?.kind === "unavailable");
+  return unavailable ? ["closures"] : [];
 }
 
 /**

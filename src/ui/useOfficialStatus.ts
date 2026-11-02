@@ -24,6 +24,8 @@ export function useOfficialStatus(rules: AccessRules | null, wanted: boolean): O
     let cancelled = false;
     void statusSource()
       .then((source) => source.readings())
+      // The adapter never throws, but its chunk can fail to load when offline: that is no reading either.
+      .catch((): OfficialReadings => ({ status: "failed" }))
       .then((readings) => {
         if (!cancelled) setOfficial(readings);
       });

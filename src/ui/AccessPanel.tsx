@@ -1,4 +1,11 @@
-import type { AccessFeature, AccessReason, AccessState, AccessStatus, LockMarker } from "@/core/access";
+import {
+  officialNotChecked,
+  type AccessFeature,
+  type AccessReason,
+  type AccessState,
+  type AccessStatus,
+  type LockMarker,
+} from "@/core/access";
 import { accessPointUses, type AccessPointUse } from "@/core/accessPoints";
 import { obstacleKinds, type Obstacle, type ObstacleKind } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
@@ -9,7 +16,7 @@ import { Icon } from "./icons/Icon";
 import { icons, obstacleIcons } from "./icons/icons";
 import { reasonText, statusReasonTexts } from "./reasonText";
 import { accessStateLabel, strings } from "./strings";
-import { StatusIcon } from "./TripAccessView";
+import { OfficialNotCheckedNote, StatusIcon } from "./TripAccessView";
 import "./AccessPanel.css";
 
 const states: readonly Exclude<AccessState, "checking">[] = ["open", "closed-today", "forbidden", "unknown"];
@@ -217,6 +224,7 @@ export function OfficialAireDetail({
         </p>
       )}
       <StatusLine state={status?.state ?? "checking"} date={date} className="access-aire-status" />
+      {status && <OfficialNotCheckedNote checks={officialNotChecked(status)} />}
       {status && statusReasonTexts(status).map((reason) => <p key={reason}>{reason}</p>)}
       <p>{text.lastChanged(aire.lastChanged)}</p>
       <p className="access-source">
@@ -270,6 +278,7 @@ export function AccessDetail({
   return (
     <div className="access-detail">
       <StatusLine state={status.state} date={date} />
+      <OfficialNotCheckedNote checks={officialNotChecked(status)} />
       <ul className="access-reasons">
         {status.reasons.map((reason, i) => (
           <Reason key={i} reason={reason} />

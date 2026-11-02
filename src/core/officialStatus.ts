@@ -46,6 +46,9 @@ export type OfficialVerdict =
   | { readonly kind: "unavailable" }
   | { readonly kind: "none" };
 
+/** What the app asks the SPW and may have to go without, today or on a future date (#211): the note names each one. */
+export type OfficialCheck = "closures";
+
 /** A stretch the SPW has closed today, with its reason if it gives one. */
 export type OfficialClosedVerdict = Extract<OfficialVerdict, { kind: "closed" }>;
 

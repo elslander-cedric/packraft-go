@@ -1,8 +1,9 @@
-import type { AccessState } from "@/core/access";
+import { officialNotChecked, type AccessState } from "@/core/access";
 import type { AireWarning } from "@/core/aire";
 import type { LockWarning } from "@/core/locks";
 import type { LegWarnings } from "@/core/dayWarnings";
 import { obstacleGroups, type ObstacleWarning } from "@/core/obstacle";
+import type { OfficialCheck } from "@/core/officialStatus";
 import type { AccessNote, AccessSummary, AccessWarning, LegAccess } from "@/core/tripAccess";
 import { accessColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
@@ -10,7 +11,7 @@ import { FlowFiguresView } from "./FlowFiguresView";
 import { formatDayDate } from "./format";
 import { Icon } from "./icons/Icon";
 import { icons, type IconDefinition } from "./icons/icons";
-import { reasonText } from "./reasonText";
+import { notCheckedText, reasonText } from "./reasonText";
 import { accessStateLabel, strings } from "./strings";
 import "./TripAccessView.css";
 
@@ -101,6 +102,20 @@ function Note({ note }: { note: AccessNote }) {
   );
 }
 
+/** How far to trust a status with no official reading behind it (#211), with a link to the SPW. */
+export function OfficialNotCheckedNote({ checks }: { checks: readonly OfficialCheck[] }) {
+  if (checks.length === 0) return null;
+  const { title, url } = strings.official.notCheckedLink;
+  return (
+    <p className="access-not-checked">
+      {`${notCheckedText(checks)} `}
+      <a href={url} target="_blank" rel="noreferrer">
+        {title}
+      </a>
+    </p>
+  );
+}
+
 /** Lock warnings (#60): "lock at X: portage required", with the region's rule source. Never blocks. */
 function LockWarnings({ warnings }: { warnings: readonly LockWarning[] }) {
   if (warnings.length === 0) return null;
@@ -174,6 +189,7 @@ export function LegAccessView({ access }: { access: LegAccess }) {
           ? strings.tripAccess.legStatusInGeneral(state)
           : strings.tripAccess.legStatusOn(formatDayDate(date), state)}
       </p>
+      <OfficialNotCheckedNote checks={officialNotChecked(status)} />
       {generalRules.length > 0 && (
         <div className="leg-access-rules">
           {generalRules.map((reason) => (

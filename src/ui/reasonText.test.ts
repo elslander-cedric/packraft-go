@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { AccessReason, AccessState } from "@/core/access";
 import type { OfficialVerdict } from "@/core/officialStatus";
-import { reasonText, statusReasonTexts } from "./reasonText";
+import { notCheckedText, reasonText, statusReasonTexts } from "./reasonText";
 
 type RuleReason = Extract<AccessReason, { kind: "rule" }>;
 
@@ -113,7 +113,17 @@ describe("a reason's text", () => {
     expect(reasonText(high)).toBe("Rule text. Officially closed today, says the SPW: high water. Crue");
   });
 
-  it("adds nothing yet when the official status is unavailable", () => {
+  it("leaves an unavailable official status to the note that goes with it", () => {
     expect(reasonText(reason("open", { kind: "unavailable" }))).toBe("Rule text.");
+  });
+});
+
+describe("the note on what wasn't checked with the SPW (#211)", () => {
+  it("is empty when everything was checked", () => {
+    expect(notCheckedText([])).toBe("");
+  });
+
+  it("says official closures weren't checked", () => {
+    expect(notCheckedText(["closures"])).toBe("Official closures weren't checked, so the SPW may have closed this stretch.");
   });
 });
