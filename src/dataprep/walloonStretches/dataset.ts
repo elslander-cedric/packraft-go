@@ -30,10 +30,13 @@ export const KIWIS_STATIONS: Readonly<Record<string, string>> = {
 /** The most likely station, not a confirmed one (ADR 0024; Martinrive and Gendron added 2026-10-13). */
 export const ASSUMED_GAUGES: readonly string[] = ["Martelange", "Membre", "Martinrive", "Gendron"];
 
-/** Annex 2 gauges with no KiWIS station: flow status is unknown (ADR 0024). */
-export const GAUGES_WITHOUT_STATION: Readonly<Record<string, string>> = {
-  Wanlin:
-    "Annex 2 names the Wanlin gauge, but KiWIS has no Wanlin station on the Lesse, so flow status is unknown. Season and hours still apply.",
+/**
+ * Annex 2 gauges with no KiWIS station, and the gauge the SPW itself uses there
+ * (`station` on kayak.spw.wallonie.be, #205). Annex 2 says otherwise, so these are
+ * marked as SPW practice.
+ */
+export const SPW_PRACTICE_GAUGES: Readonly<Record<string, { name: string; stationNo: string }>> = {
+  Wanlin: { name: "Hérock", stationNo: "L6610" },
 };
 
 export const RESEARCH_DATE = "2026-10-12";
@@ -44,7 +47,14 @@ export const SOURCES = {
   geometry: "OpenStreetMap contributors (ODbL), prepared offline by scripts/walloon-stretches",
 };
 
-export type Gauge = { name: string; stationNo: string; assumed: boolean };
+export type Gauge = { name: string; stationNo: string; assumed: boolean; spwPractice?: true };
+
+function gaugeFor(annex2Name: string): Gauge | null {
+  const practice = SPW_PRACTICE_GAUGES[annex2Name];
+  if (practice) return { ...practice, assumed: false, spwPractice: true };
+  const stationNo = KIWIS_STATIONS[annex2Name];
+  return stationNo ? { name: annex2Name, stationNo, assumed: ASSUMED_GAUGES.includes(annex2Name) } : null;
+}
 
 export type ShippedStretch = Omit<DraftStretch, "annex2Gauge"> & {
   gauge: Gauge | null;
@@ -79,11 +89,11 @@ export function toDataset(
     sources: SOURCES,
     stretches: stretches.map(({ annex2Gauge, ...rest }) => {
       const name = annex2Gauge ?? "";
-      const stationNo = KIWIS_STATIONS[name];
+      const gauge = gaugeFor(name);
       return {
         ...rest,
-        gauge: stationNo ? { name, stationNo, assumed: ASSUMED_GAUGES.includes(name) } : null,
-        ...(stationNo ? {} : { noGaugeNote: GAUGES_WITHOUT_STATION[name] ?? `No KiWIS station for the ${name} gauge.` }),
+        gauge,
+        ...(gauge ? {} : { noGaugeNote: `No KiWIS station for the ${name} gauge.` }),
         source: `AGW 19 March 2009, Annex 1 (${SOURCES.annex1}) and Annex 2 (${SOURCES.annex2}); geometry © OpenStreetMap contributors`,
         researchDate: RESEARCH_DATE,
       };

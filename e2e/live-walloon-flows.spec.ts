@@ -20,6 +20,8 @@ const FAILING = () => ({ status: 503, body: "" });
 const SEMOIS = "walloon-1B4c";
 /** The Amblève from the Warche confluence (1.B, gauge Stavelot): within its limits. */
 const AMBLEVE = "walloon-1B1a";
+/** The Lesse from Han to Houyet (1.C, open in October): Hérock isn't in the recording. */
+const LESSE_HAN_HOUYET = "walloon-1C2b";
 
 test.use({ viewport: { width: 1400, height: 900 }, timezoneId: "Europe/Brussels" });
 
@@ -95,6 +97,38 @@ test("a flow-dependent stretch shows unknown today when the service fails, with 
   // A failure is cached: the service isn't asked again and again.
   expect(network.kiwis).toHaveLength(1);
   expect(network.blocked).toEqual([]);
+});
+
+test("a flow request that hangs ends in unknown, not Checking flow, and isn't asked again (#205)", async ({ page }) => {
+  // Time runs on the page's own clock here, so the timeout can be reached without waiting for it.
+  await page.clock.install({ time: RECORDED_AT });
+  const hung = delayedKiwis(RECORDED); // Never released.
+  const network = await serveOffline(page, { kiwis: hung.kiwis });
+  await openAccessLayer(page);
+
+  await expect(water(page, SEMOIS)).toHaveClass(/access-checking/);
+  await expect.poll(() => network.kiwis.length).toBe(1);
+  await page.clock.fastForward("00:16");
+  await expect(water(page, SEMOIS)).toHaveClass(/access-unknown/);
+  await holdWater(page, SEMOIS);
+  await expect(detail(page)).toContainText("Flow unknown: the live flow service is unavailable");
+  await expect(detail(page)).not.toContainText(strings.accessChecking);
+  expect(network.kiwis).toHaveLength(1);
+  expect(network.blocked).toEqual([]);
+});
+
+test("the Lesse from Han to Houyet uses Hérock, marked as SPW practice, and has no readings in the recording (#205)", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(RECORDED_AT);
+  await serveOffline(page, { kiwis: RECORDED });
+  await openAccessLayer(page);
+
+  await holdWater(page, LESSE_HAN_HOUYET);
+  const panel = detail(page);
+  await expect(panel).toContainText(strings.flow.gaugeSpwPractice("Hérock"));
+  await expect(panel).toContainText(strings.flow.noReadings);
+  await expect(water(page, LESSE_HAN_HOUYET)).toHaveClass(/access-unknown/);
 });
 
 /** A paddle leg along the Semois (stretch 1.B.4c), dated today. */

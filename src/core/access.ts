@@ -31,6 +31,8 @@ export type AgwGauge = {
   readonly stationNo: string;
   /** True when the match to Annex 2 is a best guess (ADR 0024); #61 shows it as assumed. */
   readonly assumed: boolean;
+  /** True when this is the gauge the SPW uses, not the one Annex 2 names (#205). */
+  readonly spwPractice?: boolean;
 };
 
 /**
@@ -44,7 +46,7 @@ export type AgwRule = {
   /** Annex 2 minimum flow (72-hour mean), or null when none is set. */
   readonly minM3s: number | null;
   readonly maxM3s: number;
-  /** The Annex 2 gauge, or null when no gauge matches (Wanlin). */
+  /** The Annex 2 gauge, or null when no gauge matches. */
   readonly gauge: AgwGauge | null;
   readonly link?: AccessSource;
 };

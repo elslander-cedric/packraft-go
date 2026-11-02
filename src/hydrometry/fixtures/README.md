@@ -28,5 +28,9 @@ stale data (the same answer, read a day later).
 `e2e/support/offline.ts` replays these files with `kiwisFixtures(...)`; the e2e
 tests set the page's clock to the recording's morning.
 
+The recording is older than the Hérock gauge (L6610, #205), so it holds 21 of the
+app's 22 gauges. Tests rely on that: the Lesse from Han to Houyet reads as a gauge
+with no recent readings. Nobody has yet seen L6610's answer from KiWIS.
+
 #64 adds a manual contract check against the live service; re-record by hand
 only when it reports a mismatch.

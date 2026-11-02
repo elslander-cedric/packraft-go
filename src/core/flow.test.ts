@@ -118,7 +118,7 @@ describe("flow check (AGW art. 6)", () => {
     });
   });
 
-  it("is unknown without a matching gauge (Wanlin)", () => {
+  it("is unknown without a matching gauge", () => {
     expect(
       flowCheck(rule({ gauge: null }), ok(gauge(5, 10)), today),
     ).toMatchObject({ kind: "unknown", why: "no-gauge" });

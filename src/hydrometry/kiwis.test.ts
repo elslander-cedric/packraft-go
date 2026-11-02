@@ -75,6 +75,9 @@ const stretches = (builtIn as unknown as { stretches: (Stretch & { id: string; c
   .stretches;
 const rules: AgwRule[] = stretches.map((s) => ({ type: "agw", category: s.category, minM3s: s.minM3s, maxM3s: s.maxM3s, gauge: s.gauge }));
 const stations = gaugeStations(rules);
+/** The recording is older than the Hérock gauge (#205): it has the other 21 gauges. */
+const HEROCK = "L6610";
+const recordedStations = stations.filter((s) => s !== HEROCK);
 
 describe("KiWIS requests", () => {
   it("resolves both series of every gauge in one request, and reads all their values in one more", async () => {
@@ -88,7 +91,7 @@ describe("KiWIS requests", () => {
     expect(list.searchParams.get("ts_name")).toBe(`${MEAN_72H_SERIES},${HOURLY_SERIES}`);
     expect(values.searchParams.get("request")).toBe("getTimeseriesValues");
     // Every series the list named: two per gauge.
-    expect(values.searchParams.get("ts_id")!.split(",")).toHaveLength(2 * stations.length);
+    expect(values.searchParams.get("ts_id")!.split(",")).toHaveLength(2 * recordedStations.length);
   });
 
   it("builds the URLs the recorded fixtures answered", () => {
@@ -102,7 +105,7 @@ describe("KiWIS answers", () => {
     const readings = await fakeServer().source.readings(stations);
     expect(readings.status).toBe("ok");
     if (readings.status !== "ok") return;
-    expect(Object.keys(readings.gauges).sort()).toEqual(stations);
+    expect(Object.keys(readings.gauges).sort()).toEqual(recordedStations);
     for (const gauge of Object.values(readings.gauges)) {
       expect(gauge.mean72h.length).toBeGreaterThan(0);
       expect(gauge.hourly.length).toBeGreaterThan(0);
@@ -137,6 +140,18 @@ describe("KiWIS answers", () => {
     expect(readings.status === "ok" && readings.gauges["L0000"]).toBeFalsy();
     const rule: AgwRule = { type: "agw", category: "1.C", minM3s: null, maxM3s: 5, gauge: { name: "Nowhere", stationNo: "L0000", assumed: false } };
     expect(flowCheck(rule, readings, RECORDED_ON)).toMatchObject({ kind: "unknown", why: "missing" });
+  });
+
+  it("asks for Hérock, and if KiWIS has no series for it the Lesse from Han to Houyet says so, as any missing gauge (#205)", async () => {
+    expect(stations).toContain(HEROCK);
+    const readings = await fakeServer().source.readings(stations);
+    const lesse = stretches.find((s) => s.id === "1C2b")!;
+    const rule = rules[stretches.indexOf(lesse)]!;
+    expect(flowCheck(rule, readings, RECORDED_ON)).toMatchObject({
+      kind: "unknown",
+      why: "missing",
+      figures: { gauge: { name: "Hérock" } },
+    });
   });
 
   it("an empty series list asks for no values", async () => {

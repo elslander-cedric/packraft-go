@@ -353,7 +353,7 @@
   "annex2Gauge": "Wanlin",
   "minM3s": null,
   "maxM3s": 47,
-  "note": "No KiWIS station named Wanlin on the Lesse (see hydrometry.md)."
+  "note": "Annex 2 names Wanlin, but KiWIS has no Wanlin station on the Lesse; the SPW uses Hérock (L6610)."
  },
  {
   "id": "1C2c",
