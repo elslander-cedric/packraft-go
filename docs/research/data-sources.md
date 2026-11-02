@@ -1,22 +1,23 @@
 # Data sources for access rules, routes and waterways
 
-Researched 2026-10-12. This decides what packraft-go can *show* versus only *link to*. All services must stay free (ADR 0012).
+Researched 2026-10-12, updated 2026-11-02 from [kayak-spw-access-points.md](kayak-spw-access-points.md) and the SPW's permission (ADR 0035). This decides what packraft-go can *show* versus only *link to*. All services must stay free (ADR 0012).
 
 ## Summary
 
 | Data | Machine-readable? | Licence | Usable in the app? |
 |---|---|---|---|
-| Walloon live river status (kayak.spw.wallonie.be) | No public API found | No terms published | **No**, unless the SPW agrees to a feed |
-| Walloon stretches + put-in/take-out points (Metawal dataset) | Shapefile / FGDB, from 2014 | Restricted; redistribution forbidden | **No** |
+| Walloon live river status (kayak.spw.wallonie.be) | **Yes**: public `PKAYAK` ArcGIS service, no key, any origin. Uncatalogued and undocumented | SPW terms: no redistribution without written agreement | **Yes**: the SPW gave permission on 2026-11-02 (ADR 0035) |
+| Walloon aires and stretch lines (`PKAYAK` layers 3 and 5) | **Yes**, same service | Same | **Yes, as a built-in snapshot** (ADR 0035) |
+| Walloon stretches + put-in/take-out points (Metawal dataset) | Shapefile / FGDB, from 2014 | Restricted; redistribution forbidden | **No**, and not needed: `PKAYAK` has the same kind of data and is fresher |
 | Walloon rules (AGW 2009, annexes) | Public legal text (PDF), **now extracted** to [data/walloon-stretches.json](data/walloon-stretches.json) | Public law | **Yes**. Stretch ends still need placing on the map (about 45 landmarks, 2–4 h of curation) |
-| Walloon hydrometry (live river flows) | **Yes**: public KiWIS JSON API, no key, CORS open | No named licence; attribution required; publishing needs the SPW's written agreement | **Technically yes; legally needs SPW permission.** See [hydrometry.md](hydrometry.md) |
+| Walloon hydrometry (live river flows) | **Yes**: public KiWIS JSON API, no key, CORS open | No named licence; attribution required; publishing needs the SPW's written agreement | **Yes**: the SPW has no objection (ADR 0022). See [hydrometry.md](hydrometry.md) |
 | Sport Vlaanderen routes (RouteYou) | Internal API only | No open licence found | **No**, without permission |
 | Flemish waterway network (De Vlaamse Waterweg RIS-index) | WFS/WMS | Modellicentie Gratis Hergebruik (open) | **Yes** |
 | Flemish rules (forbidden waters, ports, lock ban) | Prose only | Public | **Yes**, if encoded by hand. A short list, since non-navigable rivers are allowed by default |
 | Flemish river categories and managers (VHA Waterlopen) | WFS | Open Data Licentie Vlaanderen | **Yes** |
 | OpenStreetMap paddling tags in Belgium | Yes (Overpass) | ODbL (open) | Too sparse to rely on; locks and waterway classes are usable |
 
-**Conclusion:** there's no ready-made open feed for "can I paddle here today?". But the Walloon status **can be computed in the browser**: encode the AGW rules ourselves (stretch list, categories, seasons, hours, thresholds) and combine them with **live flows from the public KiWIS API**, which needs no key and allows CORS. This covers about 25 of 26 stretches. The forecast rule and ad-hoc closures can't be computed, and **publishing the derived status needs written permission from the SPW**. See [hydrometry.md](hydrometry.md).
+**Conclusion:** the first answer here was that there's no feed for "can I paddle here today?", so the Walloon status had to be **computed in the browser**: encode the AGW rules ourselves (stretch list, categories, seasons, hours, thresholds) and combine them with **live flows from the public KiWIS API**. That still works as the fallback, but the forecast rule and ad-hoc closures can't be computed. The 2026-11-01 research found the SPW's own status in the public `PKAYAK` service, and the SPW has since allowed the app to read it (ADR 0035). See [hydrometry.md](hydrometry.md) and [kayak-spw-access-points.md](kayak-spw-access-points.md).
 
 ## Details
 
@@ -27,11 +28,12 @@ Researched 2026-10-12. This decides what packraft-go can *show* versus only *lin
   - format: Shapefile and FGDB, Belgian Lambert 72 coordinates (EPSG:31370)
   - last revised 1 June 2014, updated "irregularly"
   - access is **Restricted** (public bodies, contractors, research), and the SPW terms forbid redistributing it or publishing it as a web service
+  - the app doesn't use this dataset: its aires and stretch lines come from `PKAYAK`, under the permission in ADR 0035
 - **kayak.spw.wallonie.be (live status):**
   - a web app with an embedded ArcGIS map
-  - no public JSON endpoint was found in its HTML or JavaScript, and no terms of use are shown
-  - there's no kayak layer in the public map services ([geoservices.wallonie.be](https://geoservices.wallonie.be/arcgis/rest/services/MOBILITE/VOIESNAVIGABLES/MapServer) only has navigable waterways and hydrographic atlases)
-  - scraping it would very likely go against the SPW's terms; ask info.kayak@spw.wallonie.be instead
+  - it does have public endpoints, which the first research missed. Its own REST API has no CORS. The [`PKAYAK` map service](https://geoservices3.wallonie.be/arcgis/rest/services/APP_KAYAK/PKAYAK/MapServer) on `geoservices3.wallonie.be` has aires, stretches with status, obstacles and incidents, needs no key and allows any origin. Details: [kayak-spw-access-points.md](kayak-spw-access-points.md)
+  - no terms of use are shown on the site, and the service has no Metawal record of its own
+  - the app reads it under the permission in ADR 0035, and doesn't scrape the REST API
 - **Hydrographic atlases:** `EAU/ATLAS_HYDRO` and `EAU/RES_HYDRO_WAL` are public map services ([geoservices.wallonie.be/EAU](https://geoservices.wallonie.be/arcgis/rest/services/EAU)). **[UNVERIFIED]:** their licence. Many SPW datasets are CC BY 4.0.
 - **Hydrometry (live flows):** checked. hydrometrie.wallonie.be has a public KiWIS JSON API with 72-hour mean and hourly flows per gauge, no key and open CORS. Attribution is required, and publishing the data needs the SPW's written agreement. Full details, request patterns and the gauge mapping are in [hydrometry.md](hydrometry.md).
 
@@ -64,5 +66,5 @@ These counts are far too sparse to base access rules on. `CEMT` and lock tags ar
 
 1. ~~Check the Walloon hydrometry API.~~ Done: see [hydrometry.md](hydrometry.md).
 2. ~~Get AGW Annex 2.~~ Done: all 26 stretches with gauges and thresholds are in [hydrometry.md](hydrometry.md#5-gauge-coverage-agw-annex-2-mapped-to-kiwis). Annex 1 (river list and categories) is at [wallex 6393.pdf](https://wallex.wallonie.be/files/medias/0/6393.pdf) and still needs extracting.
-3. **Ask the SPW for written permission** to show flows and a derived status, and ask which gauge is used for Wanlin (Lesse). Contacts: [hydrometrie.wallonie.be/contact](https://hydrometrie.wallonie.be/contact.html) and info.kayak@spw.wallonie.be. Sending the email is Cedric's call.
+3. ~~Ask the SPW for written permission to show flows and a derived status, and ask which gauge is used for Wanlin (Lesse).~~ Done: see ADRs 0022 and 0035. The SPW's own data shows Hérock in place of Wanlin.
 4. Check the Visuris port regulations and the Flemish rules for non-navigable rivers, to close the open questions in [access-rules.md](access-rules.md).
