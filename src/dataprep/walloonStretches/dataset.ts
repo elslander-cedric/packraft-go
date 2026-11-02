@@ -63,12 +63,20 @@ export type ShippedStretch = Omit<DraftStretch, "annex2Gauge"> & {
   researchDate: string;
 };
 
+export type DatasetReview = {
+  reviewedBy: string;
+  reviewedAt: string;
+  decisions: number;
+  /** The official split boundaries (#209) not reviewed yet: the data ships them but nobody has confirmed them. */
+  pending?: string[];
+};
+
 export type WalloonStretchDataset = {
   dataset: "walloon-stretches";
   formatVersion: 1;
   researchDate: string;
   /** Who reviewed the uncertain end points, and when (the review page, #54). */
-  review?: { reviewedBy: string; reviewedAt: string; decisions: number };
+  review?: DatasetReview;
   credit: string;
   licence: string;
   sources: typeof SOURCES;
@@ -77,7 +85,7 @@ export type WalloonStretchDataset = {
 
 export function toDataset(
   stretches: readonly DraftStretch[],
-  review?: { reviewedBy: string; reviewedAt: string; decisions: number },
+  review?: DatasetReview,
 ): WalloonStretchDataset {
   return {
     dataset: "walloon-stretches",

@@ -145,7 +145,7 @@ describe("KiWIS answers", () => {
   it("asks for Hérock, and if KiWIS has no series for it the Lesse from Han to Houyet says so, as any missing gauge (#205)", async () => {
     expect(stations).toContain(HEROCK);
     const readings = await fakeServer().source.readings(stations);
-    const lesse = stretches.find((s) => s.id === "1C2b")!;
+    const lesse = stretches.find((s) => s.id === "1C2b-2")!;
     const rule = rules[stretches.indexOf(lesse)]!;
     expect(flowCheck(rule, readings, RECORDED_ON)).toMatchObject({
       kind: "unknown",

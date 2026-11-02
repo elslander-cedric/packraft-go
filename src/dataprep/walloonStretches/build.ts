@@ -45,6 +45,10 @@ export type DraftStretch = AnnexRow & {
   /** Along the river, downstream; [lng, lat] pairs like GeoJSON. */
   line: Array<[number, number]>;
   lengthKm: number;
+  /** The SPW stretch it lies on, set by official.ts; absent where the SPW lists none. */
+  officialStretch?: string;
+  /** On a piece of a split record: the record's id, the Annex row's (several rows can share an annex1Ref). */
+  splitOf?: string;
 };
 
 /** A review decision for one end, keyed "1A1.from". The position is always recorded. */

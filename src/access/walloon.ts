@@ -25,6 +25,7 @@ export type WalloonStretchData = {
     readonly noGaugeNote?: string;
     readonly minM3s: number | null;
     readonly maxM3s: number;
+    readonly officialStretch?: string;
     readonly note?: string;
     readonly researchDate: string;
   }[];
@@ -57,6 +58,7 @@ export function walloonDataset(data: WalloonStretchData): AccessDataset {
         minM3s: stretch.minM3s,
         maxM3s: stretch.maxM3s,
         gauge: stretch.gauge && { ...stretch.gauge },
+        ...(stretch.officialStretch && { officialStretch: stretch.officialStretch }),
         link: KAYAK_LINK,
       },
       geometry: { type: "LineString", coordinates: stretch.line.map(([lng, lat]) => [lng, lat] as const) },

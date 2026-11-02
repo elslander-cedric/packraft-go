@@ -1,14 +1,17 @@
 // Local review page for the Walloon stretch end points (#54).
 // Run with `npm run review:walloon-stretches`, then open http://localhost:3461.
-// Manual only. Uses cached OSM data (run `npm run data:walloon-stretches` first).
+// Manual only. Uses cached OSM data when `npm run data:walloon-stretches` has made it. Without
+// it the page works from the shipped lines, which is all the official boundaries need (#209).
 // Every confirm or move is written straight to docs/research/data/walloon-stretches-review.json,
-// and the stretches are rebuilt from the cache so the page shows the result.
+// and the stretches are rebuilt so the page shows the result.
 import { createReadStream } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
+import { mappingNotes } from "../../src/dataprep/walloonStretches/official";
+import { RIVERS } from "../../src/dataprep/walloonStretches/rivers";
 import { ROOT } from "./osmCache";
-import { buildDataset, readReview, writeReview } from "./pipeline";
+import { buildDataset, readReview, readSpwLines, writeReview } from "./pipeline";
 
 const PORT = Number(process.env.REVIEW_PORT ?? 3461);
 const PAGE = path.join(ROOT, "scripts", "walloon-stretches", "review.html");
@@ -19,10 +22,24 @@ const json = (res: ServerResponse, status: number, body: unknown) => {
   res.end(JSON.stringify(body));
 };
 
+/** One cached answer per river, plus the national border. */
+const osmCached = await readdir(path.join(ROOT, ".cache", "osm"))
+  .then((files) => files.length > RIVERS.length)
+  .catch(() => false);
+
 async function state() {
-  const { draft, needingReview, problems, finalPath } = await buildDataset({ offline: true });
+  const { draft, needingReview, problems, finalPath } = await buildDataset({ offline: true, shipped: !osmCached });
   const review = await readReview();
-  return { draft, needingReview, problems, finalWritten: Boolean(finalPath), decisions: review.decisions };
+  const { raw, lines } = await readSpwLines();
+  return {
+    draft,
+    needingReview,
+    problems,
+    finalWritten: Boolean(finalPath),
+    decisions: review.decisions,
+    spwLines: raw.stretches,
+    mappingNotes: mappingNotes(draft.stretches, lines),
+  };
 }
 
 async function body(req: IncomingMessage): Promise<unknown> {
@@ -36,7 +53,7 @@ type Decision = { id: string; action: "confirm" | "move" | "clear"; lat?: number
 const isDecision = (d: unknown): d is Decision => {
   if (!d || typeof d !== "object") return false;
   const x = d as Record<string, unknown>;
-  if (typeof x.id !== "string" || !/^[0-9][A-C][0-9][a-c]?\.(from|to)$/.test(x.id)) return false;
+  if (typeof x.id !== "string" || !/^[0-9][A-C][0-9][a-c]?(-[12])?\.(from|to)$/.test(x.id)) return false;
   if (x.action === "clear") return true;
   return (x.action === "confirm" || x.action === "move") && Number.isFinite(x.lat) && Number.isFinite(x.lng);
 };
@@ -81,5 +98,6 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`Walloon stretch review page: http://localhost:${PORT}`);
+  if (!osmCached) console.log("No OSM cache: using the shipped lines. Official boundaries work as usual; moving any other end needs `npm run data:walloon-stretches` first.");
   console.log("Stop with Ctrl+C.");
 });

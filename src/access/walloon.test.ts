@@ -9,8 +9,8 @@ const dataset = walloonDataset(stretches as unknown as Parameters<typeof walloon
 const walloon = dataset.records;
 
 describe("Walloon stretch records", () => {
-  it("has the 28 reviewed stretches, each with a source and research date", () => {
-    expect(walloon).toHaveLength(28);
+  it("has the 28 reviewed stretches, 4 of them split in two (#209), each with a source and research date", () => {
+    expect(walloon).toHaveLength(32);
     for (const r of walloon) {
       expect(r.scope).toBe("water");
       expect(r.source.url).toMatch(/^https:\/\//);
@@ -27,11 +27,44 @@ describe("Walloon stretch records", () => {
   });
 
   it("the Lesse from Han to Houyet keeps Hérock's SPW practice mark on its rule, as a confirmed gauge (#205)", () => {
-    const lesse = walloon.find((r) => r.id === "walloon-1C2b")!;
-    expect(lesse.rule).toMatchObject({
-      gauge: { name: "Hérock", stationNo: "L6610", assumed: false, spwPractice: true },
-    });
-    expect(lesse.unverified).toBeUndefined();
+    for (const piece of ["walloon-1C2b-1", "walloon-1C2b-2"]) {
+      const lesse = walloon.find((r) => r.id === piece)!;
+      expect(lesse.rule).toMatchObject({
+        gauge: { name: "Hérock", stationNo: "L6610", assumed: false, spwPractice: true },
+      });
+      expect(lesse.unverified).toBeUndefined();
+    }
+  });
+});
+
+describe("official stretch ids", () => {
+  const ruleOf = (over: object) => {
+    const stretch = {
+      id: "1X1",
+      category: "1.A",
+      river: "Test",
+      from: { en: "a" },
+      to: { en: "b" },
+      line: [
+        [5, 50],
+        [5.1, 50],
+      ],
+      gauge: null,
+      minM3s: null,
+      maxM3s: 10,
+      researchDate: "2026-10-12",
+      ...over,
+    };
+    const data = { researchDate: "2026-10-12", sources: { annex1: "https://example.org" }, stretches: [stretch] };
+    return walloonDataset(data as unknown as Parameters<typeof walloonDataset>[0]).records[0]!.rule;
+  };
+
+  it("carries a stretch's official stretch onto its rule (#209)", () => {
+    expect(ruleOf({ officialStretch: "SEMOIS2-3" })).toMatchObject({ officialStretch: "SEMOIS2-3" });
+  });
+
+  it("leaves it out for a stretch the SPW doesn't list (#209)", () => {
+    expect(ruleOf({})).not.toHaveProperty("officialStretch");
   });
 });
 
