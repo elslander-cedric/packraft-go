@@ -31,19 +31,25 @@ export type AccessLayer = {
   selectedLock: LockMarker | undefined;
   selectedAire: OfficialAire | undefined;
   selectedAireStretch: OfficialStretch | undefined;
+  /** The official aires once loaded, on or off: the Access points tab lists the ones on the route (#208). */
+  officialAires: readonly OfficialAire[];
 };
+
+const NO_AIRES: readonly OfficialAire[] = [];
 
 /**
  * The access layer's state for the planner: on or off,
  * the date (today unless another is picked, #59), the coloured waters and locks for that
  * date (with live Walloon flows for today, #61), and the water or lock whose details are open.
+ * An official aire's details also open with the layer off, from the Access points tab: pass
+ * `wantAires` while that tab shows.
  */
-export function useAccessLayer(trip: Trip): AccessLayer {
+export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const [on, setOnState] = useState(false);
   const [selectedId, select] = useState<string | null>(null);
   const rules = useAccessRules(on);
   const locks = useBuiltInLocks(on);
-  const official = useBuiltInOfficialAires(on);
+  const official = useBuiltInOfficialAires(on || wantAires);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const today = localToday();
   const date = pickedDate ?? today;
@@ -62,7 +68,7 @@ export function useAccessLayer(trip: Trip): AccessLayer {
         : summarise(trip).days.flatMap((d, i) => (d.date === undefined ? [] : [{ day: i + 1, date: d.date }])),
     [trip],
   );
-  const selectedAire = on ? official?.aires.find((a) => a.id === selectedId) : undefined;
+  const selectedAire = official?.aires.find((a) => a.id === selectedId);
   const setOn = (next: boolean) => {
     setOnState(next);
     if (!next) select(null);
@@ -80,5 +86,6 @@ export function useAccessLayer(trip: Trip): AccessLayer {
     selectedLock: on ? locks?.find((l) => l.id === selectedId) : undefined,
     selectedAire,
     selectedAireStretch: official?.stretches.find((s) => s.id === selectedAire?.officialStretch),
+    officialAires: official?.aires ?? NO_AIRES,
   };
 }

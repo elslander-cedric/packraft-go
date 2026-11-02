@@ -133,7 +133,7 @@ export default function Planner({ router }: { router?: Router }) {
   };
   const marking = useMarkAccessPoint(access, position, showPosition, placed);
   // The access layer (#125): on or off, its date, and the water or lock whose details are open.
-  const layer = useAccessLayer(trip);
+  const layer = useAccessLayer(trip, tab === "accessPoints");
   // The base map (ADR 0031): a setting on this device, never in the trip.
   const [baseMap, chooseBaseMap] = useBaseMap();
   // The overlays (ADR 0032): settings on this device too.
@@ -296,8 +296,10 @@ export default function Planner({ router }: { router?: Router }) {
         <AccessPoints
           access={access}
           trip={trip}
+          officialAires={layer.officialAires}
           position={position.state === "shown" ? position.at : null}
           onOpen={openAccessPoint}
+          onOpenAire={layer.select}
           onEdit={(id) => {
             access.select(id);
             setEditingId(id);
