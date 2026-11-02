@@ -3,13 +3,16 @@
 import {
   faArrowDown,
   faArrowLeft,
+  faArrowsDownToLine,
   faArrowsSpin,
   faArrowsUpDown,
   faArrowTrendDown,
   faArrowTrendUp,
+  faArrowTurnDown,
   faArrowUp,
   faBan,
   faBars,
+  faBridgeWater,
   faCalendarXmark,
   faCircleCheck,
   faChevronDown,
@@ -25,11 +28,13 @@ import {
   faFolderOpen,
   faGear,
   faGaugeHigh,
+  faHand,
   faHourglassHalf,
   faLayerGroup,
   faLocationCrosshairs,
   faLocationDot,
   faMagnifyingGlass,
+  faMountain,
   faPen,
   faRotateLeft,
   faShoePrints,
@@ -40,7 +45,18 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
+import type { ObstacleKind } from "@/core/obstacle";
+
 export type { IconDefinition } from "@fortawesome/free-solid-svg-icons";
+
+/** An obstacle's marker, legend line and details (ADR 0035), by kind. */
+export const obstacleIcons: Readonly<Record<ObstacleKind, typeof faHand>> = {
+  dam: faArrowsDownToLine,
+  impassable: faHand,
+  rocks: faMountain,
+  drossage: faArrowTurnDown,
+  "low-bridge": faBridgeWater,
+};
 
 export const icons = {
   // No kayak in Font Awesome Free: hike is footprints, paddle is water.

@@ -12,8 +12,10 @@ import { serialiseSnapshot } from "../src/access/prepare/serialise";
 import {
   AIRE_FIELDS,
   brusselsDate,
+  buildObstacles,
   buildOfficialAires,
   buildOfficialStretches,
+  OBSTACLE_FIELDS,
   PKAYAK_LAYERS,
   pkayakQuery,
   STRETCH_FIELDS,
@@ -44,10 +46,13 @@ const stretches = buildOfficialStretches(
 );
 await sleep(PAUSE_MS);
 const aires = buildOfficialAires(await layer(pkayakQuery(PKAYAK_LAYERS.aires, AIRE_FIELDS)), stretches, today);
+await sleep(PAUSE_MS);
+const obstacles = buildObstacles(await layer(pkayakQuery(PKAYAK_LAYERS.obstacles, OBSTACLE_FIELDS)), today);
 
 const outputs = [
   { file: "official-stretches.json", content: serialiseSnapshot(stretches, "stretches"), count: stretches.stretches.length },
   { file: "official-aires.json", content: serialiseSnapshot(aires, "aires"), count: aires.aires.length },
+  { file: "obstacles.json", content: serialiseSnapshot(obstacles, "obstacles"), count: obstacles.obstacles.length },
 ];
 for (const { file, content, count } of outputs) {
   writeFileSync(path.join(OUT, file), content);

@@ -2,11 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { accessFeatures, type AccessFeature, type LockMarker } from "@/core/access";
+import type { Obstacle } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
 import { summarise } from "@/core/summarise";
 import type { Trip } from "@/core/trip";
 import type { AccessDateProps, AccessTripDay } from "./AccessPanel";
-import { localToday, useAccessRules, useBuiltInLocks, useBuiltInOfficialAires } from "./useAccessRules";
+import {
+  localToday,
+  useAccessRules,
+  useBuiltInLocks,
+  useBuiltInObstacles,
+  useBuiltInOfficialAires,
+} from "./useAccessRules";
 import { useWalloonFlows } from "./useWalloonFlows";
 
 export type AccessLayer = {
@@ -18,19 +25,21 @@ export type AccessLayer = {
   isToday: boolean;
   /** The date controls' props (#59). */
   dateSelector: AccessDateProps;
-  /** The waters, locks and official aires to draw, once the rules have loaded; null while off or loading. */
+  /** The waters, locks, official aires and obstacles to draw, once the rules have loaded; null while off or loading. */
   shown: {
     features: readonly AccessFeature[];
     locks: readonly LockMarker[];
     aires: readonly OfficialAire[];
+    obstacles: readonly Obstacle[];
   } | null;
-  /** The water, lock or official aire whose details are open, if any. */
+  /** The water, lock, official aire or obstacle whose details are open, if any. */
   selectedId: string | null;
   select: (id: string | null) => void;
   selectedWater: AccessFeature | undefined;
   selectedLock: LockMarker | undefined;
   selectedAire: OfficialAire | undefined;
   selectedAireStretch: OfficialStretch | undefined;
+  selectedObstacle: Obstacle | undefined;
   /** The official aires once loaded, on or off: the Access points tab lists the ones on the route (#208). */
   officialAires: readonly OfficialAire[];
 };
@@ -50,6 +59,7 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const rules = useAccessRules(on);
   const locks = useBuiltInLocks(on);
   const official = useBuiltInOfficialAires(on || wantAires);
+  const obstacles = useBuiltInObstacles(on);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const today = localToday();
   const date = pickedDate ?? today;
@@ -79,13 +89,14 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
     date,
     isToday: pickedDate === null,
     dateSelector: { date, isToday: pickedDate === null, onDate: setPickedDate, onToday: () => setPickedDate(null), tripDays },
-    shown: on && rules ? { features, locks: locks ?? [], aires: official?.aires ?? [] } : null,
+    shown: on && rules ? { features, locks: locks ?? [], aires: official?.aires ?? [], obstacles: obstacles ?? [] } : null,
     selectedId,
     select,
     selectedWater: on ? features.find((f) => f.record.id === selectedId) : undefined,
     selectedLock: on ? locks?.find((l) => l.id === selectedId) : undefined,
     selectedAire,
     selectedAireStretch: official?.stretches.find((s) => s.id === selectedAire?.officialStretch),
+    selectedObstacle: on ? obstacles?.find((o) => o.id === selectedId) : undefined,
     officialAires: official?.aires ?? NO_AIRES,
   };
 }

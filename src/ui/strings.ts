@@ -293,6 +293,30 @@ export const strings = {
     attribution:
       'Aires: <a href="https://kayak.spw.wallonie.be/">Sources des données : Service public de Wallonie</a>',
   },
+  // Obstacles (ADR 0035, GLOSSARY "Obstacle"). The SPW publishes only a position and a code,
+  // so all of this is the app's own wording and stays cautious. The drossage text follows the
+  // SPW's own definition (kayak.spw.wallonie.be, Recommandations, B.1.4).
+  obstacles: {
+    marker: (name: string) => `Obstacle: ${name}`,
+    names: {
+      dam: "Dam",
+      impassable: "Impassable point",
+      rocks: "Rocks",
+      drossage: "Drossage (sharp bend)",
+      "low-bridge": "Low bridge",
+    },
+    meanings: {
+      dam: "Check it before you reach it and be ready to portage.",
+      impassable: "Portage required: get out before it and carry your packraft around it.",
+      rocks: "Take care: watch for rocks in the water.",
+      drossage:
+        "Take care: the river bends sharply here and the current runs into the bank. It can pin a boat against the bank, and a capsize here can leave you stuck in the eddy.",
+      "low-bridge": "Take care: it may need a portage at high water.",
+    },
+    legendNote: "Obstacles show when zoomed in.",
+    // No obstacle list is complete (ADR 0035).
+    incomplete: "The SPW marks only where this is; what it says here is this app's reading. No list of obstacles is complete.",
+  },
   accessDetailClose: "Close",
   accessNoRule: "No access rules are known for this place.",
   accessConditionsHeading: "Extra rules",

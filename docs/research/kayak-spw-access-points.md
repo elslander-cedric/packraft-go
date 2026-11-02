@@ -42,7 +42,7 @@ Layers of the map service, queried with `where=1=1&outFields=*&outSR=4326&f=geoj
 | Id | Layer | Count | Fields of interest |
 |---|---|---|---|
 | 0 | Incidents | 3 | `nomtro`, `commen` (4 languages), `datcre`, `datmod`, `datexp` |
-| 1 | Objets particuliers | 96 | Dams, drossages, impassable points, rocks, low bridges (`codico`, `nomofr`) |
+| 1 | Objets particuliers | 96 | Dams, drossages, impassable points, rocks, low bridges (`codico`, `nomofr`). A drossage is defined on the site, Recommandations, B.1.4: a tight bend where the current runs into the bank |
 | 2 | Plans d'eau | 13 | Name, icons |
 | 3 | **Aires** | **92** | `numemb`, `nomtro`, `nomair` (4 languages), `typemb`, `divers`, position, `datmod` |
 | 5, 6 | Tronçons (two scale ranges, same data) | 21 each | `nomtro`, `stapub`, `justif` (4 languages), `adrtro` (4 languages), line |

@@ -1,7 +1,7 @@
 // The offline preparation of the SPW snapshots (ADR 0035): what the script makes of
 // PKAYAK answers. Never calls the service.
 import { describe, expect, it } from "vitest";
-import { buildOfficialAires, buildOfficialStretches, pkayakQuery, type PkayakAnswer } from "./spw";
+import { buildObstacles, buildOfficialAires, buildOfficialStretches, pkayakQuery, type PkayakAnswer } from "./spw";
 
 const SNAPSHOT = "2026-11-02";
 
@@ -99,6 +99,65 @@ describe("official stretches", () => {
       /X.*name/i,
     );
     expect(() => buildOfficialStretches({ features: [stretch, stretch] }, SNAPSHOT)).toThrow(/SEMOIS2-3.*twice/i);
+  });
+});
+
+describe("obstacles", () => {
+  const obstacle = (overrides: Record<string, unknown> = {}) => ({
+    geometry: { type: "Point", coordinates: [4.972388358810162, 49.846021160855486] },
+    properties: { id: 111, codico: "2", datmod: Date.UTC(2023, 0, 16, 16, 23), ...overrides },
+  });
+  const obstacles = (...features: PkayakAnswer["features"]) => buildObstacles({ features }, SNAPSHOT);
+
+  it("keeps the SPW's id, the kind, the position rounded for a small diff, and the last-changed date", () => {
+    expect(obstacles(obstacle()).obstacles).toEqual([
+      { spwId: 111, kind: "dam", position: [4.97239, 49.84602], lastChanged: "2023-01-16" },
+    ]);
+  });
+
+  it.each([
+    ["2", "dam"],
+    ["15", "impassable"],
+    ["8", "rocks"],
+    ["21", "drossage"],
+    ["22", "low-bridge"],
+  ])("maps SPW code %s to %s", (codico, kind) => {
+    expect(obstacles(obstacle({ codico })).obstacles[0].kind).toBe(kind);
+  });
+
+  // Codes on the layer's own legend that are not obstacles today, among others.
+  it.each(["1", "4", "12", "16", "", null])("fails on SPW code %s", (codico) => {
+    expect(() => obstacles(obstacle({ codico }))).toThrow(/obstacle 111.*code/i);
+  });
+
+  it("takes the kind from the code alone, not from the SPW's name fields", () => {
+    const named = obstacle({ codico: "21", nomofr: "Barrage", nomoen: "Rocks" });
+    expect(obstacles(named).obstacles[0].kind).toBe("drossage");
+  });
+
+  it("dates a last change in Brussels time, so it can't move a day", () => {
+    // 23:30 UTC on 30 June 2016 is already 1 July in Brussels.
+    expect(obstacles(obstacle({ datmod: Date.UTC(2016, 5, 30, 23, 30) })).obstacles[0].lastChanged).toBe("2016-07-01");
+  });
+
+  it("records the snapshot's source and date once, and sorts by id so a refresh diffs well", () => {
+    const dataset = obstacles(obstacle({ id: 150 }), obstacle({ id: 53 }));
+    expect(dataset.obstacles.map((o) => o.spwId)).toEqual([53, 150]);
+    expect(dataset.snapshot).toBe(SNAPSHOT);
+    expect(dataset.source.title).toMatch(/SPW/);
+    expect(dataset.source.url).toMatch(/^https:\/\/.*PKAYAK\/MapServer\/1$/);
+    expect(dataset.attribution).toMatch(/Service public de Wallonie/);
+  });
+
+  it("fails on a missing id, a repeated id, a missing date or no position", () => {
+    expect(() => obstacles(obstacle({ id: null }))).toThrow(/no id/i);
+    expect(() => obstacles(obstacle(), obstacle())).toThrow(/obstacle 111.*twice/i);
+    expect(() => obstacles(obstacle({ datmod: null }))).toThrow(/obstacle 111.*date/i);
+    expect(() => obstacles({ ...obstacle(), geometry: null })).toThrow(/obstacle 111.*position/i);
+  });
+
+  it("fails on a cut-off answer rather than ship part of the list", () => {
+    expect(() => buildObstacles({ features: [obstacle()], exceededTransferLimit: true }, SNAPSHOT)).toThrow(/cut off/i);
   });
 });
 

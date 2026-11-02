@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { AccessRules, LockMarker } from "@/core/access";
 import type { CalendarDate } from "@/core/calendarDate";
+import type { Obstacle } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
 
 /** Today's local date, YYYY-MM-DD (the planner's own calendar day, not UTC's). */
@@ -44,6 +45,22 @@ export function useBuiltInLocks(wanted: boolean): readonly LockMarker[] | null {
     };
   }, [wanted, locks]);
   return locks;
+}
+
+/** The built-in obstacles (ADR 0035), loaded the first time they are wanted. */
+export function useBuiltInObstacles(wanted: boolean): readonly Obstacle[] | null {
+  const [obstacles, setObstacles] = useState<readonly Obstacle[] | null>(null);
+  useEffect(() => {
+    if (!wanted || obstacles) return;
+    let cancelled = false;
+    void import("@/access/builtInRules").then(({ builtInObstacles }) => {
+      if (!cancelled) setObstacles(builtInObstacles);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wanted, obstacles]);
+  return obstacles;
 }
 
 export type BuiltInOfficialAires = {
