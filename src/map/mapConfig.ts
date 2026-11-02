@@ -173,6 +173,9 @@ export const overlays: readonly Overlay[] = [
  */
 export const lockMarkersMinZoom = 11;
 
+/** Official aires are finger-sized from this zoom on, and small further out, for the same reason. */
+export const aireFullMarkersMinZoom = 11;
+
 /**
  * The z-index of each of our Leaflet panes, in one place, so their order reads at a glance.
  * Leaflet's own: tiles 200, overlays (paths) 400, shadows 500, markers 600 (your access
@@ -192,7 +195,7 @@ export const paneZIndex = {
   tripCamps: 402,
   /** The legs' hit lines: above the drawn trip, below the access-point markers and point hit areas. */
   tripLegHits: 450,
-  /** The lock markers: above the leg hit lines, so a tap on a lock on a leg opens the lock. */
+  /** The lock and official aire markers: above the leg hit lines, so a tap on one on a leg opens it. */
   accessLocks: 460,
   /** The points' hit areas: above the access-point markers, so a route point there is grabbed first (#120). */
   tripPointHits: 620,

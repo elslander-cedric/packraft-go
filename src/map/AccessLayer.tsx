@@ -4,10 +4,12 @@ import type { LatLngExpression, Polygon as LeafletPolygon, Polyline as LeafletPo
 import { useEffect, useRef, useState } from "react";
 import { CircleMarker, LayerGroup, Pane, Polygon, Polyline, useMap, useMapEvents } from "react-leaflet";
 import type { AccessFeature, AccessState, Geometry, LockMarker, Position } from "@/core/access";
+import type { OfficialAire } from "@/core/officialAire";
 import { strings } from "@/ui/strings";
 import { accessColours } from "./accessColours";
 import { useHold } from "./hold";
 import { lockMarkersMinZoom, paneZIndex } from "./mapConfig";
+import OfficialAireLayer from "./OfficialAireLayer";
 
 export type AccessLayerProps = {
   features: readonly AccessFeature[];
@@ -15,6 +17,8 @@ export type AccessLayerProps = {
   onSelect: (id: string) => void;
   /** Lock markers (#57), drawn above the legs' hit lines, so a tap on one opens its details. */
   locks?: readonly LockMarker[];
+  /** The official aires (ADR 0035): a tap on one opens its details. */
+  aires?: readonly OfficialAire[];
 };
 
 const toLatLng = ([lng, lat]: Position): LatLngExpression => [lat, lng];
@@ -97,7 +101,7 @@ function LockMarkers({ locks, selectedId, onSelect }: Required<Pick<AccessLayerP
 }
 
 /** The access layer: specific waters coloured by access status, and lock markers, below the trip. */
-export default function AccessLayer({ features, selectedId, onSelect, locks = [] }: AccessLayerProps) {
+export default function AccessLayer({ features, selectedId, onSelect, locks = [], aires = [] }: AccessLayerProps) {
   return (
     <>
       <Pane name="access" pane="overlayPane" style={{ zIndex: paneZIndex.access }}>
@@ -113,10 +117,14 @@ export default function AccessLayer({ features, selectedId, onSelect, locks = []
           ))}
         </LayerGroup>
       </Pane>
-      {/* Locks sit above the legs' hit lines and below the access-point markers,
-          so a tap on a lock on a leg still opens the lock. */}
+      {/* Locks and official aires sit above the legs' hit lines and below the access-point
+          markers, so a tap on one on a leg still opens it. */}
       <Pane name="access-locks" style={{ zIndex: paneZIndex.accessLocks }}>
         <LockMarkers locks={locks} selectedId={selectedId} onSelect={onSelect} />
+        {/* Its own group, so the SPW's credit comes and goes with the aires. */}
+        <LayerGroup attribution={strings.officialAires.attribution}>
+          <OfficialAireLayer aires={aires} onSelect={onSelect} />
+        </LayerGroup>
       </Pane>
     </>
   );

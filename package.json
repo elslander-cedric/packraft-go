@@ -16,7 +16,8 @@
     "check:basemaps": "tsx scripts/check-basemaps.mts",
     "data:walloon-stretches": "tsx scripts/walloon-stretches/build.mts",
     "review:walloon-stretches": "tsx scripts/walloon-stretches/review.mts",
-    "prepare:access-data": "tsx scripts/prepare-access-data.mts"
+    "prepare:access-data": "tsx scripts/prepare-access-data.mts",
+    "prepare:spw-data": "tsx scripts/prepare-spw-data.mts"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",

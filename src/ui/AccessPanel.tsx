@@ -1,7 +1,11 @@
 import type { AccessFeature, AccessReason, AccessState, LockMarker } from "@/core/access";
-import { accessColours } from "@/map/accessColours";
+import { accessPointUses, type AccessPointUse } from "@/core/accessPoints";
+import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
+import { accessColours, accessUseColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
 import { FlowFiguresView } from "./FlowFiguresView";
+import { Icon } from "./icons/Icon";
+import { icons } from "./icons/icons";
 import { accessStateLabel, strings } from "./strings";
 import { StatusIcon } from "./TripAccessView";
 import "./AccessPanel.css";
@@ -10,6 +14,17 @@ const states: readonly Exclude<AccessState, "checking">[] = ["open", "closed-tod
 
 function Swatch({ state }: { state: AccessState }) {
   return <span className="access-swatch" style={{ background: accessColours[state] }} aria-hidden="true" />;
+}
+
+const aireArrows = { "put-in": icons.airePutIn, "take-out": icons.aireTakeOut, both: icons.aireBoth } as const;
+
+/** An official aire's marker, as on the map. */
+function AireSwatch({ use }: { use: AccessPointUse }) {
+  return (
+    <span className="access-aire-swatch" style={{ background: accessUseColours[use] }} aria-hidden="true">
+      <Icon icon={aireArrows[use]} />
+    </span>
+  );
 }
 
 export type AccessTripDay = { readonly day: number; readonly date: string };
@@ -72,6 +87,12 @@ export function AccessLegend() {
         <span className="access-lock-swatch" aria-hidden="true" />
         {strings.lockLegend}
       </p>
+      {accessPointUses.map((use) => (
+        <p key={use} className="access-legend-lock">
+          <AireSwatch use={use} />
+          {strings.officialAires.legend[use]}
+        </p>
+      ))}
       <p className="access-legend-note">{strings.accessLegendNote}</p>
       <p className="access-legend-note">{strings.accessDataCredit}</p>
     </section>
@@ -133,6 +154,34 @@ export function LockDetail({ lock }: { lock: LockMarker }) {
         {strings.accessResearched(lock.researched)}
       </p>
       <p className="access-legend-note">{strings.accessDataCredit}</p>
+    </div>
+  );
+}
+
+/** An official aire (ADR 0035): read-only, with how old the SPW's data on it is. */
+export function OfficialAireDetail({ aire, stretch }: { aire: OfficialAire; stretch: OfficialStretch | undefined }) {
+  const text = strings.officialAires;
+  return (
+    <div className="access-detail">
+      <p className="access-status">
+        <AireSwatch use={aire.use} />
+        {text.legend[aire.use]}
+      </p>
+      {stretch && (
+        <p>
+          {text.stretchLabel}: {stretch.name}
+        </p>
+      )}
+      <p>{text.lastChanged(aire.lastChanged)}</p>
+      <p className="access-source">
+        {strings.accessSourceLabel}{" "}
+        <a href={aire.source.url} target="_blank" rel="noreferrer">
+          {aire.source.title}
+        </a>
+        {" · "}
+        {text.snapshot(aire.snapshot)}
+      </p>
+      <p className="access-legend-note">{strings.flow.credit}</p>
     </div>
   );
 }

@@ -1,0 +1,127 @@
+// The offline preparation of the SPW snapshots (ADR 0035): turns answers from the
+// PKAYAK map service into the datasets shipped in src/access/data/. Pure; the
+// network calls are in scripts/prepare-spw-data.mts. To add a layer: a build
+// function here, and an entry in that script's list.
+import type { AccessPointUse } from "@/core/accessPoints";
+import type { CalendarDate } from "@/core/calendarDate";
+import {
+  OFFICIAL_AIRE_DATA_FORMAT,
+  OFFICIAL_STRETCH_DATA_FORMAT,
+  SPW_ATTRIBUTION,
+  type OfficialAireDataset,
+  type OfficialStretchDataset,
+  type StoredOfficialAire,
+} from "../dataset";
+
+const PKAYAK = "https://geoservices3.wallonie.be/arcgis/rest/services/APP_KAYAK/PKAYAK/MapServer";
+export const PKAYAK_LAYERS = { aires: 3, stretches: 5 } as const;
+
+/** A query for every record of a layer: only the fields it names, in WGS84 GeoJSON. */
+export function pkayakQuery(layer: number, fields: readonly string[], { geometry = true } = {}): string {
+  const query = new URLSearchParams({
+    where: "1=1",
+    outFields: fields.join(","),
+    returnGeometry: String(geometry),
+    outSR: "4326",
+    f: "geojson",
+  });
+  return `${PKAYAK}/${layer}/query?${query}`;
+}
+
+export const AIRE_FIELDS = ["numemb", "nomtro", "nomair", "typemb", "datmod"] as const;
+export const STRETCH_FIELDS = ["nomtro", "adrtro"] as const;
+
+/** What the service answers, loosely: nothing in it is trusted until checked here. */
+export type PkayakAnswer = {
+  readonly features: readonly {
+    readonly geometry?: { readonly type?: string; readonly coordinates?: readonly number[] } | null;
+    readonly properties: Readonly<Record<string, unknown>>;
+  }[];
+  readonly exceededTransferLimit?: boolean;
+};
+
+const featuresOf = (answer: PkayakAnswer, what: string) => {
+  // The service caps an answer at 2000 records: a partial list must never ship.
+  if (answer.exceededTransferLimit) throw new Error(`The ${what} answer was cut off by the service's record limit`);
+  return answer.features;
+};
+
+const text = (value: unknown): string | null =>
+  typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+
+/** The SPW's type codes. `NA` is treated as both: its 2 records describe themselves as in-and-out. */
+const AIRE_USES: Readonly<Record<string, AccessPointUse>> = { E: "put-in", D: "take-out", ED: "both", NA: "both" };
+
+/** An epoch time as the calendar date in Brussels, where the SPW works. */
+export const brusselsDate = (epochMs: number): CalendarDate =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date(epochMs));
+
+const round = (value: number) => Math.round(value * 100000) / 100000;
+
+function positionOf(geometry: PkayakAnswer["features"][number]["geometry"]): readonly [number, number] | null {
+  const [lng, lat] = geometry?.type === "Point" ? (geometry.coordinates ?? []) : [];
+  return Number.isFinite(lng) && Number.isFinite(lat) ? [round(lng), round(lat)] : null;
+}
+
+/** Each official stretch's id and name, from layer 5. Its line isn't shipped (ADR 0035). */
+export function buildOfficialStretches(answer: PkayakAnswer, snapshot: CalendarDate): OfficialStretchDataset {
+  const stretches = featuresOf(answer, "stretch").map(({ properties }) => {
+    const id = text(properties.nomtro);
+    if (id === null) throw new Error("A stretch has no id");
+    const name = text(properties.adrtro);
+    if (name === null) throw new Error(`Stretch ${id} has no name`);
+    return { id, name };
+  });
+  stretches.forEach(({ id }, i) => {
+    if (stretches.findIndex((s) => s.id === id) !== i) throw new Error(`Stretch ${id} appears twice`);
+  });
+  return {
+    format: OFFICIAL_STRETCH_DATA_FORMAT,
+    version: 1,
+    id: "official-stretches",
+    title: "Official stretches in Wallonia",
+    attribution: SPW_ATTRIBUTION,
+    source: { title: "SPW, PKAYAK map service, stretches", url: `${PKAYAK}/${PKAYAK_LAYERS.stretches}` },
+    snapshot,
+    stretches: stretches.toSorted((a, b) => a.id.localeCompare(b.id)),
+  };
+}
+
+/** The official aires, from layer 3. Fails on anything the app couldn't show truthfully. */
+export function buildOfficialAires(
+  answer: PkayakAnswer,
+  { stretches }: OfficialStretchDataset,
+  snapshot: CalendarDate,
+): OfficialAireDataset {
+  const known = new Set(stretches.map((s) => s.id));
+  const aires = featuresOf(answer, "aire").map(({ geometry, properties }): StoredOfficialAire => {
+    const number = properties.numemb;
+    if (typeof number !== "number") throw new Error(`An aire has no number: ${JSON.stringify(properties)}`);
+    const fail = (problem: string) => new Error(`Aire ${number}: ${problem}`);
+    const use = AIRE_USES[String(properties.typemb)];
+    if (use === undefined) throw fail(`unknown type ${JSON.stringify(properties.typemb)}`);
+    const officialStretch = text(properties.nomtro);
+    if (officialStretch === null || !known.has(officialStretch)) {
+      throw fail(`unknown official stretch ${JSON.stringify(properties.nomtro)}`);
+    }
+    const name = text(properties.nomair);
+    if (name === null) throw fail("no name");
+    if (typeof properties.datmod !== "number") throw fail("no last-changed date");
+    const position = positionOf(geometry);
+    if (position === null) throw fail("no position");
+    return { number, name, use, officialStretch, position, lastChanged: brusselsDate(properties.datmod) };
+  });
+  aires.forEach(({ number }, i) => {
+    if (aires.findIndex((a) => a.number === number) !== i) throw new Error(`Aire ${number} appears twice`);
+  });
+  return {
+    format: OFFICIAL_AIRE_DATA_FORMAT,
+    version: 1,
+    id: "official-aires",
+    title: "Official aires in Wallonia",
+    attribution: SPW_ATTRIBUTION,
+    source: { title: "SPW, PKAYAK map service, aires", url: `${PKAYAK}/${PKAYAK_LAYERS.aires}` },
+    snapshot,
+    aires: aires.toSorted((a, b) => a.number - b.number),
+  };
+}

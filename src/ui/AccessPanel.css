@@ -77,6 +77,20 @@
   vertical-align: middle;
 }
 
+/* Official aire swatch (ADR 0035): the hexagon on the map, with its arrow. */
+.access-aire-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.2rem;
+  margin-right: var(--space-2);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  color: #fff;
+  font-size: 0.65rem;
+  vertical-align: middle;
+}
+
 .access-legend-lock {
   margin: var(--space-2) 0 0;
 }

@@ -469,6 +469,8 @@ export default function Planner({ router }: { router?: Router }) {
       <AccessDetailsDialog
         water={layer.selectedWater}
         lock={layer.selectedLock}
+        aire={layer.selectedAire}
+        aireStretch={layer.selectedAireStretch}
         date={layer.date}
         onClose={() => layer.select(null)}
       />

@@ -1,10 +1,13 @@
 // The app's UI icons (#143, ADR 0028): Font Awesome Free Solid, imported only here,
 // so switching to another set only touches src/ui/icons/. Their names stay in strings.ts.
 import {
+  faArrowDown,
   faArrowLeft,
   faArrowsSpin,
+  faArrowsUpDown,
   faArrowTrendDown,
   faArrowTrendUp,
+  faArrowUp,
   faBan,
   faBars,
   faCalendarXmark,
@@ -52,6 +55,10 @@ export const icons = {
   backToStart: faArrowsSpin,
   accessPoint: faFlag,
   deletePoint: faXmark,
+  // An official aire's marker and legend (ADR 0035): down onto the water, up off it.
+  airePutIn: faArrowDown,
+  aireTakeOut: faArrowUp,
+  aireBoth: faArrowsUpDown,
   // An access point row's edit and delete buttons.
   editAccessPoint: faPen,
   deleteAccessPoint: faTrashCan,

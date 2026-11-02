@@ -14,6 +14,10 @@ These scripts are manual only: never part of `npm test`, `npm run e2e` or CI. Th
 
 `npm run check:basemaps` (#179, ADR 0031; overlays #180, ADR 0032). Asks every base map and overlay source for one tile: OpenTopoMap, the Walloon SPW orthophoto WMS, the Flemish orthophoto WMTS, Brussels' UrbIS, the NGI's CartoWeb.be topo, then Waymarked Trails' hiking overlay. One request at a time with a 1.5 s pause, no retries, identifying itself with the project URL only. Prints OK / FAILED per source (FAILED with the HTTP status, a non-image answer or the network error, and the URL asked for); exit code 1 means a source failed and that base map or overlay is probably broken in the live app. Run it now and then, or when a base map shows blank tiles. Logic: `src/map/baseMapCheck.ts` (unit-tested offline); entry point: `scripts/check-basemaps.mts`.
 
+## SPW snapshots
+
+`npm run prepare:spw-data` (#206, ADR 0035). Makes two read-only GETs to the SPW's public `PKAYAK` map service, one at a time with a 2 s pause, no retries, identifying itself with the project URL only: layer 5 (each official stretch's id and name, no geometry) and layer 3 (the aires). It writes `src/access/data/official-stretches.json` and `official-aires.json` with the source and today's date, and writes nothing if anything fails a check: an unknown aire type (only `E`, `D`, `ED` and `NA` are known), an aire on an unknown stretch, a missing name, date or position, a repeated id, or an answer cut off by the service's record limit. Refresh it now and then and review the diff before committing; the app never queries this data at runtime. Logic: `src/access/prepare/spw.ts` (unit-tested offline); entry point: `scripts/prepare-spw-data.mts`. To add a layer, add a build function there and a step in the script.
+
 ## Walloon stretch geometry
 
 Walloon stretch geometry (#54, ADR 0024):

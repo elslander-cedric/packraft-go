@@ -4,10 +4,13 @@
 // like the router: the core never loads data itself.
 import walloonStretches from "@/data/walloon-stretches.json";
 import type { AccessRules } from "@/core/access";
-import type { AccessDataset, LockDataset } from "./dataset";
+import type { OfficialAire } from "@/core/officialAire";
+import type { AccessDataset, LockDataset, OfficialAireDataset, OfficialStretchDataset } from "./dataset";
 import brussels from "./data/brussels.json";
 import flanders from "./data/flanders.json";
 import locks from "./data/locks.json";
+import officialAires from "./data/official-aires.json";
+import officialStretches from "./data/official-stretches.json";
 import regions from "./data/regions.json";
 import { walloonDataset, type WalloonStretchData } from "./walloon";
 
@@ -23,5 +26,18 @@ export const builtInDatasets: readonly AccessDataset[] = [
 
 /** The lock markers of Flanders and Brussels (#57). */
 export const builtInLocks: LockDataset = locks as unknown as LockDataset;
+
+/** The official stretches' ids and names (ADR 0035). */
+export const builtInOfficialStretches: OfficialStretchDataset = officialStretches as unknown as OfficialStretchDataset;
+
+const aireDataset = officialAires as unknown as OfficialAireDataset;
+
+/** The official aires (ADR 0035), each with the snapshot's source and date. */
+export const builtInOfficialAires: readonly OfficialAire[] = aireDataset.aires.map((aire) => ({
+  ...aire,
+  id: `official-aire-${aire.number}`,
+  source: aireDataset.source,
+  snapshot: aireDataset.snapshot,
+}));
 
 export const builtInAccessRules: AccessRules = { records: builtInDatasets.flatMap((dataset) => dataset.records) };

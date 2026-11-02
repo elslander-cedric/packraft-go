@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { AccessRules, LockMarker } from "@/core/access";
 import type { CalendarDate } from "@/core/calendarDate";
+import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
 
 /** Today's local date, YYYY-MM-DD (the planner's own calendar day, not UTC's). */
 export function localToday(): CalendarDate {
@@ -43,4 +44,25 @@ export function useBuiltInLocks(wanted: boolean): readonly LockMarker[] | null {
     };
   }, [wanted, locks]);
   return locks;
+}
+
+export type BuiltInOfficialAires = {
+  readonly aires: readonly OfficialAire[];
+  readonly stretches: readonly OfficialStretch[];
+};
+
+/** The built-in official aires and stretches (ADR 0035), loaded the first time they are wanted. */
+export function useBuiltInOfficialAires(wanted: boolean): BuiltInOfficialAires | null {
+  const [official, setOfficial] = useState<BuiltInOfficialAires | null>(null);
+  useEffect(() => {
+    if (!wanted || official) return;
+    let cancelled = false;
+    void import("@/access/builtInRules").then(({ builtInOfficialAires, builtInOfficialStretches }) => {
+      if (!cancelled) setOfficial({ aires: builtInOfficialAires, stretches: builtInOfficialStretches.stretches });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wanted, official]);
+  return official;
 }

@@ -278,6 +278,21 @@ export const strings = {
   lockLegend: "Lock: portage required (shown when zoomed in)",
   lockPortageRequired: "Portage required",
   lockPortageText: "Don't go through the lock on the water: get out before it and carry your packraft around it.",
+  // Official aires (ADR 0035, GLOSSARY "Official aire"): marked on the access layer in Wallonia.
+  officialAires: {
+    marker: (name: string, use: string) => `Official aire: ${name} (${use})`,
+    legend: {
+      "put-in": "Official aire: put-in",
+      "take-out": "Official aire: take-out",
+      both: "Official aire: both ways",
+    },
+    stretchLabel: "Stretch",
+    lastChanged: (date: string) => `Last changed by the SPW: ${date}`,
+    snapshot: (date: string) => `Snapshot of ${date}`,
+    // Shown in the map's attribution control while the access layer is on. Contains an HTML link.
+    attribution:
+      'Aires: <a href="https://kayak.spw.wallonie.be/">Sources des données : Service public de Wallonie</a>',
+  },
   accessDetailClose: "Close",
   accessNoRule: "No access rules are known for this place.",
   accessConditionsHeading: "Extra rules",
