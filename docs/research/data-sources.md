@@ -1,6 +1,6 @@
 # Data sources for access rules, routes and waterways
 
-Researched 2026-10-12, updated 2026-11-02 from [kayak-spw-access-points.md](kayak-spw-access-points.md) and the SPW's permission (ADR 0035). This decides what packraft-go can *show* versus only *link to*. All services must stay free (ADR 0012).
+Researched 2026-10-12, updated 2026-11-02 from [kayak-spw-access-points.md](kayak-spw-access-points.md), [official-access-points-flanders-brussels.md](official-access-points-flanders-brussels.md) and the SPW's permission (ADR 0035). This decides what packraft-go can *show* versus only *link to*. All services must stay free (ADR 0012).
 
 ## Summary
 
@@ -11,7 +11,9 @@ Researched 2026-10-12, updated 2026-11-02 from [kayak-spw-access-points.md](kaya
 | Walloon stretches + put-in/take-out points (Metawal dataset) | Shapefile / FGDB, from 2014 | Restricted; redistribution forbidden | **No**, and not needed: `PKAYAK` has the same kind of data and is fresher |
 | Walloon rules (AGW 2009, annexes) | Public legal text (PDF), **now extracted** to [data/walloon-stretches.json](data/walloon-stretches.json) | Public law | **Yes**. Stretch ends still need placing on the map (about 45 landmarks, 2–4 h of curation) |
 | Walloon hydrometry (live river flows) | **Yes**: public KiWIS JSON API, no key, CORS open | No named licence; attribution required; publishing needs the SPW's written agreement | **Yes**: the SPW has no objection (ADR 0022). See [hydrometry.md](hydrometry.md) |
-| Sport Vlaanderen routes (RouteYou) | Internal API only | No open licence found | **No**, without permission |
+| Sport Vlaanderen routes (RouteYou) | Internal API, plus GPX links and street addresses of start points on the route pages | No open licence found | **No**, without permission |
+| Flemish access points (VMM boards and agreements, De Vlaamse Waterweg list) | **No dataset**: PDFs, images and web pages | De Vlaamse Waterweg: no reuse without written permission. VMM: free model licence for datasets, PDFs unclear | **No**, without permission. See [official-access-points-flanders-brussels.md](official-access-points-flanders-brussels.md) |
+| Brussels canal charts (Port IENC) | S-57 ZIP | CC0 | **Yes**, but they hold no access points for paddlers |
 | Flemish waterway network (De Vlaamse Waterweg RIS-index) | WFS/WMS | Modellicentie Gratis Hergebruik (open) | **Yes** |
 | Flemish rules (forbidden waters, ports, lock ban) | Prose only | Public | **Yes**, if encoded by hand. A short list, since non-navigable rivers are allowed by default |
 | Flemish river categories and managers (VHA Waterlopen) | WFS | Open Data Licentie Vlaanderen | **Yes** |
@@ -42,12 +44,14 @@ Researched 2026-10-12, updated 2026-11-02 from [kayak-spw-access-points.md](kaya
 - **Sport Vlaanderen routes:**
   - Hosted on RouteYou, a commercial route platform. The site loads them through an internal proxy (JSON-RPC calls), with geometry as an encoded polyline and fields for length, start, end and difficulty.
   - No open licence was found, and the routes aren't on the Flemish open-data portal. Treat them as not reusable without permission (contact: sportievevrijetijd@sport.vlaanderen).
-  - **[UNVERIFIED]:** whether GPX downloads are free.
+  - GPX: a route page carries links on `download.routeyou.com`, served to an anonymous visitor (observed on the Kleine Nete page, 2026-11-02). They embed an authorisation token and weren't called. **[UNVERIFIED]:** whether a GPX holds the start points, and RouteYou's terms.
+  - Each route page lists its start points as street addresses: 74 lines across the 12 routes, about 72 distinct.
+- **Access points:** no dataset in any regional catalogue searched. De Vlaamse Waterweg's [list of 172 places](https://www.visuris.be/download/17b25fd3-9d05-4317-add5-c2fe0fd3b3e0?dl=0) is a PDF with no coordinates, and VMM's 43 points are in PDFs and images. Details and terms: [official-access-points-flanders-brussels.md](official-access-points-flanders-brussels.md).
 - **De Vlaamse Waterweg RIS-index** (waterway lines and network nodes):
   - available as WFS/WMS under the **Modellicentie Gratis Hergebruik**, an open licence that requires attribution
   - sources: [metadata (WMS)](https://metadata.vlaanderen.be/srv/api/records/a730cf61-2ae0-468e-ac8e-8c75ae76f754), [metadata](https://metadata.vlaanderen.be/29/api/records/5c412b19-f5af-4dea-b8ac-9e869a6f97b8)
 - **Vlaamse Hydrografische Atlas (VHA):** gives the category, and so the manager, of each non-navigable river. **[UNVERIFIED]:** the current dataset and its licence.
-- **Locks and high-speed zones:** shown on Visuris maps. **[UNVERIFIED]:** whether they're available as open WFS. OpenStreetMap has locks (`lock=yes`, `waterway=lock_gate`).
+- **Locks and high-speed zones:** shown on Visuris maps. The pleasure boating map loads boat ramps, marinas and high-speed zones from undocumented query endpoints (observed 2026-11-02), but the [Visuris terms](https://www.visuris.be/Voorwaarden?KL=nl) forbid reuse without written permission and ban automated collection, so they aren't usable. **[UNVERIFIED]:** whether locks are available as open WFS. OpenStreetMap has locks (`lock=yes`, `waterway=lock_gate`).
 
 ### OpenStreetMap (Belgium, data up to 2026-10-11, [taginfo](https://taginfo.geofabrik.de/europe:belgium/))
 

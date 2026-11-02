@@ -1,6 +1,6 @@
 # Paddle routes in Belgium
 
-Researched 2026-10-12. For access rules, see [access-rules.md](access-rules.md). For whether this data can be used in the app, see [data-sources.md](data-sources.md).
+Researched 2026-10-12, updated 2026-11-02 from [official-access-points-flanders-brussels.md](official-access-points-flanders-brussels.md). For access rules, see [access-rules.md](access-rules.md). For whether this data can be used in the app, see [data-sources.md](data-sources.md).
 
 **Summary:** Flanders has a marketed route network (Sport Vlaanderen / Peddelsport Vlaanderen) on canals and designated rivers. Wallonia has no official "routes". Instead it has **legal stretches** with designated put-in and take-out points, and rental operators package trips on them. The Ardennes rivers are where packrafting's hike + paddle mix makes most sense: hike between stretches, paddle the open ones.
 
@@ -14,7 +14,7 @@ Researched 2026-10-12. For access rules, see [access-rules.md](access-rules.md).
 | **Walloon legal stretches** (AGW Annex 1) | Wallonia | Stretches with a category (A/B/C), a reference gauge, minimum and maximum flow, and designated put-in and take-out points ("aires"). | [AGW 2009](https://wallex.wallonie.be/files/pdfs/5/6718_Arr%C3%AAt%C3%A9_du_Gouvernement_wallon_r%C3%A9glementant_la_circulation_sur_et_dans_les_cours_d%27eau_01-09-2021-.pdf), [kayak.spw.wallonie.be](https://kayak.spw.wallonie.be/) |
 | **Peddelsport "Wallonië" page** | Wallonia and border rivers | A summary of the Walloon rules, plus gauge tips for rivers just across the border (Rur, Perlbach, Prüm, Cure, Chaleau). | [Peddelsport Wallonië](https://www.peddelsport.vlaanderen/waar-het-water-op/wallonie) |
 
-Sport Vlaanderen opened 4 new routes in 2020: Waasland, Kempen, and two in Vlaams-Brabant ([Sporza](https://sporza.be/nl/2020/07/13/sport-vlaanderen-opent-nieuw-peddeltraject-in-aarschot/)). **[UNVERIFIED]:** the current total number of routes.
+Sport Vlaanderen opened 4 new routes in 2020: Waasland, Kempen, and two in Vlaams-Brabant ([Sporza](https://sporza.be/nl/2020/07/13/sport-vlaanderen-opent-nieuw-peddeltraject-in-aarschot/)). The [route list](https://www.sport.vlaanderen/sporten-in-mijn-omgeving/vind-een-route/vind-een-kajak-kano-suproute?type=kayak) showed **12 routes, 230.8 km** on 2026-11-02: Dijle, Zenne, Grote Nete, Demer, Durme (from Lokeren), Zuidlede, Stekense Vaart, Kleine Nete, Moervaart, Dessel | Herentals, Dessel | Turnhout, Mandel.
 
 ## Walloon rivers most relevant to packrafting
 
@@ -28,5 +28,6 @@ The test fixture for packraft-go's paddle legs is on the Lesse (Walzin → Anser
 ## What this means for packraft-go
 
 - **Put-ins and take-outs matter legally in Wallonia.** You may only get in or out at designated aires. Today the app lets you put a put-in anywhere, so in Wallonia a mode change should eventually snap to, or at least warn about, the nearest aire.
+- **In Flanders official points are a rule only on VMM's four stretches.** There the agreements limit getting in and out to the provided points. Elsewhere the points are a convenience, and who an agreement binds is **[UNVERIFIED]**. See [official-access-points-flanders-brussels.md](official-access-points-flanders-brussels.md).
 - **Portages around locks are mandatory in Flanders.** This matches ADR 0016 (portages are short hike legs). Locks are tagged in OpenStreetMap and could be detected.
 - **Official routes could be shown as suggestions or overlays,** but only if the data licence allows it, which today it doesn't (see [data-sources.md](data-sources.md)).
