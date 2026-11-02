@@ -1,11 +1,12 @@
 import type { AccessFeature, AccessReason, AccessState, LockMarker } from "@/core/access";
 import { accessPointUses, type AccessPointUse } from "@/core/accessPoints";
+import { obstacleKinds, type Obstacle, type ObstacleKind } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
 import { accessColours, accessUseColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
 import { FlowFiguresView } from "./FlowFiguresView";
 import { Icon } from "./icons/Icon";
-import { icons } from "./icons/icons";
+import { icons, obstacleIcons } from "./icons/icons";
 import { accessStateLabel, strings } from "./strings";
 import { StatusIcon } from "./TripAccessView";
 import "./AccessPanel.css";
@@ -23,6 +24,15 @@ function AireSwatch({ use }: { use: AccessPointUse }) {
   return (
     <span className="access-aire-swatch" style={{ background: accessUseColours[use] }} aria-hidden="true">
       <Icon icon={aireArrows[use]} />
+    </span>
+  );
+}
+
+/** An obstacle's marker, as on the map. */
+function ObstacleSwatch({ kind }: { kind: ObstacleKind }) {
+  return (
+    <span className="access-obstacle-swatch" aria-hidden="true">
+      <Icon icon={obstacleIcons[kind]} />
     </span>
   );
 }
@@ -93,6 +103,13 @@ export function AccessLegend() {
           {strings.officialAires.legend[use]}
         </p>
       ))}
+      {obstacleKinds.map((kind) => (
+        <p key={kind} className="access-legend-lock">
+          <ObstacleSwatch kind={kind} />
+          {strings.obstacles.names[kind]}
+        </p>
+      ))}
+      <p className="access-legend-note">{strings.obstacles.legendNote}</p>
       <p className="access-legend-note">{strings.accessLegendNote}</p>
       <p className="access-legend-note">{strings.accessDataCredit}</p>
     </section>
@@ -181,6 +198,31 @@ export function OfficialAireDetail({ aire, stretch }: { aire: OfficialAire; stre
         {" · "}
         {text.snapshot(aire.snapshot)}
       </p>
+      <p className="access-legend-note">{strings.flow.credit}</p>
+    </div>
+  );
+}
+
+/** An obstacle (ADR 0035): read-only, with what it means and how old the SPW's data on it is. */
+export function ObstacleDetail({ obstacle }: { obstacle: Obstacle }) {
+  const text = strings.obstacles;
+  return (
+    <div className="access-detail">
+      <p className="access-status">
+        <ObstacleSwatch kind={obstacle.kind} />
+        {text.names[obstacle.kind]}
+      </p>
+      <p>{text.meanings[obstacle.kind]}</p>
+      <p>{strings.officialAires.lastChanged(obstacle.lastChanged)}</p>
+      <p className="access-source">
+        {strings.accessSourceLabel}{" "}
+        <a href={obstacle.source.url} target="_blank" rel="noreferrer">
+          {obstacle.source.title}
+        </a>
+        {" · "}
+        {strings.officialAires.snapshot(obstacle.snapshot)}
+      </p>
+      <p className="access-legend-note">{text.incomplete}</p>
       <p className="access-legend-note">{strings.flow.credit}</p>
     </div>
   );

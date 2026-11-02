@@ -471,6 +471,7 @@ export default function Planner({ router }: { router?: Router }) {
         lock={layer.selectedLock}
         aire={layer.selectedAire}
         aireStretch={layer.selectedAireStretch}
+        obstacle={layer.selectedObstacle}
         date={layer.date}
         onClose={() => layer.select(null)}
       />

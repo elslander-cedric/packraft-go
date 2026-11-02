@@ -24,7 +24,7 @@ npm run prepare:access-data -- --skip-flanders # refreshes regions, Brussels and
 Manual only: never part of `npm test`, `npm run e2e` or CI. It sends one request at a time with a pause between requests, identifies itself with the project URL only (never a personal email), and caches answers in `.cache/access-osm/` (git-ignored). Review the diff of `data/` before committing.
 
 ```
-npm run prepare:spw-data   # the official aires and stretches, from the SPW's PKAYAK service
+npm run prepare:spw-data   # the official aires, stretches and obstacles, from the SPW's PKAYAK service
 ```
 
 Manual only, like the above; see `docs/manual-scripts.md`. It writes nothing unless every layer passes its checks. Review the diff of `data/` before committing.

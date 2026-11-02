@@ -4,11 +4,13 @@
 // like the router: the core never loads data itself.
 import walloonStretches from "@/data/walloon-stretches.json";
 import type { AccessRules } from "@/core/access";
+import type { Obstacle } from "@/core/obstacle";
 import type { OfficialAire } from "@/core/officialAire";
-import type { AccessDataset, LockDataset, OfficialAireDataset, OfficialStretchDataset } from "./dataset";
+import type { AccessDataset, LockDataset, ObstacleDataset, OfficialAireDataset, OfficialStretchDataset } from "./dataset";
 import brussels from "./data/brussels.json";
 import flanders from "./data/flanders.json";
 import locks from "./data/locks.json";
+import obstacles from "./data/obstacles.json";
 import officialAires from "./data/official-aires.json";
 import officialStretches from "./data/official-stretches.json";
 import regions from "./data/regions.json";
@@ -38,6 +40,16 @@ export const builtInOfficialAires: readonly OfficialAire[] = aireDataset.aires.m
   id: `official-aire-${aire.number}`,
   source: aireDataset.source,
   snapshot: aireDataset.snapshot,
+}));
+
+const obstacleDataset = obstacles as unknown as ObstacleDataset;
+
+/** The obstacles (ADR 0035), each with the snapshot's source and date. */
+export const builtInObstacles: readonly Obstacle[] = obstacleDataset.obstacles.map((obstacle) => ({
+  ...obstacle,
+  id: `obstacle-${obstacle.spwId}`,
+  source: obstacleDataset.source,
+  snapshot: obstacleDataset.snapshot,
 }));
 
 export const builtInAccessRules: AccessRules = { records: builtInDatasets.flatMap((dataset) => dataset.records) };

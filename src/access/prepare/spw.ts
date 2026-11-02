@@ -4,17 +4,21 @@
 // function here, and an entry in that script's list.
 import type { AccessPointUse } from "@/core/accessPoints";
 import type { CalendarDate } from "@/core/calendarDate";
+import type { ObstacleKind } from "@/core/obstacle";
 import {
+  OBSTACLE_DATA_FORMAT,
   OFFICIAL_AIRE_DATA_FORMAT,
   OFFICIAL_STRETCH_DATA_FORMAT,
   SPW_ATTRIBUTION,
+  type ObstacleDataset,
   type OfficialAireDataset,
   type OfficialStretchDataset,
+  type StoredObstacle,
   type StoredOfficialAire,
 } from "../dataset";
 
 const PKAYAK = "https://geoservices3.wallonie.be/arcgis/rest/services/APP_KAYAK/PKAYAK/MapServer";
-export const PKAYAK_LAYERS = { aires: 3, stretches: 5 } as const;
+export const PKAYAK_LAYERS = { obstacles: 1, aires: 3, stretches: 5 } as const;
 
 /** A query for every record of a layer: only the fields it names, in WGS84 GeoJSON. */
 export function pkayakQuery(layer: number, fields: readonly string[], { geometry = true } = {}): string {
@@ -30,6 +34,7 @@ export function pkayakQuery(layer: number, fields: readonly string[], { geometry
 
 export const AIRE_FIELDS = ["numemb", "nomtro", "nomair", "typemb", "datmod"] as const;
 export const STRETCH_FIELDS = ["nomtro", "adrtro"] as const;
+export const OBSTACLE_FIELDS = ["id", "codico", "datmod"] as const;
 
 /** What the service answers, loosely: nothing in it is trusted until checked here. */
 export type PkayakAnswer = {
@@ -51,6 +56,18 @@ const text = (value: unknown): string | null =>
 
 /** The SPW's type codes. `NA` is treated as both: its 2 records describe themselves as in-and-out. */
 const AIRE_USES: Readonly<Record<string, AccessPointUse>> = { E: "put-in", D: "take-out", ED: "both", NA: "both" };
+
+/**
+ * The SPW's `codico` values the app shows as obstacles. The layer's legend lists many more
+ * (bathing, camping, "Danger", "Obstacle temporaire"): one appearing in the data is a decision.
+ */
+const OBSTACLE_KINDS: Readonly<Record<string, ObstacleKind>> = {
+  "2": "dam",
+  "15": "impassable",
+  "8": "rocks",
+  "21": "drossage",
+  "22": "low-bridge",
+};
 
 /** An epoch time as the calendar date in Brussels, where the SPW works. */
 export const brusselsDate = (epochMs: number): CalendarDate =>
@@ -123,5 +140,36 @@ export function buildOfficialAires(
     source: { title: "SPW, PKAYAK map service, aires", url: `${PKAYAK}/${PKAYAK_LAYERS.aires}` },
     snapshot,
     aires: aires.toSorted((a, b) => a.number - b.number),
+  };
+}
+
+/**
+ * The obstacles, from layer 1. The kind comes from the code alone: the SPW's name fields
+ * are inconsistent (the English one often just says "Barrage"), so the app's text is its own.
+ */
+export function buildObstacles(answer: PkayakAnswer, snapshot: CalendarDate): ObstacleDataset {
+  const obstacles = featuresOf(answer, "obstacle").map(({ geometry, properties }): StoredObstacle => {
+    const spwId = properties.id;
+    if (typeof spwId !== "number") throw new Error(`An obstacle has no id: ${JSON.stringify(properties)}`);
+    const fail = (problem: string) => new Error(`Obstacle ${spwId}: ${problem}`);
+    const kind = OBSTACLE_KINDS[String(properties.codico)];
+    if (kind === undefined) throw fail(`unknown code ${JSON.stringify(properties.codico)}`);
+    if (typeof properties.datmod !== "number") throw fail("no last-changed date");
+    const position = positionOf(geometry);
+    if (position === null) throw fail("no position");
+    return { spwId, kind, position, lastChanged: brusselsDate(properties.datmod) };
+  });
+  obstacles.forEach(({ spwId }, i) => {
+    if (obstacles.findIndex((o) => o.spwId === spwId) !== i) throw new Error(`Obstacle ${spwId} appears twice`);
+  });
+  return {
+    format: OBSTACLE_DATA_FORMAT,
+    version: 1,
+    id: "obstacles",
+    title: "Obstacles on Walloon rivers",
+    attribution: SPW_ATTRIBUTION,
+    source: { title: "SPW, PKAYAK map service, obstacles", url: `${PKAYAK}/${PKAYAK_LAYERS.obstacles}` },
+    snapshot,
+    obstacles: obstacles.toSorted((a, b) => a.spwId - b.spwId),
   };
 }
