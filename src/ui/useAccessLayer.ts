@@ -66,7 +66,8 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const date = pickedDate ?? today;
   const shownToday = on && date === today;
   const flows = useWalloonFlows(rules, shownToday);
-  const official = useOfficialStatus(rules, shownToday);
+  // A future date notes today's closures (#212); a past date has no use for them.
+  const official = useOfficialStatus(rules, on && date >= today);
   const features = useMemo(
     () =>
       rules

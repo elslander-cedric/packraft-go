@@ -116,12 +116,14 @@ export function usePlanner(router?: Router) {
   // Paddle legs dated today use the live Walloon flows (#61) and the official status (#210), asked for only when there are some.
   const legToday = rulesAccess?.legs.some((leg) => leg?.date === today) ?? false;
   const flows = useWalloonFlows(rules, legToday);
-  const official = useOfficialStatus(rules, legToday);
+  // A leg on a later date notes today's closures (#212).
+  const legUpcoming = rulesAccess?.legs.some((leg) => leg?.date !== undefined && leg.date >= today) ?? false;
+  const official = useOfficialStatus(rules, legUpcoming);
   const flowsPending = flows === undefined && legToday;
   const officialPending = official === undefined && legToday;
   const waterAccess = useMemo(
     () =>
-      rules && legToday
+      rules && legUpcoming
         ? tripAccess(trip, rules, {
             today,
             ...(flows && { flows }),
@@ -132,7 +134,7 @@ export function usePlanner(router?: Router) {
             obstacles,
           })
         : rulesAccess,
-    [trip, rules, today, flows, flowsPending, official, officialPending, locks, obstacles, rulesAccess, legToday],
+    [trip, rules, today, flows, flowsPending, official, officialPending, locks, obstacles, rulesAccess, legUpcoming],
   );
   // Wanted from the first point, not the first paddle leg: that leg's own put-in may be offered one.
   const officialAires = useBuiltInOfficialAires(trip.points.length > 0)?.aires;

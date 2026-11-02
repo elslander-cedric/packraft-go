@@ -13,7 +13,8 @@ function statusSource(): Promise<OfficialStatusSource> {
 
 /**
  * Today's official status (#210), asked for only while it is wanted (something is
- * shown for today) and the rules that use it have loaded. Undefined until it arrives.
+ * shown for today, or for a future date, which notes a closure today, #212) and the
+ * rules that use it have loaded. Undefined until it arrives.
  */
 export function useOfficialStatus(rules: AccessRules | null, wanted: boolean): OfficialReadings | undefined {
   const [official, setOfficial] = useState<OfficialReadings | undefined>(undefined);
