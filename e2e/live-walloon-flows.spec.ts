@@ -21,7 +21,7 @@ const SEMOIS = "walloon-1B4c";
 /** The Amblève from the Warche confluence (1.B, gauge Stavelot): within its limits. */
 const AMBLEVE = "walloon-1B1a";
 /** The Lesse from Han to Houyet (1.C, open in October): Hérock isn't in the recording. */
-const LESSE_HAN_HOUYET = "walloon-1C2b";
+const LESSE_HAN_HOUYET = "walloon-1C2b-2";
 
 test.use({ viewport: { width: 1400, height: 900 }, timezoneId: "Europe/Brussels" });
 

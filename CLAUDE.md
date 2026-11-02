@@ -23,7 +23,7 @@ Node 22 (see `.nvmrc`), npm.
 - Manual-only scripts (call live services; never in `npm test`, `npm run e2e` or CI). Details in `docs/manual-scripts.md`:
   - `npm run check:brouter` and `npm run check:kiwis`: compare the live BRouter / KiWIS answers with the recorded fixtures (MATCH / DRIFT / MISMATCH; exit 1 = the live app is probably broken). They never write fixtures.
   - `npm run check:basemaps`: asks every base map and overlay source for one tile (OK / FAILED; exit 1 = a base map or overlay is probably broken; #179, #180, ADRs 0031, 0032).
-  - `npm run data:walloon-stretches` and `npm run review:walloon-stretches`: build and review the Walloon stretch geometry from OSM (#54, ADR 0024).
+  - `npm run data:walloon-stretches` and `npm run review:walloon-stretches`: build and review the Walloon stretch geometry from OSM (#54, ADR 0024), and each record's official stretch against the SPW's lines (#209, ADR 0035).
   - `npm run prepare:spw-data`: prepares the built-in SPW snapshots (official aires and stretches) from `PKAYAK` (#206, ADR 0035). Review the diff of `src/access/data/` before committing.
 
 **Layout tests must be font-independent (#70).** The app ships one self-hosted font (Inter, OFL, `public/fonts/`, declared in `globals.css`) so text measures the same on macOS and the Linux CI runner. In layout e2e tests wait for `document.fonts.ready` before measuring, assert the real rule (a figure on one line, Retry fully visible), and never rely on an OS font or a tuned line-count threshold. Don't change the font stack without re-running the layout tests on CI.

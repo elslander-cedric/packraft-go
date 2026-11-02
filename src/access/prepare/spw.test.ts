@@ -1,7 +1,7 @@
 // The offline preparation of the SPW snapshots (ADR 0035): what the script makes of
 // PKAYAK answers. Never calls the service.
 import { describe, expect, it } from "vitest";
-import { buildOfficialAires, buildOfficialStretches, pkayakQuery, type PkayakAnswer } from "./spw";
+import { buildOfficialAires, buildOfficialLines, buildOfficialStretches, pkayakQuery, type PkayakAnswer } from "./spw";
 
 const SNAPSHOT = "2026-11-02";
 
@@ -99,6 +99,81 @@ describe("official stretches", () => {
       /X.*name/i,
     );
     expect(() => buildOfficialStretches({ features: [stretch, stretch] }, SNAPSHOT)).toThrow(/SEMOIS2-3.*twice/i);
+  });
+});
+
+describe("official stretch lines (#209)", () => {
+  const line = (properties: Record<string, unknown>, coordinates: unknown, type = "MultiLineString") => ({
+    geometry: { type, coordinates: coordinates as readonly unknown[] },
+    properties,
+  });
+  const lines = (...features: PkayakAnswer["features"]) => buildOfficialLines({ features }, SNAPSHOT);
+
+  it("keeps each stretch's parts, rounded and thinned, sorted by id, with the source and date", () => {
+    const dataset = lines(
+      line({ nomtro: "SEMOIS2-3" }, [
+        [
+          [5.1234567, 49.8],
+          [5.124, 49.8],
+          [5.125, 49.8],
+        ],
+      ]),
+      line({ nomtro: "LESSE2" }, [
+        [
+          [5, 50],
+          [5.001, 50],
+        ],
+        [
+          [5.002, 50],
+          [5.003, 50],
+        ],
+      ]),
+    );
+    expect(dataset.snapshot).toBe(SNAPSHOT);
+    expect(dataset.source.url).toMatch(/PKAYAK\/MapServer\/5$/);
+    expect(dataset.stretches).toEqual([
+      {
+        id: "LESSE2",
+        parts: [
+          [
+            [5, 50],
+            [5.001, 50],
+          ],
+          [
+            [5.002, 50],
+            [5.003, 50],
+          ],
+        ],
+      },
+      {
+        id: "SEMOIS2-3",
+        parts: [
+          [
+            [5.12346, 49.8],
+            [5.125, 49.8],
+          ],
+        ],
+      },
+    ]);
+  });
+
+  it("reads a stretch that is a single line", () => {
+    const dataset = lines(
+      line(
+        { nomtro: "SURE" },
+        [
+          [5, 50],
+          [5.001, 50],
+        ],
+        "LineString",
+      ),
+    );
+    expect(dataset.stretches[0]!.parts).toHaveLength(1);
+  });
+
+  it("fails on a stretch with no line, and on a cut-off answer", () => {
+    expect(() => lines({ properties: { nomtro: "SURE" } })).toThrow(/SURE.*no line/i);
+    expect(() => buildOfficialLines({ features: [], exceededTransferLimit: true }, SNAPSHOT)).toThrow(/cut off/i);
   });
 });
 

@@ -2,8 +2,10 @@
 // PKAYAK map service into the datasets shipped in src/access/data/. Pure; the
 // network calls are in scripts/prepare-spw-data.mts. To add a layer: a build
 // function here, and an entry in that script's list.
+import type { AccessSource } from "@/core/access";
 import type { AccessPointUse } from "@/core/accessPoints";
 import type { CalendarDate } from "@/core/calendarDate";
+import { simplify } from "@/dataprep/walloonStretches/geo";
 import {
   OFFICIAL_AIRE_DATA_FORMAT,
   OFFICIAL_STRETCH_DATA_FORMAT,
@@ -34,7 +36,7 @@ export const STRETCH_FIELDS = ["nomtro", "adrtro"] as const;
 /** What the service answers, loosely: nothing in it is trusted until checked here. */
 export type PkayakAnswer = {
   readonly features: readonly {
-    readonly geometry?: { readonly type?: string; readonly coordinates?: readonly number[] } | null;
+    readonly geometry?: { readonly type?: string; readonly coordinates?: readonly unknown[] } | null;
     readonly properties: Readonly<Record<string, unknown>>;
   }[];
   readonly exceededTransferLimit?: boolean;
@@ -60,7 +62,47 @@ const round = (value: number) => Math.round(value * 100000) / 100000;
 
 function positionOf(geometry: PkayakAnswer["features"][number]["geometry"]): readonly [number, number] | null {
   const [lng, lat] = geometry?.type === "Point" ? (geometry.coordinates ?? []) : [];
-  return Number.isFinite(lng) && Number.isFinite(lat) ? [round(lng), round(lat)] : null;
+  return typeof lng === "number" && typeof lat === "number" && Number.isFinite(lng) && Number.isFinite(lat)
+    ? [round(lng), round(lat)]
+    : null;
+}
+
+/** Each official stretch's line as prepared for the mapping to AGW records (#209). Never shipped in the app. */
+export type OfficialLineDataset = {
+  readonly attribution: string;
+  readonly source: AccessSource;
+  readonly snapshot: CalendarDate;
+  readonly stretches: readonly { readonly id: string; readonly parts: readonly (readonly (readonly [number, number])[])[] }[];
+};
+
+/** Well below the 100 m that decides whether a river point is on a line. */
+const LINE_TOLERANCE_M = 3;
+
+const partsOf = (geometry: PkayakAnswer["features"][number]["geometry"]) => {
+  const parts = geometry?.type === "LineString" ? [geometry.coordinates] : geometry?.type === "MultiLineString" ? geometry.coordinates : [];
+  return (parts ?? []) as readonly (readonly (readonly [number, number])[])[];
+};
+
+/** Each official stretch's line, from layer 5, thinned: what the mapping is checked against. */
+export function buildOfficialLines(answer: PkayakAnswer, snapshot: CalendarDate): OfficialLineDataset {
+  const stretches = featuresOf(answer, "stretch line").map(({ geometry, properties }) => {
+    const id = text(properties.nomtro);
+    if (id === null) throw new Error("A stretch has no id");
+    const parts = partsOf(geometry).map((part) =>
+      simplify(
+        part.map(([lng, lat]) => ({ lat, lng })),
+        LINE_TOLERANCE_M,
+      ).map(({ lat, lng }): [number, number] => [round(lng), round(lat)]),
+    );
+    if (parts.length === 0) throw new Error(`Stretch ${id} has no line`);
+    return { id, parts };
+  });
+  return {
+    attribution: SPW_ATTRIBUTION,
+    source: { title: "SPW, PKAYAK map service, stretches", url: `${PKAYAK}/${PKAYAK_LAYERS.stretches}` },
+    snapshot,
+    stretches: stretches.toSorted((a, b) => a.id.localeCompare(b.id)),
+  };
 }
 
 /** Each official stretch's id and name, from layer 5. Its line isn't shipped (ADR 0035). */
