@@ -46,6 +46,9 @@ export type OfficialVerdict =
   | { readonly kind: "unavailable" }
   | { readonly kind: "none" };
 
+/** What the app asks the SPW for today and may have to go without (#211): the note names each one. */
+export type OfficialCheck = "closures";
+
 function closed(cause: OfficialClosure, { reasonEn, reasonFr }: OfficialReading): OfficialVerdict {
   const reason = reasonEn ?? reasonFr;
   return { kind: "closed", cause, ...(reason !== undefined && { reason }) };

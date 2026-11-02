@@ -1,4 +1,4 @@
-import type { AccessFeature, AccessReason, AccessState, LockMarker } from "@/core/access";
+import { officialNotChecked, type AccessFeature, type AccessReason, type AccessState, type LockMarker } from "@/core/access";
 import { accessPointUses, type AccessPointUse } from "@/core/accessPoints";
 import { obstacleKinds, type Obstacle, type ObstacleKind } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
@@ -9,7 +9,7 @@ import { Icon } from "./icons/Icon";
 import { icons, obstacleIcons } from "./icons/icons";
 import { reasonText } from "./reasonText";
 import { accessStateLabel, strings } from "./strings";
-import { StatusIcon } from "./TripAccessView";
+import { OfficialNotCheckedNote, StatusIcon } from "./TripAccessView";
 import "./AccessPanel.css";
 
 const states: readonly Exclude<AccessState, "checking">[] = ["open", "closed-today", "forbidden", "unknown"];
@@ -246,6 +246,7 @@ export function AccessDetail({
         {accessStateLabel(status.state)}
       </p>
       <p className="access-legend-note access-status-date">{strings.accessStatusOn(date)}</p>
+      <OfficialNotCheckedNote checks={officialNotChecked(status)} />
       <ul className="access-reasons">
         {status.reasons.map((reason, i) => (
           <Reason key={i} reason={reason} />

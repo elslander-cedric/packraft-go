@@ -273,6 +273,9 @@ export const strings = {
     unrecognised: (code: string) =>
       `The SPW gives a status the app doesn't know (code ${code}); check today's official status on kayak.spw.wallonie.be.`,
     none: "The SPW publishes no official status for this stretch.",
+    // With no official reading (#211): one sentence per check that didn't happen, then the link.
+    notChecked: { closures: "Official closures weren't checked, so the SPW may have closed this stretch." },
+    notCheckedLink: { title: "See today's status on the SPW's site", url: "https://kayak.spw.wallonie.be/" },
   },
   accessLegendNote:
     "In Flanders, water that isn't marked is open by default. In Wallonia, only the listed stretches may be paddled; other water is treated as not allowed, but isn't painted red. " +

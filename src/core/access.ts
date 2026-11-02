@@ -13,7 +13,7 @@ import {
   type Geometry,
   type Position,
 } from "./geo";
-import { officialCheck, type OfficialReadings, type OfficialVerdict } from "./officialStatus";
+import { officialCheck, type OfficialCheck, type OfficialReadings, type OfficialVerdict } from "./officialStatus";
 import type { LatLng } from "./trip";
 
 export type { Geometry, Position } from "./geo";
@@ -330,6 +330,16 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     ...(official && { official }),
   };
   return { state, reasons: [reason] };
+}
+
+/**
+ * What this status couldn't check with the SPW (#211): the computed status stood in
+ * for a reading. Empty with a reading, while one loads, on a date the official status
+ * doesn't cover, and on water with no official stretch.
+ */
+export function officialNotChecked(status: AccessStatus): readonly OfficialCheck[] {
+  const unavailable = status.reasons.some((reason) => reason.kind === "rule" && reason.official?.kind === "unavailable");
+  return unavailable ? ["closures"] : [];
 }
 
 /**

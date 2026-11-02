@@ -1,6 +1,11 @@
 import type { AccessReason } from "@/core/access";
-import type { OfficialVerdict } from "@/core/officialStatus";
+import type { OfficialCheck, OfficialVerdict } from "@/core/officialStatus";
 import { strings } from "./strings";
+
+/** What wasn't checked with the SPW, in words (#211); empty when everything was. */
+export function notCheckedText(checks: readonly OfficialCheck[]): string {
+  return checks.map((check) => strings.official.notChecked[check]).join(" ");
+}
 
 function closedText(verdict: Extract<OfficialVerdict, { kind: "closed" }>): string {
   const text = strings.official;
