@@ -275,6 +275,45 @@ describe("a paddle leg dated today", () => {
   const leg: Leg = { mode: "paddle", route: { status: "routed", geometry: points.map((p) => ({ ...p, elevation: 0 })) } };
   const paddle: Trip = { name: "Test", points, legs: [leg], startDate: today };
 
+  describe("when the incidents couldn't be loaded (#216)", () => {
+    const loaded = { today, official: official({ code: "1" }) };
+    const options = { ...loaded, incidents: { status: "failed" } } as const;
+
+    it("says so on a leg dated today or later", () => {
+      expect(tripAccess(paddle, rules, options).legs[0]!.notChecked).toEqual(["incidents"]);
+      const later = { ...paddle, startDate: "2026-11-20" };
+      expect(tripAccess(later, rules, options).legs[0]!.notChecked).toEqual(["incidents"]);
+    });
+
+    it("says nothing on a past or undated leg, which doesn't ask the SPW", () => {
+      const past = { ...paddle, startDate: "2026-10-20" };
+      expect(tripAccess(past, rules, options).legs[0]!.notChecked).toEqual([]);
+      const undated = { name: paddle.name, points: paddle.points, legs: paddle.legs };
+      expect(tripAccess(undated, rules, options).legs[0]!.notChecked).toEqual([]);
+    });
+
+    it("leaves the closures note as it is", () => {
+      const failed = tripAccess(paddle, rules, { ...loaded, official: { status: "failed" } });
+      expect(failed.legs[0]!.notChecked).toEqual(["closures"]);
+    });
+
+    it("never changes the access state, whatever an incident says", () => {
+      const closure = {
+        id: "incident-1",
+        spwId: 1,
+        officialStretch: "TEST-1",
+        position: [onWalloonAllYear.lng, onWalloonAllYear.lat],
+        textEn: "River closed (works in progress)",
+      } as const;
+      const without = tripAccess(paddle, rules, loaded);
+      const failing = tripAccess(paddle, rules, options);
+      const reported = tripAccess(paddle, rules, { ...loaded, incidents: { status: "ok", incidents: [closure] } });
+      expect(failing.legs[0]!.status).toEqual(without.legs[0]!.status);
+      expect(reported.legs[0]!.status).toEqual(without.legs[0]!.status);
+      expect(reported.legs[0]!.warnings).toEqual(without.legs[0]!.warnings);
+    });
+  });
+
   it("on an officially closed stretch gets the closure warning with its reason", () => {
     const access = tripAccess(paddle, rules, { today, official: official({ code: "0", reasonFr: "Travaux" }) });
     expect(access.legs[0]!.warnings).toEqual([
@@ -425,6 +464,38 @@ describe("what wasn't checked with the SPW (#211)", () => {
   it("is nothing on a past date", () => {
     const status = accessAt(onWalloonAllYear, rules, { today, date: "2026-10-20", official: { status: "failed" } });
     expect(officialNotChecked(status)).toEqual([]);
+  });
+
+  describe("with the incidents (#216)", () => {
+    const failed = { status: "failed" } as const;
+    const open = accessAt(onWalloonAllYear, rules, { ...context, official: official({ code: "1" }) });
+
+    it("names them alone when only the incidents failed", () => {
+      expect(officialNotChecked(open, failed)).toEqual(["incidents"]);
+    });
+
+    it("names both, closures first, when both failed", () => {
+      const status = accessAt(onWalloonAllYear, rules, { ...context, official: failed });
+      expect(officialNotChecked(status, failed)).toEqual(["closures", "incidents"]);
+    });
+
+    it("names them on a future date with a reading", () => {
+      const status = accessAt(onWalloonAllYear, rules, { today, date: "2026-11-20", official: official({ code: "1" }) });
+      expect(officialNotChecked(status, failed)).toEqual(["incidents"]);
+    });
+
+    it("names them once, however many stretches a status covers", () => {
+      expect(officialNotChecked(combineAccess([open, open]), failed)).toEqual(["incidents"]);
+    });
+
+    it("is nothing when they loaded, even if there are none", () => {
+      expect(officialNotChecked(open, { status: "ok", incidents: [] })).toEqual([]);
+    });
+
+    it("is nothing on a stretch the SPW doesn't list, as it reports no incidents there", () => {
+      const status = accessAt(onWalloonAllYear, unlistedRules, { ...context, official: official({ code: "1" }) });
+      expect(officialNotChecked(status, failed)).toEqual([]);
+    });
   });
 
   it("leaves a future date's status rule-based", () => {

@@ -276,7 +276,10 @@ export const strings = {
       `The SPW gives a status the app doesn't know (code ${code}); check today's official status on kayak.spw.wallonie.be.`,
     none: "The SPW publishes no official status for this stretch.",
     // With no official reading (#211): one sentence per check that didn't happen, then the link.
-    notChecked: { closures: "Official closures weren't checked, so the SPW may have closed this stretch." },
+    notChecked: {
+      closures: "Official closures weren't checked, so the SPW may have closed this stretch.",
+      incidents: "The SPW's incidents couldn't be loaded, so there may be hazards here that aren't shown.",
+    },
     notCheckedLink: { title: "See today's status on the SPW's site", url: "https://kayak.spw.wallonie.be/" },
   },
   accessLegendNote:
@@ -332,6 +335,14 @@ export const strings = {
     legendNote: "Obstacles show when zoomed in.",
     // No obstacle list is complete (ADR 0035).
     incomplete: "The SPW marks only where this is; what it says here is this app's reading. No list of obstacles is complete.",
+  },
+  // Incidents (ADR 0035, GLOSSARY "Incident"): the text is the SPW's own, and can be old, so its date always shows.
+  incidents: {
+    title: "Incident reported by the SPW",
+    legend: "Incident reported by the SPW",
+    marker: (text: string) => `Incident: ${text}`,
+    noText: "The SPW gives no description.",
+    reported: (date: string) => `Reported by the SPW on ${date}`,
   },
   accessDetailClose: "Close",
   accessNoRule: "No access rules are known for this place.",

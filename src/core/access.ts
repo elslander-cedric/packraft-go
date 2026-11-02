@@ -20,6 +20,7 @@ import {
   type OfficialReadings,
   type OfficialVerdict,
 } from "./officialStatus";
+import type { OfficialIncidents } from "./incident";
 import type { LatLng } from "./trip";
 
 export type { Geometry, Position } from "./geo";
@@ -179,6 +180,8 @@ export type AccessReason =
       readonly official?: OfficialVerdict;
       /** Walloon stretches on a future date: the SPW has closed it today, which may still apply then (#212). */
       readonly closedToday?: OfficialClosedVerdict;
+      /** The official stretch this water belongs to, where the SPW lists one. */
+      readonly officialStretch?: string;
     }
   /** The place is outside every region with rules. */
   | { readonly kind: "no-rule"; readonly state: "unknown" };
@@ -351,6 +354,7 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     ...(official && { official }),
     ...(unavailableToday && { official: unavailableToday }),
     ...(closedToday && { closedToday }),
+    ...(rule.officialStretch && { officialStretch: rule.officialStretch }),
   };
   return { state, reasons: [reason] };
 }
@@ -359,10 +363,15 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
  * What this status couldn't check with the SPW (#211): the computed status stood in
  * for a reading on today's date, or on a future date a closure today can't be known.
  * Empty with a reading, while one loads, on a past date, and on water with no official stretch.
+ *
+ * Incidents aren't part of a status (ADR 0035), so pass them in to have a failure named
+ * too (#216), on water the SPW lists. Pass them only where they were asked for: today or later.
  */
-export function officialNotChecked(status: AccessStatus): readonly OfficialCheck[] {
-  const unavailable = status.reasons.some((reason) => reason.kind === "rule" && reason.official?.kind === "unavailable");
-  return unavailable ? ["closures"] : [];
+export function officialNotChecked(status: AccessStatus, incidents?: OfficialIncidents): readonly OfficialCheck[] {
+  const rules = status.reasons.flatMap((reason) => (reason.kind === "rule" ? [reason] : []));
+  const closures = rules.some((reason) => reason.official?.kind === "unavailable");
+  const hazards = incidents?.status === "failed" && rules.some((reason) => reason.officialStretch !== undefined);
+  return [...(closures ? (["closures"] as const) : []), ...(hazards ? (["incidents"] as const) : [])];
 }
 
 /**

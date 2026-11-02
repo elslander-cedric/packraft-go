@@ -101,6 +101,8 @@ export const icons = {
   warningCheckFlow: faGaugeHigh,
   warningLock: faStairs,
   warningObstacle: faTriangleExclamation,
+  // An incident's marker and legend (ADR 0035).
+  incident: faTriangleExclamation,
   warningAire: faFlag,
   // The planner menu's items.
   newTrip: faFileCirclePlus,

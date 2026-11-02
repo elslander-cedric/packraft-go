@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { accessFeatures, type AccessFeature, type LockMarker } from "@/core/access";
+import { incidentsOn, type Incident, type OfficialIncidents } from "@/core/incident";
 import type { Obstacle } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
 import { summarise } from "@/core/summarise";
@@ -14,7 +15,7 @@ import {
   useBuiltInObstacles,
   useBuiltInOfficialAires,
 } from "./useAccessRules";
-import { useOfficialStatus } from "./useOfficialStatus";
+import { useOfficialIncidents, useOfficialStatus } from "./useOfficialStatus";
 import { useWalloonFlows } from "./useWalloonFlows";
 
 export type AccessLayer = {
@@ -26,14 +27,15 @@ export type AccessLayer = {
   isToday: boolean;
   /** The date controls' props (#59). */
   dateSelector: AccessDateProps;
-  /** The waters, locks, official aires and obstacles to draw, once the rules have loaded; null while off or loading. */
+  /** The waters, locks, official aires, obstacles and incidents to draw, once the rules have loaded; null while off or loading. */
   shown: {
     features: readonly AccessFeature[];
     locks: readonly LockMarker[];
     aires: readonly OfficialAire[];
     obstacles: readonly Obstacle[];
+    incidents: readonly Incident[];
   } | null;
-  /** The water, lock, official aire or obstacle whose details are open, if any. */
+  /** The water, lock, official aire, obstacle or incident whose details are open, if any. */
   selectedId: string | null;
   select: (id: string | null) => void;
   selectedWater: AccessFeature | undefined;
@@ -41,11 +43,15 @@ export type AccessLayer = {
   selectedAire: OfficialAire | undefined;
   selectedAireStretch: OfficialStretch | undefined;
   selectedObstacle: Obstacle | undefined;
+  selectedIncident: Incident | undefined;
+  /** Today's incidents, once asked for and answered: a water's details say if they failed (#216). */
+  incidents: OfficialIncidents | undefined;
   /** The official aires once loaded, on or off: the Access points tab lists the ones on the route (#208). */
   officialAires: readonly OfficialAire[];
 };
 
 const NO_AIRES: readonly OfficialAire[] = [];
+const NO_INCIDENTS: readonly Incident[] = [];
 
 /**
  * The access layer's state for the planner: on or off,
@@ -68,6 +74,11 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const flows = useWalloonFlows(rules, shownToday);
   // A future date notes today's closures (#212); a past date has no use for them.
   const official = useOfficialStatus(rules, on && date >= today);
+  const incidents = useOfficialIncidents(rules, on && date >= today);
+  const shownIncidents = useMemo(
+    () => (incidents?.status === "ok" ? incidentsOn(incidents.incidents, date) : NO_INCIDENTS),
+    [incidents, date],
+  );
   const features = useMemo(
     () =>
       rules
@@ -100,7 +111,16 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
     date,
     isToday: pickedDate === null,
     dateSelector: { date, isToday: pickedDate === null, onDate: setPickedDate, onToday: () => setPickedDate(null), tripDays },
-    shown: on && rules ? { features, locks: locks ?? [], aires: builtInAires?.aires ?? [], obstacles: obstacles ?? [] } : null,
+    shown:
+      on && rules
+        ? {
+            features,
+            locks: locks ?? [],
+            aires: builtInAires?.aires ?? [],
+            obstacles: obstacles ?? [],
+            incidents: shownIncidents,
+          }
+        : null,
     selectedId,
     select,
     selectedWater: on ? features.find((f) => f.record.id === selectedId) : undefined,
@@ -108,6 +128,8 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
     selectedAire,
     selectedAireStretch: builtInAires?.stretches.find((s) => s.id === selectedAire?.officialStretch),
     selectedObstacle: on ? obstacles?.find((o) => o.id === selectedId) : undefined,
+    selectedIncident: on ? shownIncidents.find((i) => i.id === selectedId) : undefined,
+    incidents,
     officialAires: builtInAires?.aires ?? NO_AIRES,
   };
 }

@@ -1,16 +1,22 @@
 // PKAYAK adapter: implements the core's OfficialStatusSource with the SPW's public
-// ArcGIS map service (ADR 0035, #210). The browser calls it directly (it allows any
-// origin), for layer 5 without geometry and with only the fields needed. The answer
-// is cached for 15 minutes, and a request that doesn't answer in time counts as a
-// failure. It is the only module that talks to this service. The REST API at
+// ArcGIS map service (ADR 0035, #210, #216). The browser calls it directly (it allows
+// any origin), with only the fields needed: layer 5 without geometry for the status,
+// layer 0 for the incidents. A refresh is those two requests, which fail apart. The
+// answers are cached for 15 minutes, and a request that doesn't answer in time counts
+// as a failure. It is the only module that talks to this service. The REST API at
 // kayak.spw.wallonie.be has no CORS and isn't used. See
 // docs/research/kayak-spw-access-points.md.
+import { todayInBrussels, type CalendarDate } from "@/core/calendarDate";
+import type { Incident, OfficialIncidents } from "@/core/incident";
 import type { OfficialReading, OfficialReadings, OfficialStatusSource } from "@/core/officialStatus";
 
 export const PKAYAK_URL = "https://geoservices3.wallonie.be/arcgis/rest/services/APP_KAYAK/PKAYAK/MapServer";
 
 /** The layer of official stretches. */
 const STRETCHES_LAYER = 5;
+
+/** The layer of incidents. */
+const INCIDENTS_LAYER = 0;
 
 /** How long an answer (or a failure) is reused: the SPW's limit on heavy use, at most once per 15 minutes per page. */
 export const CACHE_MS = 15 * 60 * 1000;
@@ -33,7 +39,10 @@ export type PkayakOptions = {
   serviceUrl?: string;
 };
 
-const FAILED: OfficialReadings = { status: "failed" };
+const FAILED = { status: "failed" } as const;
+
+/** One refresh: two requests, each answering by itself, so a slow one doesn't hold the other back. */
+type Refresh = { readonly readings: Promise<OfficialReadings>; readonly incidents: Promise<OfficialIncidents> };
 
 /** The request for every official stretch's id (`nomtro`), status code (`stapub`) and reason (`justie`, `justif`). */
 export function stretchesUrl(serviceUrl = PKAYAK_URL): string {
@@ -41,12 +50,27 @@ export function stretchesUrl(serviceUrl = PKAYAK_URL): string {
   return `${serviceUrl}/${STRETCHES_LAYER}/query?${new URLSearchParams(params).toString()}`;
 }
 
+/**
+ * The request for every current incident: its id, official stretch (`nomtro`), French and
+ * English text (`commen`, `commene`), created, changed and expiry dates, and position.
+ */
+export function incidentsUrl(serviceUrl = PKAYAK_URL): string {
+  const params = {
+    where: "1=1",
+    outFields: "id,nomtro,commen,commene,datcre,datmod,datexp",
+    returnGeometry: "true",
+    outSR: "4326",
+    f: "json",
+  };
+  return `${serviceUrl}/${INCIDENTS_LAYER}/query?${new URLSearchParams(params).toString()}`;
+}
+
 /** The SPW's free text, or undefined where it gives none: its empty fields are null or "". */
 function text(value: unknown): string | undefined {
   return (typeof value === "string" && value.trim()) || undefined;
 }
 
-type Feature = { attributes?: Record<string, unknown> };
+type Feature = { attributes?: Record<string, unknown>; geometry?: { x?: unknown; y?: unknown } | null };
 
 /** The features' attributes as readings, or null when the body isn't a layer's answer (an ArcGIS error is a 200). */
 function parseStretches(body: unknown): Record<string, OfficialReading> | null {
@@ -64,6 +88,36 @@ function parseStretches(body: unknown): Record<string, OfficialReading> | null {
     };
   }
   return stretches;
+}
+
+/** One of the SPW's dates, milliseconds since the epoch, as the day it falls on in Brussels. */
+function day(value: unknown): CalendarDate | undefined {
+  return typeof value === "number" ? todayInBrussels(new Date(value)) : undefined;
+}
+
+function parseIncident({ attributes, geometry }: Feature): Incident | null {
+  const [spwId, x, y] = [attributes?.id, geometry?.x, geometry?.y];
+  if (typeof spwId !== "number" || typeof x !== "number" || typeof y !== "number") return null;
+  const [officialStretch, textEn, textFr] = [text(attributes?.nomtro), text(attributes?.commene), text(attributes?.commen)];
+  const [created, changed, expires] = [day(attributes?.datcre), day(attributes?.datmod), day(attributes?.datexp)];
+  return {
+    id: `incident-${spwId}`,
+    spwId,
+    ...(officialStretch && { officialStretch }),
+    position: [x, y],
+    ...(textEn && { textEn }),
+    ...(textFr && { textFr }),
+    ...(created && { created }),
+    ...(changed && { changed }),
+    ...(expires && { expires }),
+  };
+}
+
+/** The features as incidents, or null when the body isn't a layer's answer. A feature with no place on the map is left out. */
+function parseIncidents(body: unknown): readonly Incident[] | null {
+  const features = (body as { features?: unknown } | null)?.features;
+  if (!Array.isArray(features)) return null;
+  return (features as Feature[]).flatMap((feature) => parseIncident(feature) ?? []);
 }
 
 async function getJson(fetchFn: Fetch, setTimer: SetTimer, url: string): Promise<unknown> {
@@ -88,9 +142,9 @@ async function getJson(fetchFn: Fetch, setTimer: SetTimer, url: string): Promise
 }
 
 /**
- * The live official status source. One refresh per 15 minutes: a failure, a timeout
- * included, is cached too, so a failing service isn't asked again and again.
- * Concurrent callers share one refresh.
+ * The live official status source. One refresh per 15 minutes, of at most two requests:
+ * a failure, a timeout included, is cached too, so a failing service isn't asked again
+ * and again. Concurrent callers share one refresh.
  */
 export function createPkayakStatusSource(options: PkayakOptions = {}): OfficialStatusSource {
   const fetchFn: Fetch = options.fetch ?? ((input, init) => fetch(input, init));
@@ -102,9 +156,9 @@ export function createPkayakStatusSource(options: PkayakOptions = {}): OfficialS
       return () => clearTimeout(timer);
     });
   const serviceUrl = options.serviceUrl ?? PKAYAK_URL;
-  let cached: { at: number; answer: Promise<OfficialReadings> } | null = null;
+  let cached: { at: number; refresh: Refresh } | null = null;
 
-  async function load(): Promise<OfficialReadings> {
+  async function loadReadings(): Promise<OfficialReadings> {
     try {
       const stretches = parseStretches(await getJson(fetchFn, setTimer, stretchesUrl(serviceUrl)));
       return stretches ? { status: "ok", stretches } : FAILED;
@@ -113,11 +167,27 @@ export function createPkayakStatusSource(options: PkayakOptions = {}): OfficialS
     }
   }
 
+  async function loadIncidents(): Promise<OfficialIncidents> {
+    try {
+      const incidents = parseIncidents(await getJson(fetchFn, setTimer, incidentsUrl(serviceUrl)));
+      return incidents ? { status: "ok", incidents } : FAILED;
+    } catch {
+      return FAILED;
+    }
+  }
+
+  function load(): Refresh {
+    return { readings: loadReadings(), incidents: loadIncidents() };
+  }
+
+  function current(): Refresh {
+    if (cached && now() - cached.at < CACHE_MS) return cached.refresh;
+    cached = { at: now(), refresh: load() };
+    return cached.refresh;
+  }
+
   return {
-    readings() {
-      if (cached && now() - cached.at < CACHE_MS) return cached.answer;
-      cached = { at: now(), answer: load() };
-      return cached.answer;
-    },
+    readings: () => current().readings,
+    incidents: () => current().incidents,
   };
 }

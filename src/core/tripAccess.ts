@@ -4,6 +4,7 @@
 import {
   accessAlong,
   combineAccess,
+  officialNotChecked,
   type AccessReason,
   type AccessRules,
   type AccessState,
@@ -13,7 +14,8 @@ import {
 import { addDays, type CalendarDate } from "./calendarDate";
 import type { FlowReadings } from "./flow";
 import { locksOnLine, type LockWarning } from "./locks";
-import type { OfficialReadings } from "./officialStatus";
+import type { OfficialIncidents } from "./incident";
+import type { OfficialCheck, OfficialReadings } from "./officialStatus";
 import { obstaclesOnLine, type Obstacle, type ObstacleWarning } from "./obstacle";
 import { dayRanges } from "./summarise";
 import type { LatLng, Trip } from "./trip";
@@ -26,6 +28,8 @@ export type LegAccess = {
   /** The day's date; absent for an undated trip. */
   readonly date?: CalendarDate;
   readonly status: AccessStatus;
+  /** What couldn't be checked with the SPW for this leg (#211, #216). */
+  readonly notChecked: readonly OfficialCheck[];
   /** True on a future date where the rules allow paddling but flow decides on the day. */
   readonly checkFlowOnTheDay: boolean;
   /** Why this leg may not be paddleable, most serious first. Information only: warnings never block. */
@@ -122,6 +126,8 @@ export type TripAccessOptions = {
   readonly official?: OfficialReadings;
   /** True while today's official status is loading: legs dated today on water it decides are "checking". */
   readonly officialPending?: boolean;
+  /** Today's incidents (#216), once known. They never change a leg's status. */
+  readonly incidents?: OfficialIncidents;
   /** Lock markers (#57): a paddle leg passing one gets a lock warning (#60). */
   readonly locks?: readonly LockMarker[];
   /** Obstacles (ADR 0035): a paddle leg passing one gets an obstacle warning (#215). */
@@ -147,6 +153,7 @@ function legAccess(
   when: When,
   status: AccessStatus,
   today: CalendarDate,
+  incidents: OfficialIncidents | undefined,
   lockWarnings: readonly LockWarning[],
   obstacleWarnings: readonly ObstacleWarning[],
 ): LegAccess {
@@ -161,14 +168,17 @@ function legAccess(
     ? status.reasons.filter((reason) => reason.kind === "rule" && reason.flowDependent && reason.state === "open")
     : [];
   for (const reason of flowReasons) warnings.push({ kind: "check-flow", ...when, reason });
-  return { ...when, status, checkFlowOnTheDay: flowReasons.length > 0, warnings, notes, lockWarnings, obstacleWarnings };
+  // Only a leg dated today or later asks for incidents; another leg's failure says nothing about it.
+  const upcoming = when.date !== undefined && when.date >= today;
+  const notChecked = officialNotChecked(status, upcoming ? incidents : undefined);
+  return { ...when, status, notChecked, checkFlowOnTheDay: flowReasons.length > 0, warnings, notes, lockWarnings, obstacleWarnings };
 }
 
 /** Access status and warnings for every paddle leg, day and the whole trip. */
 export function tripAccess(
   trip: Trip,
   rules: AccessRules,
-  { today, flows, flowsPending, official, officialPending, locks = [], obstacles = [] }: TripAccessOptions,
+  { today, flows, flowsPending, official, officialPending, incidents, locks = [], obstacles = [] }: TripAccessOptions,
 ): TripAccess {
   const legs: (LegAccess | undefined)[] = trip.legs.map(() => undefined);
   const days = dayRanges(trip).map(([first, last], day): DayAccess => {
@@ -189,7 +199,7 @@ export function tripAccess(
       const when = { leg, day, ...(date !== undefined && { date }) };
       const lockWarnings = locksOnLine(line, locks).map((lock): LockWarning => ({ lock, ...when }));
       const obstacleWarnings = obstaclesOnLine(line, obstacles).map((obstacle): ObstacleWarning => ({ obstacle, ...when }));
-      dayLegs.push((legs[leg] = legAccess(when, status, today, lockWarnings, obstacleWarnings)));
+      dayLegs.push((legs[leg] = legAccess(when, status, today, incidents, lockWarnings, obstacleWarnings)));
     }
     return { day, ...(date !== undefined && { date }), ...summary(dayLegs) };
   });

@@ -475,7 +475,9 @@ export default function Planner({ router }: { router?: Router }) {
         aire={layer.selectedAire}
         aireStretch={layer.selectedAireStretch}
         obstacle={layer.selectedObstacle}
+        {...(layer.selectedIncident && { incident: layer.selectedIncident })}
         date={layer.date}
+        {...(layer.incidents && { incidents: layer.incidents })}
         onClose={() => layer.select(null)}
       />
       <LegDetailsDialog

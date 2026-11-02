@@ -1,6 +1,7 @@
 // Official status (ADR 0035, #210, GLOSSARY "Official status"): the SPW's own
 // status per official stretch for today, and what each of its codes means. Pure:
 // readings are passed in by whoever asked the source.
+import type { OfficialIncidents } from "./incident";
 
 /** What the SPW publishes for one official stretch. `code` is its status code, as published. */
 export type OfficialReading = {
@@ -20,12 +21,14 @@ export type OfficialReadings =
   | { readonly status: "failed" };
 
 /**
- * Gives today's reading of every official stretch. The real implementation (the
- * PKAYAK adapter) is injected; tests pass a fake. Implementations never throw: a
- * failure is a `failed` result.
+ * Gives today's reading of every official stretch, and the SPW's current incidents. One
+ * refresh serves both, and each can fail without the other. The real implementation (the
+ * PKAYAK adapter) is injected; tests pass a fake. Implementations never throw: a failure
+ * is a `failed` result.
  */
 export interface OfficialStatusSource {
   readings(): Promise<OfficialReadings>;
+  incidents(): Promise<OfficialIncidents>;
 }
 
 /** Why the SPW closed a stretch: code 0 means too low, or whatever reason it gives. */
@@ -47,7 +50,7 @@ export type OfficialVerdict =
   | { readonly kind: "none" };
 
 /** What the app asks the SPW and may have to go without, today or on a future date (#211): the note names each one. */
-export type OfficialCheck = "closures";
+export type OfficialCheck = "closures" | "incidents";
 
 /** A stretch the SPW has closed today, with its reason if it gives one. */
 export type OfficialClosedVerdict = Extract<OfficialVerdict, { kind: "closed" }>;

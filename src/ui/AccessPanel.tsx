@@ -1,10 +1,12 @@
 import { officialNotChecked, type AccessFeature, type AccessReason, type AccessState, type LockMarker } from "@/core/access";
 import { accessPointUses, type AccessPointUse } from "@/core/accessPoints";
+import { incidentText, type Incident, type OfficialIncidents } from "@/core/incident";
 import { obstacleKinds, type Obstacle, type ObstacleKind } from "@/core/obstacle";
 import type { OfficialAire, OfficialStretch } from "@/core/officialAire";
 import { accessColours, accessUseColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
 import { FlowFiguresView } from "./FlowFiguresView";
+import { formatDayDate } from "./format";
 import { Icon } from "./icons/Icon";
 import { icons, obstacleIcons } from "./icons/icons";
 import { reasonText } from "./reasonText";
@@ -34,6 +36,14 @@ function ObstacleSwatch({ kind }: { kind: ObstacleKind }) {
   return (
     <span className="access-obstacle-swatch" aria-hidden="true">
       <Icon icon={obstacleIcons[kind]} />
+    </span>
+  );
+}
+
+function IncidentSwatch() {
+  return (
+    <span className="access-incident-swatch" aria-hidden="true">
+      <Icon icon={icons.incident} />
     </span>
   );
 }
@@ -110,6 +120,10 @@ export function AccessLegend() {
           {strings.obstacles.names[kind]}
         </p>
       ))}
+      <p className="access-legend-lock">
+        <IncidentSwatch />
+        {strings.incidents.legend}
+      </p>
       <p className="access-legend-note">{strings.obstacles.legendNote}</p>
       <p className="access-legend-note">{strings.accessLegendNote}</p>
       <p className="access-legend-note">{strings.accessDataCredit}</p>
@@ -229,14 +243,29 @@ export function ObstacleDetail({ obstacle }: { obstacle: Obstacle }) {
   );
 }
 
+/** An incident (ADR 0035, #216): the SPW's own text, and the date, as it can be years old. */
+export function IncidentDetail({ incident }: { incident: Incident }) {
+  const text = strings.incidents;
+  return (
+    <div className="access-detail">
+      <p>{incidentText(incident) ?? text.noText}</p>
+      {incident.created && <p>{text.reported(formatDayDate(incident.created))}</p>}
+      <p className="access-legend-note">{strings.flow.credit}</p>
+    </div>
+  );
+}
+
 /** Why a water has its access status: status, reasons, extra rules, source and research date. */
 export function AccessDetail({
   feature,
   date,
+  incidents,
 }: {
   feature: AccessFeature;
   /** The date the status is for. */
   date: string;
+  /** Today's incidents, once asked for: the note says if they failed (#216). */
+  incidents?: OfficialIncidents;
 }) {
   const { status } = feature;
   return (
@@ -246,7 +275,7 @@ export function AccessDetail({
         {accessStateLabel(status.state)}
       </p>
       <p className="access-legend-note access-status-date">{strings.accessStatusOn(date)}</p>
-      <OfficialNotCheckedNote checks={officialNotChecked(status)} />
+      <OfficialNotCheckedNote checks={officialNotChecked(status, incidents)} />
       <ul className="access-reasons">
         {status.reasons.map((reason, i) => (
           <Reason key={i} reason={reason} />

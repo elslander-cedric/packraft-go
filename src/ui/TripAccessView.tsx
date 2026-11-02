@@ -1,4 +1,4 @@
-import { officialNotChecked, type AccessState } from "@/core/access";
+import type { AccessState } from "@/core/access";
 import type { AireWarning } from "@/core/aire";
 import type { LockWarning } from "@/core/locks";
 import type { LegWarnings } from "@/core/dayWarnings";
@@ -189,7 +189,7 @@ export function LegAccessView({ access }: { access: LegAccess }) {
           ? strings.tripAccess.legStatusInGeneral(state)
           : strings.tripAccess.legStatusOn(formatDayDate(date), state)}
       </p>
-      <OfficialNotCheckedNote checks={officialNotChecked(status)} />
+      <OfficialNotCheckedNote checks={access.notChecked} />
       {generalRules.length > 0 && (
         <div className="leg-access-rules">
           {generalRules.map((reason) => (

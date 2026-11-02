@@ -99,4 +99,14 @@ describe("the note on what wasn't checked with the SPW (#211)", () => {
   it("says official closures weren't checked", () => {
     expect(notCheckedText(["closures"])).toBe("Official closures weren't checked, so the SPW may have closed this stretch.");
   });
+
+  it("says the incidents couldn't be loaded, as none on the map doesn't mean none on the river (#216)", () => {
+    expect(notCheckedText(["incidents"])).toBe("The SPW's incidents couldn't be loaded, so there may be hazards here that aren't shown.");
+  });
+
+  it("names both, one sentence each", () => {
+    expect(notCheckedText(["closures", "incidents"])).toBe(
+      "Official closures weren't checked, so the SPW may have closed this stretch. The SPW's incidents couldn't be loaded, so there may be hazards here that aren't shown.",
+    );
+  });
 });

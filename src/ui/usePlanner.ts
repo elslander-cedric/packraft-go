@@ -16,7 +16,7 @@ import { strings } from "./strings";
 import { useAccessPoints } from "./useAccessPoints";
 import { localToday, useAccessRules, useBuiltInLocks, useBuiltInObstacles, useBuiltInOfficialAires } from "./useAccessRules";
 import { useSettings } from "./useSettings";
-import { useOfficialStatus } from "./useOfficialStatus";
+import { useOfficialIncidents, useOfficialStatus } from "./useOfficialStatus";
 import { useWalloonFlows } from "./useWalloonFlows";
 
 /** True when a key press is meant for a text field, not for the planner. */
@@ -119,6 +119,7 @@ export function usePlanner(router?: Router) {
   // A leg on a later date notes today's closures (#212).
   const legUpcoming = rulesAccess?.legs.some((leg) => leg?.date !== undefined && leg.date >= today) ?? false;
   const official = useOfficialStatus(rules, legUpcoming);
+  const incidents = useOfficialIncidents(rules, legUpcoming); // Only for the note when they fail (#216); #217 adds warnings.
   const flowsPending = flows === undefined && legToday;
   const officialPending = official === undefined && legToday;
   const waterAccess = useMemo(
@@ -130,11 +131,12 @@ export function usePlanner(router?: Router) {
             flowsPending,
             ...(official && { official }),
             officialPending,
+            ...(incidents && { incidents }),
             locks,
             obstacles,
           })
         : rulesAccess,
-    [trip, rules, today, flows, flowsPending, official, officialPending, locks, obstacles, rulesAccess, legUpcoming],
+    [trip, rules, today, flows, flowsPending, official, officialPending, incidents, locks, obstacles, rulesAccess, legUpcoming],
   );
   // Wanted from the first point, not the first paddle leg: that leg's own put-in may be offered one.
   const officialAires = useBuiltInOfficialAires(trip.points.length > 0)?.aires;
