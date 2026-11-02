@@ -334,6 +334,7 @@ export const strings = {
     heading: "Live flow today",
     gauge: (name: string) => `Gauge: ${name}`,
     gaugeAssumed: (name: string) => `Gauge: ${name} (assumed gauge: its match to the official one isn't confirmed)`,
+    gaugeSpwPractice: (name: string) => `Gauge: ${name} (the gauge the SPW uses here, not the one in the regulation)`,
     at8: (flow: string) => `Flow at 08:00: ${flow}`,
     at8Missing: "Flow at 08:00: not measured yet",
     mean72h: (flow: string, when: string) => `72-hour mean: ${flow} (${when})`,

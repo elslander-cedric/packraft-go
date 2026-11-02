@@ -8,16 +8,21 @@ const HYDROMETRY_URL = "https://hydrometrie.wallonie.be/";
 
 /**
  * A Walloon stretch's live flow for today (#61): the gauge (and whether it is
- * assumed), the flow at 08:00, the 72-hour mean, the limits, when the gauge was
+ * assumed or SPW practice), the flow at 08:00, the 72-hour mean, the limits, when the gauge was
  * last measured, and the SPW credit. Renders the core's figures; no domain logic.
  */
 export function FlowFiguresView({ figures }: { figures: FlowFigures }) {
   const { gauge, mean72h, at8, latest, minM3s, maxM3s } = figures;
+  const gaugeLine = gauge.assumed
+    ? strings.flow.gaugeAssumed(gauge.name)
+    : gauge.spwPractice
+      ? strings.flow.gaugeSpwPractice(gauge.name)
+      : strings.flow.gauge(gauge.name);
   return (
     <div className="flow-figures">
       <p className="flow-heading">{strings.flow.heading}</p>
       <div className="flow-lines">
-        <p className="flow-gauge">{gauge.assumed ? strings.flow.gaugeAssumed(gauge.name) : strings.flow.gauge(gauge.name)}</p>
+        <p className="flow-gauge">{gaugeLine}</p>
         <p className="flow-at8">{at8 ? strings.flow.at8(formatFlow(at8.m3s)) : strings.flow.at8Missing}</p>
         <p className="flow-mean72h">
           {mean72h

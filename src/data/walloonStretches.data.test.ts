@@ -41,6 +41,9 @@ const ANNEX_2: Record<string, [string, number | null, number]> = {
   "1C6b": ["Martilly", null, 8.6],
 };
 
+/** Where the app follows the SPW's gauge, not Annex 2's: KiWIS has no such Annex 2 station (#205). */
+const SPW_PRACTICE: Record<string, { name: string }> = { "1C2b": { name: "Hérock" } };
+
 /** Wallonia lies within this box; every stretch must too. */
 const WALLONIA = { south: 49.45, west: 2.8, north: 50.85, east: 6.45 };
 
@@ -70,16 +73,25 @@ describe("shipped Walloon stretch dataset", () => {
     for (const s of stretches) {
       const [gauge, min, max] = ANNEX_2[s.id];
       expect({ min: s.minM3s, max: s.maxM3s }, s.id).toEqual({ min, max });
-      if (s.gauge) expect(s.gauge.name, s.id).toBe(gauge);
+      expect(s.gauge?.name, s.id).toBe(SPW_PRACTICE[s.id]?.name ?? gauge);
     }
   });
 
-  it("gives every stretch a KiWIS gauge or an explicit no-gauge note", () => {
-    for (const s of stretches) {
-      if (s.gauge) expect(s.gauge.stationNo, s.id).toMatch(/^L?\d+$/);
-      else expect(s.noGaugeNote, s.id).toMatch(/\S/);
-    }
-    expect(stretches.filter((s) => !s.gauge).map((s) => s.id)).toEqual(["1C2b"]);
+  it("gives every stretch a KiWIS gauge", () => {
+    for (const s of stretches) expect(s.gauge?.stationNo, s.id).toMatch(/^L?\d+$/);
+  });
+
+  it("uses Hérock for the Lesse from Han to Houyet, marked as SPW practice, and only there (#205)", () => {
+    const practice = stretches.filter((s) => s.gauge?.spwPractice);
+    expect(practice.map((s) => s.id)).toEqual(Object.keys(SPW_PRACTICE));
+    expect(practice[0].gauge).toEqual({ name: "Hérock", stationNo: "L6610", assumed: false, spwPractice: true });
+    expect(practice[0].note).toMatch(/Hérock/);
+  });
+
+  it("leaves the Salm and Our on their Annex 2 gauges until KiWIS shows the SPW's have the series (#205)", () => {
+    const stationOf = (id: string) => stretches.find((s) => s.id === id)?.gauge?.stationNo;
+    expect(stationOf("1C1b")).toBe("6832");
+    expect(stationOf("1C4b")).toBe("9914");
   });
 
   it("flags exactly the Martelange, Membre, Martinrive and Gendron gauges as assumed (ADR 0024)", () => {

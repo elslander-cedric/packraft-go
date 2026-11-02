@@ -16,7 +16,12 @@ export type WalloonStretchData = {
     readonly from: { readonly en: string };
     readonly to: { readonly en: string };
     readonly line: readonly (readonly [number, number])[];
-    readonly gauge: { readonly name: string; readonly stationNo: string; readonly assumed: boolean } | null;
+    readonly gauge: {
+      readonly name: string;
+      readonly stationNo: string;
+      readonly assumed: boolean;
+      readonly spwPractice?: boolean;
+    } | null;
     readonly noGaugeNote?: string;
     readonly minM3s: number | null;
     readonly maxM3s: number;

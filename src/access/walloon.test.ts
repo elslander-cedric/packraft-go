@@ -26,10 +26,12 @@ describe("Walloon stretch records", () => {
     for (const r of assumed) expect(r.unverified).toMatch(/assumed/);
   });
 
-  it("Wanlin has no gauge and says so", () => {
-    const wanlin = walloon.find((r) => r.id === "walloon-1C2b")!;
-    expect(wanlin.rule).toMatchObject({ gauge: null });
-    expect(wanlin.unverified).toBeTruthy();
+  it("the Lesse from Han to Houyet keeps Hérock's SPW practice mark on its rule, as a confirmed gauge (#205)", () => {
+    const lesse = walloon.find((r) => r.id === "walloon-1C2b")!;
+    expect(lesse.rule).toMatchObject({
+      gauge: { name: "Hérock", stationNo: "L6610", assumed: false, spwPractice: true },
+    });
+    expect(lesse.unverified).toBeUndefined();
   });
 });
 

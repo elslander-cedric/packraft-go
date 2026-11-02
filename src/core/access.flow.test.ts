@@ -15,7 +15,7 @@ import {
 } from "./testing/fakeAccessRules";
 
 const today = "2026-10-14";
-/** A 1.B stretch without a matching gauge, like Wanlin. */
+/** A 1.B stretch without a matching gauge. */
 const noGaugeStretch: AccessRecord = {
   ...walloonAllYear,
   id: "test-no-gauge",
@@ -85,7 +85,7 @@ describe("a Walloon stretch's status with today's flow", () => {
     expect(rule(status).flow?.gauge.assumed).toBe(true);
   });
 
-  it("without a matching gauge (Wanlin), the flow is unknown while season and hours are still checked", () => {
+  it("without a matching gauge, the flow is unknown while season and hours are still checked", () => {
     const status = accessAt(onWalloonAllYear, wanlinRules, { date: today, today, flows: readings(5, 10) });
     expect(status.state).toBe("unknown");
     expect(rule(status).ruleText).toMatch(/no gauge/i);
