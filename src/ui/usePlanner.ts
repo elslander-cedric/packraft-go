@@ -14,7 +14,7 @@ import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
 import { strings } from "./strings";
 import { useAccessPoints } from "./useAccessPoints";
-import { localToday, useAccessRules, useBuiltInLocks, useBuiltInOfficialAires } from "./useAccessRules";
+import { localToday, useAccessRules, useBuiltInLocks, useBuiltInObstacles, useBuiltInOfficialAires } from "./useAccessRules";
 import { useSettings } from "./useSettings";
 import { useWalloonFlows } from "./useWalloonFlows";
 
@@ -109,17 +109,18 @@ export function usePlanner(router?: Router) {
   const hasPaddle = trip.legs.some((leg) => leg.mode === "paddle");
   const rules = useAccessRules(hasPaddle);
   const locks = useBuiltInLocks(hasPaddle) ?? undefined; // Lock warnings (#60).
+  const obstacles = useBuiltInObstacles(hasPaddle) ?? undefined; // Obstacle warnings (#215).
   const today = localToday();
-  const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today, locks }) : null), [trip, rules, today, locks]);
+  const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today, locks, obstacles }) : null), [trip, rules, today, locks, obstacles]);
   // Paddle legs dated today use the live Walloon flows (#61), asked for only when there are some.
   const flows = useWalloonFlows(rules, rulesAccess?.legs.some((leg) => leg?.date === today) ?? false);
   const flowsPending = flows === undefined && (rulesAccess?.legs.some((leg) => leg?.date === today) ?? false);
   const waterAccess = useMemo(
     () =>
       rules && (flows || flowsPending)
-        ? tripAccess(trip, rules, { today, ...(flows && { flows }), flowsPending, locks })
+        ? tripAccess(trip, rules, { today, ...(flows && { flows }), flowsPending, locks, obstacles })
         : rulesAccess,
-    [trip, rules, today, flows, flowsPending, locks, rulesAccess],
+    [trip, rules, today, flows, flowsPending, locks, obstacles, rulesAccess],
   );
   // Wanted from the first point, not the first paddle leg: that leg's own put-in may be offered one.
   const officialAires = useBuiltInOfficialAires(trip.points.length > 0)?.aires;

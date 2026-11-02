@@ -41,6 +41,7 @@ import {
   faStairs,
   faTent,
   faTrashCan,
+  faTriangleExclamation,
   faWater,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -99,6 +100,7 @@ export const icons = {
   warningClosed: faCalendarXmark,
   warningCheckFlow: faGaugeHigh,
   warningLock: faStairs,
+  warningObstacle: faTriangleExclamation,
   warningAire: faFlag,
   // The planner menu's items.
   newTrip: faFileCirclePlus,

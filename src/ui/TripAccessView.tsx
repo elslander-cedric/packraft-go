@@ -2,6 +2,7 @@ import type { AccessState } from "@/core/access";
 import type { AireWarning } from "@/core/aire";
 import type { LockWarning } from "@/core/locks";
 import type { LegWarnings } from "@/core/dayWarnings";
+import { obstacleGroups, type ObstacleWarning } from "@/core/obstacle";
 import type { AccessNote, AccessSummary, AccessWarning, LegAccess } from "@/core/tripAccess";
 import { accessColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
@@ -29,6 +30,7 @@ const warningIcon: Record<LegWarnings["kind"], IconDefinition> = {
   closed: icons.warningClosed,
   "check-flow": icons.warningCheckFlow,
   lock: icons.warningLock,
+  obstacle: icons.warningObstacle,
   aire: icons.warningAire,
 };
 
@@ -38,6 +40,7 @@ const warningColour: Record<LegWarnings["kind"], AccessState> = {
   closed: "closed-today",
   "check-flow": "closed-today",
   lock: "closed-today",
+  obstacle: "closed-today",
   aire: "closed-today",
 };
 
@@ -114,6 +117,27 @@ function LockWarnings({ warnings }: { warnings: readonly LockWarning[] }) {
     </div>
   );
 }
+
+/** Obstacle warnings (#215): one line per kind, however many the leg passes. Never blocks. */
+function ObstacleWarnings({ warnings }: { warnings: readonly ObstacleWarning[] }) {
+  const groups = obstacleGroups(warnings);
+  if (groups.length === 0) return null;
+  return (
+    <div className="access-warnings obstacle-warnings">
+      {groups.map(({ kind, obstacles }) => (
+        <p key={kind} className="access-warning access-warning-obstacle">
+          <WarningIcon kind="obstacle" />
+          <strong>{strings.tripAccess.obstacleWarning(strings.obstacles.names[kind], obstacles.length)}</strong>{" "}
+          {strings.obstacles.meanings[kind]}{" "}
+          <a href={obstacles[0].source.url} target="_blank" rel="noreferrer">
+            {obstacles[0].source.title}
+          </a>
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function WarningList({ warnings }: { warnings: readonly AccessWarning[] }) {
   if (warnings.length === 0) return null;
   return (
@@ -154,6 +178,7 @@ export function LegAccessView({ access }: { access: LegAccess }) {
       {access.checkFlowOnTheDay && <p className="leg-access-flow">{strings.tripAccess.checkFlowOnTheDay}</p>}
       <WarningList warnings={access.warnings} />
       <LockWarnings warnings={access.lockWarnings} />
+      <ObstacleWarnings warnings={access.obstacleWarnings} />
       {access.notes.map((note, i) => (
         <Note key={i} note={note} />
       ))}
@@ -212,7 +237,7 @@ export function DayWarningChips({ legs, onShowLeg }: { legs: readonly LegWarning
 
 /**
  * A leg or section row's access at a glance: its status's icon, then one icon per kind of
- * warning it has (access, lock, aire), each icon once. Their names are only read out; the text
+ * warning it has (access, lock, obstacle, aire), each icon once. Their names are only read out; the text
  * is in the row's dialog.
  */
 export function LegAccessIcons({
@@ -222,13 +247,14 @@ export function LegAccessIcons({
   className,
 }: {
   state: AccessState | undefined;
-  access: Pick<AccessSummary, "warnings" | "lockWarnings"> | undefined;
+  access: Pick<AccessSummary, "warnings" | "lockWarnings" | "obstacleWarnings"> | undefined;
   aire: readonly AireWarning[];
   className?: string;
 }) {
   const kinds: LegWarnings["kind"][] = [
     ...(access?.warnings ?? []).map((warning) => warning.kind),
     ...(access?.lockWarnings ?? []).map(() => "lock" as const),
+    ...(access?.obstacleWarnings ?? []).map(() => "obstacle" as const),
     ...aire.map(() => "aire" as const),
   ];
   const all = [
