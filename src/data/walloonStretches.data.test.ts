@@ -4,6 +4,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import official from "@/access/data/official-stretches.json";
+import { kmByOfficial, officialRuns, splitBoundaryEnds } from "@/dataprep/walloonStretches/official";
+import spwLines from "../../docs/research/data/spw-stretch-lines.json";
 import data from "./walloon-stretches.json";
 
 type Stretch = (typeof data.stretches)[number];
@@ -41,6 +44,61 @@ const ANNEX_2: Record<string, [string, number | null, number]> = {
   "1C6b": ["Martilly", null, 8.6],
 };
 
+/** Where the app follows the SPW's gauge, not Annex 2's: KiWIS has no such Annex 2 station (#205). */
+const SPW_PRACTICE: Record<string, { name: string }> = { "1C2b": { name: "Hérock" } };
+
+/**
+ * The official stretch of each record (#209), by hand from the SPW's lines and the research
+ * (docs/research/kayak-spw-access-points.md section 4). Pieces are listed downstream.
+ */
+const OFFICIAL: Record<string, string | null> = {
+  "1A1": "AMBLEVE3",
+  "1A2": "LESSE6-7",
+  "1A3a": "OURTHE1",
+  "1A3b": "OURTHE2",
+  "1A3c-1": "OURTHE3",
+  "1A3c-2": null,
+  "1A4-1": "SEMOIS2-3",
+  "1A4-2": "SEMOIS4-5",
+  "1B1a": "AMBLEVE1",
+  "1B1b": null,
+  "1B2a": "LESSE5",
+  "1B2b-1": "LESSE5",
+  "1B2b-2": "LESSE6-7",
+  "1B2c": "LESSE6-7",
+  "1B3": "VIROIN",
+  "1B4a": "SEMOIS2-3",
+  "1B4b": "SEMOIS2-3",
+  "1B4c": "SEMOIS2-3",
+  "1C1a": null,
+  "1C1b": "SALM",
+  "1C2a": "LESSE2",
+  "1C2b-1": null,
+  "1C2b-2": "LESSE4",
+  "1C2c": null,
+  "1C3": "HOUILLE",
+  "1C4a": "SURE",
+  "1C4b": "OUR",
+  "1C5a": "AISNE",
+  "1C5b": "OURTHEOCC",
+  "1C5c": "OURTHEOR",
+  "1C6a": "SEMOIS1",
+  "1C6b": "VIERRE",
+};
+
+/** A record may only overlap another official line by less than this: more is a missed split. */
+const MAX_ON_ANOTHER_LINE_KM = 2;
+/** The issue's "short gaps of a few kilometres" stay with their record; a longer one is split off. */
+const MAX_UNLISTED_KM = 10;
+/** A record with no official stretch may only touch an SPW line at its ends. */
+const MAX_ON_A_LINE_WHEN_UNLISTED_KM = 0.5;
+
+const pending: string[] = (data.review as { pending?: string[] }).pending ?? [];
+const review = JSON.parse(readFileSync(path.join(__dirname, "../../docs/research/data/walloon-stretches-review.json"), "utf8"));
+const officialOf = (s: Stretch): string | undefined => (s as { officialStretch?: string }).officialStretch;
+/** The Annex row a record comes from: its own id, or the id of the record it is a piece of. */
+const annexIdOf = (s: Stretch): string => (s as { splitOf?: string }).splitOf ?? s.id;
+
 /** Wallonia lies within this box; every stretch must too. */
 const WALLONIA = { south: 49.45, west: 2.8, north: 50.85, east: 6.45 };
 
@@ -48,8 +106,12 @@ const metres = ([lng1, lat1]: number[], [lng2, lat2]: number[]) =>
   Math.hypot((lat1 - lat2) * 111_320, (lng1 - lng2) * 111_320 * Math.cos((lat1 * Math.PI) / 180));
 
 describe("shipped Walloon stretch dataset", () => {
-  it("has the 28 Annex 1/2 stretches, once each", () => {
-    expect(stretches.map((s) => s.id).sort()).toEqual(Object.keys(ANNEX_2).sort());
+  it("has every one of the 28 Annex 1/2 stretches, whole or in pieces", () => {
+    expect([...new Set(stretches.map(annexIdOf))].sort()).toEqual(Object.keys(ANNEX_2).sort());
+  });
+
+  it("has each record once", () => {
+    expect(new Set(stretches.map((s) => s.id)).size).toBe(stretches.length);
   });
 
   it("gives every stretch a valid line along the river, from its start to its end", () => {
@@ -68,18 +130,27 @@ describe("shipped Walloon stretch dataset", () => {
 
   it("has thresholds and gauges matching Annex 2", () => {
     for (const s of stretches) {
-      const [gauge, min, max] = ANNEX_2[s.id];
+      const [gauge, min, max] = ANNEX_2[annexIdOf(s)];
       expect({ min: s.minM3s, max: s.maxM3s }, s.id).toEqual({ min, max });
-      if (s.gauge) expect(s.gauge.name, s.id).toBe(gauge);
+      expect(s.gauge?.name, s.id).toBe(SPW_PRACTICE[annexIdOf(s)]?.name ?? gauge);
     }
   });
 
-  it("gives every stretch a KiWIS gauge or an explicit no-gauge note", () => {
-    for (const s of stretches) {
-      if (s.gauge) expect(s.gauge.stationNo, s.id).toMatch(/^L?\d+$/);
-      else expect(s.noGaugeNote, s.id).toMatch(/\S/);
-    }
-    expect(stretches.filter((s) => !s.gauge).map((s) => s.id)).toEqual(["1C2b"]);
+  it("gives every stretch a KiWIS gauge", () => {
+    for (const s of stretches) expect(s.gauge?.stationNo, s.id).toMatch(/^L?\d+$/);
+  });
+
+  it("uses Hérock for the Lesse from Han to Houyet, marked as SPW practice, and only there (#205)", () => {
+    const practice = stretches.filter((s) => s.gauge?.spwPractice);
+    expect([...new Set(practice.map(annexIdOf))]).toEqual(Object.keys(SPW_PRACTICE));
+    expect(practice[0].gauge).toEqual({ name: "Hérock", stationNo: "L6610", assumed: false, spwPractice: true });
+    expect(practice[0].note).toMatch(/Hérock/);
+  });
+
+  it("leaves the Salm and Our on their Annex 2 gauges until KiWIS shows the SPW's have the series (#205)", () => {
+    const stationOf = (id: string) => stretches.find((s) => s.id === id)?.gauge?.stationNo;
+    expect(stationOf("1C1b")).toBe("6832");
+    expect(stationOf("1C4b")).toBe("9914");
   });
 
   it("flags exactly the Martelange, Membre, Martinrive and Gendron gauges as assumed (ADR 0024)", () => {
@@ -87,10 +158,12 @@ describe("shipped Walloon stretch dataset", () => {
     expect([...assumed].sort()).toEqual(["Gendron", "Martelange", "Martinrive", "Membre"]);
   });
 
-  it("leaves no end point needing review", () => {
-    const ends = stretches.flatMap((s) => [s.from, s.to]);
-    expect(ends.filter((e) => e.status === "needsReview")).toEqual([]);
-    for (const e of ends) expect(["confident", "reviewed"]).toContain(e.status);
+  it("leaves no end point needing review, but the split boundaries waiting for Cedric (#209)", () => {
+    const needingReview = stretches.flatMap((s) =>
+      (["from", "to"] as const).filter((e) => s[e].status === "needsReview" && !("sameAs" in s[e])).map((e) => `${s.id}.${e}`),
+    );
+    expect(needingReview.filter((end) => !splitBoundaryEnds().includes(end))).toEqual([]);
+    expect(pending).toEqual(needingReview);
   });
 
   it("records source and research date on every record, and who reviewed it and when", () => {
@@ -100,19 +173,112 @@ describe("shipped Walloon stretch dataset", () => {
       expect(s.researchDate, s.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
     expect(data.researchDate).toBe("2026-10-12");
-    expect(data.review).toEqual({ reviewedBy: "Cedric", reviewedAt: "2026-10-13", decisions: 35 });
+    expect(data.review).toMatchObject({
+      reviewedBy: "Cedric",
+      reviewedAt: review.reviewedAt,
+      decisions: Object.keys(review.decisions).length,
+    });
     expect(data.licence).toMatch(/ODbL/);
   });
 
   it("matches the committed review decisions", () => {
-    const review = JSON.parse(
-      readFileSync(path.join(__dirname, "../../docs/research/data/walloon-stretches-review.json"), "utf8"),
-    );
     for (const [id, decision] of Object.entries(review.decisions) as Array<[string, { lat: number; lng: number }]>) {
       const [stretchId, end] = id.split(".") as [string, "from" | "to"];
-      const s = stretches.find((x) => x.id === stretchId)!;
+      // A decision taken on a whole record holds for the piece that kept that end.
+      const pieces = stretches.filter((x) => annexIdOf(x) === stretchId);
+      const s = stretches.find((x) => x.id === stretchId) ?? pieces.at(end === "from" ? 0 : -1)!;
       expect(s[end].status, id).toBe("reviewed");
       expect(metres([s[end].point.lng, s[end].point.lat], [decision.lng, decision.lat]), id).toBeLessThan(30);
     }
+  });
+});
+
+describe("the mapping to official stretches (#209)", () => {
+  const lines = Object.fromEntries(
+    spwLines.stretches.map(({ id, parts }) => [id, parts.map((part) => part.map(([lng, lat]) => ({ lat: lat!, lng: lng! })))]),
+  );
+  const lengthOf = (line: number[][]) => line.slice(1).reduce((sum, p, i) => sum + metres(line[i]!, p), 0) / 1000;
+  const totalsOf = (s: Stretch) => kmByOfficial(officialRuns(s.line.map(([lng, lat]) => ({ lat: lat!, lng: lng! })), lines));
+  const piecesOf = (annexId: string) => stretches.filter((s) => annexIdOf(s) === annexId);
+
+  it("gives each record the expected official stretch, or none", () => {
+    expect(Object.fromEntries(stretches.map((s) => [s.id, officialOf(s) ?? null]))).toEqual(OFFICIAL);
+  });
+
+  it("gives every official stretch at least one record, and no record an unknown one", () => {
+    const mapped = new Set(stretches.flatMap((s) => officialOf(s) ?? []));
+    expect([...mapped].sort()).toEqual(official.stretches.map((s) => s.id).sort());
+  });
+
+  it("is checked against a line for every official stretch", () => {
+    expect(spwLines.stretches.map((s) => s.id).sort()).toEqual(official.stretches.map((s) => s.id).sort());
+  });
+
+  it("puts the most of a mapped record on its official line, and at most a little on another", () => {
+    for (const s of stretches) {
+      const id = officialOf(s);
+      if (!id) continue;
+      const { none = 0, [id]: own = 0, ...others } = totalsOf(s);
+      expect(own, s.id).toBeGreaterThan(Math.max(...Object.values(others), 0));
+      for (const [other, km] of Object.entries(others)) expect(km, `${s.id} on ${other}`).toBeLessThan(MAX_ON_ANOTHER_LINE_KM);
+      expect(none, s.id).toBeLessThan(MAX_UNLISTED_KM);
+    }
+  });
+
+  it("keeps a record with no official stretch off the SPW's lines", () => {
+    for (const s of stretches.filter((x) => !officialOf(x))) {
+      for (const [other, km] of Object.entries(totalsOf(s))) {
+        if (other !== "none") expect(km, `${s.id} on ${other}`).toBeLessThan(MAX_ON_A_LINE_WHEN_UNLISTED_KM);
+      }
+    }
+  });
+
+  it("splits only where the SPW's lines call for it, into two pieces that meet exactly", () => {
+    const split = [...new Set(stretches.filter((s) => s.id !== annexIdOf(s)).map(annexIdOf))];
+    expect(split).toEqual(["1A3c", "1A4", "1B2b", "1C2b"]);
+    for (const id of split) {
+      const [upper, lower] = piecesOf(id);
+      expect(piecesOf(id).map((s) => s.id)).toEqual([`${id}-1`, `${id}-2`]);
+      expect(lower!.line[0]).toEqual(upper!.line.at(-1));
+      expect(lower!.from.point).toEqual(upper!.to.point);
+      expect(lower!.from).toMatchObject({ sameAs: `${id}-1.to` });
+    }
+  });
+
+  it("keeps the whole river: a split record's pieces add up to the record", () => {
+    const WHOLE_KM: Record<string, number> = { "1A3c": 55.1, "1A4": 81.6, "1B2b": 13.3, "1C2b": 27.1 };
+    for (const [id, km] of Object.entries(WHOLE_KM)) {
+      const [upper, lower] = piecesOf(id);
+      expect(lengthOf(upper!.line) + lengthOf(lower!.line), id).toBeCloseTo(km, 0);
+    }
+  });
+
+  it("keeps a split piece's category, thresholds, gauge and source", () => {
+    const kept = ({ category, minM3s, maxM3s, gauge, source, researchDate, river, note }: Stretch) => ({
+      category,
+      minM3s,
+      maxM3s,
+      gauge,
+      source,
+      researchDate,
+      river,
+      note,
+    });
+    for (const id of ["1A3c", "1A4", "1B2b", "1C2b"]) {
+      const [upper, lower] = piecesOf(id);
+      expect(kept(lower!), id).toEqual(kept(upper!));
+    }
+  });
+
+  it("puts the part of 1A4 above Linglé on the SEMOIS2-3 line, with 1B4c", () => {
+    const [deleauToLingle] = piecesOf("1A4");
+    expect(deleauToLingle!.to.en).toBe("Linglé bridge");
+    expect(deleauToLingle!.lengthKm).toBeCloseTo(3.2, 0);
+    expect(totalsOf(deleauToLingle!)["SEMOIS2-3"]).toBeGreaterThan(2.8);
+  });
+
+  it("says in the review metadata which split boundaries still wait for review", () => {
+    const decided = Object.keys(review.decisions);
+    expect(pending).toEqual(splitBoundaryEnds().filter((end) => !decided.includes(end)));
   });
 });

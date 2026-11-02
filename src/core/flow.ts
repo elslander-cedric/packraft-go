@@ -53,7 +53,7 @@ export type FlowFigures = {
 
 /**
  * Why the flow can't tell whether a stretch is open:
- * - `no-gauge`: no gauge matches the stretch (Wanlin).
+ * - `no-gauge`: no gauge matches the stretch.
  * - `failed`: the service failed.
  * - `missing`: the service has no series (or no values) for the gauge.
  * - `stale`: the 72-hour mean isn't from today.

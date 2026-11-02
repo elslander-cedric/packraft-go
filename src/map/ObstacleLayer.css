@@ -1,0 +1,9 @@
+/* An obstacle: the shape in the middle of its hit box (ADR 0035). */
+.obstacle-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+}

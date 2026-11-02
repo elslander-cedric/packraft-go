@@ -5,7 +5,15 @@ import { describe, expect, it } from "vitest";
 import builtIn from "@/data/walloon-stretches.json";
 import { flowCheck, gaugeStations, type FlowReadings } from "@/core/flow";
 import type { AgwRule } from "@/core/access";
-import { CACHE_MS, HOURLY_SERIES, MEAN_72H_SERIES, createKiwisFlowSource, seriesListUrl, valuesUrl } from "./kiwis";
+import {
+  CACHE_MS,
+  HOURLY_SERIES,
+  MEAN_72H_SERIES,
+  REQUEST_TIMEOUT_MS,
+  createKiwisFlowSource,
+  seriesListUrl,
+  valuesUrl,
+} from "./kiwis";
 
 const fixture = (name: string) => readFileSync(path.join(__dirname, "fixtures", name), "utf8");
 const LIST = fixture("timeseries-list.json");
@@ -13,15 +21,19 @@ const VALUES = fixture("timeseries-values.json");
 /** The day the values were recorded (see fixtures/README.md). */
 const RECORDED_ON = "2026-10-14";
 
-type Reply = { status: number; body: string } | "network-error";
+/** `hangs` never answers; `hangs-in-body` sends its headers and then nothing. */
+type Reply = { status: number; body: string } | "network-error" | "hangs" | "hangs-in-body";
 
-/** A stand-in KiWIS server: answers by request type and logs every request. */
+/** A stand-in KiWIS server: answers by request type, logs every request, and keeps the clock and its timers. */
 function fakeServer(replies: { list?: Reply; values?: Reply } = {}) {
   const requests: URL[] = [];
+  const signals: (AbortSignal | undefined)[] = [];
   let clock = 0;
-  const fetch = async (input: string) => {
+  let timers: { at: number; fire: () => void }[] = [];
+  const fetch = async (input: string, init?: { signal?: AbortSignal }) => {
     const url = new URL(input);
     requests.push(url);
+    signals.push(init?.signal);
     const request = url.searchParams.get("request");
     const reply =
       request === "getTimeseriesList"
@@ -30,12 +42,31 @@ function fakeServer(replies: { list?: Reply; values?: Reply } = {}) {
           ? (replies.values ?? { status: 200, body: VALUES })
           : { status: 400, body: "" };
     if (reply === "network-error") throw new TypeError("Failed to fetch");
+    if (reply === "hangs") return new Promise<Response>(() => {});
+    if (reply === "hangs-in-body") return new Response(new ReadableStream());
     return new Response(reply.body, { status: reply.status });
   };
   return {
     requests,
-    tick: (ms: number) => (clock += ms),
-    source: createKiwisFlowSource({ fetch, now: () => clock }),
+    signals,
+    pendingTimers: () => timers.length,
+    tick: (ms: number) => {
+      clock += ms;
+      const due = timers.filter((t) => t.at <= clock);
+      timers = timers.filter((t) => t.at > clock);
+      for (const t of due) t.fire();
+    },
+    source: createKiwisFlowSource({
+      fetch,
+      now: () => clock,
+      setTimer: (fire, ms) => {
+        const timer = { at: clock + ms, fire };
+        timers.push(timer);
+        return () => {
+          timers = timers.filter((t) => t !== timer);
+        };
+      },
+    }),
   };
 }
 
@@ -44,6 +75,9 @@ const stretches = (builtIn as unknown as { stretches: (Stretch & { id: string; c
   .stretches;
 const rules: AgwRule[] = stretches.map((s) => ({ type: "agw", category: s.category, minM3s: s.minM3s, maxM3s: s.maxM3s, gauge: s.gauge }));
 const stations = gaugeStations(rules);
+/** The recording is older than the Hérock gauge (#205): it has the other 21 gauges. */
+const HEROCK = "L6610";
+const recordedStations = stations.filter((s) => s !== HEROCK);
 
 describe("KiWIS requests", () => {
   it("resolves both series of every gauge in one request, and reads all their values in one more", async () => {
@@ -57,7 +91,7 @@ describe("KiWIS requests", () => {
     expect(list.searchParams.get("ts_name")).toBe(`${MEAN_72H_SERIES},${HOURLY_SERIES}`);
     expect(values.searchParams.get("request")).toBe("getTimeseriesValues");
     // Every series the list named: two per gauge.
-    expect(values.searchParams.get("ts_id")!.split(",")).toHaveLength(2 * stations.length);
+    expect(values.searchParams.get("ts_id")!.split(",")).toHaveLength(2 * recordedStations.length);
   });
 
   it("builds the URLs the recorded fixtures answered", () => {
@@ -71,7 +105,7 @@ describe("KiWIS answers", () => {
     const readings = await fakeServer().source.readings(stations);
     expect(readings.status).toBe("ok");
     if (readings.status !== "ok") return;
-    expect(Object.keys(readings.gauges).sort()).toEqual(stations);
+    expect(Object.keys(readings.gauges).sort()).toEqual(recordedStations);
     for (const gauge of Object.values(readings.gauges)) {
       expect(gauge.mean72h.length).toBeGreaterThan(0);
       expect(gauge.hourly.length).toBeGreaterThan(0);
@@ -108,6 +142,18 @@ describe("KiWIS answers", () => {
     expect(flowCheck(rule, readings, RECORDED_ON)).toMatchObject({ kind: "unknown", why: "missing" });
   });
 
+  it("asks for Hérock, and if KiWIS has no series for it the Lesse from Han to Houyet says so, as any missing gauge (#205)", async () => {
+    expect(stations).toContain(HEROCK);
+    const readings = await fakeServer().source.readings(stations);
+    const lesse = stretches.find((s) => s.id === "1C2b-2")!;
+    const rule = rules[stretches.indexOf(lesse)]!;
+    expect(flowCheck(rule, readings, RECORDED_ON)).toMatchObject({
+      kind: "unknown",
+      why: "missing",
+      figures: { gauge: { name: "Hérock" } },
+    });
+  });
+
   it("an empty series list asks for no values", async () => {
     const server = fakeServer({ list: { status: 200, body: '[["station_no","ts_id","ts_name"]]' } });
     expect(await server.source.readings(["L0000"])).toEqual({ status: "ok", gauges: {} });
@@ -124,6 +170,70 @@ describe("KiWIS answers", () => {
   it.each(failures)("failure when %s", async (_, replies) => {
     const readings: FlowReadings = await fakeServer(replies).source.readings(stations);
     expect(readings).toEqual({ status: "failed" });
+  });
+});
+
+/** Lets the source's pending promises run, so a request is really waiting before the clock moves. */
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+describe("a request that doesn't answer", () => {
+  it("gives up after 15 seconds: the check fails like any other failure, and the stretch is unknown", async () => {
+    const server = fakeServer({ list: "hangs" });
+    let answer: FlowReadings | undefined;
+    void server.source.readings(stations).then((readings) => (answer = readings));
+    await settle();
+    server.tick(REQUEST_TIMEOUT_MS - 1);
+    await settle();
+    expect(answer).toBeUndefined();
+    server.tick(1);
+    await settle();
+    expect(answer).toEqual({ status: "failed" });
+    expect(REQUEST_TIMEOUT_MS).toBe(15_000);
+    expect(flowCheck(rules.find((r) => r.gauge)!, answer, RECORDED_ON)).toMatchObject({ kind: "unknown", why: "failed" });
+  });
+
+  const hanging: [string, { list?: Reply; values?: Reply }, number][] = [
+    ["the second request hangs", { values: "hangs" }, 2],
+    ["the body never finishes", { list: "hangs-in-body" }, 1],
+  ];
+  it.each(hanging)("gives up when %s", async (_, replies, requests) => {
+    const server = fakeServer(replies);
+    const answer = server.source.readings(stations);
+    await settle();
+    expect(server.requests).toHaveLength(requests);
+    server.tick(REQUEST_TIMEOUT_MS);
+    expect(await answer).toEqual({ status: "failed" });
+  });
+
+  it("is cancelled, so the hung connection is let go", async () => {
+    const server = fakeServer({ list: "hangs" });
+    const answer = server.source.readings(stations);
+    await settle();
+    expect(server.signals[0]?.aborted).toBe(false);
+    server.tick(REQUEST_TIMEOUT_MS);
+    await answer;
+    expect(server.signals[0]?.aborted).toBe(true);
+  });
+
+  it("is cached like a failure: not asked again for 15 minutes, then asked again", async () => {
+    const server = fakeServer({ list: "hangs" });
+    const answer = server.source.readings(stations);
+    await settle();
+    server.tick(REQUEST_TIMEOUT_MS);
+    await answer;
+    server.tick(CACHE_MS - REQUEST_TIMEOUT_MS - 1);
+    expect(await server.source.readings(stations)).toEqual({ status: "failed" });
+    expect(server.requests).toHaveLength(1);
+    server.tick(1);
+    void server.source.readings(stations);
+    await settle();
+    expect(server.requests).toHaveLength(2);
+  });
+
+  it("leaves no timer behind once the answers are in", async () => {
+    const server = fakeServer();
+    await server.source.readings(stations);
+    expect(server.pendingTimers()).toBe(0);
   });
 });
 

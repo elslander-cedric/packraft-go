@@ -2,7 +2,7 @@
 // stories 57 and 55). Seams: the planner session's new-trip path, and today's
 // calendar date in Europe/Brussels.
 import { describe, expect, it } from "vitest";
-import { todayInBrussels } from "./calendarDate";
+import { dateInBrussels } from "./calendarDate";
 import { firstSession, plannerSession } from "./plannerSession";
 import { applyEdit, emptyTrip, setStartDate, type Trip } from "./trip";
 
@@ -54,6 +54,6 @@ describe("today in Europe/Brussels", () => {
     // Early morning in Brussels is still the same day, never the day before.
     ["2026-03-29T00:30:00Z", "2026-03-29"],
   ])("at %s it is %s", (instant, day) => {
-    expect(todayInBrussels(new Date(instant))).toBe(day);
+    expect(dateInBrussels(new Date(instant))).toBe(day);
   });
 });

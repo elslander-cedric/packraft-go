@@ -1,0 +1,35 @@
+{
+  "format": "packraft-go/official-stretch-data",
+  "version": 1,
+  "id": "official-stretches",
+  "title": "Official stretches in Wallonia",
+  "attribution": "Sources des données : Service public de Wallonie",
+  "source": {
+    "title": "SPW, PKAYAK map service, stretches",
+    "url": "https://geoservices3.wallonie.be/arcgis/rest/services/APP_KAYAK/PKAYAK/MapServer/5"
+  },
+  "snapshot": "2026-11-02",
+  "stretches": [
+    {"id":"AISNE","name":"L'Aisne en aval de Fanzel"},
+    {"id":"AMBLEVE1","name":"L'Amblève entre la Confluence avec la Warche et le Pont de Cheneux"},
+    {"id":"AMBLEVE3","name":"L'Amblève de Aywaille (Deux Fortins) à Comblain-au Pont"},
+    {"id":"HOUILLE","name":"La Houille en aval de Patignies"},
+    {"id":"LESSE2","name":"La Lesse, en aval du pont des Barbouillons à Daverdisse, jusqu'à Chanly"},
+    {"id":"LESSE4","name":"La Lesse de Lessive à Houyet"},
+    {"id":"LESSE5","name":"La Lesse de Houyet à Gendron"},
+    {"id":"LESSE6-7","name":"La Lesse de Gendron à Anseremme"},
+    {"id":"OUR","name":"L'Our en aval d'Auel"},
+    {"id":"OURTHE1","name":"L'Ourthe en aval de Nisramont jusqu'au pont de Maboge"},
+    {"id":"OURTHE2","name":"L'Ourthe en aval du Pont de Maboge jusqu'au barrage mobile de Barvaux"},
+    {"id":"OURTHE3","name":"L'Ourthe en aval du barrage mobile de Barvaux jusqu'à Comblain-au-pont"},
+    {"id":"OURTHEOCC","name":"L'Ourthe Occidentale en aval du Pont de Prelle"},
+    {"id":"OURTHEOR","name":"L'Ourthe Orientale en aval du Pont Rue Porte-à-l'eau à Houffalize"},
+    {"id":"SALM","name":"La Salm en aval du barrage de Vielsalm"},
+    {"id":"SEMOIS1","name":"La Semois, de Tintigny jusqu'à Chiny"},
+    {"id":"SEMOIS2-3","name":"La Semois, de Chiny jusqu'au pont de Linglé"},
+    {"id":"SEMOIS4-5","name":"La Semois en aval du pont de Linglé"},
+    {"id":"SURE","name":"La Sûre, en aval de la rampe d'accès à la rivière établie en amont du Pont de Bodange (Fauvillers)"},
+    {"id":"VIERRE","name":"La Vierre, en aval de la route Straimont-Martilly à Martilly, jusqu'au pont-route Suxy-Chiny"},
+    {"id":"VIROIN","name":"Le Viroin"}
+  ]
+}

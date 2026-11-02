@@ -14,8 +14,9 @@ import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
 import { strings } from "./strings";
 import { useAccessPoints } from "./useAccessPoints";
-import { localToday, useAccessRules, useBuiltInLocks } from "./useAccessRules";
+import { localToday, useAccessRules, useBuiltInLocks, useBuiltInObstacles, useBuiltInOfficialAires } from "./useAccessRules";
 import { useSettings } from "./useSettings";
+import { useOfficialIncidents, useOfficialStatus } from "./useOfficialStatus";
 import { useWalloonFlows } from "./useWalloonFlows";
 
 /** True when a key press is meant for a text field, not for the planner. */
@@ -109,19 +110,42 @@ export function usePlanner(router?: Router) {
   const hasPaddle = trip.legs.some((leg) => leg.mode === "paddle");
   const rules = useAccessRules(hasPaddle);
   const locks = useBuiltInLocks(hasPaddle) ?? undefined; // Lock warnings (#60).
+  const obstacles = useBuiltInObstacles(hasPaddle) ?? undefined; // Obstacle warnings (#215).
   const today = localToday();
-  const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today, locks }) : null), [trip, rules, today, locks]);
-  // Paddle legs dated today use the live Walloon flows (#61), asked for only when there are some.
-  const flows = useWalloonFlows(rules, rulesAccess?.legs.some((leg) => leg?.date === today) ?? false);
-  const flowsPending = flows === undefined && (rulesAccess?.legs.some((leg) => leg?.date === today) ?? false);
+  const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today, locks, obstacles }) : null), [trip, rules, today, locks, obstacles]);
+  // Paddle legs dated today use the live Walloon flows (#61) and the official status (#210), asked for only when there are some.
+  const legToday = rulesAccess?.legs.some((leg) => leg?.date === today) ?? false;
+  const flows = useWalloonFlows(rules, legToday);
+  // A leg on a later date notes today's closures (#212).
+  const legUpcoming = rulesAccess?.legs.some((leg) => leg?.date !== undefined && leg.date >= today) ?? false;
+  const official = useOfficialStatus(rules, legUpcoming);
+  // Incident warnings (#217) on every paddle leg, dated or not, and the note when they fail (#216).
+  const incidents = useOfficialIncidents(rules, hasPaddle);
+  const flowsPending = flows === undefined && legToday;
+  const officialPending = official === undefined && legToday;
   const waterAccess = useMemo(
     () =>
-      rules && (flows || flowsPending)
-        ? tripAccess(trip, rules, { today, ...(flows && { flows }), flowsPending, locks })
+      rules && hasPaddle
+        ? tripAccess(trip, rules, {
+            today,
+            ...(flows && { flows }),
+            flowsPending,
+            ...(official && { official }),
+            officialPending,
+            ...(incidents && { incidents }),
+            locks,
+            obstacles,
+          })
         : rulesAccess,
-    [trip, rules, today, flows, flowsPending, locks, rulesAccess],
+    [trip, rules, today, flows, flowsPending, official, officialPending, incidents, locks, obstacles, rulesAccess, hasPaddle],
   );
-  const aire = useMemo(() => (rules ? aireWarnings(trip, rules, access.points) : []), [trip, rules, access.points]);
+  // Wanted from the first point, not the first paddle leg: that leg's own put-in may be offered one.
+  const officialAires = useBuiltInOfficialAires(trip.points.length > 0)?.aires;
+  // No warnings until the aires are in: a put-in at one must not warn for a moment.
+  const aire = useMemo(
+    () => (rules && officialAires ? aireWarnings(trip, rules, access.points, officialAires) : []),
+    [trip, rules, access.points, officialAires],
+  );
 
   return {
     session,
@@ -133,6 +157,7 @@ export function usePlanner(router?: Router) {
     access,
     waterAccess,
     aire,
+    officialAires: officialAires ?? [],
     saveFile,
     exportGpx,
     openFile,

@@ -1,7 +1,10 @@
 import type { AccessState } from "@/core/access";
 import type { AireWarning } from "@/core/aire";
+import { incidentText, type IncidentWarning } from "@/core/incident";
 import type { LockWarning } from "@/core/locks";
 import type { LegWarnings } from "@/core/dayWarnings";
+import { obstacleGroups, type ObstacleWarning } from "@/core/obstacle";
+import type { OfficialCheck } from "@/core/officialStatus";
 import type { AccessNote, AccessSummary, AccessWarning, LegAccess } from "@/core/tripAccess";
 import { accessColours } from "@/map/accessColours";
 import { Button } from "./components/Button";
@@ -9,6 +12,7 @@ import { FlowFiguresView } from "./FlowFiguresView";
 import { formatDayDate } from "./format";
 import { Icon } from "./icons/Icon";
 import { icons, type IconDefinition } from "./icons/icons";
+import { notCheckedText, reasonText } from "./reasonText";
 import { accessStateLabel, strings } from "./strings";
 import "./TripAccessView.css";
 
@@ -29,6 +33,8 @@ const warningIcon: Record<LegWarnings["kind"], IconDefinition> = {
   closed: icons.warningClosed,
   "check-flow": icons.warningCheckFlow,
   lock: icons.warningLock,
+  incident: icons.warningIncident,
+  obstacle: icons.warningObstacle,
   aire: icons.warningAire,
 };
 
@@ -38,6 +44,8 @@ const warningColour: Record<LegWarnings["kind"], AccessState> = {
   closed: "closed-today",
   "check-flow": "closed-today",
   lock: "closed-today",
+  incident: "closed-today",
+  obstacle: "closed-today",
   aire: "closed-today",
 };
 
@@ -68,7 +76,7 @@ function Warning({ warning }: { warning: AccessWarning }) {
       <strong>{`${strings.tripAccess.warningKind[warning.kind]}: `}</strong>
       {reason.kind === "no-rule" ? null : (
         <>
-          {`${reason.name}. ${reason.ruleText} `}
+          {`${reason.name}. ${reasonText(reason)} `}
           <a href={reason.source.url} target="_blank" rel="noreferrer">
             {reason.source.title}
           </a>
@@ -87,12 +95,43 @@ function Note({ note }: { note: AccessNote }) {
         strings.tripAccess.noRule
       ) : (
         <>
-          {`${reason.name}. ${reason.ruleText} `}
+          {`${reason.name}. ${reasonText(reason)} `}
           <a href={reason.source.url} target="_blank" rel="noreferrer">
             {reason.source.title}
           </a>
         </>
       )}
+    </p>
+  );
+}
+
+/**
+ * What the map can't tell because the SPW didn't answer (#211, #216): always in view while the
+ * access layer is on, with a link to the SPW. Only the link takes taps; the map works through the rest.
+ */
+export function MapNotCheckedNote({ checks }: { checks: readonly OfficialCheck[] }) {
+  if (checks.length === 0) return null;
+  const { title, url } = strings.official.notCheckedLink;
+  return (
+    <p role="status" className="planner-map-not-checked">
+      {`${notCheckedText(checks, strings.official.mapNotChecked)} `}
+      <a href={url} target="_blank" rel="noreferrer">
+        {title}
+      </a>
+    </p>
+  );
+}
+
+/** How far to trust a status with no official reading behind it (#211), with a link to the SPW. */
+export function OfficialNotCheckedNote({ checks }: { checks: readonly OfficialCheck[] }) {
+  if (checks.length === 0) return null;
+  const { title, url } = strings.official.notCheckedLink;
+  return (
+    <p className="access-not-checked">
+      {`${notCheckedText(checks)} `}
+      <a href={url} target="_blank" rel="noreferrer">
+        {title}
+      </a>
     </p>
   );
 }
@@ -114,6 +153,63 @@ function LockWarnings({ warnings }: { warnings: readonly LockWarning[] }) {
     </div>
   );
 }
+
+/** Obstacle warnings (#215): one line per kind, however many the leg passes. Never blocks. */
+function ObstacleWarnings({ warnings }: { warnings: readonly ObstacleWarning[] }) {
+  const groups = obstacleGroups(warnings);
+  if (groups.length === 0) return null;
+  return (
+    <div className="access-warnings obstacle-warnings">
+      {groups.map(({ kind, obstacles }) => (
+        <p key={kind} className="access-warning access-warning-obstacle">
+          <WarningIcon kind="obstacle" />
+          <strong>{strings.tripAccess.obstacleWarning(strings.obstacles.names[kind], obstacles.length)}</strong>{" "}
+          {strings.obstacles.meanings[kind]}{" "}
+          <a href={obstacles[0].source.url} target="_blank" rel="noreferrer">
+            {obstacles[0].source.title}
+          </a>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Incident warnings (#217): one line each, in the SPW's words, as each can ask something different.
+ * The date always shows, as an incident can be years old (ADR 0035). Never blocks.
+ */
+function IncidentWarnings({ warnings }: { warnings: readonly IncidentWarning[] }) {
+  if (warnings.length === 0) return null;
+  const text = strings.incidents;
+  const { title, url } = strings.official.notCheckedLink;
+  return (
+    <div className="access-warnings incident-warnings">
+      {warnings.map(({ incident, leg }) => (
+        <p key={`${leg}-${incident.id}`} className="access-warning access-warning-incident">
+          <WarningIcon kind="incident" />
+          <strong>{strings.tripAccess.incidentWarning(incidentText(incident) ?? text.noText)}</strong>{" "}
+          {`${incident.created ? text.reported(formatDayDate(incident.created)) : text.reportedUndated}. `}
+          {incident.expires && `${text.until(formatDayDate(incident.expires))}. `}
+          <a href={url} target="_blank" rel="noreferrer">
+            {title}
+          </a>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/** The SPW's credit on warnings its data gives (ADR 0035), as for its other data. */
+function SpwCredit() {
+  return (
+    <p className="leg-access-credit">
+      <a href={strings.official.notCheckedLink.url} target="_blank" rel="noreferrer">
+        {strings.flow.credit}
+      </a>
+    </p>
+  );
+}
+
 function WarningList({ warnings }: { warnings: readonly AccessWarning[] }) {
   if (warnings.length === 0) return null;
   return (
@@ -132,9 +228,14 @@ export function LegAccessView({ access }: { access: LegAccess }) {
   const extraRules = status.reasons.flatMap((reason) =>
     reason.kind === "rule" && (reason.conditions?.length || reason.link) ? [reason] : [],
   );
-  // Without a date, the rules that allow paddling are shown in general terms too (warnings show the others).
+  // Without a date, the rules that allow paddling are shown in general terms too (warnings show the others);
+  // on open water today, so is what the SPW adds: a closure coming, or no official status at all (#210).
   const generalRules = status.reasons.flatMap((reason) =>
-    date === undefined && reason.kind === "rule" && reason.state === "open" ? [reason] : [],
+    reason.kind === "rule" &&
+    reason.state === "open" &&
+    (date === undefined || reason.official?.kind === "none" || (reason.official?.kind === "open" && reason.official.soon))
+      ? [reason]
+      : [],
   );
   return (
     <div className="leg-access">
@@ -144,16 +245,20 @@ export function LegAccessView({ access }: { access: LegAccess }) {
           ? strings.tripAccess.legStatusInGeneral(state)
           : strings.tripAccess.legStatusOn(formatDayDate(date), state)}
       </p>
+      <OfficialNotCheckedNote checks={access.notChecked} />
       {generalRules.length > 0 && (
         <div className="leg-access-rules">
           {generalRules.map((reason) => (
-            <p key={reason.recordId}>{`${reason.name}. ${reason.ruleText}`}</p>
+            <p key={reason.recordId}>{`${reason.name}. ${reasonText(reason)}`}</p>
           ))}
         </div>
       )}
       {access.checkFlowOnTheDay && <p className="leg-access-flow">{strings.tripAccess.checkFlowOnTheDay}</p>}
       <WarningList warnings={access.warnings} />
       <LockWarnings warnings={access.lockWarnings} />
+      <IncidentWarnings warnings={access.incidentWarnings} />
+      <ObstacleWarnings warnings={access.obstacleWarnings} />
+      {access.incidentWarnings.length + access.obstacleWarnings.length > 0 && <SpwCredit />}
       {access.notes.map((note, i) => (
         <Note key={i} note={note} />
       ))}
@@ -212,7 +317,7 @@ export function DayWarningChips({ legs, onShowLeg }: { legs: readonly LegWarning
 
 /**
  * A leg or section row's access at a glance: its status's icon, then one icon per kind of
- * warning it has (access, lock, aire), each icon once. Their names are only read out; the text
+ * warning it has (access, lock, incident, obstacle, aire), each icon once. Their names are only read out; the text
  * is in the row's dialog.
  */
 export function LegAccessIcons({
@@ -222,13 +327,15 @@ export function LegAccessIcons({
   className,
 }: {
   state: AccessState | undefined;
-  access: Pick<AccessSummary, "warnings" | "lockWarnings"> | undefined;
+  access: Pick<AccessSummary, "warnings" | "lockWarnings" | "incidentWarnings" | "obstacleWarnings"> | undefined;
   aire: readonly AireWarning[];
   className?: string;
 }) {
   const kinds: LegWarnings["kind"][] = [
     ...(access?.warnings ?? []).map((warning) => warning.kind),
     ...(access?.lockWarnings ?? []).map(() => "lock" as const),
+    ...(access?.incidentWarnings ?? []).map(() => "incident" as const),
+    ...(access?.obstacleWarnings ?? []).map(() => "obstacle" as const),
     ...aire.map(() => "aire" as const),
   ];
   const all = [

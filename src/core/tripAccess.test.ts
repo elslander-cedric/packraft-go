@@ -212,6 +212,8 @@ describe("per-day and trip summaries", () => {
       warnings: [],
       notes: [],
       lockWarnings: [],
+      obstacleWarnings: [],
+      incidentWarnings: [],
       legsWithoutRules: 0,
     });
   });

@@ -57,6 +57,9 @@ describe("service worker", () => {
       false,
     );
     expect(answers({ url: "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=50.268&lon=5.446" })).toBe(false);
+    expect(
+      answers({ url: "https://geoservices3.wallonie.be/arcgis/rest/services/APP_KAYAK/PKAYAK/MapServer/5/query?f=json" }),
+    ).toBe(false);
   });
 
   it("never answers anything but GET", () => {

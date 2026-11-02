@@ -13,6 +13,14 @@ import {
   type Geometry,
   type Position,
 } from "./geo";
+import {
+  officialVerdict,
+  type OfficialCheck,
+  type OfficialClosedVerdict,
+  type OfficialReadings,
+  type OfficialVerdict,
+} from "./officialStatus";
+import type { OfficialIncidents } from "./incident";
 import type { LatLng } from "./trip";
 
 export type { Geometry, Position } from "./geo";
@@ -31,6 +39,8 @@ export type AgwGauge = {
   readonly stationNo: string;
   /** True when the match to Annex 2 is a best guess (ADR 0024); #61 shows it as assumed. */
   readonly assumed: boolean;
+  /** True when this is the gauge the SPW uses, not the one Annex 2 names (#205). */
+  readonly spwPractice?: boolean;
 };
 
 /**
@@ -44,8 +54,10 @@ export type AgwRule = {
   /** Annex 2 minimum flow (72-hour mean), or null when none is set. */
   readonly minM3s: number | null;
   readonly maxM3s: number;
-  /** The Annex 2 gauge, or null when no gauge matches (Wanlin). */
+  /** The Annex 2 gauge, or null when no gauge matches. */
   readonly gauge: AgwGauge | null;
+  /** The SPW stretch this record lies on (ADR 0035, #209); absent where the SPW lists none. */
+  readonly officialStretch?: string;
   readonly link?: AccessSource;
 };
 
@@ -127,10 +139,17 @@ export type AccessContext = {
   readonly flows?: FlowReadings;
   /** True while today's live flows are being fetched: flow-dependent stretches are "checking", not open (#85). */
   readonly flowsPending?: boolean;
+  /**
+   * Today's official status (ADR 0035, #210), once asked for. It decides only when `date` is
+   * `today`; on a later date a closure today is a note beside the rules (#212).
+   */
+  readonly official?: OfficialReadings;
+  /** True while today's official status is being fetched: stretches it decides are "checking", not open. */
+  readonly officialPending?: boolean;
 };
 
-/** Why a Walloon stretch is closed on a date: the calendar (AGW art. 4), or today's flow (art. 6). */
-export type AccessClosure = AgwClosure | "low-flow" | "high-flow";
+/** Why a Walloon stretch is closed on a date: the calendar (AGW art. 4), today's flow (art. 6), or the SPW itself. */
+export type AccessClosure = AgwClosure | "low-flow" | "high-flow" | "official";
 
 /** Why a piece of water has its status. */
 export type AccessReason =
@@ -139,7 +158,11 @@ export type AccessReason =
       readonly state: AccessState;
       readonly recordId: string;
       readonly name: string;
-      readonly ruleText: string;
+      /**
+       * What the rules alone say. Absent where there is nothing but the state and the category
+       * to say, which the UI words itself. On a stretch with an `official` verdict, the UI words the two together.
+       */
+      readonly ruleText?: string;
       readonly conditions?: readonly string[];
       readonly link?: AccessSource;
       readonly source: AccessSource;
@@ -153,6 +176,15 @@ export type AccessReason =
       readonly flowDependent?: true;
       /** Walloon stretches on today's date: the live flow figures behind the status (#61). */
       readonly flow?: FlowFigures;
+      /**
+       * Walloon stretches on today's date: what the official status says, once known (ADR 0035, #210).
+       * On a future date, only `unavailable`: there was no reading to note a closure today from (#211).
+       */
+      readonly official?: OfficialVerdict;
+      /** Walloon stretches on a future date: the SPW has closed it today, which may still apply then (#212). */
+      readonly closedToday?: OfficialClosedVerdict;
+      /** The official stretch this water belongs to, where the SPW lists one. */
+      readonly officialStretch?: string;
     }
   /** The place is outside every region with rules. */
   | { readonly kind: "no-rule"; readonly state: "unknown" };
@@ -206,8 +238,6 @@ const FISHING_DAYS = "the fishing opening days (3rd Saturday of March, 1st Satur
 
 const KAYAK_PAGE = "check today's official status on kayak.spw.wallonie.be";
 
-const CHECKING_FLOW = "Checking flow…";
-
 const m3s = (value: number) => `${value} m³/s`;
 
 /** Why today's flow can't decide, in one sentence. */
@@ -221,7 +251,9 @@ const flowUnknownText: Record<FlowUnknown, string> = {
 
 /**
  * A Walloon stretch's status on a date: season, fishing opening days and hours
- * (AGW art. 4), and on today's date the live flow (art. 6, #61).
+ * (AGW art. 4), and on today's date the official status (ADR 0035, #210) or, where
+ * there's no reading, the live flow (art. 6, #61). A calendar closure always stands.
+ * A future date stays rule-based, with a note when the SPW has closed the stretch today (#212).
  */
 function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext): AccessStatus {
   const { category } = rule;
@@ -234,9 +266,19 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     rule.minM3s !== null && `minimum ${m3s(rule.minM3s)} (72-hour mean)`,
     `maximum ${m3s(rule.maxM3s)}`,
   ].filter(Boolean);
-  // Flow is only known for today.
-  const verdict: FlowVerdict =
-    date !== undefined && date === today ? flowCheck(rule, context.flows, today) : { kind: "not-checked" };
+  // Flow and official status are only known for today.
+  const isToday = date !== undefined && date === today;
+  const verdict: FlowVerdict = isToday ? flowCheck(rule, context.flows, today) : { kind: "not-checked" };
+  const official = isToday ? officialVerdict(rule.officialStretch, context.official) : undefined;
+  const officialPending = isToday && official === undefined && context.officialPending === true;
+  // YYYY-MM-DD strings order as calendar days, so no time zone can move this.
+  const isFuture = date !== undefined && today !== undefined && date > today;
+  const verdictToday = isFuture ? officialVerdict(rule.officialStretch, context.official) : undefined;
+  const closedToday = verdictToday?.kind === "closed" ? verdictToday : undefined;
+  // With no reading a closure today can't be known, so a future date is marked like today (#211).
+  const unavailableToday = verdictToday?.kind === "unavailable" ? verdictToday : undefined;
+  // With a reading (or one on its way), the official status replaces the flow check; the figures stay on show.
+  const flowDecides = !officialPending && (!official || official.kind === "none" || official.kind === "unavailable");
   const figures = verdict.kind === "not-checked" ? undefined : verdict.figures;
   const conditions = [
     ...hours,
@@ -248,7 +290,7 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
 
   let state: AccessState = "open";
   let closedBy: AccessClosure | undefined;
-  let ruleText: string;
+  let ruleText: string | undefined;
   if (day?.closure === "season") {
     state = "closed-today";
     closedBy = "season";
@@ -257,28 +299,29 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     state = "closed-today";
     closedBy = "fishing-day";
     ruleText = `Closed today: fishing opening day. Category ${category} stretches are closed on ${FISHING_DAYS}.`;
-  } else if (verdict.kind === "low") {
+  } else if (official?.kind === "closed") {
+    state = "closed-today";
+    closedBy = "official";
+  } else if (officialPending) {
+    state = "checking";
+  } else if (official?.kind === "unrecognised") {
+    state = "unknown";
+  } else if (flowDecides && verdict.kind === "low") {
     state = "closed-today";
     closedBy = "low-flow";
     ruleText = `Closed today: low flow. The 72-hour mean flow (${m3s(verdict.figures.mean72h!.m3s)}) is below the minimum of ${m3s(rule.minM3s!)}.`;
-  } else if (verdict.kind === "high") {
+  } else if (flowDecides && verdict.kind === "high") {
     state = "closed-today";
     closedBy = "high-flow";
     ruleText = `Closed today: high flow. The flow at 08:00 (${m3s(verdict.figures.at8!.m3s)}) is above the maximum of ${m3s(rule.maxM3s)}: based on measured flow; the official status may differ.`;
-  } else if (verdict.kind === "not-checked" && context.flowsPending && date !== undefined && date === today) {
+  } else if (flowDecides && verdict.kind === "not-checked" && context.flowsPending && isToday) {
     state = "checking";
-    ruleText = CHECKING_FLOW;
-  } else if (verdict.kind === "unknown") {
+  } else if (flowDecides && verdict.kind === "unknown") {
     state = "unknown";
     ruleText = `${flowUnknownText[verdict.why]}; ${KAYAK_PAGE}.`;
-  } else if (category === "1.A") {
-    ruleText = "Category 1.A (navigable): open all year, within the permitted hours.";
-  } else if (category === "1.B") {
-    ruleText = `Category 1.B: open all year, except on ${FISHING_DAYS}.`;
-  } else {
-    ruleText = `Category 1.C: open from 1 October to 15 March only, except on ${FISHING_DAYS}.`;
-    // Without a date the season can't be told.
-    if (!day) state = "unknown";
+  } else if (category === "1.C" && !day) {
+    // Without a date the 1.C season can't be told.
+    state = "unknown";
   }
 
   const reason: AccessReason = {
@@ -286,7 +329,7 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     state,
     recordId: record.id,
     name: record.name,
-    ruleText,
+    ...(ruleText !== undefined && { ruleText }),
     conditions,
     ...(rule.link && { link: rule.link }),
     source: record.source,
@@ -297,8 +340,27 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     // Every stretch has flow limits: on a later date the flow decides on the day.
     flowDependent: true,
     ...(figures && { flow: figures }),
+    ...(official && { official }),
+    ...(unavailableToday && { official: unavailableToday }),
+    ...(closedToday && { closedToday }),
+    ...(rule.officialStretch && { officialStretch: rule.officialStretch }),
   };
   return { state, reasons: [reason] };
+}
+
+/**
+ * What this status couldn't check with the SPW (#211): the computed status stood in
+ * for a reading on today's date, or on a future date a closure today can't be known.
+ * Empty with a reading, while one loads, on a past date, and on water with no official stretch.
+ *
+ * Incidents aren't part of a status (ADR 0035), so pass them in to have a failure named
+ * too (#216), on water the SPW lists. Pass them only where they were asked for.
+ */
+export function officialNotChecked(status: AccessStatus, incidents?: OfficialIncidents): readonly OfficialCheck[] {
+  const rules = status.reasons.flatMap((reason) => (reason.kind === "rule" ? [reason] : []));
+  const closures = rules.some((reason) => reason.official?.kind === "unavailable");
+  const hazards = incidents?.status === "failed" && rules.some((reason) => reason.officialStretch !== undefined);
+  return [...(closures ? (["closures"] as const) : []), ...(hazards ? (["incidents"] as const) : [])];
 }
 
 /**
@@ -346,6 +408,18 @@ export function accessAlong(line: readonly LatLng[], rules: AccessRules, context
   const samples = samplesAlong(line, SAMPLE_STEP_M);
   if (samples.length === 0) return noRule;
   return combineAccess(samples.map((point) => accessAt(point, rules, context)));
+}
+
+/**
+ * The access status of an official stretch, such as an official aire's: every record
+ * on it is evaluated and the most restrictive wins. One official stretch can hold
+ * several records, of different categories. Unknown when no record lies on it.
+ */
+export function officialStretchAccess(officialStretch: string, rules: AccessRules, context: AccessContext): AccessStatus {
+  const records = rules.records.filter(
+    ({ rule }) => rule.type === "agw" && rule.officialStretch === officialStretch,
+  );
+  return combineAccess(records.map((record) => evaluateRecord(record, context)));
 }
 
 /** A water record with its status, for drawing on the map. */

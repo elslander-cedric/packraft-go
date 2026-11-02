@@ -7,6 +7,13 @@ export function serialiseLocks(dataset: LockDataset): string {
   return head.replace('"@@locks@@"', `[\n${locks.map((l) => `    ${JSON.stringify(l)}`).join(",\n")}\n  ]`) + "\n";
 }
 
+/** An SPW snapshot as JSON with one item of `list` per line, so a refresh reads well as a diff. */
+export function serialiseSnapshot<Key extends string>(dataset: { readonly [key in Key]: readonly unknown[] }, list: Key): string {
+  const head = JSON.stringify({ ...dataset, [list]: "@@items@@" }, null, 2);
+  const items = dataset[list].map((item) => `    ${JSON.stringify(item)}`).join(",\n");
+  return head.replace('"@@items@@"', () => `[\n${items}\n  ]`) + "\n";
+}
+
 /**
  * A dataset as JSON that reads well in a diff: fields indented, each geometry
  * on one line.

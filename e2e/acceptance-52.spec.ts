@@ -7,7 +7,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
-import { todayInBrussels } from "../src/core/calendarDate";
+import { dateInBrussels } from "../src/core/calendarDate";
 import {
   dayCardDates,
   dayCards,
@@ -192,7 +192,7 @@ test("a new trip starts on today in Brussels", async ({ page }) => {
   await setStartDate(page, "2026-10-31");
   await menuItem(page, strings.planner.menu.newTrip);
   await answerConfirmation(page, "newTrip", "confirm");
-  const today = todayInBrussels(new Date());
+  const today = dateInBrussels(new Date());
   expect(await shownStartDate(page)).toBe(today);
   await expect.poll(async () => (await storedJson(page)).trip?.startDate).toBe(today);
 });

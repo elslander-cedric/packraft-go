@@ -261,8 +261,39 @@ export const strings = {
     forbidden: "Forbidden",
     unknown: "Unknown",
   },
-  // Transient status while today's live Walloon flow loads (#85); not one of the legend's states.
-  accessChecking: "Checking flow…",
+  // Transient status while today's live Walloon flow or official status loads (#85, #210); not one of the legend's states.
+  accessChecking: "Checking status…",
+  // What a Walloon category's calendar allows, in one sentence.
+  accessCalendar: {
+    "1.A": "Category 1.A (navigable): open all year, within the permitted hours.",
+    "1.B": "Category 1.B: open all year, except on the fishing opening days (3rd Saturday of March, 1st Saturday of June).",
+    "1.C":
+      "Category 1.C: open from 1 October to 15 March only, except on the fishing opening days (3rd Saturday of March, 1st Saturday of June).",
+  },
+  // The SPW's official status for today (#210, ADR 0035).
+  official: {
+    closed: (why: string) => `Closed today by the SPW: ${why}`,
+    // On a future date (#212): the status stays rule-based, but an order "until further notice" may still apply.
+    closedTodayNote: (why: string) => `Officially closed today, says the SPW: ${why}`,
+    tooLow: "the water is too low.",
+    causes: { "high-water": "high water.", "out-of-season": "out of season." },
+    open: "Open today, says the SPW.",
+    openSoon: "Open today, says the SPW, but kayaks may soon be forbidden.",
+    unrecognised: (code: string) =>
+      `The SPW gives a status the app doesn't know (code ${code}); check today's official status on kayak.spw.wallonie.be.`,
+    none: "The SPW publishes no official status for this stretch.",
+    // With no official reading (#211): one sentence per check that didn't happen, then the link.
+    notChecked: {
+      closures: "Official closures weren't checked, so the SPW may have closed this stretch.",
+      incidents: "The SPW's incidents couldn't be loaded, so there may be hazards here that aren't shown.",
+    },
+    // The same, short, for the whole map while the access layer is on.
+    mapNotChecked: {
+      closures: "Official closures weren't checked.",
+      incidents: "The SPW's incidents couldn't be loaded.",
+    },
+    notCheckedLink: { title: "See today's status on the SPW's site", url: "https://kayak.spw.wallonie.be/" },
+  },
   accessLegendNote:
     "In Flanders, water that isn't marked is open by default. In Wallonia, only the listed stretches may be paddled; other water is treated as not allowed, but isn't painted red. " +
     "In Brussels, only the canal is known to be open; other water is unknown.",
@@ -278,6 +309,58 @@ export const strings = {
   lockLegend: "Lock: portage required (shown when zoomed in)",
   lockPortageRequired: "Portage required",
   lockPortageText: "Don't go through the lock on the water: get out before it and carry your packraft around it.",
+  // Official aires (ADR 0035, GLOSSARY "Official aire"): marked on the access layer in Wallonia.
+  officialAires: {
+    marker: (name: string, use: string) => `Official aire: ${name} (${use})`,
+    legend: {
+      "put-in": "Official aire: put-in",
+      "take-out": "Official aire: take-out",
+      both: "Official aire: both ways",
+    },
+    stretchLabel: "Stretch",
+  },
+  // The SPW's kayak data (ADR 0035), whatever kind it is.
+  spwData: {
+    lastChanged: (date: string) => `Last changed by the SPW: ${date}`,
+    snapshot: (date: string) => `Snapshot of ${date}`,
+    // Shown in the map's attribution control while the access layer is on. Contains an HTML link.
+    attribution:
+      'Aires, obstacles and incidents: <a href="https://kayak.spw.wallonie.be/">Sources des données : Service public de Wallonie</a>',
+  },
+  // Obstacles (ADR 0035, GLOSSARY "Obstacle"). The SPW publishes only a position and a code,
+  // so all of this is the app's own wording and stays cautious. The drossage text follows the
+  // SPW's own definition (kayak.spw.wallonie.be, Recommandations, B.1.4).
+  obstacles: {
+    marker: (name: string) => `Obstacle: ${name}`,
+    names: {
+      dam: "Dam",
+      impassable: "Impassable point",
+      rocks: "Rocks",
+      drossage: "Drossage (sharp bend)",
+      "low-bridge": "Low bridge",
+    },
+    meanings: {
+      dam: "Check it before you reach it and be ready to portage.",
+      impassable: "Portage required: get out before it and carry your packraft around it.",
+      rocks: "Take care: watch for rocks in the water.",
+      drossage:
+        "Take care: the river bends sharply here and the current runs into the bank. It can pin a boat against the bank, and a capsize here can leave you stuck in the eddy.",
+      "low-bridge": "Take care: it may need a portage at high water.",
+    },
+    legendNote: "Obstacles show when zoomed in.",
+    // No obstacle list is complete (ADR 0035).
+    incomplete: "The SPW marks only where this is; what it says here is this app's reading. No list of obstacles is complete.",
+  },
+  // Incidents (ADR 0035, GLOSSARY "Incident"): the text is the SPW's own, and can be old, so its date always shows.
+  incidents: {
+    title: "Incident reported by the SPW",
+    legend: "Incident reported by the SPW",
+    marker: (text: string) => `Incident: ${text}`,
+    noText: "The SPW gives no description.",
+    reported: (date: string) => `Reported by the SPW on ${date}`,
+    reportedUndated: "Reported by the SPW",
+    until: (date: string) => `Ends ${date}`,
+  },
   accessDetailClose: "Close",
   accessNoRule: "No access rules are known for this place.",
   accessConditionsHeading: "Extra rules",
@@ -300,6 +383,10 @@ export const strings = {
     noRule: "No access rules known here.",
     // Lock warning (#60): the lock's name is the lock's own, from the data.
     lockWarning: (name: string) => `Lock at ${name}: portage required.`,
+    // Obstacle warning (#215): one line per kind, whose meaning is strings.obstacles.meanings.
+    obstacleWarning: (name: string, count: number) => (count === 1 ? `${name}.` : `${name}, ${count} on this leg.`),
+    // Incident warning (#217): the text is the SPW's own.
+    incidentWarning: (text: string) => `Incident: ${text}`,
     // A day card's chips: one per leg with warnings, its most serious kind; the text is on the leg.
     dayWarningsLabel: "Access warnings",
     chipKind: {
@@ -307,6 +394,8 @@ export const strings = {
       closed: "Closed",
       "check-flow": "Check flow",
       lock: "Lock",
+      incident: "Incident",
+      obstacle: "Obstacle",
       aire: "No aire",
     },
     chip: (leg: number, kind: string) => `Leg ${leg} · ${kind}`,
@@ -319,6 +408,7 @@ export const strings = {
     heading: "Live flow today",
     gauge: (name: string) => `Gauge: ${name}`,
     gaugeAssumed: (name: string) => `Gauge: ${name} (assumed gauge: its match to the official one isn't confirmed)`,
+    gaugeSpwPractice: (name: string) => `Gauge: ${name} (the gauge the SPW uses here, not the one in the regulation)`,
     at8: (flow: string) => `Flow at 08:00: ${flow}`,
     at8Missing: "Flow at 08:00: not measured yet",
     mean72h: (flow: string, when: string) => `72-hour mean: ${flow} (${when})`,
@@ -333,15 +423,20 @@ export const strings = {
     // The SPW's legal notice asks for this credit, in French, with a link.
     credit: "Sources des données : Service public de Wallonie",
   },
-  // Snapping a new put-in or take-out to one of your access points (#62, ADR 0023).
+  // Snapping a new put-in or take-out to one of your access points or an official aire
+  // (#62, ADR 0023, ADR 0035).
   snap: {
-    label: "Snap to an access point",
+    label: "Snap to an access point or aire",
     // `name` is the access point's name (#136), or null when it has none.
     offer: (kind: string, metres: number, name: string | null, use: string, accessKind: string) =>
       name === null
         ? `The new ${kind} is ${metres} m from your access point (${use}, ${accessKind}). Snap it there?`
         : `The new ${kind} is ${metres} m from your access point ${name} (${use}, ${accessKind}). Snap it there?`,
+    // `use` is the aire's use, lower-case, e.g. "put-in".
+    offerAire: (kind: string, metres: number, name: string, use: string) =>
+      `The new ${kind} is ${metres} m from the official aire ${name} (${use}). Snap it there?`,
     accept: "Snap to access point",
+    acceptAire: "Snap to aire",
     decline: "Keep where it is",
     kinds: { "put-in": "put-in", "take-out": "take-out" },
   },
@@ -349,8 +444,9 @@ export const strings = {
   aire: {
     warningKind: "No official aire",
     text: (kind: string, point: number) =>
-      `Point ${point}, the ${kind}, is in Wallonia but not within 200 m of an access point of yours marked as an ` +
-      "official aire. In Wallonia you may only get on or off the water at an aire (AGW art. 5).",
+      `Point ${point}, the ${kind}, is in Wallonia but not within 200 m of an official aire you can use as a ${kind}, ` +
+      "or an access point of yours marked as an official aire. " +
+      "In Wallonia you may only get on or off the water at an aire (AGW art. 5).",
     kinds: { "put-in": "put-in", "take-out": "take-out" },
   },
   // Place search (#173, ADR 0030): the bar over the map, its dropdown and the result's pin.

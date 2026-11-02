@@ -1,14 +1,21 @@
 // The app's UI icons (#143, ADR 0028): Font Awesome Free Solid, imported only here,
 // so switching to another set only touches src/ui/icons/. Their names stay in strings.ts.
 import {
+  faArrowDown,
   faArrowLeft,
+  faArrowsDownToLine,
   faArrowsSpin,
+  faArrowsUpDown,
   faArrowTrendDown,
   faArrowTrendUp,
+  faArrowTurnDown,
+  faArrowUp,
   faBan,
   faBars,
+  faBridgeWater,
   faCalendarXmark,
   faCircleCheck,
+  faCircleExclamation,
   faChevronDown,
   faChevronLeft,
   faChevronRight,
@@ -22,22 +29,36 @@ import {
   faFolderOpen,
   faGear,
   faGaugeHigh,
+  faHand,
   faHourglassHalf,
   faLayerGroup,
   faLocationCrosshairs,
   faLocationDot,
   faMagnifyingGlass,
+  faMountain,
   faPen,
   faRotateLeft,
   faShoePrints,
   faStairs,
   faTent,
   faTrashCan,
+  faTriangleExclamation,
   faWater,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
+import type { ObstacleKind } from "@/core/obstacle";
+
 export type { IconDefinition } from "@fortawesome/free-solid-svg-icons";
+
+/** An obstacle's marker, legend line and details (ADR 0035), by kind. */
+export const obstacleIcons: Readonly<Record<ObstacleKind, typeof faHand>> = {
+  dam: faArrowsDownToLine,
+  impassable: faHand,
+  rocks: faMountain,
+  drossage: faArrowTurnDown,
+  "low-bridge": faBridgeWater,
+};
 
 export const icons = {
   // No kayak in Font Awesome Free: hike is footprints, paddle is water.
@@ -52,6 +73,10 @@ export const icons = {
   backToStart: faArrowsSpin,
   accessPoint: faFlag,
   deletePoint: faXmark,
+  // An official aire's marker and legend (ADR 0035): down onto the water, up off it.
+  airePutIn: faArrowDown,
+  aireTakeOut: faArrowUp,
+  aireBoth: faArrowsUpDown,
   // An access point row's edit and delete buttons.
   editAccessPoint: faPen,
   deleteAccessPoint: faTrashCan,
@@ -76,6 +101,10 @@ export const icons = {
   warningClosed: faCalendarXmark,
   warningCheckFlow: faGaugeHigh,
   warningLock: faStairs,
+  warningObstacle: faTriangleExclamation,
+  warningIncident: faCircleExclamation,
+  // An incident's marker and legend (ADR 0035).
+  incident: faTriangleExclamation,
   warningAire: faFlag,
   // The planner menu's items.
   newTrip: faFileCirclePlus,

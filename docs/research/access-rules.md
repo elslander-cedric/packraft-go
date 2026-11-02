@@ -1,6 +1,6 @@
 # Paddling access rules in Belgium
 
-Researched 2026-10-12. Not legal advice. The app still shows "check local navigation rules" (ADR 0010).
+Researched 2026-10-12, Wallonia updated 2026-11-02 from [kayak-spw-access-points.md](kayak-spw-access-points.md). Not legal advice. The app still shows "check local navigation rules" (ADR 0010).
 
 **Summary**
 - **Flanders:** paddling is allowed by default on **navigable** waterways, with a short list of exceptions (some canals, the ports) and a ban on entering locks. It's also allowed by default on **non-navigable** rivers (BVR of 7 May 2021, art. 21), unless the river's manager bans it. No permit is needed. Details: [flanders.md](flanders.md).
@@ -110,7 +110,7 @@ The **Arrêté du Gouvernement wallon (AGW) of 19 March 2009**, "réglementant l
 | Semois (Membre) | 2.2 m³/s | 50 m³/s |
 
   The full Annex 2 table (26 stretches) is in [hydrometry.md](hydrometry.md).
-- **Temporary closures and exceptions (art. 7–8):** the minister can close stretches (for nature or works) or grant exceptions.
+- **Temporary closures and exceptions (art. 7–8):** the minister can close stretches (for nature or works) or grant exceptions. An art. 8 order overrides the art. 4 calendar and the art. 6 flow rules, and it did in 2026: on 2026-11-01 all 11 of the SPW's 1.C stretches, in season under art. 4, were closed by ministerial order for severe low water, until further notice. **[UNVERIFIED]:** the order's number, date and text. Details: [kayak-spw-access-points.md](kayak-spw-access-points.md#2-how-the-spw-decides-and-what-the-law-says).
 - **Practical rules** ([wallonie.be, updated 23/07/2026](https://www.wallonie.be/fr/demarches/sinformer-sur-la-pratique-du-canoe-kayak-en-wallonie)):
   - about 450 km of river open in total
   - "touristic" stretches on the Amblève, Ourthe, Lesse, Semois and Viroin
@@ -124,7 +124,7 @@ The **Arrêté du Gouvernement wallon (AGW) of 19 March 2009**, "réglementant l
 
 - **Map:** a map of stretches, each with a status: kayaks and rafts allowed / kayaks only / ban coming soon / banned / always banned / navigable waterway.
 - **Stretch details:** river, gauge, hourly and 72-hour flow, thresholds, the reason for any ban (low flow, high flow, or the 1.C season), and route notes.
-- **Updates:** automatically every day at 08:15, plus manual alerts from the administration. Available in FR, NL, EN and DE.
+- **Updates:** automatically every day, plus manual alerts from the administration. The site's dialog says 08:15 for the new measurements; its FAQ says 08:20. Available in FR, NL, EN and DE.
 
 ---
 

@@ -1,13 +1,13 @@
 # Walloon hydrometry: can packraft-go compute the daily kayak status?
 
-Researched 2026-10-12. Every live test was a single request made that day. Not legal advice.
+Researched 2026-10-12, updated 2026-11-02 from [kayak-spw-access-points.md](kayak-spw-access-points.md) and ADR 0035. Every live test was a single request made on the research day. Not legal advice.
 
 ## TL;DR
 
 - **Technically, yes.** `hydrometrie.wallonie.be` exposes a public, keyless **KISTERS KiWIS** web service that returns JSON with discharge (m³/s) at 5-minute, hourly and **72-hour moving mean** resolution. It sends `Access-Control-Allow-Origin: *`, so a static browser app can call it directly. No CORS proxy is needed.
-- **All Annex 2 reference gauges were found with station IDs except "Wanlin" (Lesse).** Some names are ambiguous (two "Martelange" stations, for example).
+- **All Annex 2 reference gauges were found with station IDs except "Wanlin" (Lesse).** Some names are ambiguous (two "Martelange" stations, for example). Update 2026-11-02: the SPW's own `station` field answers Wanlin (L6610 Hérock) and confirms the assumed gauges, but raises doubts on the Salm and the Our. See the notes in section 5.
 - **No public flow forecast exists.** The AGW's "08:00 forecast" rule for maximum flow can't be reproduced. kayak.spw.wallonie.be itself appears to use the observed hourly flow at 08:00 plus the 72 h mean, updated at 08:15.
-- **The licence is the blocker, not the technology.** The site's legal notice allows reproduction with attribution. It also says that, without written SPW agreement, you may not pass the data to third parties or publish it, and it bans commercial reuse without permission. Showing derived "open/closed" status publicly sits in a grey zone. **Recommendation: email the SPW for written permission before shipping.**
+- **The licence is the blocker, not the technology.** The site's legal notice allows reproduction with attribution. It also says that, without written SPW agreement, you may not pass the data to third parties or publish it, and it bans commercial reuse without permission. Showing derived "open/closed" status publicly sits in a grey zone. **Recommendation: email the SPW for written permission before shipping.** Update: the SPW has no objection (ADR 0022), and on 2026-11-02 gave the wider permission in ADR 0035.
 
 ---
 
@@ -50,7 +50,7 @@ Source: https://wallex.wallonie.be/files/pdfs/5/6718_Arr%C3%AAt%C3%A9_du_Gouvern
 - §2: **closed for the day** if the 72 h mean flow is below the Annex 2 minimum.
 - §3: **closed for the day** if the 08:00 forecast predicts the maximum will be exceeded during permitted hours, **or** if the observed hourly mean is above the maximum.
 - §4: inflatables for 4 to 10 people are allowed only if both the 72 h mean and the hourly mean are above 5 times the minimum.
-- §1: the status is published on the SPW kayak website and a phone line. Art. 8: ministers can restrict or allow exceptions ad hoc. Data can't capture these exceptions.
+- §1: the status is published on the SPW kayak website and a phone line. Art. 8: ministers can restrict or allow exceptions ad hoc. Flow data can't capture these exceptions; the SPW's official status does (ADR 0035).
 
 ## 3. Access: tested requests
 
@@ -97,6 +97,8 @@ Source: https://hydrometrie.wallonie.be/mentions-legales.html. No named licence,
 
 **Interpretation (not legal advice):** having each visitor's browser fetch directly from the SPW means packraft-go never stores or rehosts the data. That is arguably the user consulting the SPW service. But showing flows, or a status derived from them, publicly on packraft-go is close to "diffuser au public" (publishing to the public). The free, non-commercial nature of the app helps but doesn't remove the clause. **Get written permission from the SPW** (Direction de la Gestion hydrologique, via https://hydrometrie.wallonie.be/contact.html). This could go in the same email as the kayak-feed request to info.kayak@spw.wallonie.be. Sending it is Cedric's call.
 
+**Update 2026-11-02:** done. See ADRs 0022 and 0035.
+
 ## 5. Gauge coverage: AGW Annex 2 mapped to KiWIS
 
 **Annex 2 source:** linked from the Wallex act page https://wallex.wallonie.be/contents/acts/6/6718.html. The PDFs are:
@@ -118,7 +120,7 @@ Column notes:
 | Amblève | Warche below Robertville dam | Malmedy | | 8.9 | 6933 | 299434010 | 299412010 |
 | Amblève | Salm below Vielsalm dam | Trois-Ponts | | 9.7 | 6832 | 299362010 | 299340010 |
 | Lesse | Lesse, Barbouillons bridge (Daverdisse) to Chanly | Daverdisse | | 14 | 8341 | 301366010 | 301344010 |
-| Lesse | Lesse, Han-sur-Lesse dam to 100 m above Houyet bridge | Wanlin | | 47 | **not found** | | |
+| Lesse | Lesse, Han-sur-Lesse dam to 100 m above Houyet bridge | Wanlin | | 47 | **L6610 Hérock** (SPW practice; no Wanlin station on the Lesse) | | |
 | Lesse | Lesse, Houyet to Gendron | Gendron | 2.0 | 52 | 8221 | 301222010 | 301200010 |
 | Lesse | Lesse, Gendron to Pont-à-Lesse | Gendron | 1.5 | 52 | 8221 | (same) | (same) |
 | Lesse | Lesse below Pont-à-Lesse | Gendron | 1.5 | 52 | 8221 | (same) | (same) |
@@ -144,12 +146,18 @@ Sources for the table:
 - Thresholds: Annex 2 PDF above.
 - IDs: KiWIS `getStationList` and `getTimeseriesList` responses on 2026-10-12. The ts_ids are internal KiWIS numbers and could change, so look them up by station_no and ts_name at build time or at runtime.
 
-Notes and gaps:
+Update 2026-11-02, from the SPW's `station` field (full comparison in [kayak-spw-access-points.md](kayak-spw-access-points.md#3-how-the-app-works-today)):
+
+- **Answered:** Wanlin is L6610 Hérock in SPW practice. L5610 (Martelange), S9434 (Membre), S6621 (Martinrive) and S8221 (Gendron) match the gauges assumed below and in the table.
+- **New doubts:** the SPW uses L6070 Trois-Ponts for the Salm, not 6832, and L6330 Ouren for the Our, not 9914 Reuland. Whether KiWIS has the needed series for those two is **[UNVERIFIED]**, as KiWIS was down.
+- **Semois:** the SPW uses S9541 Chiny down to Linglé, where Annex 2 puts Chassepierre to Deleau on Membre.
+
+Notes and gaps from 2026-10-12:
 - **Wanlin (Lesse) has no station of that name.** There is an AQUALIM "Wanlin" (L7190), but it's on the Biran, a different river. Lesse candidates between Han and Houyet:
   - Hérock L6610 has Q.
   - Han-sur-Lesse L8930 has Q only until 2026-08-23.
   - Houyet 8231 has water level only.
-  - **[UNVERIFIED]** which gauge the SPW now uses. Ask the SPW, or read the "Liminigraphe" field on kayak.spw.wallonie.be.
+  - The SPW uses Hérock (see the update above).
 - **Martelange is ambiguous.** L5610 (AQUALIM, Sûre, has 72 h and 1 h Q) and 9960 (no river name). **[UNVERIFIED]** which one is the reference. L5610 seems likely.
 - **Membre** has two stations: "MEMBRE Pont" 9434, which has Q, and "MEMBRE Amont" 9435, which only has water level. Use 9434. **[UNVERIFIED]** that it's the reference.
 - **Gedinne:** L6400 (AQUALIM, Houille) has Q. FELENNE 8661 is further downstream on the Houille. Annex 2 names Gedinne, so use L6400.
@@ -166,9 +174,9 @@ What a static browser app **can** do from public data:
 
 What's **missing**:
 1. **The 08:00 maximum-flow forecast.** It isn't public. Use "observed hourly at 08:00 > max" as an approximation, and label it clearly.
-2. **Ad hoc ministerial restrictions and exceptions (Art. 8) and manual overrides** on kayak.spw.wallonie.be. Data can't capture these, so the app must always link to kayak.spw.wallonie.be as the authoritative source and show a disclaimer.
-3. **The Wanlin gauge mapping** (and to a lesser extent Martelange and Membre) needs confirming.
-4. **The licence.** Written SPW permission is needed for public display. Attribution is mandatory either way.
+2. **Ad hoc ministerial restrictions and exceptions (Art. 8) and manual overrides** on kayak.spw.wallonie.be. Flow data can't capture these, so the app must always link to kayak.spw.wallonie.be as the authoritative source and show a disclaimer. Update: for today the app now reads the official status itself (ADR 0035).
+3. ~~**The Wanlin gauge mapping** (and to a lesser extent Martelange and Membre) needs confirming.~~ Answered: see the update in section 5.
+4. ~~**The licence.** Written SPW permission is needed for public display.~~ Settled: see ADRs 0022 and 0035. The app keeps crediting the SPW.
 5. **Stability.** KiWIS isn't documented as a public API. Plan for failure and fall back to "unknown, check kayak.spw.wallonie.be".
 
 **No CORS proxy is needed** (`Access-Control-Allow-Origin: *`).

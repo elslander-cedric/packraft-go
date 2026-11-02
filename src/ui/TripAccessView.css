@@ -49,13 +49,26 @@
   color: var(--color-muted);
 }
 .access-warning-aire strong,
-.access-warning-lock strong {
+.access-warning-lock strong,
+.access-warning-incident strong,
+.access-warning-obstacle strong {
   color: var(--color-warning);
+}
+
+.leg-access-credit {
+  color: var(--color-muted);
+  font-size: 0.8rem;
 }
 
 /* Unknown access: a quiet note, visibly lighter than the coloured warnings (#78). */
 .access-note {
   font-style: italic;
+}
+
+/* No official reading behind the status (#211): plain text, so it reads as a caveat on the status above it. */
+.access-not-checked {
+  margin: var(--space-1) 0 0;
+  color: var(--color-warning);
 }
 
 /* A day card's chips: one per leg with warnings, on a line of their own under the figures. */

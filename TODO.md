@@ -63,7 +63,7 @@ Low priority. File one if it starts to bother you.
 - [ ] Plan a real trip with v2 and note what's missing.
 - [x] Research access rules, routes and data sources for Flanders and Wallonia: see [docs/research/](docs/research/).
 - [x] Check the Walloon hydrometry API: it works from the browser; publishing needs SPW permission. See [hydrometry.md](docs/research/hydrometry.md).
-- [ ] Email the SPW for written permission to show flows and a derived status, and ask which gauge is used for Wanlin (Cedric sends).
+- [x] Email the SPW for written permission to show flows and a derived status, and ask which gauge is used for Wanlin: permission given 2026-11-02 (ADR 0035); the SPW uses Hérock.
 - [x] Extract AGW Annex 1 ([walloon-stretches.md](docs/research/walloon-stretches.md)) and check the Flemish rules and ports ([flanders.md](docs/research/flanders.md)).
 - [x] Place the Walloon stretch start and end points on the map (#54, reviewed 2026-10-13).
 - [ ] Close spec #51 (all sub-issues are done).

@@ -106,6 +106,18 @@ export type OfflineOptions = {
    */
   kiwis?: (url: URL) => BRouterReply | Promise<BRouterReply>;
   /**
+   * Answers the SPW's PKAYAK map service (official status, #210). Defaults to
+   * "service unavailable" (503): today's computed status stands. Replay
+   * `src/kayak/fixtures` with `kayakFixture`.
+   */
+  kayak?: (url: URL) => BRouterReply | Promise<BRouterReply>;
+  /**
+   * Answers PKAYAK's incidents (layer 0, #216), apart from `kayak`, as the two fail
+   * apart. Defaults to no incidents, so a spec about something else has no note on them.
+   * Replay `src/kayak/fixtures` with `kayakFixture`.
+   */
+  incidents?: (url: URL) => BRouterReply | Promise<BRouterReply>;
+  /**
    * Answers Nominatim: reverse geocoding (default names of access points,
    * #136) and search (place search, #172). Defaults to "service unavailable"
    * (503): points stay unnamed and searches fail. Replay `src/geocoding/fixtures`
@@ -147,6 +159,14 @@ export function kiwisFixtures(list: string, values: string): (url: URL) => BRout
   };
 }
 
+const KAYAK_FIXTURES = path.join(__dirname, "../../src/kayak/fixtures");
+
+/** Answers a PKAYAK request with a recorded response from `src/kayak/fixtures`. */
+export const kayakFixture = (name: string) => {
+  const body = readFileSync(path.join(KAYAK_FIXTURES, name), "utf8");
+  return (): BRouterReply => ({ status: 200, body });
+};
+
 /**
  * Holds every KiWIS answer back until `release()` is called, then gives the
  * wrapped answer. Lets a test observe the page while the flows are loading (#85).
@@ -165,20 +185,24 @@ export function delayedKiwis(answer: (url: URL) => BRouterReply | Promise<BRoute
 
 /**
  * Serves every base map's tiles (OpenTopoMap, the Walloon WMS, the Flemish and Brussels WMTS,
- * the NGI's CartoWeb.be; ADR 0031) and the Hiking trails overlay's (ADR 0032) from one fixture, answers BRouter, KiWIS and Nominatim from recorded
+ * the NGI's CartoWeb.be; ADR 0031) and the Hiking trails overlay's (ADR 0032) from one fixture, answers BRouter, KiWIS, PKAYAK and Nominatim from recorded
  * responses, and blocks every other external request, so e2e tests never
  * touch live services (ADR 0019).
- * Returns the tiles (with the base map each was for), BRouter routes, KiWIS and Nominatim requests the page asked for, and any other
+ * Returns the tiles (with the base map each was for), BRouter routes, KiWIS, PKAYAK (official status in `kayak`, incidents in `incidents`) and Nominatim requests the page asked for, and any other
  * external requests it tried.
  */
 export async function serveOffline(page: Page, options: OfflineOptions = {}) {
   const tiles: TileRequest[] = [];
   const brouter: URL[] = [];
   const kiwis: URL[] = [];
+  const kayak: URL[] = [];
+  const incidents: URL[] = [];
   const nominatim: URL[] = [];
   const blocked: string[] = [];
   const answerBRouter = options.brouter ?? (() => ({ status: 503, body: "" }));
   const answerKiwis = options.kiwis ?? (() => ({ status: 503, body: "" }));
+  const answerKayak = options.kayak ?? (() => ({ status: 503, body: "" }));
+  const answerIncidents = options.incidents ?? (() => ({ status: 200, body: '{"features":[]}' }));
   const answerNominatim = options.nominatim ?? (() => ({ status: 503, body: "" }));
 
   await page.route(
@@ -207,6 +231,16 @@ export async function serveOffline(page: Page, options: OfflineOptions = {}) {
           contentType: reply.status === 200 ? "application/json;charset=UTF-8" : "text/plain",
           body: reply.body,
         });
+      } else if (url.hostname === "geoservices3.wallonie.be" && url.pathname.includes("/PKAYAK/MapServer/")) {
+        const isIncidents = url.pathname.endsWith("/MapServer/0/query");
+        (isIncidents ? incidents : kayak).push(url);
+        const reply = await (isIncidents ? answerIncidents : answerKayak)(url);
+        await route.fulfill({
+          status: reply.status,
+          headers: { "Access-Control-Allow-Origin": "*" },
+          contentType: reply.status === 200 ? "application/json;charset=UTF-8" : "text/plain",
+          body: reply.body,
+        });
       } else if (url.hostname === "nominatim.openstreetmap.org" && ["/reverse", "/search"].includes(url.pathname)) {
         nominatim.push(url);
         const reply = await answerNominatim(url);
@@ -223,5 +257,5 @@ export async function serveOffline(page: Page, options: OfflineOptions = {}) {
     },
   );
 
-  return { tiles, brouter, kiwis, nominatim, blocked };
+  return { tiles, brouter, kiwis, kayak, incidents, nominatim, blocked };
 }

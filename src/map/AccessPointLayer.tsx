@@ -8,12 +8,14 @@ import type { Marker as LeafletMarker } from "leaflet";
 import { divIcon } from "leaflet";
 import { useRef } from "react";
 import { Marker } from "react-leaflet";
-import type { AccessPoint, AccessPointKind, AccessPointUse, AccessPoints } from "@/core/accessPoints";
+import type { AccessPoint, AccessPointKind, AccessPoints } from "@/core/accessPoints";
 import type { LatLng } from "@/core/trip";
 import { accessPointText } from "@/ui/accessPointText";
 import { icons } from "@/ui/icons/icons";
 import { iconSvg, type IconPlacement } from "@/ui/icons/iconSvg";
 import { strings } from "@/ui/strings";
+import { accessUseColours } from "./accessColours";
+import { escapeAttribute, escapeText } from "./escapeHtml";
 import { HIT_SIZE_PX, usePressDrag } from "./pressDrag";
 import "./AccessPointLayer.css";
 
@@ -25,13 +27,6 @@ export type AccessPointLayerProps = {
   onSelect: (id: string) => void;
   /** The planner dragged an access point's marker and dropped it at `to`. */
   onMove: (id: string, to: LatLng) => void;
-};
-
-// Put-ins and take-outs share the colours of the trip's put-in and take-out rings.
-const useColour: Record<AccessPointUse, string> = {
-  "put-in": "#1a8f3a",
-  "take-out": "#7a3fb5",
-  both: "#0e7c86",
 };
 
 // Each kind has its own shape, in a 24 × 24 box.
@@ -55,10 +50,6 @@ const SIZE = 24;
 // Icons are shared and kept: a new icon replaces the marker's element, which would interrupt a drag.
 const markerIcons = new Map<string, ReturnType<typeof divIcon>>();
 
-// Names and notes are yours: escape them in the marker's HTML.
-const escapeText = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const escapeAttribute = (value: string) => escapeText(value).replace(/"/g, "&quot;");
-
 /**
  * Drawn in a 44 px hit box, for press-and-drag (#120) instead of Leaflet's marker drag,
  * which a finger can't use.
@@ -77,7 +68,7 @@ function accessPointIcon(point: AccessPoint, selected: boolean) {
     html:
       `<svg role="img" aria-label="${escapeAttribute(label)}" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}">` +
       `<title>${escapeText(label)}</title>` +
-      `<g stroke="#fff" stroke-width="2" stroke-linejoin="round">${kindShape[kind](useColour[use])}</g>` +
+      `<g stroke="#fff" stroke-width="2" stroke-linejoin="round">${kindShape[kind](accessUseColours[use])}</g>` +
       `<g color="#fff">${iconSvg(icons.accessPoint, flagPlacement[kind])}</g></svg>`,
     iconSize: [HIT_SIZE_PX, HIT_SIZE_PX],
     iconAnchor: [HIT_SIZE_PX / 2, HIT_SIZE_PX / 2],

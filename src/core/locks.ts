@@ -1,16 +1,27 @@
 // Lock warnings on paddle legs (#60, GLOSSARY: Lock). A paddle leg whose line
 // passes a lock must portage there. Information only: it never blocks.
-import type { LockMarker } from "./access";
+import type { LockMarker, Position } from "./access";
 import type { CalendarDate } from "./calendarDate";
-import { distanceToLineM } from "./geo";
+import { distanceToLineM, projectOntoLine } from "./geo";
 import type { LatLng } from "./trip";
 
 /**
- * How far from a lock the leg's line may pass and still count as passing it.
- * A routed line follows the waterway and a lock's mapped position is its middle,
- * while the lock itself is up to a few hundred metres long.
+ * How far from a marker (a lock, an obstacle, an incident) the leg's line may pass and still
+ * count as passing it. A routed line follows the waterway and a lock's mapped position is its
+ * middle, while the lock itself is up to a few hundred metres long.
  */
-export const LOCK_TOLERANCE_M = 100;
+export const PASSING_TOLERANCE_M = 100;
+
+/** The markers a leg's line passes within `PASSING_TOLERANCE_M`, in the order the leg meets them. */
+export function markersPassedInOrder<T extends { readonly position: Position }>(line: readonly LatLng[], markers: readonly T[]): T[] {
+  return markers
+    .flatMap((marker) => {
+      const { offM, alongM } = projectOntoLine({ lat: marker.position[1], lng: marker.position[0] }, line);
+      return offM <= PASSING_TOLERANCE_M ? [{ marker, alongM }] : [];
+    })
+    .sort((a, b) => a.alongM - b.alongM)
+    .map(({ marker }) => marker);
+}
 
 /** Locks of the same name closer than this are one lock complex (e.g. two chambers side by side): warned once. */
 const SAME_COMPLEX_M = 400;
@@ -24,13 +35,13 @@ export type LockWarning = {
   readonly date?: CalendarDate;
 };
 
-/** The locks a leg's line passes within `LOCK_TOLERANCE_M`, in the order they are given; a lock complex counts once. */
+/** The locks a leg's line passes within `PASSING_TOLERANCE_M`, in the order they are given; a lock complex counts once. */
 export function locksOnLine(line: readonly LatLng[], locks: readonly LockMarker[]): LockMarker[] {
   const coordinates = line.map((p) => [p.lng, p.lat] as [number, number]);
   const found: LockMarker[] = [];
   for (const lock of locks) {
     const at = { lat: lock.position[1], lng: lock.position[0] };
-    if (distanceToLineM(at, coordinates) > LOCK_TOLERANCE_M) continue;
+    if (distanceToLineM(at, coordinates) > PASSING_TOLERANCE_M) continue;
     const sameComplex = found.some(
       (other) => other.name === lock.name && distanceToLineM(at, [other.position]) <= SAME_COMPLEX_M,
     );

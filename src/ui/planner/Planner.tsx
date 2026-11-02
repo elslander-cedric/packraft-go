@@ -25,6 +25,7 @@ import AccessDetailsDialog from "./AccessDetailsDialog";
 import AccessPointDialog from "./AccessPointDialog";
 import AccessPoints from "./AccessPoints";
 import SnapOffers from "../SnapOffers";
+import { MapNotCheckedNote } from "../TripAccessView";
 import LegDetailsDialog from "./LegDetailsDialog";
 import SectionDetailsDialog from "./SectionDetailsDialog";
 import SectionsList from "./SectionsList";
@@ -90,6 +91,7 @@ export default function Planner({ router }: { router?: Router }) {
     access,
     waterAccess,
     aire,
+    officialAires,
     undo,
     deleteSelectedPoint,
     saveFile,
@@ -132,7 +134,7 @@ export default function Planner({ router }: { router?: Router }) {
   };
   const marking = useMarkAccessPoint(access, position, showPosition, placed);
   // The access layer (#125): on or off, its date, and the water or lock whose details are open.
-  const layer = useAccessLayer(trip);
+  const layer = useAccessLayer(trip, tab === "accessPoints");
   // The base map (ADR 0031): a setting on this device, never in the trip.
   const [baseMap, chooseBaseMap] = useBaseMap();
   // The overlays (ADR 0032): settings on this device too.
@@ -174,7 +176,7 @@ export default function Planner({ router }: { router?: Router }) {
     else if (selectedPoint !== null) dispatch({ type: "deselect" });
     else {
       if (held !== null && trip.points.length === 0) setPick({ ...held, carry: true });
-      dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points });
+      dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points, officialAires });
     }
   };
   // A leg row tap shows its leg above the half-raised sheet and marks the row.
@@ -295,8 +297,10 @@ export default function Planner({ router }: { router?: Router }) {
         <AccessPoints
           access={access}
           trip={trip}
+          officialAires={layer.officialAires}
           position={position.state === "shown" ? position.at : null}
           onOpen={openAccessPoint}
+          onOpenAire={layer.select}
           onEdit={(id) => {
             access.select(id);
             setEditingId(id);
@@ -346,6 +350,7 @@ export default function Planner({ router }: { router?: Router }) {
       {layer.on && (
         <div className="planner-access-chip-slot">
           <AccessChip dateSelector={layer.dateSelector} />
+          <MapNotCheckedNote checks={layer.notChecked} />
         </div>
       )}
       <div className="planner-buttons planner-buttons-top planner-buttons-left">
@@ -469,7 +474,13 @@ export default function Planner({ router }: { router?: Router }) {
       <AccessDetailsDialog
         water={layer.selectedWater}
         lock={layer.selectedLock}
+        aire={layer.selectedAire}
+        aireStretch={layer.selectedAireStretch}
+        aireStatus={layer.selectedAireStatus}
+        obstacle={layer.selectedObstacle}
+        {...(layer.selectedIncident && { incident: layer.selectedIncident })}
         date={layer.date}
+        {...(layer.incidents && { incidents: layer.incidents })}
         onClose={() => layer.select(null)}
       />
       <LegDetailsDialog

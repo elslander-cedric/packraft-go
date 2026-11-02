@@ -77,6 +77,50 @@
   vertical-align: middle;
 }
 
+/* Incident swatch (ADR 0035): the disc on the map, with its sign. */
+.access-incident-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-right: var(--space-2);
+  border-radius: 50%;
+  background: var(--color-incident);
+  color: var(--color-lock-ring);
+  font-size: 0.6rem;
+  vertical-align: middle;
+}
+
+/* Obstacle swatch (ADR 0035): the diamond on the map, with its sign. */
+.access-obstacle-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-right: var(--space-2);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: var(--color-lock-ring);
+  color: var(--color-on-accent);
+  font-size: 0.5rem;
+  vertical-align: middle;
+}
+
+/* Official aire swatch (ADR 0035): the hexagon on the map, with its arrow. */
+.access-aire-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.2rem;
+  margin-right: var(--space-2);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  color: var(--color-on-accent);
+  font-size: 0.65rem;
+  vertical-align: middle;
+}
+
 .access-legend-lock {
   margin: var(--space-2) 0 0;
 }
