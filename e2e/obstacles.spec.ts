@@ -22,11 +22,12 @@ const SAMPLES = [
 const [DAM] = SAMPLES;
 
 /** A trip either side of a place, `span` degrees of longitude wide, which sets the zoom. */
-const around = ({ lat, lng }: { lat: number; lng: number }, span = 0.02): Trip => ({
+// The leg runs `north` degrees north of the spot: far enough that a click on the spot isn't on it (#230).
+const around = ({ lat, lng }: { lat: number; lng: number }, span = 0.02, north = 0.004): Trip => ({
   name: "",
   points: [
-    { lat: lat + 0.004, lng: lng - span / 2 },
-    { lat: lat + 0.004, lng: lng + span / 2 },
+    { lat: lat + north, lng: lng - span / 2 },
+    { lat: lat + north, lng: lng + span / 2 },
   ],
   legs: [{ mode: "hike" }],
 });
@@ -113,7 +114,7 @@ test.describe("on a desktop", () => {
   }
 
   test("a map not zoomed in much shows small obstacles that leave clicks to the river beneath", async ({ page }) => {
-    await openWith(page, around(DAM, 0.5));
+    await openWith(page, around(DAM, 0.5, 0.05));
     await toggleAccessLayer(page);
     await expect(obstacles(page)).toHaveCount(96);
 

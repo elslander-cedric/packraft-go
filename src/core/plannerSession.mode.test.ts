@@ -44,6 +44,11 @@ describe("planner modes", () => {
     expect(after.selectedPoint).toBeNull();
   });
 
+  it("entering access point editing clears the selected leg (#230)", () => {
+    const before = { ...firstSession({ trip }), selectedLeg: 0 };
+    expect(enter(before).selectedLeg).toBeNull();
+  });
+
   it("Done in normal mode changes nothing", () => {
     const s = selected();
     expect(plannerSession(s, { type: "leaveAccessPointEditing" })).toBe(s);
@@ -86,6 +91,7 @@ describe("the trip is frozen while editing access points (#227)", () => {
     ["toggle camp", () => ({ type: "toggleCampOnSelectedPoint" })],
     ["undo", () => ({ type: "undo" })],
     ["point clicked", () => ({ type: "pointClicked", index: 2 })],
+    ["leg clicked", () => ({ type: "legClicked", index: 0 })],
     ["accept offer", (s) => ({ type: "acceptOffer", offer: s.offers[0] })],
     ["decline offer", (s) => ({ type: "declineOffer", offer: s.offers[0] })],
   ];

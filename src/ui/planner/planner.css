@@ -603,7 +603,9 @@
   right: calc(var(--panel-cover, 0px) + var(--space-3) * 2 + var(--planner-next-mode-width));
   z-index: var(--planner-z-floating);
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
   pointer-events: none;
   transition:
     bottom 250ms,
@@ -612,6 +614,36 @@
 
 .planner-snap-offers .snap-offers {
   pointer-events: auto;
+}
+
+/* The selected leg's card (#230), above any snap offers, like them on the right. */
+.planner-leg-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+  pointer-events: auto;
+}
+
+.planner-leg-card-title {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.planner-leg-card-mode .toggle {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border-radius: 0.6rem;
+}
+
+.planner-snap-offers .button.planner-leg-card-close {
+  min-width: 2.75rem;
+  padding: 0;
+  border: none;
+  background: none;
 }
 
 .planner-snap-offers .snap-offer {

@@ -113,7 +113,7 @@ test("a supported autosave shows no warning", async ({ page }) => {
 });
 
 test.describe("mouse gestures", () => {
-  test("a 0.4 s mouse hold on a leg inserts a point and routes both halves; a click there adds one at the end", async ({
+  test("a 0.4 s mouse hold on a leg inserts a point and routes both halves; a click there selects the leg", async ({
     page,
   }) => {
     const network = await serveOffline(page, routed);
@@ -131,13 +131,12 @@ test.describe("mouse gestures", () => {
     expect(inserted.points[1].lat).toBeLessThan(trip.points[0].lat);
     expect(inserted.points[1].lat).toBeGreaterThan(trip.points[1].lat);
 
-    // A plain click on a leg is a click on the map: it adds a point at the trip's end.
+    // A plain click on a leg selects it (#230): it adds no point.
     await page.getByRole("button", { name: strings.undoButton }).click();
     await expect(points(page)).toHaveCount(2);
     await page.mouse.click(middle.x, middle.y + 6);
-    await expect(points(page)).toHaveCount(3);
-    const added = JSON.parse((await storedTrip(page))!).trip as Trip;
-    expect(added.points.slice(0, 2)).toEqual(trip.points);
+    await expect(page.getByRole("group", { name: /^Leg 1 · / })).toBeVisible();
+    await expect(points(page)).toHaveCount(2);
     expect(network.blocked).toEqual([]);
   });
 

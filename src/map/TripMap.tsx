@@ -24,7 +24,7 @@ import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 import { HOLD_MS, isPrimaryPress, useHold } from "./hold";
 import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
-import { campIcon, legCasingStyle, legStyle, modeChangeStyle } from "./tripStyles";
+import { campIcon, legCasingStyle, legStyle, modeChangeStyle, selectedLegCasingStyle } from "./tripStyles";
 
 /**
  * A place to show in the part of the map the sheet leaves free (it covers
@@ -50,6 +50,10 @@ export type TripMapProps = {
   onPointDrop: (index: number, to: LatLng) => void;
   /** A finger held still on a leg for 0.4 s, or a right-click on it, at `at` (#122). */
   onLegHold: (leg: number, at: LatLng) => void;
+  /** The selected leg (#230), marked on the map, or null. */
+  selectedLeg: number | null;
+  /** A tap on a leg (#230); it is not a tap on the map. */
+  onLegTap: (leg: number) => void;
   /**
    * The trip is drawn but can't be touched (access point editing, ADR 0036, #227): its points and
    * legs have no hit areas, so a press reaches your access points or the map beneath.
@@ -185,14 +189,21 @@ function Focus({ focus }: { focus: MapFocus }) {
   return null;
 }
 
+/** The leg a leg hit line's element stands for (#230), kept on the element. */
+const LEG_HIT_ATTRIBUTE = "data-leg";
+function legOf(target: EventTarget | null): number | null {
+  const leg = target instanceof Element ? target.getAttribute(LEG_HIT_ATTRIBUTE) : null;
+  return leg === null ? null : Number(leg);
+}
+
 /**
- * Turns taps into `onMapTap`. A double tap gives one tap (its second tap is
- * ignored), and the click that can follow a pinch is ignored. So is the click
- * that ends a finger or the mouse held for 0.4 s or more: holding the map does
- * nothing, and holding a leg inserts a point instead (#122, ADR 0034); a tap
+ * Turns taps into `onMapTap`, or `onLegTap` when the tap is on a leg's hit line (#230). A
+ * double tap gives one tap (its second tap is ignored), and the click that can follow a pinch
+ * is ignored. So is the click that ends a finger or the mouse held for 0.4 s or more: holding
+ * the map does nothing, and holding a leg inserts a point instead (#122, ADR 0034); a tap
  * right after a hold is a tap.
  */
-function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
+function Taps({ onTap, onLegTap }: { onTap: (at: LatLng) => void; onLegTap: (leg: number) => void }) {
   const map = useMap();
   const lastTap = useRef<{ at: number; point: Point } | null>(null);
   const pinched = useRef(false);
@@ -229,7 +240,9 @@ function Taps({ onTap }: { onTap: (at: LatLng) => void }) {
       if (previous && now - previous.at < DOUBLE_TAP_MS && previous.point.distanceTo(event.containerPoint) < DOUBLE_TAP_PX) {
         return;
       }
-      onTap({ lat: event.latlng.lat, lng: event.latlng.lng });
+      const leg = legOf(event.originalEvent.target);
+      if (leg !== null) onLegTap(leg);
+      else onTap({ lat: event.latlng.lat, lng: event.latlng.lng });
     },
   });
   return null;
@@ -269,13 +282,17 @@ function MapLeg({
   status,
   positions,
   dragged,
+  selected,
 }: {
   mode: LegMode;
   status: LegStatus;
   positions: LatLng[];
   dragged: boolean;
+  selected: boolean;
 }) {
   const line = useRef<LeafletPolyline>(null);
+  const casing = useRef<LeafletPolyline>(null);
+  useClass(casing, "leg-casing-selected", selected);
   useClass(line, "leg-dragged", dragged);
   useClass(line, "leg-hike", mode === "hike");
   useClass(line, "leg-paddle", mode === "paddle");
@@ -285,7 +302,13 @@ function MapLeg({
   const dashed = dragged || status === "failed";
   return (
     <>
-      <Polyline positions={positions} interactive={false} className="leg-casing" pathOptions={legCasingStyle[mode]} />
+      <Polyline
+        ref={casing}
+        positions={positions}
+        interactive={false}
+        className="leg-casing"
+        pathOptions={(selected ? selectedLegCasingStyle : legCasingStyle)[mode]}
+      />
       <Polyline
         ref={line}
         positions={positions}
@@ -305,11 +328,15 @@ const legHitStyle = { color: "#000", opacity: 0, weight: LEG_HIT_WIDTH_PX, fill:
 
 /**
  * A leg's transparent 28 px hit line: hold it 0.4 s (or right-click it) to
- * insert a point (#122). A tap on it is still a tap on the map.
+ * insert a point (#122). Its element says which leg it is, so the map's tap
+ * handling makes a tap on it a tap on the leg (#230).
  */
-function LegHitLine({ positions, onHold }: { positions: LatLng[]; onHold: (at: LatLng) => void }) {
+function LegHitLine({ leg, positions, onHold }: { leg: number; positions: LatLng[]; onHold: (at: LatLng) => void }) {
   const line = useRef<LeafletPolyline>(null);
   useHold(line, onHold);
+  useEffect(() => {
+    line.current?.getElement()?.setAttribute(LEG_HIT_ATTRIBUTE, String(leg));
+  }, [leg]);
   return <Polyline ref={line} positions={positions} className="leg-hit" pathOptions={legHitStyle} />;
 }
 
@@ -340,8 +367,9 @@ function TripLayers({
   onPointTap,
   onPointDrop,
   onLegHold,
+  selectedLeg,
   frozen,
-}: Pick<TripMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold" | "frozen">) {
+}: Pick<TripMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold" | "selectedLeg" | "frozen">) {
   const [preview, setPreview] = useState<{ index: number; at: LatLng } | null>(null);
   const points = preview ? trip.points.with(preview.index, preview.at) : trip.points;
   const handlers = (index: number): PressDragHandlers => ({
@@ -370,6 +398,7 @@ function TripLayers({
             status={leg.route?.status ?? "pending"}
             dragged={dragged}
             positions={positions}
+            selected={i === selectedLeg}
           />
         ))}
       </Pane>
@@ -378,7 +407,7 @@ function TripLayers({
       <Pane name="trip-leg-hits" style={{ zIndex: paneZIndex.tripLegHits }}>
         {!frozen &&
           legs.map(({ positions }, i) => (
-            <LegHitLine key={`leg-hit-${i}`} positions={positions} onHold={(at) => onLegHold(i, at)} />
+            <LegHitLine key={`leg-hit-${i}`} leg={i} positions={positions} onHold={(at) => onLegHold(i, at)} />
           ))}
       </Pane>
       {putInsAndTakeOuts(trip).map(({ kind, point }) => (
@@ -427,6 +456,8 @@ export default function TripMap({
   onPointTap,
   onPointDrop,
   onLegHold,
+  selectedLeg,
+  onLegTap,
   frozen,
   position,
   accessPoints,
@@ -450,13 +481,14 @@ export default function TripMap({
       {access && <AccessLayer {...access} />}
       <MapView trip={trip} position={position} cover={searchCover} />
       {focus && <Focus focus={focus} />}
-      <Taps onTap={onMapTap} />
+      <Taps onTap={onMapTap} onLegTap={onLegTap} />
       <TripLayers
         trip={trip}
         selectedPoint={selectedPoint}
         onPointTap={onPointTap}
         onPointDrop={onPointDrop}
         onLegHold={onLegHold}
+        selectedLeg={selectedLeg}
         frozen={frozen}
       />
       {accessPoints && <AccessPointLayer {...accessPoints} />}

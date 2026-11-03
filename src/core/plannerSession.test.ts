@@ -76,6 +76,7 @@ const actions: [name: string, make: Make][] = [
   ["set start date", { type: "setStartDate", date: "2026-10-20" }],
   ["retry leg", { type: "retryLeg", index: 0 }],
   ["point clicked", { type: "pointClicked", index: 2 }],
+  ["leg clicked", { type: "legClicked", index: 0 }],
   ["deselect", { type: "deselect" }],
   ["accept offer", (s) => ({ type: "acceptOffer", offer: s.offers[0] })],
   ["decline offer", (s) => ({ type: "declineOffer", offer: s.offers[0] })],
@@ -91,7 +92,12 @@ const kept = (value: unknown): Outcome => ({ label: "kept", value });
 const set = (value: unknown): Outcome => ({ label: "set", value });
 
 /** One table per piece of state: a row per action, checked against what `read` shows. */
-function table(piece: string, outcomes: Record<string, Outcome>, read: (s: PlannerSession) => unknown) {
+function table(
+  piece: string,
+  outcomes: Record<string, Outcome>,
+  read: (s: PlannerSession) => unknown,
+  start: () => PlannerSession = busy,
+) {
   describe(`rule table: ${piece}`, () => {
     it("has a row for every action", () => {
       const skipped = actions.map(([name]) => name).filter((name) => !(name in outcomes) && name !== "set leg mode");
@@ -101,7 +107,7 @@ function table(piece: string, outcomes: Record<string, Outcome>, read: (s: Plann
       const outcome = outcomes[name];
       if (!outcome) continue;
       it(`${name}: ${outcome.label}`, () => {
-        const before = busy();
+        const before = start();
         expect(read(plannerSession(before, build(make, before)))).toEqual(outcome.value);
       });
     }
@@ -124,6 +130,7 @@ table(
     "set start date": kept(1),
     "retry leg": kept(1),
     "point clicked": set(2),
+    "leg clicked": cleared(null),
     deselect: cleared(null),
     "accept offer": cleared(null),
     "decline offer": kept(1),
@@ -151,6 +158,7 @@ table(
     "set start date": kept(1),
     "retry leg": kept(1),
     "point clicked": kept(1),
+    "leg clicked": kept(1),
     deselect: kept(1),
     "accept offer": cleared([]), // that one offer is removed
     "decline offer": cleared([]), // that one offer is removed
@@ -178,6 +186,7 @@ table(
     "set start date": cleared(null),
     "retry leg": cleared(null),
     "point clicked": cleared(null),
+    "leg clicked": cleared(null),
     deselect: cleared(null),
     "accept offer": cleared(null),
     "decline offer": cleared(null),
@@ -188,6 +197,72 @@ table(
   },
   (s) => s.fileError,
 );
+
+// A selected leg and a selected point never go together: this session has leg 1 selected instead (#230).
+const legSelected = (): PlannerSession => ({ ...busy(), selectedPoint: null, selectedLeg: 1 });
+
+table(
+  "selected leg (leg 1 is selected)",
+  {
+    "add point": cleared(null),
+    "move point": cleared(null),
+    "delete selected point": kept(1), // no point is selected: nothing happens
+    "back to start": cleared(null),
+    "insert point": cleared(null),
+    "set leg mode": kept(1), // legs keep their indices, so you can switch it back
+    "access points changed": kept(1),
+    "toggle camp": kept(1), // no point is selected: nothing happens
+    undo: cleared(null),
+    rename: kept(1),
+    "set start date": kept(1),
+    "retry leg": kept(1),
+    "point clicked": cleared(null),
+    "leg clicked": set(0),
+    deselect: cleared(null),
+    "accept offer": cleared(null),
+    "decline offer": kept(1),
+    "file downloaded": kept(1),
+    "enter access point editing": cleared(null),
+    "route requested": kept(1),
+    "route arrived": kept(1),
+  },
+  (s) => s.selectedLeg,
+  legSelected,
+);
+
+describe("leg clicked (#230)", () => {
+  it("selects the leg and clears the selected point", () => {
+    const after = plannerSession(busy(), { type: "legClicked", index: 1 });
+    expect(after.selectedLeg).toBe(1);
+    expect(after.selectedPoint).toBeNull();
+  });
+
+  it("on the selected leg clears it", () => {
+    expect(plannerSession(legSelected(), { type: "legClicked", index: 1 }).selectedLeg).toBeNull();
+  });
+
+  it("on a leg the trip doesn't have returns the same session", () => {
+    const before = legSelected();
+    expect(plannerSession(before, { type: "legClicked", index: 2 })).toBe(before);
+  });
+
+  it("set leg mode on the selected leg changes its mode and keeps it selected, as one undo step", () => {
+    const after = plannerSession(legSelected(), {
+      type: "setLegMode",
+      index: 1,
+      mode: "paddle",
+      accessPoints: [],
+      officialAires: [],
+    });
+    expect(after.trip.legs[1].mode).toBe("paddle");
+    expect(after.selectedLeg).toBe(1);
+    expect(plannerSession(after, { type: "undo" }).trip.legs[1].mode).toBe("hike");
+  });
+
+  it("starts cleared", () => {
+    expect(firstSession({ trip: through(A, B, C) }).selectedLeg).toBeNull();
+  });
+});
 
 table(
   "stored save kept (the stored save is kept)",
@@ -213,6 +288,7 @@ describe("rule table: replacing the trip", () => {
       expect(plannerSession(empty, action)).toMatchObject({
         trip: next,
         selectedPoint: null,
+        selectedLeg: null,
         offers: [],
         fileError: null,
         keepStoredSave: false,
@@ -224,6 +300,7 @@ describe("rule table: replacing the trip", () => {
       expect(run(busy(), action, { type: "confirmReplace" })).toMatchObject({
         trip: next,
         selectedPoint: null,
+        selectedLeg: null,
         offers: [],
         fileError: null,
         keepStoredSave: false,

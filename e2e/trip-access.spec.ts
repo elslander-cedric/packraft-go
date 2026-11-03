@@ -99,8 +99,9 @@ test("a paddle leg on a forbidden Flemish canal shows a warning with its reason;
   expect(save.suggestedFilename()).toMatch(/\.packraft\.json$/);
   const gpx = await exportGpxFile(page);
   expect(gpx.suggestedFilename()).toMatch(/\.zip$/);
+  // Off the legs, which cross the middle of the map: a click on a leg selects it (#230).
   const centre = await freeMapCentre(page);
-  await page.mouse.click(centre.x, centre.y);
+  await page.mouse.click(centre.x + 120, centre.y + 120);
   await expect(legLines(page)).toHaveCount(3);
   expect(network.blocked).toEqual([]);
 });

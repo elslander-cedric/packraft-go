@@ -17,7 +17,7 @@ import { Button } from "../components/Button";
 import { SidePanel, useSidePanelWidth } from "../components/SidePanel";
 import { sidePanelCover } from "../components/sidePanelWidth";
 import { Tab, TabList, TabPanel, Tabs } from "../components/Tabs";
-import { ToggleGroup, type ToggleOption } from "../components/ToggleGroup";
+import { ToggleGroup } from "../components/ToggleGroup";
 import DaysPanel from "../DaysPanel";
 import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
@@ -33,6 +33,7 @@ import AccessPoints from "./AccessPoints";
 import SnapOffers from "../SnapOffers";
 import { MapNotCheckedNote } from "../TripAccessView";
 import LegDetailsDialog from "./LegDetailsDialog";
+import LegModeCard, { legModeOptions } from "./LegModeCard";
 import SectionDetailsDialog from "./SectionDetailsDialog";
 import SectionsList from "./SectionsList";
 import MapMenu from "./MapMenu";
@@ -62,17 +63,6 @@ type NextModePick = {
 };
 const pickedFor = (trip: Trip) => ({ points: trip.points, undoSteps: trip.undoSteps });
 const pickHolds = (pick: NextModePick, trip: Trip) => pick.points === trip.points && pick.undoSteps === trip.undoSteps;
-
-/** Hike / Paddle, icon-only, in the legs' colours: the map's next leg toggle. */
-const legModeOptions: readonly ToggleOption<LegMode>[] = [
-  { value: "hike", label: strings.legModeHike, icon: <Icon icon={icons.hike} />, className: "leg-mode leg-mode-hike" },
-  {
-    value: "paddle",
-    label: strings.legModePaddle,
-    icon: <Icon icon={icons.paddle} />,
-    className: "leg-mode leg-mode-paddle",
-  },
-];
 
 /** Where a day or a section goes: its points and its legs' routes. */
 function legsArea(trip: Trip, { firstLeg, lastLeg }: { firstLeg: number; lastLeg: number }): LatLng[] {
@@ -186,11 +176,11 @@ export default function Planner({ router }: { router?: Router }) {
   };
 
   // While editing access points the tap places the new access point, or moves it there; it does
-  // nothing to the trip, which is frozen (#227). While a point is selected, it only clears the
-  // selection (#120); otherwise it adds a trip point with the next leg's mode.
+  // nothing to the trip, which is frozen (#227). While a point or a leg is selected, it only clears
+  // the selection (#120, #230); otherwise it adds a trip point with the next leg's mode.
   const onMapTap = (at: LatLng) => {
     if (editingAccessPoints) access.placeDraft(at);
-    else if (selectedPoint !== null) dispatch({ type: "deselect" });
+    else if (selectedPoint !== null || session.selectedLeg !== null) dispatch({ type: "deselect" });
     else {
       if (held !== null && trip.points.length === 0) setPick({ ...held, carry: true });
       dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points, officialAires });
@@ -370,6 +360,8 @@ export default function Planner({ router }: { router?: Router }) {
         onPointTap={(index) => dispatch({ type: "pointClicked", index })}
         onPointDrop={(index, to) => dispatch({ type: "movePoint", index, to })}
         onLegHold={(index, near) => dispatch({ type: "insertPoint", index, near })}
+        selectedLeg={session.selectedLeg}
+        onLegTap={(index) => dispatch({ type: "legClicked", index })}
         frozen={editingAccessPoints}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
@@ -544,6 +536,25 @@ export default function Planner({ router }: { router?: Router }) {
         onClose={() => setDetailsSection(null)}
       />
       <div className="planner-snap-offers">
+        {/* The selected leg's mode (#230); none while editing access points, which clears it. */}
+        {session.selectedLeg !== null && summary.legs[session.selectedLeg] && (
+          <LegModeCard
+            leg={session.selectedLeg}
+            mode={trip.legs[session.selectedLeg].mode}
+            distanceKm={summary.legs[session.selectedLeg].distanceKm}
+            onChange={(mode) =>
+              session.selectedLeg !== null &&
+              dispatch({
+                type: "setLegMode",
+                index: session.selectedLeg,
+                mode,
+                accessPoints: access.points,
+                officialAires,
+              })
+            }
+            onClose={() => dispatch({ type: "deselect" })}
+          />
+        )}
         <SnapOffers
           // Hidden while editing access points; they wait until leaving (#227).
           offers={editingAccessPoints ? [] : offers}

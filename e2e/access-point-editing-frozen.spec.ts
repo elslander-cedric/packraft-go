@@ -311,7 +311,8 @@ test.describe("on a wide screen", () => {
       [TRIP_KEY, serialiseTrip(seeded), ACCESS_POINTS_KEY, serialiseAccessPoints(slipway)],
     );
     await openPlanner(page);
-    await (await mapClicker(page))(0, -150, "paddle");
+    // Beside the hike leg, which runs up the middle of the map: a click on a leg selects it (#230).
+    await (await mapClicker(page))(100, -150, "paddle");
     await expect(legLines(page)).toHaveCount(2);
     await expect(snapOffer(page)).toBeVisible();
 

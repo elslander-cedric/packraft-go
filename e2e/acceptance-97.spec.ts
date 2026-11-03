@@ -45,7 +45,8 @@ const river = { brouter: () => ({ status: 200, body: brouterFixture("river-succe
 async function drawPaddleLeg(page: Page) {
   await pickNextMode(page, "paddle");
   const centre = await freeMapCentre(page);
-  await page.mouse.click(centre.x, centre.y - 150);
+  // Beside the hike leg, which runs up the middle of the map: a click on a leg selects it (#230).
+  await page.mouse.click(centre.x + 100, centre.y - 150);
   await expect(legLines(page)).toHaveCount(2);
 }
 
