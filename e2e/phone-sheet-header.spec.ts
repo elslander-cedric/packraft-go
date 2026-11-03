@@ -8,6 +8,7 @@ import { icons } from "../src/ui/icons/icons";
 import { strings } from "../src/ui/strings";
 import { iconIn } from "./support/icons";
 import { serveOffline } from "./support/offline";
+import { enterAccessPointEditing } from "./support/accessPointEditing";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
@@ -164,7 +165,9 @@ test("the section and day lists sit right under the tab row; every other tab's c
   await serveOffline(page);
   await open(page, hikeAndPaddle("Dinant weekend"));
   for (const name of Object.values(text.tabs)) {
-    await tab(page, name).click();
+    // The Access points tab is shown in access point editing only (ADR 0036).
+    if (name === text.tabs.accessPoints) await enterAccessPointEditing(page);
+    else await tab(page, name).click();
     await settled(page);
     // Measured in one go, polled: the panel's content re-renders as the tab opens, and right
     // after Days the flush Days panel may still be the one shown.
@@ -189,7 +192,7 @@ test("the bottom-left and bottom-right buttons are fully on screen, above the sh
   expect(Math.abs(app - page.viewportSize()!.height)).toBeLessThan(1);
 
   const sheetTop = (await box(sheet(page))).y;
-  for (const name of [text.markAccessPointButton, strings.undoButton]) {
+  for (const name of [text.editAccessPointsButton, strings.undoButton]) {
     const button = await box(page.getByRole("button", { name }));
     expect(button.y, name).toBeGreaterThanOrEqual(0);
     expect(button.y + button.height, name).toBeLessThanOrEqual(sheetTop);

@@ -2,6 +2,7 @@
 // trip panel on the right, the floating buttons over the map and the menu top left.
 import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../../src/ui/strings";
+import { editAccessPointsButton, enterAccessPointEditing, markAccessPointButton } from "./accessPointEditing";
 
 const text = strings.planner;
 
@@ -286,10 +287,12 @@ export const accessPointDialog = (page: Page) => page.getByRole("dialog", { name
 
 /**
  * Marks an access point by the floating button, then a click on the map at `at` (without a
- * position fix the button starts place mode). Leaves the new point's dialog open.
+ * position fix the button starts place mode), entering access point editing first when the
+ * planner is in normal mode (ADR 0036). Leaves the new point's dialog open.
  */
 export async function markAccessPointAt(page: Page, at: { x: number; y: number }) {
-  await page.getByRole("button", { name: text.markAccessPointButton, exact: true }).click();
+  if (await editAccessPointsButton(page).isVisible()) await enterAccessPointEditing(page);
+  await markAccessPointButton(page).click();
   await expect(page.getByRole("status").filter({ hasText: text.placingState })).toBeVisible();
   await page.mouse.click(at.x, at.y);
   await expect(accessPointDialog(page)).toBeVisible();

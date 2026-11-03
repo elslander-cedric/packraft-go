@@ -196,10 +196,14 @@ export const strings = {
     positionUnsupported: "This browser can't share your location.",
     // Your access points in the planner (#119; first #63, ADR 0023).
     accessPointsLabel: "Your access points",
-    // The floating button bottom left, icon-only.
+    // Access point editing (ADR 0036, #225): the planner's mode for changing your access points.
+    // The floating button bottom left that enters it, icon-only.
+    editAccessPointsButton: "Edit access points",
+    // The banner while in it, and its button that leaves it.
+    editingAccessPointsState: "Editing access points",
+    editingAccessPointsDone: "Done",
+    // The floating button bottom left in access point editing, icon-only.
     markAccessPointButton: "Mark an access point",
-    // The same button while a route point is selected (#120): it saves that point as an access point.
-    selectedPointToAccessPointButton: "Make the selected point an access point",
     // The delete and camp buttons shown while a point is selected (#120) are icon-only;
     // their names are `deletePointButton` and `campButton`.
     markLocating: "Finding your position to mark the access point…",

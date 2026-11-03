@@ -8,7 +8,8 @@ import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { toggleAccessLayer } from "./support/mapMenu";
 import { kayakFixture, kiwisFixtures, serveOffline } from "./support/offline";
-import { holdWater, mapRegion, points, showTab } from "./support/planner";
+import { holdWater, mapRegion, points } from "./support/planner";
+import { enterAccessPointEditing } from "./support/accessPointEditing";
 
 /** Just after the recording (see src/kayak/fixtures/README.md), in Belgian time. */
 const RECORDED_AT = new Date("2026-11-02T10:45:00+01:00");
@@ -77,7 +78,7 @@ async function openChanly(page: Page) {
 /** Opens the aire from the Access points tab, with the access layer off. */
 async function openPlopsaFromTab(page: Page) {
   await open(page, throughCoo);
-  await showTab(page, strings.planner.tabs.accessPoints);
+  await enterAccessPointEditing(page);
   await page.getByRole("button", { name: new RegExp(`^${PLOPSA}`) }).click();
 }
 
@@ -175,7 +176,7 @@ test("an aire opened with the layer off on a later date still notes today's clos
   await page.getByRole("button", { name: strings.planner.accessDialogClose }).click();
   await toggleAccessLayer(page);
 
-  await showTab(page, strings.planner.tabs.accessPoints);
+  await enterAccessPointEditing(page);
   await page.getByRole("button", { name: new RegExp(`^${CHANLY}`) }).click();
 
   await expect(status(page, CHANLY)).toContainText(strings.accessState.open);

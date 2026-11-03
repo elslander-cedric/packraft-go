@@ -9,7 +9,7 @@ import { ACCESS_POINTS_KEY } from "../src/persistence/accessPointStorage";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { showTab } from "./support/planner";
+import { enterAccessPointEditing } from "./support/accessPointEditing";
 
 const text = strings.planner;
 const aireText = strings.officialAires;
@@ -93,7 +93,7 @@ test.describe("on a desktop", () => {
 
   test("on-route aires sit among your points in route order, and off-route ones aren't listed", async ({ page }) => {
     const network = await seed(page, TRIP, POINTS);
-    await showTab(page, text.tabs.accessPoints);
+    await enterAccessPointEditing(page);
 
     await expect(onRouteRows(page)).toHaveText([
       new RegExp(`^${FARAVENNES}\\s*km 1\\.5\\s*${aireText.legend["take-out"]}`),
@@ -111,7 +111,7 @@ test.describe("on a desktop", () => {
     page,
   }) => {
     await seed(page, TRIP, POINTS);
-    await showTab(page, text.tabs.accessPoints);
+    await enterAccessPointEditing(page);
 
     await expect(row(page, PLOPSA).getByRole("button")).toHaveCount(1);
     await row(page, PLOPSA).getByRole("button").click();
@@ -123,7 +123,7 @@ test.describe("on a desktop", () => {
 
   test("your own points are stored exactly as before", async ({ page }) => {
     await seed(page, TRIP, POINTS);
-    await showTab(page, text.tabs.accessPoints);
+    await enterAccessPointEditing(page);
     await row(page, PLOPSA).getByRole("button").click();
     await page.getByRole("button", { name: strings.accessDetailClose }).click();
 
@@ -133,7 +133,7 @@ test.describe("on a desktop", () => {
 
   test("with none of your own points, the on-route aires are still listed", async ({ page }) => {
     await seed(page, TRIP, []);
-    await showTab(page, text.tabs.accessPoints);
+    await enterAccessPointEditing(page);
 
     await expect(onRouteRows(page)).toHaveCount(3);
     await expect(section(page)).not.toContainText(text.noAccessPoints);
@@ -149,7 +149,7 @@ test.describe("on a desktop", () => {
       legs: [{ mode: "hike" }],
     };
     await seed(page, elsewhere, POINTS);
-    await showTab(page, text.tabs.accessPoints);
+    await enterAccessPointEditing(page);
 
     await expect(section(page)).toContainText(text.noneOnRoute);
     await expect(section(page)).not.toContainText("Official aire");
@@ -162,7 +162,7 @@ test.describe("on a phone", () => {
 
   test("a tap on an aire's row opens its read-only details", async ({ page }) => {
     await seed(page, TRIP, POINTS);
-    await page.getByRole("tab", { name: text.tabs.accessPoints }).click();
+    await enterAccessPointEditing(page);
 
     await row(page, CHENEUX).getByRole("button").tap();
     await expectReadOnlyDetails(page, CHENEUX, aireText.legend["take-out"]);

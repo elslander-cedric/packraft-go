@@ -77,11 +77,8 @@ test.use({ viewport: { width: 1400, height: 900 }, timezoneId: "Europe/Brussels"
 test("the Sections tab comes first and is the one shown", async ({ page }) => {
   await serveOffline(page);
   await openPlanner(page);
-  await expect(tripPanel(page).getByRole("tab")).toHaveText([
-    text.tabs.sections,
-    text.tabs.days,
-    text.tabs.accessPoints,
-  ]);
+  // Normal mode's tabs; access point editing shows only its own (ADR 0036).
+  await expect(tripPanel(page).getByRole("tab")).toHaveText([text.tabs.sections, text.tabs.days]);
   await expect(panelTab(page, text.tabs.sections)).toHaveAttribute("aria-selected", "true");
   await expect(tripPanel(page).getByText(strings.sectionsPanelEmpty)).toBeVisible();
 });
@@ -444,13 +441,13 @@ test("a failed section's details button drops under its Retry, and comes back wi
 test.describe("on a 320 px phone", () => {
   test.use({ viewport: { width: 320, height: 640 }, isMobile: true, hasTouch: true });
 
-  test("the three tabs fit side by side, and no label is cut off (#70)", async ({ page }) => {
+  test("the tabs fit side by side, and no label is cut off (#70)", async ({ page }) => {
     await serveOffline(page);
     await page.goto("/");
     await page.evaluate(() => document.fonts.ready);
     const sheet = page.getByRole("dialog", { name: text.sheetLabel });
     const tabs = sheet.getByRole("tab");
-    await expect(tabs).toHaveCount(3);
+    await expect(tabs).toHaveCount(2);
     for (const tab of await tabs.all()) {
       await expect(tab).toBeInViewport({ ratio: 1 });
       const fits = await tab.evaluate((el) => el.scrollWidth <= el.clientWidth);

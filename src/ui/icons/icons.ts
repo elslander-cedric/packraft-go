@@ -35,6 +35,7 @@ import {
   faLocationCrosshairs,
   faLocationDot,
   faMagnifyingGlass,
+  faMapLocationDot,
   faMountain,
   faPen,
   faRotateLeft,
@@ -71,7 +72,10 @@ export const icons = {
   undo: faRotateLeft,
   // Back to start (GLOSSARY "Loop"), on the map.
   backToStart: faArrowsSpin,
+  // Marks an access point, in access point editing.
   accessPoint: faFlag,
+  // Enters access point editing (ADR 0036).
+  editAccessPoints: faMapLocationDot,
   deletePoint: faXmark,
   // An official aire's marker and legend (ADR 0035): down onto the water, up off it.
   airePutIn: faArrowDown,

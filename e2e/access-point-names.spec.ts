@@ -16,6 +16,7 @@ import {
   openPlanner,
   saveAccessPoint,
 } from "./support/planner";
+import { enterAccessPointEditing } from "./support/accessPointEditing";
 
 const text = strings.accessPoints;
 const plannerText = strings.planner;
@@ -149,7 +150,7 @@ test.describe("on the phone", () => {
     await context.setGeolocation({ latitude: 50.268, longitude: 5.446, accuracy: 10 });
     const network = await serveOffline(page, { nominatim: nominatimFixture("reverse-road.json") });
     await openMap(page);
-    await sheet(page).getByRole("tab", { name: plannerText.tabs.accessPoints }).click();
+    await enterAccessPointEditing(page);
 
     await context.setOffline(true);
     await page.getByRole("button", { name: plannerText.markAccessPointButton }).click();
@@ -177,7 +178,7 @@ test.describe("on the phone", () => {
     await context.setGeolocation({ latitude: 50.268, longitude: 5.446, accuracy: 10 });
     const network = await serveOffline(page, { nominatim: nominatimFixture("reverse-road.json") });
     await openMap(page);
-    await sheet(page).getByRole("tab", { name: plannerText.tabs.accessPoints }).click();
+    await enterAccessPointEditing(page);
 
     await context.setOffline(true);
     await page.getByRole("button", { name: plannerText.markAccessPointButton }).click();
@@ -218,7 +219,7 @@ test.describe("on the phone", () => {
       [ACCESS_POINTS_KEY, serialiseAccessPoints([named])],
     );
     await openMap(page);
-    await sheet(page).getByRole("tab", { name: plannerText.tabs.accessPoints }).click();
+    await enterAccessPointEditing(page);
 
     // The name leads the row; the whole note and use and kind follow.
     const row = rows(page).first();

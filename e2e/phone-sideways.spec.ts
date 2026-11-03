@@ -68,7 +68,7 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
   expect(box.height).toBe(SIDEWAYS.height);
   expect(box.x + box.width).toBe(SIDEWAYS.width);
   expect(box.width).toBe(380);
-  for (const name of Object.values(text.tabs)) await expect(panelTab(page, name)).toBeAttached();
+  for (const name of [text.tabs.sections, text.tabs.days]) await expect(panelTab(page, name)).toBeAttached();
   await panelTab(page, text.tabs.days).click();
   await expect(panelTab(page, text.tabs.days)).toHaveAttribute("aria-selected", "true");
 
@@ -219,7 +219,7 @@ test("sideways, the floating buttons stay in their corners over the map, beside 
     page.getByRole("button", { name: text.menu.button }),
     page.getByRole("button", { name: text.showPositionButton }),
     page.getByRole("button", { name: strings.mapMenuButton, exact: true }),
-    page.getByRole("button", { name: text.selectedPointToAccessPointButton }),
+    page.getByRole("button", { name: text.editAccessPointsButton }),
     page.getByRole("button", { name: strings.deletePointButton }),
     page.getByRole("button", { name: strings.campButton }),
     page.getByRole("group", { name: text.nextLegModeLabel }),

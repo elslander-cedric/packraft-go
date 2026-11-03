@@ -1,11 +1,13 @@
 // Point editing by touch on the phone (#120, ADR 0026): tap a point to select it, delete and
 // camp buttons while it is selected, press and drag a point or an access point (the map
-// never pans), and the access-point button on a selected point.
+// never pans). Marking a selected point as an access point is gone (ADR 0036).
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { serialiseAccessPoints, type AccessPoint } from "../src/core/accessPoints";
 import { ACCESS_POINTS_KEY } from "../src/persistence/accessPointStorage";
+import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline } from "./support/offline";
+import { enterAccessPointEditing } from "./support/accessPointEditing";
 import { touch } from "./support/touch";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
@@ -30,8 +32,6 @@ const deleteButton = (page: Page) => page.getByRole("button", { name: strings.de
 const campButton = (page: Page) => page.getByRole("button", { name: strings.campButton });
 const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const markButton = (page: Page) => page.getByRole("button", { name: text.markAccessPointButton });
-const editDialog = (page: Page) => page.getByRole("dialog", { name: text.accessPointDialogTitle });
-const pointToAccessButton = (page: Page) => page.getByRole("button", { name: text.selectedPointToAccessPointButton });
 
 /** Your access points as saved on the device. */
 const stored = (page: Page) =>
@@ -217,50 +217,38 @@ test.describe("in a narrowed desktop window", () => {
   });
 });
 
-test("with a point selected, the access-point button makes it an access point", async ({ page }) => {
+test("with a point selected, no button makes it an access point (ADR 0036)", async ({ page }) => {
   await serveOffline(page, routed);
   await openPhone(page);
   await twoPoints(page);
-  await expect(markButton(page)).toBeVisible();
-
-  const at = await centreOf(points(page).nth(0));
-  await tapAt(page, at);
-  await expect(pointToAccessButton(page)).toBeVisible();
-  await pointToAccessButton(page).click();
-  // Its details open; Cancel keeps the new point.
-  await expect(editDialog(page)).toBeVisible();
-  await editDialog(page).getByRole("button", { name: strings.confirmCancel }).click();
-
-  await expect(markers(page)).toHaveCount(1);
-  const marker = await centreOf(markers(page).first());
-  expect(Math.abs(marker.x - at.x)).toBeLessThan(3);
-  expect(Math.abs(marker.y - at.y)).toBeLessThan(3);
-  // The route point is no longer selected, so the button marks at your position again.
-  await expect(deleteButton(page)).toHaveCount(0);
-  await expect(markButton(page)).toBeVisible();
-  expect((await stored(page)).accessPoints).toHaveLength(1);
+  await tapAt(page, await centreOf(points(page).nth(0)));
+  await expect(deleteButton(page)).toBeVisible();
+  // Marking is only in access point editing.
+  await expect(markButton(page)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /selected point/i })).toHaveCount(0);
 });
 
 test("a route point under an access point can still be selected and dragged", async ({ page }) => {
   await serveOffline(page, routed);
   await openPhone(page);
   await twoPoints(page);
-  const at = await centreOf(points(page).nth(0));
-  await tapAt(page, at);
-  await pointToAccessButton(page).click();
-  await editDialog(page).getByRole("button", { name: strings.confirmCancel }).click();
-  await expect(editDialog(page)).toHaveCount(0);
+  // An access point exactly on the first route point, stored on the device; the reload shows it.
+  await page.evaluate(
+    ([tripKey, key, stored]) => {
+      const value = JSON.parse(stored);
+      value.accessPoints[0].position = JSON.parse(localStorage.getItem(tripKey)!).trip.points[0];
+      localStorage.setItem(key, JSON.stringify(value));
+    },
+    [TRIP_KEY, ACCESS_POINTS_KEY, serialiseAccessPoints([slipway])] as const,
+  );
+  await page.reload();
   await expect(markers(page)).toHaveCount(1);
-  // The new access point raised the sheet to half, over the point: lower it to the peek again.
+  await expect(legLines(page).first()).toHaveClass(/leg-routed/);
   await sheetSettled(page);
-  const box = (await sheet(page).boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + 8);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 2, box.y + 208, { steps: 5 });
-  await page.mouse.move(box.x + box.width / 2, box.y + 408, { steps: 5 });
-  await page.mouse.up();
-  await sheetSettled(page);
-  expect(await centreOf(points(page).nth(0))).toEqual(at);
+  const at = await centreOf(points(page).nth(0));
+  const onTop = await centreOf(markers(page).first());
+  expect(Math.abs(onTop.x - at.x)).toBeLessThan(3);
+  expect(Math.abs(onTop.y - at.y)).toBeLessThan(3);
 
   // A tap there selects the route point, not the access point on top of it.
   await tapAt(page, at);
@@ -300,7 +288,7 @@ test("a finger drags an access point: it moves, is saved on the device, and the 
   await openPhone(page);
   await expect(markers(page)).toHaveCount(1);
   // Bring the marker into the free part of the map: open its row, which centres it above the sheet.
-  await sheet(page).getByRole("tab", { name: text.tabs.accessPoints }).click();
+  await enterAccessPointEditing(page);
   await sheet(page)
     .getByRole("region", { name: text.accessPointsLabel, exact: true })
     .getByRole("listitem")

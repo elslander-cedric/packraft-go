@@ -40,7 +40,10 @@ import { usePosition } from "./usePosition";
 import "./planner.css";
 
 type PlannerTab = keyof typeof strings.planner.tabs;
-const tabs = Object.keys(strings.planner.tabs) as PlannerTab[];
+/** A tab of normal mode; access point editing shows only the Access points tab (ADR 0036). */
+type NormalTab = Exclude<PlannerTab, "accessPoints">;
+const normalTabs: readonly PlannerTab[] = ["sections", "days"];
+const editingTabs: readonly PlannerTab[] = ["accessPoints"];
 
 /**
  * The next leg's mode the planner picked, and the trip state it was picked for: the trip's
@@ -102,7 +105,11 @@ export default function Planner({ router }: { router?: Router }) {
   const undoReasonId = useId();
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
-  const [tab, setTab] = useState<PlannerTab>("sections");
+  // Access point editing (ADR 0036): the planner's other mode, kept in the planner session.
+  const editingAccessPoints = session.mode.kind === "accessPointEditing";
+  // Normal mode's tab; kept while editing access points, so Done brings it back.
+  const [tab, setTab] = useState<NormalTab>("sections");
+  const shownTab: PlannerTab = editingAccessPoints ? "accessPoints" : tab;
   // The sheet's last stop; kept while sideways, so turning back to portrait restores it (#126).
   const [stop, setStop] = useState<SheetStop>("peek");
   // The peek's height, so the bottom buttons sit just above it.
@@ -129,12 +136,11 @@ export default function Planner({ router }: { router?: Router }) {
   // A new access point opens its edit dialog, over its row in the Access points tab.
   const placed = (id: string) => {
     setEditingId(id);
-    setTab("accessPoints");
     raiseFromPeek();
   };
   const marking = useMarkAccessPoint(access, position, showPosition, placed);
   // The access layer (#125): on or off, its date, and the water or lock whose details are open.
-  const layer = useAccessLayer(trip, tab === "accessPoints");
+  const layer = useAccessLayer(trip, editingAccessPoints);
   // The base map (ADR 0031): a setting on this device, never in the trip.
   const [baseMap, chooseBaseMap] = useBaseMap();
   // The overlays (ADR 0032): settings on this device too.
@@ -211,19 +217,29 @@ export default function Planner({ router }: { router?: Router }) {
     raise();
     setFocus({ area: legsArea(trip, section), ...covered() });
   };
-  // With a route point selected, the access-point button saves that point as an access point (#120).
-  const markSelectedPoint = () => {
-    if (selectedPoint === null) return;
-    const id = access.placeAt(trip.points[selectedPoint]);
-    dispatch({ type: "deselect" });
-    placed(id);
+  // Entering access point editing opens the panel or sheet on the Access points tab; Done
+  // restores the tab and the panel or sheet as they were. Both clear the selection (ADR 0036).
+  const enterAccessPointEditing = () => {
+    dispatch({ type: "enterAccessPointEditing", returnTo: { tab, sheet: stop, panelOpen } });
+    access.select(null);
+    raiseFromPeek();
+  };
+  const leaveAccessPointEditing = () => {
+    if (session.mode.kind !== "accessPointEditing") return;
+    const { returnTo } = session.mode;
+    dispatch({ type: "leaveAccessPointEditing" });
+    access.select(null);
+    if (access.placing) access.togglePlacing();
+    setTab(returnTo.tab);
+    setStop(returnTo.sheet);
+    if (panelOpen !== returnTo.panelOpen) setPanelOpen(returnTo.panelOpen);
   };
 
-  // A marker tap shows the point's row in the Access points tab, raised to half from the peek.
+  // A marker tap selects the point; while editing access points it also shows its row, raised to
+  // half from the peek.
   const onSelectAccessPoint = (id: string) => {
     access.select(id);
-    setTab("accessPoints");
-    raiseFromPeek();
+    if (editingAccessPoints) raiseFromPeek();
   };
   // A row tap shows the point on the map, above the half-raised sheet.
   const openAccessPoint = (id: string) => {
@@ -256,7 +272,7 @@ export default function Planner({ router }: { router?: Router }) {
   );
   const tabList = (
     <TabList label={strings.planner.tabsLabel}>
-      {tabs.map((value) => (
+      {(editingAccessPoints ? editingTabs : normalTabs).map((value) => (
         <Tab key={value} value={value} onPress={raiseFromPeek}>
           {strings.planner.tabs[value]}
         </Tab>
@@ -265,48 +281,53 @@ export default function Planner({ router }: { router?: Router }) {
   );
   const sheetContent = (
     <div className="planner-tab-panels">
-      <TabPanel value="sections">
-        <SectionsList
-          summary={summary}
-          legs={trip.legs}
-          access={waterAccess}
-          aire={aire}
-          selected={selectedSection}
-          selectedLeg={selectedLeg}
-          open={stillOpen}
-          onSelect={selectSectionRow}
-          onSelectLeg={selectLegRow}
-          onShowDetails={setDetailsSection}
-          onShowLegDetails={setDetailsLeg}
-          onRetry={(index) => dispatch({ type: "retryLeg", index })}
-        />
-      </TabPanel>
-      <TabPanel value="days">
-        {summary.days.length === 0 && <p className="planner-empty">{strings.daysPanelEmpty}</p>}
-        <DaysPanel
-          days={summary.days}
-          access={waterAccess?.days}
-          aire={aire}
-          onSelectDay={openDay}
-          selectedDay={selectedDay}
-          // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
-          onShowLeg={setDetailsLeg}
-        />
-      </TabPanel>
-      <TabPanel value="accessPoints">
-        <AccessPoints
-          access={access}
-          trip={trip}
-          officialAires={layer.officialAires}
-          position={position.state === "shown" ? position.at : null}
-          onOpen={openAccessPoint}
-          onOpenAire={layer.select}
-          onEdit={(id) => {
-            access.select(id);
-            setEditingId(id);
-          }}
-        />
-      </TabPanel>
+      {editingAccessPoints ? (
+        <TabPanel value="accessPoints">
+          <AccessPoints
+            access={access}
+            trip={trip}
+            officialAires={layer.officialAires}
+            position={position.state === "shown" ? position.at : null}
+            onOpen={openAccessPoint}
+            onOpenAire={layer.select}
+            onEdit={(id) => {
+              access.select(id);
+              setEditingId(id);
+            }}
+          />
+        </TabPanel>
+      ) : (
+        <>
+          <TabPanel value="sections">
+            <SectionsList
+              summary={summary}
+              legs={trip.legs}
+              access={waterAccess}
+              aire={aire}
+              selected={selectedSection}
+              selectedLeg={selectedLeg}
+              open={stillOpen}
+              onSelect={selectSectionRow}
+              onSelectLeg={selectLegRow}
+              onShowDetails={setDetailsSection}
+              onShowLegDetails={setDetailsLeg}
+              onRetry={(index) => dispatch({ type: "retryLeg", index })}
+            />
+          </TabPanel>
+          <TabPanel value="days">
+            {summary.days.length === 0 && <p className="planner-empty">{strings.daysPanelEmpty}</p>}
+            <DaysPanel
+              days={summary.days}
+              access={waterAccess?.days}
+              aire={aire}
+              onSelectDay={openDay}
+              selectedDay={selectedDay}
+              // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
+              onShowLeg={setDetailsLeg}
+            />
+          </TabPanel>
+        </>
+      )}
     </div>
   );
 
@@ -420,18 +441,33 @@ export default function Planner({ router }: { router?: Router }) {
             <Icon icon={icons.backToStart} />
           </Button>
         )}
-        <Button
-          className="planner-fab"
-          aria-label={
-            selectedPoint === null
-              ? strings.planner.markAccessPointButton
-              : strings.planner.selectedPointToAccessPointButton
-          }
-          onClick={selectedPoint === null ? marking.mark : markSelectedPoint}
-          disabled={selectedPoint === null && marking.locating}
-        >
-          <Icon icon={icons.accessPoint} />
-        </Button>
+        {editingAccessPoints ? (
+          <>
+            {/* Done sits beside the live region, so it isn't read out as part of the state. */}
+            <div className="planner-message planner-state-line">
+              <span role="status">{strings.planner.editingAccessPointsState}</span>
+              <Button className="planner-state-action" onClick={leaveAccessPointEditing}>
+                {strings.planner.editingAccessPointsDone}
+              </Button>
+            </div>
+            <Button
+              className="planner-fab"
+              aria-label={strings.planner.markAccessPointButton}
+              onClick={marking.mark}
+              disabled={marking.locating}
+            >
+              <Icon icon={icons.accessPoint} />
+            </Button>
+          </>
+        ) : (
+          <Button
+            className="planner-fab"
+            aria-label={strings.planner.editAccessPointsButton}
+            onClick={enterAccessPointEditing}
+          >
+            <Icon icon={icons.editAccessPoints} />
+          </Button>
+        )}
       </div>
       <div className="planner-buttons planner-buttons-bottom">
         {selectedPoint !== null && (
@@ -504,7 +540,7 @@ export default function Planner({ router }: { router?: Router }) {
           onDecline={(offer) => dispatch({ type: "declineOffer", offer })}
         />
       </div>
-      <Tabs value={tab} onChange={setTab}>
+      <Tabs value={shownTab} onChange={(next) => next !== "accessPoints" && setTab(next)}>
         {sideways ? (
           <SidePanel
             label={strings.planner.sheetLabel}

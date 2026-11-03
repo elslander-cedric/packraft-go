@@ -9,6 +9,7 @@ import { ACCESS_POINTS_KEY } from "../src/persistence/accessPointStorage";
 import { strings } from "../src/ui/strings";
 import { confirmDialog } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
+import { editAccessPointsButton, enterAccessPointEditing } from "./support/accessPointEditing";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
@@ -125,7 +126,7 @@ test("the floating button marks one at my GPS position, saved at once, and opens
   await serveOffline(page);
   await openPhone(page);
 
-  await accessTab(page).click();
+  await enterAccessPointEditing(page);
   await expect(section(page)).toContainText(plannerText.noAccessPoints);
   // No Mark here in the tab: the floating button marks.
   await expect(section(page).getByRole("button")).toHaveCount(0);
@@ -187,7 +188,7 @@ test("the floating button marks one at my GPS position, saved at once, and opens
   // It survives a reload.
   await page.reload();
   await expect(markers(page)).toHaveCount(1);
-  await accessTab(page).click();
+  await enterAccessPointEditing(page);
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText(text.useAndKind(text.uses["put-in"], text.kinds.slipway));
   await expect(rows(page).first()).toContainText("Slipway by the bridge");
@@ -195,13 +196,13 @@ test("the floating button marks one at my GPS position, saved at once, and opens
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.reload();
   const panel = page.getByRole("complementary", { name: plannerText.sheetLabel });
-  await panel.getByRole("tab", { name: plannerText.tabs.accessPoints }).click();
+  await enterAccessPointEditing(page);
   await expect(panel.getByRole("region", { name: plannerText.accessPointsLabel, exact: true })).toContainText(
     "Slipway by the bridge",
   );
 });
 
-test("from the peek, the floating button marks one, opens the Access points tab at half and its details over it", async ({
+test("from the peek, entering access point editing raises the sheet on the Access points tab; marking opens its details over it", async ({
   page,
   context,
 }) => {
@@ -211,11 +212,13 @@ test("from the peek, the floating button marks one, opens the Access points tab 
   await openPhone(page);
 
   const peek = await settledSheetHeight(page);
-  // Bottom left, over the map.
-  const button = (await markButton(page).boundingBox())!;
+  // Bottom left, over the map (ADR 0036: the button that enters access point editing).
+  const button = (await editAccessPointsButton(page).boundingBox())!;
   expect(button.x).toBeLessThan(page.viewportSize()!.width / 2);
   expect(button.y + button.height).toBeLessThanOrEqual(page.viewportSize()!.height - peek);
 
+  await enterAccessPointEditing(page);
+  await expect.poll(() => sheetHeight(page)).toBeGreaterThan(page.viewportSize()!.height * 0.45);
   await markButton(page).click();
   await expect(markers(page)).toHaveCount(1);
   await expect(details(page)).toBeVisible();
@@ -240,7 +243,7 @@ test("with the network blocked, marking, editing and deleting keep working and a
   await context.setGeolocation({ ...AT_HOTTON, accuracy: 10 });
   const network = await serveOffline(page);
   await openPhone(page);
-  await accessTab(page).click();
+  await enterAccessPointEditing(page);
 
   await context.setOffline(true);
   await markButton(page).click();
@@ -286,6 +289,7 @@ test("without a fix the button enters place mode; Cancel leaves it; the next tap
   const box = (await mapRegion(page).boundingBox())!;
   const tapMap = (dx: number) => page.touchscreen.tap(box.x + box.width / 2 + dx, box.y + box.height / 3);
 
+  await enterAccessPointEditing(page);
   await markButton(page).click();
   await expect(page.getByRole("alert").filter({ hasText: plannerText.positionDenied })).toBeVisible();
   await expect(placingLine(page)).toBeVisible();
@@ -325,6 +329,7 @@ test("while the floating button waits for a fix it says so over the map", async 
     navigator.geolocation.watchPosition = () => 0;
   });
 
+  await enterAccessPointEditing(page);
   await markButton(page).click();
   await expect(page.getByRole("status").filter({ hasText: plannerText.markLocating })).toBeVisible();
   await expect(markButton(page)).toBeDisabled();
@@ -338,7 +343,7 @@ test("tapping a row zooms the map to that access point and selects it, without o
   await storePoints(page, [saved("a", 50.268, 5.446, "Hotton bridge"), saved("b", 51.05, 3.72, "Ghent quay")]);
   const network = await serveOffline(page);
   await openPhone(page);
-  await accessTab(page).click();
+  await enterAccessPointEditing(page);
   await expect(rows(page)).toHaveCount(2);
 
   await rowButton(page, 1).click();
@@ -357,12 +362,16 @@ test("tapping a row zooms the map to that access point and selects it, without o
     .toBe(true);
 });
 
-test("tapping an access point's marker selects its row in the Access points tab and raises the sheet to half", async ({
+test("in access point editing, tapping an access point's marker selects its row and raises the sheet to half", async ({
   page,
 }) => {
   await storePoints(page, [saved("a", 50.5, 4.47, "Meuse slipway")]);
   await serveOffline(page);
   await openPhone(page);
+  await enterAccessPointEditing(page);
+  // Back to the peek, so the tap raises it.
+  await sheet(page).getByRole("slider", { name: plannerText.resizeSheetHandle }).focus();
+  await page.keyboard.press("Home");
   expect(await settledSheetHeight(page)).toBeLessThan(200);
 
   const marker = (await markers(page).boundingBox())!;

@@ -11,9 +11,9 @@ import {
   markAccessPointAt,
   openPlanner,
   saveAccessPoint,
-  showTab,
   tripPanel,
 } from "./support/planner";
+import { enterAccessPointEditing } from "./support/accessPointEditing";
 
 const text = strings.accessPoints;
 const ACCESS_POINTS_KEY = "packraft-go.access-points";
@@ -87,6 +87,7 @@ test("add an access point on the map, edit it in the detail panel, and the marke
 test("Escape cancels placing an access point; the next click adds a trip point", async ({ page }) => {
   await serveOffline(page);
   const middle = await openMap(page);
+  await enterAccessPointEditing(page);
   await markButton(page).click();
   await expect(placingLine(page)).toBeVisible();
   await page.keyboard.press("Escape");
@@ -122,7 +123,7 @@ test("delete an access point after confirming", async ({ page }) => {
   await addAccessPoint(page, middle);
   await saveAccessPoint(page);
   // Deleted from its row in the Access points tab.
-  await showTab(page, strings.planner.tabs.accessPoints);
+  await enterAccessPointEditing(page);
   const deleteButton = tripPanel(page)
     .locator(".planner-access-point-item")
     .getByRole("button", { name: /^Delete / });
@@ -158,6 +159,7 @@ test("access points are autosaved under their own key, apart from the trip, and 
 
   await page.reload();
   await expect(markers(page)).toHaveCount(1);
+  await enterAccessPointEditing(page);
   await markers(page).click();
   await editSelectedAccessPoint(page);
   await expect(details(page).getByLabel(text.noteLabel)).toHaveValue("Park at the church");
