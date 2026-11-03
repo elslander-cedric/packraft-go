@@ -18,6 +18,8 @@
 // - replace question: new trip and file opened ask it when the current trip needs
 //   confirmation. While it is open only confirm, cancel and the routing actions
 //   apply.
+// - mode (ADR 0036, #225): normal on load (never stored); enter access point editing sets it,
+//   keeping the panel view to return to, and Done sets it back. Both clear the selected point.
 // Actions that can't apply return the same session.
 import type { AccessPoints } from "./accessPoints";
 import type { CalendarDate } from "./calendarDate";
@@ -43,7 +45,22 @@ export type ReplaceQuestion = "newTrip" | "openFile";
 /** Why a file could not be opened. */
 export type FileError = "unknown-version" | "invalid";
 
+/** The panel or sheet as it was before access point editing: Done restores it (ADR 0036). */
+export type PanelView = {
+  readonly tab: "sections" | "days";
+  /** The bottom sheet's stop. */
+  readonly sheet: "peek" | "half" | "full";
+  /** Whether the side panel was open. */
+  readonly panelOpen: boolean;
+};
+
+/** The planner's mode (GLOSSARY "Access point editing", ADR 0036): always normal on load. */
+export type PlannerMode =
+  | { readonly kind: "normal" }
+  | { readonly kind: "accessPointEditing"; readonly returnTo: PanelView };
+
 export type PlannerSession = {
+  readonly mode: PlannerMode;
   readonly trip: Trip;
   /** Index of the selected point, or null. */
   readonly selectedPoint: number | null;
@@ -86,11 +103,16 @@ export type PlannerAction =
   | { readonly type: "confirmReplace" }
   | { readonly type: "cancelReplace" }
   | { readonly type: "fileDownloaded" }
+  /** Enters access point editing; Done returns to `returnTo`. */
+  | { readonly type: "enterAccessPointEditing"; readonly returnTo: PanelView }
+  /** Done: back to normal mode. */
+  | { readonly type: "leaveAccessPointEditing" }
   | RoutingAction;
 
 /** The first session, from what loading the stored trip returned. */
 export function firstSession(stored: { readonly trip: Trip; readonly unknownVersion?: boolean }): PlannerSession {
   return {
+    mode: { kind: "normal" },
     trip: stored.trip,
     selectedPoint: null,
     offers: [],
@@ -220,5 +242,11 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
       return { ...session, fileError: action.reason };
     case "fileDownloaded":
       return session.fileError === null ? session : { ...session, fileError: null };
+    case "enterAccessPointEditing":
+      return session.mode.kind === "accessPointEditing"
+        ? session
+        : { ...session, mode: { kind: "accessPointEditing", returnTo: action.returnTo }, selectedPoint: null };
+    case "leaveAccessPointEditing":
+      return session.mode.kind === "normal" ? session : { ...session, mode: { kind: "normal" }, selectedPoint: null };
   }
 }

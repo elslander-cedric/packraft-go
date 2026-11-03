@@ -80,6 +80,7 @@ const actions: [name: string, make: Make][] = [
   ["accept offer", (s) => ({ type: "acceptOffer", offer: s.offers[0] })],
   ["decline offer", (s) => ({ type: "declineOffer", offer: s.offers[0] })],
   ["file downloaded", { type: "fileDownloaded" }],
+  ["enter access point editing", { type: "enterAccessPointEditing", returnTo: { tab: "sections", sheet: "peek", panelOpen: true } }],
   ["route requested", (s) => ({ type: "routeRequested", request: requestOfLeg(s.trip, 1) })],
   ["route arrived", (s) => ({ type: "routeArrived", request: requestOfLeg(s.trip, 1), route: routed })],
 ];
@@ -127,6 +128,7 @@ table(
     "accept offer": cleared(null),
     "decline offer": kept(1),
     "file downloaded": kept(1),
+    "enter access point editing": cleared(null),
     "route requested": kept(1),
     "route arrived": kept(1),
   },
@@ -153,6 +155,7 @@ table(
     "accept offer": cleared([]), // that one offer is removed
     "decline offer": cleared([]), // that one offer is removed
     "file downloaded": kept(1),
+    "enter access point editing": kept(1),
     "route requested": kept(1),
     "route arrived": kept(1),
   },
@@ -179,6 +182,7 @@ table(
     "accept offer": cleared(null),
     "decline offer": cleared(null),
     "file downloaded": cleared(null),
+    "enter access point editing": kept("invalid"),
     "route requested": kept("invalid"),
     "route arrived": kept("invalid"),
   },
