@@ -6,7 +6,11 @@
 // One rule per piece of state (see ADR 0025):
 // - selected point: cleared by add, move and delete point, back to start, set leg mode, undo,
 //   accept offer and any replace of the trip; insert point makes it follow the
-//   selected point when the insert shifts its index; kept by everything else.
+//   selected point when the insert shifts its index; leg clicked clears it; kept by everything else.
+// - selected leg (#230): set by leg clicked (cleared by a click on it again), cleared by point
+//   clicked, deselect, entering access point editing and every edit of the points, undo, accept
+//   offer and any replace; kept by set leg mode, so its mode can be switched back, and by
+//   everything else. A selected point and a selected leg never go together.
 // - snap offers: set leg mode and add point replace them with the offers worked
 //   out from the trip they produced; move, insert, delete, back to start, undo and replace drop them; accept and
 //   decline remove that one offer; access points changed drops the offers to a
@@ -19,9 +23,9 @@
 //   confirmation. While it is open only confirm, cancel and the routing actions
 //   apply.
 // - mode (ADR 0036, #225): normal on load (never stored); enter access point editing sets it,
-//   keeping the panel view to return to, and Done sets it back. Both clear the selected point.
+//   keeping the panel view to return to, and Done sets it back. Both clear the selection.
 //   While editing access points the trip is frozen (#227): the actions that edit its points or
-//   leg modes, select a point or answer a snap offer return the same session; the offers wait
+//   leg modes, select a point or a leg or answer a snap offer return the same session; the offers wait
 //   for Done (still following your access points).
 // Actions that can't apply return the same session.
 import type { AccessPoints } from "./accessPoints";
@@ -79,6 +83,8 @@ export type PlannerSession = {
   readonly trip: Trip;
   /** Index of the selected point, or null. */
   readonly selectedPoint: number | null;
+  /** Index of the selected leg (#230), or null; never set together with a selected point. */
+  readonly selectedLeg: number | null;
   readonly offers: readonly SnapOffer[];
   readonly fileError: FileError | null;
   /** A stored save of an unknown version is kept, not overwritten, until the trip is replaced (#28). */
@@ -108,6 +114,8 @@ export type PlannerAction =
   | { readonly type: "setStartDate"; readonly date: CalendarDate | undefined }
   | { readonly type: "retryLeg"; readonly index: number }
   | { readonly type: "pointClicked"; readonly index: number }
+  /** A tap on a leg on the map (#230). */
+  | { readonly type: "legClicked"; readonly index: number }
   | { readonly type: "deselect" }
   | { readonly type: "acceptOffer"; readonly offer: SnapOffer }
   | { readonly type: "declineOffer"; readonly offer: SnapOffer }
@@ -130,6 +138,7 @@ export function firstSession(stored: { readonly trip: Trip; readonly unknownVers
     mode: { kind: "normal" },
     trip: stored.trip,
     selectedPoint: null,
+    selectedLeg: null,
     offers: [],
     fileError: null,
     keepStoredSave: stored.unknownVersion ?? false,
@@ -142,6 +151,7 @@ const replaced = (session: PlannerSession, trip: Trip): PlannerSession => ({
   ...session,
   trip,
   selectedPoint: null,
+  selectedLeg: null,
   offers: [],
   fileError: null,
   keepStoredSave: false,
@@ -159,6 +169,7 @@ const edited = (session: PlannerSession, trip: Trip, offers: readonly SnapOffer[
   ...session,
   trip,
   selectedPoint: null,
+  selectedLeg: null,
   offers,
   fileError: null,
 });
@@ -191,6 +202,7 @@ const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set([
   "toggleCampOnSelectedPoint",
   "undo",
   "pointClicked",
+  "legClicked",
   "acceptOffer",
   "declineOffer",
 ]);
@@ -227,7 +239,9 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
         : edited(session, applyEdit(trip, { type: "deletePoint", index: session.selectedPoint }));
     case "setLegMode": {
       const after = applyEdit(trip, { type: "setLegMode", index: action.index, mode: action.mode });
-      return edited(session, after, snapOffers(trip, after, action.accessPoints, action.officialAires));
+      const offers = snapOffers(trip, after, action.accessPoints, action.officialAires);
+      // The legs keep their indices: the selected leg stays selected.
+      return { ...edited(session, after, offers), selectedLeg: session.selectedLeg };
     }
     case "accessPointsChanged":
       return { ...session, offers: followAccessPoints(trip, session.offers, action.accessPoints), fileError: null };
@@ -247,16 +261,26 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
       return {
         ...session,
         selectedPoint: session.selectedPoint === action.index ? null : action.index,
+        selectedLeg: null,
+        fileError: null,
+      };
+    case "legClicked":
+      if (!trip.legs[action.index]) return session;
+      return {
+        ...session,
+        selectedLeg: session.selectedLeg === action.index ? null : action.index,
+        selectedPoint: null,
         fileError: null,
       };
     case "deselect":
-      return { ...session, selectedPoint: null, fileError: null };
+      return { ...session, selectedPoint: null, selectedLeg: null, fileError: null };
     case "acceptOffer":
       return session.offers.includes(action.offer)
         ? {
             ...session,
             trip: acceptSnap(trip, action.offer),
             selectedPoint: null,
+            selectedLeg: null,
             offers: session.offers.filter((o) => o !== action.offer),
             fileError: null,
           }
@@ -276,8 +300,15 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
     case "enterAccessPointEditing":
       return editingAccessPoints(session)
         ? session
-        : { ...session, mode: { kind: "accessPointEditing", returnTo: action.returnTo }, selectedPoint: null };
+        : {
+            ...session,
+            mode: { kind: "accessPointEditing", returnTo: action.returnTo },
+            selectedPoint: null,
+            selectedLeg: null,
+          };
     case "leaveAccessPointEditing":
-      return editingAccessPoints(session) ? { ...session, mode: { kind: "normal" }, selectedPoint: null } : session;
+      return editingAccessPoints(session)
+        ? { ...session, mode: { kind: "normal" }, selectedPoint: null, selectedLeg: null }
+        : session;
   }
 }

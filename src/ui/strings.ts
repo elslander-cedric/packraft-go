@@ -183,6 +183,9 @@ export const strings = {
     // The sheet's handle (#189): a slider over its stops; arrow up and down move the sheet one stop.
     resizeSheetHandle: "Resize the trip sheet",
     sheetStops: { peek: "Header only", half: "Half the screen", full: "Full screen" },
+    // The card a tap on a leg on the map shows (#230): its toggle's name is `legModeLabel`.
+    selectedLegTitle: (n: number, distance: string) => `Leg ${n} · ${distance}`,
+    selectedLegClose: "Unselect the leg",
     // The floating hike / paddle toggle for the leg the next map tap adds (#121).
     nextLegModeLabel: "Next leg's mode",
     // Its toggles are icon-only; their names are `legModeHike` and `legModePaddle`.
