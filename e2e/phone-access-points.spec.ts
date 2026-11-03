@@ -9,7 +9,7 @@ import { ACCESS_POINTS_KEY } from "../src/persistence/accessPointStorage";
 import { strings } from "../src/ui/strings";
 import { confirmDialog } from "./support/confirmDialog";
 import { serveOffline } from "./support/offline";
-import { editAccessPointsButton, enterAccessPointEditing } from "./support/accessPointEditing";
+import { editAccessPointsButton, enterAccessPointEditing, raiseSheet } from "./support/accessPointEditing";
 import { touch } from "./support/touch";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
@@ -202,7 +202,7 @@ test("the floating button places one at my GPS position and opens its details; S
   );
 });
 
-test("from the peek, entering access point editing raises the sheet on the Access points tab; marking opens its details over it", async ({
+test("from the peek, entering access point editing keeps the sheet at the peek on the Access points tab; marking opens its details over it", async ({
   page,
   context,
 }) => {
@@ -218,7 +218,7 @@ test("from the peek, entering access point editing raises the sheet on the Acces
   expect(button.y + button.height).toBeLessThanOrEqual(page.viewportSize()!.height - peek);
 
   await enterAccessPointEditing(page);
-  await expect.poll(() => sheetHeight(page)).toBeGreaterThan(page.viewportSize()!.height * 0.45);
+  await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
   await markButton(page).click();
   await expect(markers(page)).toHaveCount(1);
   await expect(details(page)).toBeVisible();
@@ -228,7 +228,7 @@ test("from the peek, entering access point editing raises the sheet on the Acces
   // Cancel keeps the new point on the map, not stored; the flag opens it again and Save stores it.
   await cancel(page).click();
   await expect(accessTab(page)).toHaveAttribute("aria-selected", "true");
-  await expect.poll(() => sheetHeight(page)).toBeGreaterThan(page.viewportSize()!.height * 0.45);
+  await expect(sheet(page)).toHaveAttribute("data-stop", "peek");
   await expect(markers(page)).toHaveClass(/access-point-draft/);
   await expect(rows(page)).toHaveCount(0);
   expect((await stored(page))?.accessPoints ?? []).toEqual([]);
@@ -365,6 +365,7 @@ test("tapping a row zooms the map to that access point and selects it, without o
   const network = await serveOffline(page);
   await openPhone(page);
   await enterAccessPointEditing(page);
+  await raiseSheet(page);
   await expect(rows(page)).toHaveCount(2);
 
   await rowButton(page, 1).click();
@@ -390,9 +391,7 @@ test("in access point editing, tapping an access point's marker selects its row 
   await serveOffline(page);
   await openPhone(page);
   await enterAccessPointEditing(page);
-  // Back to the peek, so the tap raises it.
-  await sheet(page).getByRole("slider", { name: plannerText.resizeSheetHandle }).focus();
-  await page.keyboard.press("Home");
+  // Still at the peek, so the tap raises it.
   expect(await settledSheetHeight(page)).toBeLessThan(200);
 
   const marker = (await markers(page).boundingBox())!;

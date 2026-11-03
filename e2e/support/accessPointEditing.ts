@@ -35,3 +35,12 @@ export async function leaveAccessPointEditing(page: Page) {
   await editAccessPointsButton(page).click();
   await expect(editAccessPointsButton(page)).toHaveAttribute("aria-pressed", "false");
 }
+
+/** On a phone, raises the sheet from the peek to half, where entering leaves it, so its rows are in view. */
+export async function raiseSheet(page: Page) {
+  const handle = page.getByRole("slider", { name: text.resizeSheetHandle });
+  await handle.focus();
+  await page.keyboard.press("Home");
+  await page.keyboard.press("ArrowUp");
+  await expect(page.locator(".planner")).toHaveClass(/planner-stop-half/);
+}

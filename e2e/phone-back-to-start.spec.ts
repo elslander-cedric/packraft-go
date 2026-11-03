@@ -1,5 +1,5 @@
-// Back to start on the phone (GLOSSARY "Loop", ADR 0017): a floating button bottom left, above
-// the access-point button, shown only while it can apply. The closing leg takes the next leg's mode.
+// Back to start on the phone (GLOSSARY "Loop", ADR 0017): a floating button bottom right, under
+// undo, disabled while it can't apply. The closing leg takes the next leg's mode.
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline } from "./support/offline";
@@ -14,7 +14,7 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const backButton = (page: Page) => page.getByRole("button", { name: text.backToStartButton });
-const editButton = (page: Page) => page.getByRole("button", { name: text.editAccessPointsButton });
+const undoButton = (page: Page) => page.getByRole("button", { name: strings.undoButton });
 const nextMode = (page: Page, mode: string) =>
   page.getByRole("group", { name: text.nextLegModeLabel }).getByRole("button", { name: mode });
 
@@ -29,25 +29,27 @@ async function tapSpot(page: Page, dx: number, dy: number) {
   await page.touchscreen.tap(box.x + box.width / 2 + dx, box.y + box.height / 3 + dy);
 }
 
-test("the button shows from two points, closes the loop in the next leg's mode, then hides", async ({ page }) => {
+test("the button is enabled from two points, closes the loop in the next leg's mode, then is disabled again", async ({
+  page,
+}) => {
   await serveOffline(page, routed);
   await page.goto("/");
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
 
-  await expect(backButton(page)).toHaveCount(0);
+  await expect(backButton(page)).toBeDisabled();
   await nextMode(page, strings.legModePaddle).click();
   await tapSpot(page, -100, 0);
   await expect(points(page)).toHaveCount(1);
-  await expect(backButton(page)).toHaveCount(0);
+  await expect(backButton(page)).toBeDisabled();
   await tapSpot(page, 80, 0);
   await expect(points(page)).toHaveCount(2);
 
-  // It sits above the button that enters access point editing, in the bottom-left column.
-  await expect(backButton(page)).toBeVisible();
+  // It sits under undo, at the bottom of the right-hand column.
+  await expect(backButton(page)).toBeEnabled();
   const back = (await backButton(page).boundingBox())!;
-  const mark = (await editButton(page).boundingBox())!;
-  expect(Math.abs(back.x - mark.x)).toBeLessThan(1);
-  expect(back.y + back.height).toBeLessThanOrEqual(mark.y);
+  const undo = (await undoButton(page).boundingBox())!;
+  expect(Math.abs(back.x - undo.x)).toBeLessThan(1);
+  expect(back.y).toBeGreaterThanOrEqual(undo.y + undo.height);
 
   // The planner walks back: the closing leg takes the toggle's mode.
   await nextMode(page, strings.legModeHike).click();
@@ -62,5 +64,5 @@ test("the button shows from two points, closes the loop in the next leg's mode, 
   expect(Math.abs(end.y - start.y)).toBeLessThan(1);
 
   // The trip ends on its start: nothing more to close.
-  await expect(backButton(page)).toHaveCount(0);
+  await expect(backButton(page)).toBeDisabled();
 });

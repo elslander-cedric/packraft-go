@@ -1,6 +1,7 @@
 import type { SnapOffer } from "@/core/snap";
 import { Button } from "./components/Button";
 import { strings } from "./strings";
+import "./components/Dialog.css";
 import "./SnapOffers.css";
 
 const text = strings.snap;
@@ -41,10 +42,13 @@ export default function SnapOffers({ offers, onAccept, onDecline }: SnapOffersPr
       {offers.map((offer) => (
         <div key={`${offer.change.kind}-${offer.change.point}`} className="snap-offer">
           <p>{offerText(offer)}</p>
-          <Button onClick={() => onAccept(offer)}>
-            {offer.target.kind === "official-aire" ? text.acceptAire : text.accept}
-          </Button>
-          <Button onClick={() => onDecline(offer)}>{text.decline}</Button>
+          {/* The dialogs' buttons, in their order: the main action filled, on the right. */}
+          <div className="dialog-actions dialog-buttons">
+            <Button onClick={() => onDecline(offer)}>{text.decline}</Button>
+            <Button className="button-primary" onClick={() => onAccept(offer)}>
+              {text.accept}
+            </Button>
+          </div>
         </div>
       ))}
     </section>

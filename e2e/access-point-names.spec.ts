@@ -16,7 +16,7 @@ import {
   openPlanner,
   saveAccessPoint,
 } from "./support/planner";
-import { enterAccessPointEditing } from "./support/accessPointEditing";
+import { enterAccessPointEditing, raiseSheet } from "./support/accessPointEditing";
 
 const text = strings.accessPoints;
 const plannerText = strings.planner;
@@ -219,6 +219,7 @@ test.describe("on the phone", () => {
     );
     await openMap(page);
     await enterAccessPointEditing(page);
+    await raiseSheet(page);
 
     // The name leads the row; the whole note and use and kind follow.
     const row = rows(page).first();

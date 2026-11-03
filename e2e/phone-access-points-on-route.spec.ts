@@ -10,7 +10,7 @@ import { ACCESS_POINTS_KEY } from "../src/persistence/accessPointStorage";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { enterAccessPointEditing } from "./support/accessPointEditing";
+import { enterAccessPointEditing, raiseSheet } from "./support/accessPointEditing";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
@@ -83,6 +83,7 @@ async function openWithTrip(page: Page) {
   await page.goto("/");
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
   await enterAccessPointEditing(page);
+  await raiseSheet(page);
 }
 
 test("on the route first in route order, then the rest nearest the route until my position is shown", async ({

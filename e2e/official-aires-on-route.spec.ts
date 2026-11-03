@@ -9,7 +9,7 @@ import { ACCESS_POINTS_KEY } from "../src/persistence/accessPointStorage";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { enterAccessPointEditing } from "./support/accessPointEditing";
+import { enterAccessPointEditing, raiseSheet } from "./support/accessPointEditing";
 
 const text = strings.planner;
 const aireText = strings.officialAires;
@@ -163,6 +163,7 @@ test.describe("on a phone", () => {
   test("a tap on an aire's row opens its read-only details", async ({ page }) => {
     await seed(page, TRIP, POINTS);
     await enterAccessPointEditing(page);
+    await raiseSheet(page);
 
     await row(page, CHENEUX).getByRole("button").tap();
     await expectReadOnlyDetails(page, CHENEUX, aireText.legend["take-out"]);

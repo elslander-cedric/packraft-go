@@ -191,8 +191,9 @@ export const strings = {
     // Its toggles are icon-only; their names are `legModeHike` and `legModePaddle`.
     // The position and undo buttons are icon-only too; their names are `showPositionButton` and `undoButton`.
     showPositionButton: "Show my position",
-    // The icon-only floating button above the access-point button (GLOSSARY "Loop").
+    // The icon-only floating button under undo (GLOSSARY "Loop"); disabled, it says why.
     backToStartButton: "Route back to the start",
+    backToStartDisabledReason: "Needs a route that ends away from its start.",
     positionLocating: "Finding your position…",
     positionDenied:
       "Location permission was denied, so your position can't be shown. To show it, allow location for this site in your browser settings, then try again.",
@@ -441,9 +442,9 @@ export const strings = {
     // `use` is the aire's use, lower-case, e.g. "put-in".
     offerAire: (kind: string, metres: number, name: string, use: string) =>
       `The new ${kind} is ${metres} m from the official aire ${name} (${use}). Snap it there?`,
-    accept: "Snap to access point",
-    acceptAire: "Snap to aire",
-    decline: "Keep where it is",
+    // Short, for the narrow snap offer: the question above says where it snaps to.
+    accept: "Snap",
+    decline: "Keep",
     kinds: { "put-in": "put-in", "take-out": "take-out" },
   },
   // The Walloon aire warning (#62, AGW art. 5): information only, never blocks.

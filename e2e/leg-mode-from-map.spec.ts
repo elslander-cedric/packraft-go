@@ -47,6 +47,14 @@ async function openWithRoutedLeg(page: Page) {
   return network;
 }
 
+/** The card's width, and how far its centre is from the centre of the slot it floats in. */
+const cardPlacement = (page: Page) =>
+  card(page).evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    const slot = el.parentElement!.getBoundingClientRect();
+    return { width: box.width, offCentre: Math.abs(box.x + box.width / 2 - (slot.x + slot.width / 2)) };
+  });
+
 /** A free spot of the map away from the leg, in viewport pixels. */
 async function awayFromLeg(page: Page) {
   const free = await freeMapBox(page);
@@ -137,6 +145,16 @@ test.describe("with a mouse", () => {
     await expect(points(page).first()).toHaveClass(/point-selected/);
     await expect(card(page)).toHaveCount(0);
   });
+
+  test("the card has one width whatever the leg, centred above the panel", async ({ page }) => {
+    await openWithRoutedLeg(page);
+    const at = await pointOnPath(page, legHits(page));
+    await page.mouse.click(at.x, at.y);
+    await expect(card(page)).toBeVisible();
+    const placement = await cardPlacement(page);
+    expect(placement.width).toBe(280);
+    expect(placement.offCentre).toBeLessThan(1);
+  });
 });
 
 test.describe("on a phone", () => {
@@ -155,5 +173,16 @@ test.describe("on a phone", () => {
     await (await touch(page)).hold(at, 550);
     await expect(points(page)).toHaveCount(3);
     await expect(page.getByRole("group", { name: /^Leg \d+ · / })).toHaveCount(0);
+  });
+
+  test("the card fits the slot between the buttons, centred, with its whole title", async ({ page }) => {
+    await openWithRoutedLeg(page);
+    const at = await pointOnPath(page, legHits(page));
+    await page.touchscreen.tap(at.x, at.y);
+    await expect(card(page)).toBeVisible();
+    expect((await cardPlacement(page)).offCentre).toBeLessThan(1);
+    const title = card(page).locator(".planner-leg-card-title");
+    expect(await title.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await expect(card(page).getByRole("button", { name: strings.planner.selectedLegClose })).toBeInViewport({ ratio: 1 });
   });
 });

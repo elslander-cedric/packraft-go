@@ -16,3 +16,7 @@
   flex-basis: 100%;
   margin: 0;
 }
+
+.snap-offer .dialog-actions {
+  flex-basis: 100%;
+}

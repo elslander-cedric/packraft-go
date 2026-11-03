@@ -192,6 +192,8 @@ export const paneZIndex = {
   overlays: 250,
   /** The access layer's waters, below the trip. */
   access: 350,
+  /** Your access points in normal mode, inert: below the trip, so the route and its points are drawn over them. */
+  accessPoints: 355,
   /** The legs and their casings: above the access layer's waters, so a water never covers a leg. */
   tripLegs: 360,
   /** Put-ins and take-outs, above the legs: Leaflet's own overlay pane, where they are drawn. */
