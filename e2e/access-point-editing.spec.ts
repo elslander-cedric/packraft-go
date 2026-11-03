@@ -175,7 +175,7 @@ test.describe("on a phone", () => {
   const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
   test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
-  test("normal mode has Sections and Days; entering raises the sheet on Access points, leaving restores the peek and the tab", async ({
+  test("normal mode has Sections and Days; entering keeps the sheet at the peek on Access points, leaving restores the tab", async ({
     page,
   }) => {
     await serveOffline(page);
@@ -190,7 +190,7 @@ test.describe("on a phone", () => {
     await expect(planner(page)).toHaveClass(/planner-stop-peek/);
 
     await enterAccessPointEditing(page);
-    await expect(planner(page)).not.toHaveClass(/planner-stop-peek/);
+    await expect(planner(page)).toHaveClass(/planner-stop-peek/);
     await expect(tabNames(page)).toHaveText([text.tabs.accessPoints]);
 
     await leaveAccessPointEditing(page);

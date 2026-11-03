@@ -312,8 +312,14 @@ test.describe("#31: controls by keyboard alone", () => {
     await page.keyboard.press("Space");
     await expect(pointMarkers(page)).toHaveCount(0);
 
-    // Route back to the start isn't offered before there are two points.
-    await expect(button(page, text.backToStartButton)).toHaveCount(0);
+    // Route back to the start: disabled before there are two points, says why, Enter does nothing.
+    const back = button(page, text.backToStartButton);
+    await tabTo(page, back);
+    await expect(back).toBeDisabled();
+    await expect(back).toHaveAccessibleDescription(text.backToStartDisabledReason);
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Space");
+    await expect(pointMarkers(page)).toHaveCount(0);
 
     // Export GPX in the menu, reached with the arrows: disabled, and Enter does nothing.
     let downloaded = false;

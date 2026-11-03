@@ -251,7 +251,7 @@ test.describe("on a wide screen", () => {
     await expect.poll(async () => (await storedAccessPoints(page))[0].position.lng).toBeGreaterThan(trip.points[0].lng);
   });
 
-  test("undo, delete and camp are off, by button and by key; leaving brings them back", async ({ page }) => {
+  test("undo, delete, camp and the next leg's mode are off, by button and by key; leaving brings them back", async ({ page }) => {
     await serveOffline(page, hiking);
     await openPlanner(page);
     const click = await mapClicker(page);
@@ -265,6 +265,7 @@ test.describe("on a wide screen", () => {
     await expect(deleteButton(page)).toHaveCount(0);
     await expect(campButton(page)).toHaveCount(0);
     await expect(page.getByRole("button", { name: text.backToStartButton })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: text.nextLegModeLabel })).toHaveCount(0);
     await page.locator("body").focus();
     for (const key of ["Control+z", "Meta+z", "Delete", "Backspace"]) await page.keyboard.press(key);
     await inputHandled(page);
@@ -272,6 +273,7 @@ test.describe("on a wide screen", () => {
 
     await leaveAccessPointEditing(page);
     await expect(undoButton(page)).toBeEnabled();
+    await expect(page.getByRole("group", { name: text.nextLegModeLabel })).toBeVisible();
     await page.keyboard.press("Control+z");
     await expect(points(page)).toHaveCount(1);
   });

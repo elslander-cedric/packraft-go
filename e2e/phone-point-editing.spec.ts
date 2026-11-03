@@ -7,7 +7,7 @@ import { ACCESS_POINTS_KEY } from "../src/persistence/accessPointStorage";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline } from "./support/offline";
-import { enterAccessPointEditing } from "./support/accessPointEditing";
+import { enterAccessPointEditing, raiseSheet } from "./support/accessPointEditing";
 import { touch } from "./support/touch";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
@@ -292,6 +292,7 @@ test("a finger drags an access point: it moves, is saved on the device, and the 
   await expect(markers(page)).toHaveCount(1);
   // Bring the marker into the free part of the map: open its row, which centres it above the sheet.
   await enterAccessPointEditing(page);
+  await raiseSheet(page);
   await sheet(page)
     .getByRole("region", { name: text.accessPointsLabel, exact: true })
     .getByRole("listitem")

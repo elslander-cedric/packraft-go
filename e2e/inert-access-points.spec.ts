@@ -1,7 +1,7 @@
 // Your access points don't react in normal mode (ADR 0036, #226): no tap, no drag; a press passes
-// through to the route point, leg or map under it. In access point editing they can be tapped
-// and dragged. Official aires open their details in both modes. On a wide screen (mouse) and on
-// a phone (touch). The touch drag of a route point snapped onto an access point is in
+// through to the route point, leg or map under it, and the route and its points are drawn over
+// them. In access point editing they can be tapped and dragged, drawn over the trip. Official
+// aires open their details in both modes. On a wide screen (mouse) and on a phone (touch). The touch drag of a route point snapped onto an access point is in
 // phone-point-editing.spec.ts; accepting a snap offer onto your access point in snap-aire.spec.ts.
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { serialiseAccessPoints, type AccessPoint } from "../src/core/accessPoints";
@@ -110,6 +110,32 @@ test.describe("on a wide screen", () => {
     expect(await storedAccessPoint(page)).toEqual(north);
   });
 
+  test("in normal mode the route and its points are drawn over your access points; while editing, they are over the trip", async ({
+    page,
+  }) => {
+    await openWith(page, start);
+    // The marker's pane, and whether it is stacked below the panes of the legs and the points.
+    const stacking = () =>
+      markers(page)
+        .first()
+        .evaluate((marker) => {
+          const pane = marker.closest(".leaflet-pane")!;
+          const z = (name: string) => Number(getComputedStyle(document.querySelector(`.leaflet-${name}-pane`)!).zIndex);
+          const own = Number(getComputedStyle(pane).zIndex);
+          const inOverlay = pane.parentElement!.classList.contains("leaflet-overlay-pane");
+          return { inOverlay, belowTrip: inOverlay && own < z("trip-legs") && own < z("trip-points") };
+        });
+    expect(await stacking()).toEqual({ inOverlay: true, belowTrip: true });
+
+    await enterAccessPointEditing(page);
+    expect(await stacking()).toEqual({ inOverlay: false, belowTrip: false });
+    await expect(markers(page).first()).toHaveClass(/access-point-editable/);
+    expect(await markers(page).first().evaluate((m) => m.closest(".leaflet-marker-pane") !== null)).toBe(true);
+
+    await leaveAccessPointEditing(page);
+    expect(await stacking()).toEqual({ inOverlay: true, belowTrip: true });
+  });
+
   test("in access point editing a click selects your access point and a drag moves it", async ({ page }) => {
     await openWith(page, north);
     await enterAccessPointEditing(page);
@@ -185,7 +211,7 @@ test.describe("on a phone", () => {
     await openWith(page, north);
     await enterAccessPointEditing(page);
     const marker = markers(page).first();
-    // Entering raises the sheet and redraws the marker: tap it once both have settled.
+    // Entering redraws the marker: tap it once it has settled.
     await expect(marker).toBeInViewport();
     await settled(async () => [await mapOffset(page), await centreOf(marker)]);
     const at = await centreOf(marker);

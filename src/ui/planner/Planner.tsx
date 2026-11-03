@@ -97,6 +97,7 @@ export default function Planner({ router }: { router?: Router }) {
   } = usePlanner(router);
   const { trip, selectedPoint, offers } = session;
   const undoReasonId = useId();
+  const backToStartReasonId = useId();
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
   // Access point editing (ADR 0036): the planner's other mode, kept in the planner session.
@@ -218,14 +219,14 @@ export default function Planner({ router }: { router?: Router }) {
     raise();
     setFocus({ area: legsArea(trip, section), ...covered() });
   };
-  // Entering access point editing opens the panel or sheet on the Access points tab; leaving
-  // restores the tab and the panel or sheet as they were. Both clear the selection (ADR 0036).
+  // Entering access point editing opens the panel, or switches the sheet at its stop, on the Access
+  // points tab; leaving restores the tab and the panel or sheet as they were. Both clear the
+  // selection (ADR 0036).
   const enterAccessPointEditing = () => {
     dispatch({ type: "enterAccessPointEditing", returnTo: { tab, sheet: stop } });
     access.select(null);
     // The panel opens for this visit only; the stored setting keeps the earlier state.
     setPanelOpenWhileEditing(true);
-    if (!sideways && stop === "peek") setStop("half");
   };
   const leaveAccessPointEditing = () => {
     if (session.mode.kind === "normal") return;
@@ -439,16 +440,6 @@ export default function Planner({ router }: { router?: Router }) {
             {strings.planner.markTapMap}
           </p>
         )}
-        {/* While editing access points the trip is frozen (#227): no back to start, delete, camp or undo. */}
-        {!editingAccessPoints && canGoBackToStart(trip) && (
-          <Button
-            className="planner-fab"
-            aria-label={strings.planner.backToStartButton}
-            onClick={() => dispatch({ type: "backToStart", mode: nextMode })}
-          >
-            <Icon icon={icons.backToStart} />
-          </Button>
-        )}
         {editingAccessPoints && (
           <Button
             className="planner-fab"
@@ -470,6 +461,7 @@ export default function Planner({ router }: { router?: Router }) {
         </Button>
       </div>
       <div className="planner-buttons planner-buttons-bottom">
+        {/* While editing access points the trip is frozen (#227): no delete, camp, undo or back to start. */}
         {!editingAccessPoints && selectedPoint !== null && (
           <>
             <Button className="planner-fab" aria-label={strings.deletePointButton} onClick={deleteSelectedPoint}>
@@ -485,13 +477,16 @@ export default function Planner({ router }: { router?: Router }) {
             </Button>
           </>
         )}
-        <ToggleGroup
-          label={strings.planner.nextLegModeLabel}
-          value={nextMode}
-          options={legModeOptions}
-          onChange={(mode) => setPick({ mode, ...pickedFor(trip) })}
-          className="planner-next-mode"
-        />
+        {/* The next leg's mode means nothing while the trip is frozen (ADR 0036). */}
+        {!editingAccessPoints && (
+          <ToggleGroup
+            label={strings.planner.nextLegModeLabel}
+            value={nextMode}
+            options={legModeOptions}
+            onChange={(mode) => setPick({ mode, ...pickedFor(trip) })}
+            className="planner-next-mode"
+          />
+        )}
         {/* Disabled, it stays a Tab stop and says why (#31). */}
         {!editingAccessPoints && (
           <Button
@@ -505,8 +500,24 @@ export default function Planner({ router }: { router?: Router }) {
             <Icon icon={icons.undo} />
           </Button>
         )}
+        {/* Under undo, in the bottom corner; disabled like it, it says why. */}
+        {!editingAccessPoints && (
+          <Button
+            className="planner-fab"
+            aria-label={strings.planner.backToStartButton}
+            aria-describedby={canGoBackToStart(trip) ? undefined : backToStartReasonId}
+            onClick={() => dispatch({ type: "backToStart", mode: nextMode })}
+            disabled={!canGoBackToStart(trip)}
+            focusableWhenDisabled
+          >
+            <Icon icon={icons.backToStart} />
+          </Button>
+        )}
         <span id={undoReasonId} hidden>
           {strings.undoDisabledReason}
+        </span>
+        <span id={backToStartReasonId} hidden>
+          {strings.planner.backToStartDisabledReason}
         </span>
       </div>
       <AccessDetailsDialog

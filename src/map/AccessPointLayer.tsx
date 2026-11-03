@@ -5,14 +5,15 @@
 // access point editing (ADR 0036). While `editable`
 // (access point editing, ADR 0036), tap a marker to select it; press and drag
 // it to move it (#120). Otherwise the markers are inert (#226): a press passes
-// through to the route point, leg or map under it. The new point placed while
+// through to the route point, leg or map under it, and the trip is drawn over
+// them (their own pane below the legs). The new point placed while
 // editing and not saved yet (the draft) has its own marker: drag it into place;
 // a tap on it does nothing, as only the flag button opens its details.
 // Its own layer, apart from the trip's, and only loaded through TripMap.
 import type { Marker as LeafletMarker } from "leaflet";
 import { divIcon } from "leaflet";
 import { useRef } from "react";
-import { Marker } from "react-leaflet";
+import { Marker, Pane } from "react-leaflet";
 import type { AccessPoint, AccessPointKind, AccessPoints } from "@/core/accessPoints";
 import type { LatLng } from "@/core/trip";
 import { accessPointText } from "@/ui/accessPointText";
@@ -20,6 +21,7 @@ import { icons } from "@/ui/icons/icons";
 import { iconSvg, type IconPlacement } from "@/ui/icons/iconSvg";
 import { strings } from "@/ui/strings";
 import { accessPointModeColours } from "./accessColours";
+import { paneZIndex } from "./mapConfig";
 import { escapeAttribute, escapeText } from "./escapeHtml";
 import { HIT_SIZE_PX, usePressDrag } from "./pressDrag";
 import "./AccessPointLayer.css";
@@ -136,11 +138,12 @@ export default function AccessPointLayer({
   draft,
   onDraftMove,
 }: AccessPointLayerProps) {
-  // Leaflet reads `interactive` only when it adds a marker: a change of mode remounts them.
+  // Leaflet reads `interactive` and `pane` only when it adds a marker: a change of mode remounts them.
+  // While editing they are in Leaflet's marker pane, over the trip; otherwise in their own pane below it.
   return (
     <>
-      {points.map((point) =>
-        editable ? (
+      {editable ? (
+        points.map((point) => (
           <PressDragMarker
             key={point.id}
             point={point}
@@ -148,9 +151,13 @@ export default function AccessPointLayer({
             onSelect={onSelect}
             onMove={onMove}
           />
-        ) : (
-          <InertMarker key={point.id} point={point} selected={point.id === selectedId} />
-        ),
+        ))
+      ) : (
+        <Pane name="access-points" pane="overlayPane" style={{ zIndex: paneZIndex.accessPoints }}>
+          {points.map((point) => (
+            <InertMarker key={point.id} point={point} selected={point.id === selectedId} />
+          ))}
+        </Pane>
       )}
       {draft && (
         <PressDragMarker

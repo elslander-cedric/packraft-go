@@ -1,5 +1,5 @@
 // Back to start on a desktop-sized window (GLOSSARY "Loop", ADR 0017): the floating button adds
-// a leg from the last point back to the start, and is only offered when it can (ADR 0034).
+// a leg from the last point back to the start, and is disabled when it can't (ADR 0034).
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
@@ -19,16 +19,16 @@ async function centreOf(shape: Locator) {
 
 test.beforeEach(({ page }) => showAllLegs(page));
 
-test("Back to start closes the route on the start point, is only offered when it can, and undoes", async ({ page }) => {
+test("Back to start closes the route on the start point, is disabled when it can't, and undoes", async ({ page }) => {
   await serveOffline(page);
   await openPlanner(page);
   const box = (await freeMapBox(page));
   const [cx, cy] = [box.x + box.width / 2, box.y + box.height / 2];
 
-  await expect(backButton(page)).toHaveCount(0);
+  await expect(backButton(page)).toBeDisabled();
 
   await page.mouse.click(cx - 150, cy);
-  await expect(backButton(page)).toHaveCount(0);
+  await expect(backButton(page)).toBeDisabled();
   await page.mouse.click(cx, cy - 100);
   await page.mouse.click(cx + 150, cy);
   await expect(points(page)).toHaveCount(3);
@@ -41,11 +41,11 @@ test("Back to start closes the route on the start point, is only offered when it
   expect(Math.abs(end.x - start.x)).toBeLessThan(1);
   expect(Math.abs(end.y - start.y)).toBeLessThan(1);
 
-  // Already back at the start: not offered.
-  await expect(backButton(page)).toHaveCount(0);
+  // Already back at the start: disabled.
+  await expect(backButton(page)).toBeDisabled();
 
   await undoButton(page).click();
   await expect(points(page)).toHaveCount(3);
   await expect(legRows(page)).toHaveCount(2);
-  await expect(backButton(page)).toBeVisible();
+  await expect(backButton(page)).toBeEnabled();
 });

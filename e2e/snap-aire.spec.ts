@@ -162,7 +162,7 @@ test.describe("official aires (#207)", () => {
 
     await expect(offer(page)).toContainText(MOYEN.name);
     await expect(offer(page)).toContainText(strings.accessPoints.uses[MOYEN.use].toLowerCase());
-    await offer(page).getByRole("button", { name: strings.snap.acceptAire }).click();
+    await offer(page).getByRole("button", { name: strings.snap.accept }).click();
     await expect(offer(page)).toHaveCount(0);
     await expect.poll(() => storedFirstPoint(page)).toEqual({ lat: MOYEN.lat, lng: MOYEN.lng });
 
