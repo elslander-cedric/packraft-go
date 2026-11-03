@@ -175,10 +175,12 @@ export default function Planner({ router }: { router?: Router }) {
     return { top: rowsBottom - top, right: sideways ? panel : 0, bottom: sideways ? 0 : sheet };
   };
 
-  // While an access point is being placed, the tap places it; while a point is selected, it only
-  // clears the selection (#120); otherwise it adds a trip point with the next leg's mode.
+  // While an access point is being placed, the tap places it; while editing access points it
+  // does nothing else, as the trip is frozen (#227); while a point is selected, it only clears the
+  // selection (#120); otherwise it adds a trip point with the next leg's mode.
   const onMapTap = (at: LatLng) => {
     if (access.placing) placed(access.placeAt(at));
+    else if (editingAccessPoints) return;
     else if (selectedPoint !== null) dispatch({ type: "deselect" });
     else {
       if (held !== null && trip.points.length === 0) setPick({ ...held, carry: true });
@@ -355,6 +357,7 @@ export default function Planner({ router }: { router?: Router }) {
         onPointTap={(index) => dispatch({ type: "pointClicked", index })}
         onPointDrop={(index, to) => dispatch({ type: "movePoint", index, to })}
         onLegHold={(index, near) => dispatch({ type: "insertPoint", index, near })}
+        frozen={editingAccessPoints}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
           points: access.points,
@@ -432,7 +435,8 @@ export default function Planner({ router }: { router?: Router }) {
             </Button>
           </div>
         )}
-        {canGoBackToStart(trip) && (
+        {/* While editing access points the trip is frozen (#227): no back to start, delete, camp or undo. */}
+        {!editingAccessPoints && canGoBackToStart(trip) && (
           <Button
             className="planner-fab"
             aria-label={strings.planner.backToStartButton}
@@ -470,7 +474,7 @@ export default function Planner({ router }: { router?: Router }) {
         )}
       </div>
       <div className="planner-buttons planner-buttons-bottom">
-        {selectedPoint !== null && (
+        {!editingAccessPoints && selectedPoint !== null && (
           <>
             <Button className="planner-fab" aria-label={strings.deletePointButton} onClick={deleteSelectedPoint}>
               <Icon icon={icons.deletePoint} />
@@ -493,16 +497,18 @@ export default function Planner({ router }: { router?: Router }) {
           className="planner-next-mode"
         />
         {/* Disabled, it stays a Tab stop and says why (#31). */}
-        <Button
-          className="planner-fab"
-          aria-label={strings.undoButton}
-          aria-describedby={canUndo(trip) ? undefined : undoReasonId}
-          onClick={undo}
-          disabled={!canUndo(trip)}
-          focusableWhenDisabled
-        >
-          <Icon icon={icons.undo} />
-        </Button>
+        {!editingAccessPoints && (
+          <Button
+            className="planner-fab"
+            aria-label={strings.undoButton}
+            aria-describedby={canUndo(trip) ? undefined : undoReasonId}
+            onClick={undo}
+            disabled={!canUndo(trip)}
+            focusableWhenDisabled
+          >
+            <Icon icon={icons.undo} />
+          </Button>
+        )}
         <span id={undoReasonId} hidden>
           {strings.undoDisabledReason}
         </span>
@@ -535,7 +541,8 @@ export default function Planner({ router }: { router?: Router }) {
       />
       <div className="planner-snap-offers">
         <SnapOffers
-          offers={offers}
+          // Hidden while editing access points; they wait for Done (#227).
+          offers={editingAccessPoints ? [] : offers}
           onAccept={(offer) => dispatch({ type: "acceptOffer", offer })}
           onDecline={(offer) => dispatch({ type: "declineOffer", offer })}
         />

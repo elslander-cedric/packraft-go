@@ -20,6 +20,9 @@
 //   apply.
 // - mode (ADR 0036, #225): normal on load (never stored); enter access point editing sets it,
 //   keeping the panel view to return to, and Done sets it back. Both clear the selected point.
+//   While editing access points the trip is frozen (#227): the actions that edit its points or
+//   leg modes, select a point or answer a snap offer return the same session; the offers wait
+//   for Done (still following your access points).
 // Actions that can't apply return the same session.
 import type { AccessPoints } from "./accessPoints";
 import type { CalendarDate } from "./calendarDate";
@@ -165,11 +168,27 @@ const routing = (session: PlannerSession, action: RoutingAction): PlannerSession
   return trip === session.trip ? session : { ...session, trip };
 };
 
+/** What can't apply while editing access points: the trip is frozen (#227). */
+const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set([
+  "addPoint",
+  "movePoint",
+  "backToStart",
+  "deleteSelectedPoint",
+  "insertPoint",
+  "setLegMode",
+  "toggleCampOnSelectedPoint",
+  "undo",
+  "pointClicked",
+  "acceptOffer",
+  "declineOffer",
+]);
+
 export function plannerSession(session: PlannerSession, action: PlannerAction): PlannerSession {
   if (action.type === "routeRequested" || action.type === "routeArrived") return routing(session, action);
   if (action.type === "confirmReplace") return session.pendingTrip ? replaced(session, session.pendingTrip) : session;
   if (action.type === "cancelReplace") return session.pendingTrip ? { ...session, pendingTrip: null } : session;
   if (session.pendingTrip) return session;
+  if (session.mode.kind === "accessPointEditing" && frozenWhileEditing.has(action.type)) return session;
 
   const { trip } = session;
   switch (action.type) {

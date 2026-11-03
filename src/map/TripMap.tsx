@@ -50,6 +50,11 @@ export type TripMapProps = {
   onPointDrop: (index: number, to: LatLng) => void;
   /** A finger held still on a leg for 0.4 s, or a right-click on it, at `at` (#122). */
   onLegHold: (leg: number, at: LatLng) => void;
+  /**
+   * The trip is drawn but can't be touched (access point editing, ADR 0036, #227): its points and
+   * legs have no hit areas, so a press reaches your access points or the map beneath.
+   */
+  frozen?: boolean;
   /** Your position and the browser's accuracy radius in metres, once shown. */
   position: { at: LatLng; accuracyM: number } | null;
   /** Your access points: tap one to select it, drag it to correct it (#63). */
@@ -335,7 +340,8 @@ function TripLayers({
   onPointTap,
   onPointDrop,
   onLegHold,
-}: Pick<TripMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold">) {
+  frozen,
+}: Pick<TripMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold" | "frozen">) {
   const [preview, setPreview] = useState<{ index: number; at: LatLng } | null>(null);
   const points = preview ? trip.points.with(preview.index, preview.at) : trip.points;
   const handlers = (index: number): PressDragHandlers => ({
@@ -370,9 +376,10 @@ function TripLayers({
       {/* Leg hit lines sit above the drawn trip but under the access-point markers and the
           points' hit areas, so a point or an access point on a leg is still grabbed first. */}
       <Pane name="trip-leg-hits" style={{ zIndex: paneZIndex.tripLegHits }}>
-        {legs.map(({ positions }, i) => (
-          <LegHitLine key={`leg-hit-${i}`} positions={positions} onHold={(at) => onLegHold(i, at)} />
-        ))}
+        {!frozen &&
+          legs.map(({ positions }, i) => (
+            <LegHitLine key={`leg-hit-${i}`} positions={positions} onHold={(at) => onLegHold(i, at)} />
+          ))}
       </Pane>
       {putInsAndTakeOuts(trip).map(({ kind, point }) => (
         <CircleMarker
@@ -398,9 +405,7 @@ function TripLayers({
       {/* Their hit areas sit above the access-point markers (Leaflet's marker pane is 600), so a
           route point that is also an access point can still be selected and dragged (#120). */}
       <Pane name="trip-point-hits" style={{ zIndex: paneZIndex.tripPointHits }}>
-        {points.map((point, i) => (
-          <PointHitArea key={`hit-${i}`} at={point} handlers={handlers(i)} />
-        ))}
+        {!frozen && points.map((point, i) => <PointHitArea key={`hit-${i}`} at={point} handlers={handlers(i)} />)}
       </Pane>
     </>
   );
@@ -422,6 +427,7 @@ export default function TripMap({
   onPointTap,
   onPointDrop,
   onLegHold,
+  frozen,
   position,
   accessPoints,
   focus,
@@ -451,6 +457,7 @@ export default function TripMap({
         onPointTap={onPointTap}
         onPointDrop={onPointDrop}
         onLegHold={onLegHold}
+        frozen={frozen}
       />
       {accessPoints && <AccessPointLayer {...accessPoints} />}
       {searchResult && <SearchResultLayer result={searchResult} cover={searchCover} />}

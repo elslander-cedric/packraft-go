@@ -15,7 +15,7 @@ import {
   saveAccessPoint,
   tripPanel,
 } from "./support/planner";
-import { enterAccessPointEditing } from "./support/accessPointEditing";
+import { enterAccessPointEditing, leaveAccessPointEditing } from "./support/accessPointEditing";
 
 const text = strings.accessPoints;
 const KEY = "packraft-go.access-points";
@@ -51,6 +51,8 @@ test("new trip and opening a trip file leave access points untouched", async ({ 
   const mid = await openWith(page, file(1, [point("a", 50.5, 5.5, "keep me")]));
   await expect(markers(page)).toHaveCount(1);
   const before = await stored(page);
+  // The trip is frozen while editing access points (#227): back to normal mode to plan.
+  await leaveAccessPointEditing(page);
 
   // Make a trip so the confirmations show.
   await page.mouse.click(mid.x + 200, mid.y + 100);

@@ -280,7 +280,7 @@ test("with the network blocked, marking, editing and deleting keep working and a
   expect(network.blocked).toEqual([]);
 });
 
-test("without a fix the button enters place mode; Cancel leaves it; the next tap places an access point, not a route point", async ({
+test("without a fix the button enters place mode; Cancel leaves it, and a tap then does nothing; in place mode the tap places an access point, not a route point", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -295,12 +295,14 @@ test("without a fix the button enters place mode; Cancel leaves it; the next tap
   await expect(placingLine(page)).toBeVisible();
   await expect(markers(page)).toHaveCount(0);
 
-  // Cancel: the next tap adds a route point again.
+  // Cancel: the next tap does nothing, as the trip is frozen while editing access points (#227).
   await cancelPlacing(page).click();
   await expect(placingLine(page)).toHaveCount(0);
   await tapMap(-80);
-  await expect(routePoints(page)).toHaveCount(1);
+  await page.waitForTimeout(300);
+  await expect(routePoints(page)).toHaveCount(0);
   await expect(markers(page)).toHaveCount(0);
+  await expect(details(page)).toHaveCount(0);
 
   // Place mode again: the tap places an access point, adds no route point, and opens its details.
   await markButton(page).click();
@@ -309,7 +311,7 @@ test("without a fix the button enters place mode; Cancel leaves it; the next tap
   await expect(markers(page)).toHaveCount(1);
   await expect(markers(page)).toHaveClass(/access-point-selected/);
   await expect(details(page)).toBeVisible();
-  await expect(routePoints(page)).toHaveCount(1);
+  await expect(routePoints(page)).toHaveCount(0);
   await expect(placingLine(page)).toHaveCount(0);
   expect((await stored(page)).accessPoints).toHaveLength(1);
   // Under the details, the Access points tab; the point is stored on the device.

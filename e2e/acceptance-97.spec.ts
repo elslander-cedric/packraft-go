@@ -5,7 +5,7 @@ import { addAccessPoint, serialiseAccessPoints, updateAccessPoint } from "../src
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline } from "./support/offline";
 import { freeMapCentre, legLines, openPlanner, pickNextMode, tripPanel } from "./support/planner";
-import { enterAccessPointEditing } from "./support/accessPointEditing";
+import { enterAccessPointEditing, leaveAccessPointEditing } from "./support/accessPointEditing";
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
@@ -66,6 +66,9 @@ test("deleting the access point an offer points at removes the offer", async ({ 
     .getByRole("button", { name: /^Delete / })
     .click();
   await page.getByRole("alertdialog").getByRole("button", { name: text.deleteConfirm.confirm }).click();
+  await expect(page.locator(".access-point-marker")).toHaveCount(0);
+  // Offers are hidden while editing access points (#227): on Done it is gone.
+  await leaveAccessPointEditing(page);
   await expect(offer(page)).toHaveCount(0);
 });
 

@@ -37,6 +37,7 @@ const typingInField = (event: KeyboardEvent) =>
 export function usePlanner(router?: Router) {
   const [session, dispatch] = useReducer(plannerSession, undefined, () => firstSession(loadStoredTrip()));
   const { trip, selectedPoint, keepStoredSave, pendingTrip } = session;
+  const frozen = session.mode.kind === "accessPointEditing";
   const [autoRouter] = useState(() => createAutoRouter(router ?? createBRouterRouter(), dispatch));
 
   // Every change is saved. Restored legs keep their routed results, so syncing routes nothing new.
@@ -91,6 +92,8 @@ export function usePlanner(router?: Router) {
     const onKeyDown = (event: KeyboardEvent) => {
       // While a confirmation is open, keys belong to it (Escape cancels it).
       if (pendingTrip || typingInField(event)) return;
+      // While editing access points the trip is frozen (#227): undo and delete are off.
+      if (frozen) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
         undo();

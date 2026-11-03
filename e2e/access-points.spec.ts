@@ -13,7 +13,7 @@ import {
   saveAccessPoint,
   tripPanel,
 } from "./support/planner";
-import { enterAccessPointEditing } from "./support/accessPointEditing";
+import { enterAccessPointEditing, leaveAccessPointEditing } from "./support/accessPointEditing";
 
 const text = strings.accessPoints;
 const ACCESS_POINTS_KEY = "packraft-go.access-points";
@@ -84,7 +84,9 @@ test("add an access point on the map, edit it in the detail panel, and the marke
   await expect(page.locator(".leaflet-container path.point")).toHaveCount(0);
 });
 
-test("Escape cancels placing an access point; the next click adds a trip point", async ({ page }) => {
+test("Escape cancels placing an access point; the next click adds nothing, and after Done a trip point", async ({
+  page,
+}) => {
   await serveOffline(page);
   const middle = await openMap(page);
   await enterAccessPointEditing(page);
@@ -92,7 +94,13 @@ test("Escape cancels placing an access point; the next click adds a trip point",
   await expect(placingLine(page)).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(placingLine(page)).toHaveCount(0);
+  // The trip is frozen while editing access points (#227).
   await page.mouse.click(middle.x, middle.y);
+  await page.waitForTimeout(300);
+  await expect(mapRegion(page).locator(".point")).toHaveCount(0);
+  await expect(markers(page)).toHaveCount(0);
+  await leaveAccessPointEditing(page);
+  await page.mouse.click(middle.x + 40, middle.y);
   await expect(mapRegion(page).locator(".point")).toHaveCount(1);
   await expect(markers(page)).toHaveCount(0);
 });
