@@ -241,7 +241,7 @@ test.describe("keyboard alone", () => {
       strings.planner.showPositionButton,
       strings.mapMenuButton,
       strings.planner.backToStartButton,
-      strings.planner.markAccessPointButton,
+      strings.planner.editAccessPointsButton,
       strings.legModeHike,
       strings.planner.resizePanelHandle,
       strings.planner.collapsePanelButton,

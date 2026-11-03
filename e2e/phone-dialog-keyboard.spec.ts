@@ -8,6 +8,7 @@ import { serialiseAccessPoints, type AccessPoint } from "../src/core/accessPoint
 import { ACCESS_POINTS_KEY } from "../src/persistence/accessPointStorage";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
+import { enterAccessPointEditing } from "./support/accessPointEditing";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
@@ -107,7 +108,7 @@ test("Edit trip opens without the keyboard; once a field is tapped it sits above
 });
 
 test("the access point dialog sits above the keyboard, and scrolls inside when it doesn't fit", async ({ page }) => {
-  await sheet(page).getByRole("tab", { name: text.tabs.accessPoints }).click();
+  await enterAccessPointEditing(page);
   const section = sheet(page).getByRole("region", { name: text.accessPointsLabel, exact: true });
   // A row's own button comes first, then its edit button.
   await section.getByRole("list").getByRole("listitem").first().getByRole("button").nth(1).click();

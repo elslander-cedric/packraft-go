@@ -1,12 +1,18 @@
 "use client";
 
 import { useId, useRef, useState, type CSSProperties } from "react";
+import {
+  editingAccessPoints as isEditingAccessPoints,
+  normalTabs,
+  type NormalTab,
+  type SheetStop,
+} from "@/core/plannerSession";
 import type { Router } from "@/core/router";
 import { canGoBackToStart, canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import type { MapFocus } from "@/map/TripMap";
 import type { MapCover } from "@/map/SearchResultLayer";
-import { BottomSheet, sheetStopShare, type SheetStop } from "../components/BottomSheet";
+import { BottomSheet, sheetStopShare } from "../components/BottomSheet";
 import { Button } from "../components/Button";
 import { SidePanel, useSidePanelWidth } from "../components/SidePanel";
 import { sidePanelCover } from "../components/sidePanelWidth";
@@ -39,8 +45,9 @@ import { useSideways } from "./usePlannerLayout";
 import { usePosition } from "./usePosition";
 import "./planner.css";
 
-type PlannerTab = keyof typeof strings.planner.tabs;
-const tabs = Object.keys(strings.planner.tabs) as PlannerTab[];
+/** A tab of normal mode (`normalTabs`, in the core), or the Access points tab of access point editing. */
+type PlannerTab = NormalTab | "accessPoints";
+const editingTabs: readonly PlannerTab[] = ["accessPoints"];
 
 /**
  * The next leg's mode the planner picked, and the trip state it was picked for: the trip's
@@ -102,7 +109,11 @@ export default function Planner({ router }: { router?: Router }) {
   const undoReasonId = useId();
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
-  const [tab, setTab] = useState<PlannerTab>("sections");
+  // Access point editing (ADR 0036): the planner's other mode, kept in the planner session.
+  const editingAccessPoints = isEditingAccessPoints(session);
+  // Normal mode's tab; kept while editing access points, so Done brings it back.
+  const [tab, setTab] = useState<NormalTab>("sections");
+  const shownTab: PlannerTab = editingAccessPoints ? "accessPoints" : tab;
   // The sheet's last stop; kept while sideways, so turning back to portrait restores it (#126).
   const [stop, setStop] = useState<SheetStop>("peek");
   // The peek's height, so the bottom buttons sit just above it.
@@ -110,8 +121,13 @@ export default function Planner({ router }: { router?: Router }) {
   // Except on a narrow screen in portrait, the side panel replaces the sheet (ADR 0034). Its width
   // and whether it is open are settings on this device, kept as they were whatever the sheet's stop.
   const sideways = useSideways();
-  const [{ width: panelWidth, open: panelOpen }, changePanel] = useSidePanel();
-  const setPanelOpen = (open: boolean) => changePanel({ open });
+  const [{ width: panelWidth, open: storedPanelOpen }, changePanel] = useSidePanel();
+  // While editing access points the panel's open state is not stored: a reload made while editing
+  // comes back in normal mode with the panel as it was before entering (ADR 0036).
+  const [panelOpenWhileEditing, setPanelOpenWhileEditing] = useState(true);
+  const panelOpen = editingAccessPoints ? panelOpenWhileEditing : storedPanelOpen;
+  const setPanelOpen = (open: boolean) =>
+    editingAccessPoints ? setPanelOpenWhileEditing(open) : changePanel({ open });
   const shownPanelWidth = useSidePanelWidth(panelWidth);
   // Shows the content: the sheet raised to half, or the panel opened.
   const raise = () => (sideways ? setPanelOpen(true) : setStop("half"));
@@ -129,12 +145,11 @@ export default function Planner({ router }: { router?: Router }) {
   // A new access point opens its edit dialog, over its row in the Access points tab.
   const placed = (id: string) => {
     setEditingId(id);
-    setTab("accessPoints");
     raiseFromPeek();
   };
   const marking = useMarkAccessPoint(access, position, showPosition, placed);
   // The access layer (#125): on or off, its date, and the water or lock whose details are open.
-  const layer = useAccessLayer(trip, tab === "accessPoints");
+  const layer = useAccessLayer(trip, editingAccessPoints);
   // The base map (ADR 0031): a setting on this device, never in the trip.
   const [baseMap, chooseBaseMap] = useBaseMap();
   // The overlays (ADR 0032): settings on this device too.
@@ -169,10 +184,12 @@ export default function Planner({ router }: { router?: Router }) {
     return { top: rowsBottom - top, right: sideways ? panel : 0, bottom: sideways ? 0 : sheet };
   };
 
-  // While an access point is being placed, the tap places it; while a point is selected, it only
-  // clears the selection (#120); otherwise it adds a trip point with the next leg's mode.
+  // While an access point is being placed, the tap places it; while editing access points it
+  // does nothing else, as the trip is frozen (#227); while a point is selected, it only clears the
+  // selection (#120); otherwise it adds a trip point with the next leg's mode.
   const onMapTap = (at: LatLng) => {
     if (access.placing) placed(access.placeAt(at));
+    else if (editingAccessPoints) return;
     else if (selectedPoint !== null) dispatch({ type: "deselect" });
     else {
       if (held !== null && trip.points.length === 0) setPick({ ...held, carry: true });
@@ -211,19 +228,31 @@ export default function Planner({ router }: { router?: Router }) {
     raise();
     setFocus({ area: legsArea(trip, section), ...covered() });
   };
-  // With a route point selected, the access-point button saves that point as an access point (#120).
-  const markSelectedPoint = () => {
-    if (selectedPoint === null) return;
-    const id = access.placeAt(trip.points[selectedPoint]);
-    dispatch({ type: "deselect" });
-    placed(id);
+  // Entering access point editing opens the panel or sheet on the Access points tab; Done
+  // restores the tab and the panel or sheet as they were. Both clear the selection (ADR 0036).
+  const enterAccessPointEditing = () => {
+    dispatch({ type: "enterAccessPointEditing", returnTo: { tab, sheet: stop } });
+    access.select(null);
+    // The panel opens for this visit only; the stored setting keeps the earlier state.
+    setPanelOpenWhileEditing(true);
+    if (!sideways && stop === "peek") setStop("half");
+  };
+  const leaveAccessPointEditing = () => {
+    if (session.mode.kind === "normal") return;
+    const { returnTo } = session.mode;
+    dispatch({ type: "leaveAccessPointEditing" });
+    access.select(null);
+    if (access.placing) access.togglePlacing();
+    setTab(returnTo.tab);
+    setStop(returnTo.sheet);
+    // The stored panel state was left as it was on entering, so normal mode shows it again.
   };
 
-  // A marker tap shows the point's row in the Access points tab, raised to half from the peek.
+  // A marker tap selects the point; while editing access points it also shows its row, raised to
+  // half from the peek.
   const onSelectAccessPoint = (id: string) => {
     access.select(id);
-    setTab("accessPoints");
-    raiseFromPeek();
+    if (editingAccessPoints) raiseFromPeek();
   };
   // A row tap shows the point on the map, above the half-raised sheet.
   const openAccessPoint = (id: string) => {
@@ -256,7 +285,7 @@ export default function Planner({ router }: { router?: Router }) {
   );
   const tabList = (
     <TabList label={strings.planner.tabsLabel}>
-      {tabs.map((value) => (
+      {(editingAccessPoints ? editingTabs : normalTabs).map((value) => (
         <Tab key={value} value={value} onPress={raiseFromPeek}>
           {strings.planner.tabs[value]}
         </Tab>
@@ -265,48 +294,53 @@ export default function Planner({ router }: { router?: Router }) {
   );
   const sheetContent = (
     <div className="planner-tab-panels">
-      <TabPanel value="sections">
-        <SectionsList
-          summary={summary}
-          legs={trip.legs}
-          access={waterAccess}
-          aire={aire}
-          selected={selectedSection}
-          selectedLeg={selectedLeg}
-          open={stillOpen}
-          onSelect={selectSectionRow}
-          onSelectLeg={selectLegRow}
-          onShowDetails={setDetailsSection}
-          onShowLegDetails={setDetailsLeg}
-          onRetry={(index) => dispatch({ type: "retryLeg", index })}
-        />
-      </TabPanel>
-      <TabPanel value="days">
-        {summary.days.length === 0 && <p className="planner-empty">{strings.daysPanelEmpty}</p>}
-        <DaysPanel
-          days={summary.days}
-          access={waterAccess?.days}
-          aire={aire}
-          onSelectDay={openDay}
-          selectedDay={selectedDay}
-          // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
-          onShowLeg={setDetailsLeg}
-        />
-      </TabPanel>
-      <TabPanel value="accessPoints">
-        <AccessPoints
-          access={access}
-          trip={trip}
-          officialAires={layer.officialAires}
-          position={position.state === "shown" ? position.at : null}
-          onOpen={openAccessPoint}
-          onOpenAire={layer.select}
-          onEdit={(id) => {
-            access.select(id);
-            setEditingId(id);
-          }}
-        />
-      </TabPanel>
+      {editingAccessPoints ? (
+        <TabPanel value="accessPoints">
+          <AccessPoints
+            access={access}
+            trip={trip}
+            officialAires={layer.officialAires}
+            position={position.state === "shown" ? position.at : null}
+            onOpen={openAccessPoint}
+            onOpenAire={layer.select}
+            onEdit={(id) => {
+              access.select(id);
+              setEditingId(id);
+            }}
+          />
+        </TabPanel>
+      ) : (
+        <>
+          <TabPanel value="sections">
+            <SectionsList
+              summary={summary}
+              legs={trip.legs}
+              access={waterAccess}
+              aire={aire}
+              selected={selectedSection}
+              selectedLeg={selectedLeg}
+              open={stillOpen}
+              onSelect={selectSectionRow}
+              onSelectLeg={selectLegRow}
+              onShowDetails={setDetailsSection}
+              onShowLegDetails={setDetailsLeg}
+              onRetry={(index) => dispatch({ type: "retryLeg", index })}
+            />
+          </TabPanel>
+          <TabPanel value="days">
+            {summary.days.length === 0 && <p className="planner-empty">{strings.daysPanelEmpty}</p>}
+            <DaysPanel
+              days={summary.days}
+              access={waterAccess?.days}
+              aire={aire}
+              onSelectDay={openDay}
+              selectedDay={selectedDay}
+              // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
+              onShowLeg={setDetailsLeg}
+            />
+          </TabPanel>
+        </>
+      )}
     </div>
   );
 
@@ -334,9 +368,11 @@ export default function Planner({ router }: { router?: Router }) {
         onPointTap={(index) => dispatch({ type: "pointClicked", index })}
         onPointDrop={(index, to) => dispatch({ type: "movePoint", index, to })}
         onLegHold={(index, near) => dispatch({ type: "insertPoint", index, near })}
+        frozen={editingAccessPoints}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
           points: access.points,
+          editable: editingAccessPoints,
           selectedId: access.selected?.id ?? null,
           onSelect: onSelectAccessPoint,
           onMove: (id, to) => access.update(id, { position: to }),
@@ -411,7 +447,8 @@ export default function Planner({ router }: { router?: Router }) {
             </Button>
           </div>
         )}
-        {canGoBackToStart(trip) && (
+        {/* While editing access points the trip is frozen (#227): no back to start, delete, camp or undo. */}
+        {!editingAccessPoints && canGoBackToStart(trip) && (
           <Button
             className="planner-fab"
             aria-label={strings.planner.backToStartButton}
@@ -420,21 +457,36 @@ export default function Planner({ router }: { router?: Router }) {
             <Icon icon={icons.backToStart} />
           </Button>
         )}
-        <Button
-          className="planner-fab"
-          aria-label={
-            selectedPoint === null
-              ? strings.planner.markAccessPointButton
-              : strings.planner.selectedPointToAccessPointButton
-          }
-          onClick={selectedPoint === null ? marking.mark : markSelectedPoint}
-          disabled={selectedPoint === null && marking.locating}
-        >
-          <Icon icon={icons.accessPoint} />
-        </Button>
+        {editingAccessPoints ? (
+          <>
+            {/* Done sits beside the live region, so it isn't read out as part of the state. */}
+            <div className="planner-message planner-state-line">
+              <span role="status">{strings.planner.editingAccessPointsState}</span>
+              <Button className="planner-state-action" onClick={leaveAccessPointEditing}>
+                {strings.planner.editingAccessPointsDone}
+              </Button>
+            </div>
+            <Button
+              className="planner-fab"
+              aria-label={strings.planner.markAccessPointButton}
+              onClick={marking.mark}
+              disabled={marking.locating}
+            >
+              <Icon icon={icons.accessPoint} />
+            </Button>
+          </>
+        ) : (
+          <Button
+            className="planner-fab"
+            aria-label={strings.planner.editAccessPointsButton}
+            onClick={enterAccessPointEditing}
+          >
+            <Icon icon={icons.editAccessPoints} />
+          </Button>
+        )}
       </div>
       <div className="planner-buttons planner-buttons-bottom">
-        {selectedPoint !== null && (
+        {!editingAccessPoints && selectedPoint !== null && (
           <>
             <Button className="planner-fab" aria-label={strings.deletePointButton} onClick={deleteSelectedPoint}>
               <Icon icon={icons.deletePoint} />
@@ -457,16 +509,18 @@ export default function Planner({ router }: { router?: Router }) {
           className="planner-next-mode"
         />
         {/* Disabled, it stays a Tab stop and says why (#31). */}
-        <Button
-          className="planner-fab"
-          aria-label={strings.undoButton}
-          aria-describedby={canUndo(trip) ? undefined : undoReasonId}
-          onClick={undo}
-          disabled={!canUndo(trip)}
-          focusableWhenDisabled
-        >
-          <Icon icon={icons.undo} />
-        </Button>
+        {!editingAccessPoints && (
+          <Button
+            className="planner-fab"
+            aria-label={strings.undoButton}
+            aria-describedby={canUndo(trip) ? undefined : undoReasonId}
+            onClick={undo}
+            disabled={!canUndo(trip)}
+            focusableWhenDisabled
+          >
+            <Icon icon={icons.undo} />
+          </Button>
+        )}
         <span id={undoReasonId} hidden>
           {strings.undoDisabledReason}
         </span>
@@ -499,12 +553,13 @@ export default function Planner({ router }: { router?: Router }) {
       />
       <div className="planner-snap-offers">
         <SnapOffers
-          offers={offers}
+          // Hidden while editing access points; they wait for Done (#227).
+          offers={editingAccessPoints ? [] : offers}
           onAccept={(offer) => dispatch({ type: "acceptOffer", offer })}
           onDecline={(offer) => dispatch({ type: "declineOffer", offer })}
         />
       </div>
-      <Tabs value={tab} onChange={setTab}>
+      <Tabs value={shownTab} onChange={(next) => next !== "accessPoints" && setTab(next)}>
         {sideways ? (
           <SidePanel
             label={strings.planner.sheetLabel}

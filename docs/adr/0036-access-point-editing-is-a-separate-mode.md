@@ -25,3 +25,7 @@ A route point snapped onto one of your access points sits on top of it. Their 44
 ## Consequences
 - Marking an access point where you stand takes two taps instead of one.
 - Turning a route point into an access point means entering the mode and marking it there.
+- The side panel's open or closed setting isn't changed by entering: a reload made while editing comes back in normal mode with the panel as it was before.
+- New trip and Open trip still replace the trip while editing access points, and the mode stays.
+- Back to start is frozen like the other trip edits: its button is hidden while editing.
+- Snap offers held back while editing still follow your access points as you move them, and show the result on Done.

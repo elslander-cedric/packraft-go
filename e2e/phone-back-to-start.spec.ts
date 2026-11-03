@@ -14,7 +14,7 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 const points = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.point");
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
 const backButton = (page: Page) => page.getByRole("button", { name: text.backToStartButton });
-const markButton = (page: Page) => page.getByRole("button", { name: text.markAccessPointButton });
+const editButton = (page: Page) => page.getByRole("button", { name: text.editAccessPointsButton });
 const nextMode = (page: Page, mode: string) =>
   page.getByRole("group", { name: text.nextLegModeLabel }).getByRole("button", { name: mode });
 
@@ -42,10 +42,10 @@ test("the button shows from two points, closes the loop in the next leg's mode, 
   await tapSpot(page, 80, 0);
   await expect(points(page)).toHaveCount(2);
 
-  // It sits above the access-point button, in the bottom-left column.
+  // It sits above the button that enters access point editing, in the bottom-left column.
   await expect(backButton(page)).toBeVisible();
   const back = (await backButton(page).boundingBox())!;
-  const mark = (await markButton(page).boundingBox())!;
+  const mark = (await editButton(page).boundingBox())!;
   expect(Math.abs(back.x - mark.x)).toBeLessThan(1);
   expect(back.y + back.height).toBeLessThanOrEqual(mark.y);
 

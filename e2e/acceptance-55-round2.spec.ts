@@ -2,7 +2,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { showTab, tripPanel } from "./support/planner";
+import { tripPanel } from "./support/planner";
+import { enterAccessPointEditing } from "./support/accessPointEditing";
 
 const text = strings.accessPoints;
 const KEY = "packraft-go.access-points";
@@ -18,7 +19,7 @@ const backups = (page: Page) =>
 
 async function ready(page: Page) {
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  await showTab(page, strings.planner.tabs.accessPoints);
+  await enterAccessPointEditing(page);
 }
 
 test("backup write fails: damaged save kept byte for byte and warned", async ({ page }) => {

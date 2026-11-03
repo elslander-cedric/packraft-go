@@ -112,7 +112,8 @@ test("the peek shows the five tabs (an empty, unnamed trip has no name or totals
   await openPhone(page);
   await dataFonts(page);
 
-  const names = Object.values(strings.planner.tabs);
+  // Normal mode's tabs; access point editing shows only its own (ADR 0036).
+  const names = [strings.planner.tabs.sections, strings.planner.tabs.days];
   for (const name of names) await expect(tab(page, name)).toBeVisible();
   await expect(sheet(page).locator(".planner-totals")).toHaveCount(0);
 
@@ -135,7 +136,7 @@ test("on a narrow phone the tabs share the row equally, each keeps its full name
   // Each tab gets the same width; a long name may wrap onto a second line but is never cut off,
   // and no tab is out of view.
   const widths: number[] = [];
-  for (const name of Object.values(strings.planner.tabs)) {
+  for (const name of [strings.planner.tabs.sections, strings.planner.tabs.days]) {
     const fits = await tab(page, name).evaluate((el) => el.scrollWidth <= el.clientWidth && el.clientHeight < 60);
     expect(fits).toBe(true);
     await expect(tab(page, name)).toBeInViewport({ ratio: 1 });
@@ -346,7 +347,7 @@ test("the floating buttons are icon-only: an icon each, no glyph text, named for
     [strings.planner.menu.button, icons.menu],
     [strings.planner.showPositionButton, icons.showPosition],
     [strings.mapMenuButton, icons.mapMenu],
-    [strings.planner.markAccessPointButton, icons.accessPoint],
+    [strings.planner.editAccessPointsButton, icons.editAccessPoints],
     [strings.legModeHike, icons.hike],
     [strings.legModePaddle, icons.paddle],
     [strings.undoButton, icons.undo],

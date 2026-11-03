@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { aireWarnings } from "@/core/aire";
 import type { Router } from "@/core/router";
-import { firstSession, plannerSession } from "@/core/plannerSession";
+import { editingAccessPoints, firstSession, plannerSession } from "@/core/plannerSession";
 import { createAutoRouter } from "@/core/routing";
 import { defaultSettings, withSetting, type PaceSetting } from "@/core/settings";
 import { summarise } from "@/core/summarise";
@@ -37,6 +37,7 @@ const typingInField = (event: KeyboardEvent) =>
 export function usePlanner(router?: Router) {
   const [session, dispatch] = useReducer(plannerSession, undefined, () => firstSession(loadStoredTrip()));
   const { trip, selectedPoint, keepStoredSave, pendingTrip } = session;
+  const frozen = editingAccessPoints(session);
   const [autoRouter] = useState(() => createAutoRouter(router ?? createBRouterRouter(), dispatch));
 
   // Every change is saved. Restored legs keep their routed results, so syncing routes nothing new.
@@ -91,6 +92,8 @@ export function usePlanner(router?: Router) {
     const onKeyDown = (event: KeyboardEvent) => {
       // While a confirmation is open, keys belong to it (Escape cancels it).
       if (pendingTrip || typingInField(event)) return;
+      // While editing access points the trip is frozen (#227): undo and delete are off.
+      if (frozen) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
         undo();

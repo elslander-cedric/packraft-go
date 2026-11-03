@@ -21,6 +21,7 @@ import {
   showTab,
   tripPanel,
 } from "./support/planner";
+import { enterAccessPointEditing } from "./support/accessPointEditing";
 
 const RECORDED_AT = new Date("2026-11-02T14:00:00+01:00");
 const KAYAK = kayakFixture("layer5-stretches.json");
@@ -207,7 +208,7 @@ test.describe("at desktop size", () => {
     await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, serialiseTrip(trip)]);
     await openWith(page, { incidents: FAILING });
 
-    await showTab(page, strings.planner.tabs.accessPoints);
+    await enterAccessPointEditing(page);
     await tripPanel(page).getByRole("button", { name }).click();
     const note = page.getByRole("dialog", { name }).locator(".access-not-checked");
     await expect(note).toContainText(INCIDENTS_NOTE);
