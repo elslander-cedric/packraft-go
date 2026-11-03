@@ -52,7 +52,7 @@ export type TripMapProps = {
   onLegHold: (leg: number, at: LatLng) => void;
   /** Your position and the browser's accuracy radius in metres, once shown. */
   position: { at: LatLng; accuracyM: number } | null;
-  /** Your access points: tap one to select it, drag it to correct it (#63). */
+  /** Your access points: while editable, tap one to select it, drag it to correct it (#63); otherwise inert (#226). */
   accessPoints?: AccessPointLayerProps;
   /** A place to show (a new object shows it again). */
   focus?: MapFocus | null;

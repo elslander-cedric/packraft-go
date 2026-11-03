@@ -358,6 +358,7 @@ export default function Planner({ router }: { router?: Router }) {
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
           points: access.points,
+          editable: editingAccessPoints,
           selectedId: access.selected?.id ?? null,
           onSelect: onSelectAccessPoint,
           onMove: (id, to) => access.update(id, { position: to }),

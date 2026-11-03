@@ -6,6 +6,10 @@
   justify-content: center;
   background: none;
   border: none;
+}
+
+/* Only in access point editing do the markers take taps and drags (ADR 0036, #226). */
+.access-point-marker.access-point-editable {
   cursor: pointer;
 }
 
