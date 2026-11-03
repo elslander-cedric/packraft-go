@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   addAccessPoint,
+  type AccessPoint,
   applyDefaultName,
   deleteAccessPoint,
   updateAccessPoint,
@@ -38,7 +39,8 @@ export type AccessPointsState = ReturnType<typeof useAccessPoints>;
 /**
  * Holds your access points: loaded from browser storage, autosaved on every
  * change, edited through the core. Also the UI state around them: the
- * selected point and whether the next map click places a new one.
+ * selected point and the new point being placed (the draft), which is only
+ * stored when its details are saved.
  * Only rendered in the browser (see ClientTripPlanner).
  */
 export function useAccessPoints() {
@@ -53,14 +55,16 @@ export function useAccessPoints() {
       : null;
   const keepStoredSave = savingPaused !== null;
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [placing, setPlacing] = useState(false);
+  // A new point placed on the map and not saved yet: it can be dragged, and the flag opens its details.
+  const [draft, setDraft] = useState<AccessPoint | null>(null);
 
   useEffect(() => {
     if (!keepStoredSave) storeAccessPoints(points);
   }, [points, keepStoredSave]);
 
   // Default names (#136, ADR 0027): looked up in the background whenever the
-  // app is online, for every point still waiting for one; never blocks marking.
+  // app is online, for every point still waiting for one, the draft too, so its
+  // details show it; never blocks marking.
   const latest = useRef(points);
   const defaultNames = useRef<DefaultNames | null>(null);
   useEffect(() => {
@@ -71,7 +75,10 @@ export function useAccessPoints() {
       defaultNames.current = startDefaultNames({
         source,
         points: () => latest.current,
-        found: (id, at, name) => setPoints((current) => applyDefaultName(current, id, { at, name })),
+        found: (id, at, name) => {
+          setPoints((current) => applyDefaultName(current, id, { at, name }));
+          setDraft((current) => (current?.id === id ? applyDefaultName([current], id, { at, name })[0]! : current));
+        },
         online: () => navigator.onLine,
       });
       defaultNames.current.wake();
@@ -85,41 +92,38 @@ export function useAccessPoints() {
     };
   }, []);
   useEffect(() => {
-    latest.current = points;
+    latest.current = draft ? [...points, draft] : points;
     defaultNames.current?.wake();
-  }, [points]);
-
-  // Escape cancels placing a new point.
-  useEffect(() => {
-    if (!placing) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPlacing(false);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [placing]);
+  }, [points, draft]);
 
   const selected = points.find((point) => point.id === selectedId) ?? null;
 
   return {
     points,
     selected,
-    placing,
+    draft,
     /** Why changes are not being saved, or null while they are. */
     savingPaused,
     /** Where a damaged save was backed up on load, or null. */
     backupKey: stored.backupKey,
-    togglePlacing: () => setPlacing((current) => !current),
-    /** Adds a point at `at`, ends placing and selects the new point. Returns its id. */
-    placeAt: (at: LatLng): string => {
-      const id = newId();
-      setPoints((current) => addAccessPoint(current, { id, at, now: now() }));
-      setPlacing(false);
-      setSelectedId(id);
-      return id;
+    /** Places the draft at `at`, or moves it there (its default name is looked up again); nothing is stored yet. */
+    placeDraft: (at: LatLng) => {
+      setDraft((current) =>
+        current
+          ? updateAccessPoint([current], current.id, { position: at }, now())[0]!
+          : addAccessPoint([], { id: newId(), at, now: now() })[0]!,
+      );
+      setSelectedId(null);
     },
-    /** Makes the next map tap place a new point (without toggling it off). */
-    startPlacing: () => setPlacing(true),
+    /** Stores the draft with the planner's changes and selects it. */
+    saveDraft: (changes: AccessPointChanges) => {
+      if (!draft) return;
+      const { id } = draft;
+      setPoints((current) => updateAccessPoint([...current, draft], id, changes, now()));
+      setDraft(null);
+      setSelectedId(id);
+    },
+    discardDraft: () => setDraft(null),
     select: (id: string | null) => setSelectedId(id),
     update: (id: string, changes: AccessPointChanges) =>
       setPoints((current) => updateAccessPoint(current, id, changes, now())),

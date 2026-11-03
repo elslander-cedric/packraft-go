@@ -1,38 +1,47 @@
 import { useState } from "react";
-import type { LatLng } from "@/core/trip";
 import type { AccessPointsState } from "../useAccessPoints";
 import type { MyPosition } from "./position";
 
-/** Marking an access point where you stand, for the floating button (#119). */
+/** The flag button in access point editing (#119, ADR 0036). */
 export type MarkAccessPoint = ReturnType<typeof useMarkAccessPoint>;
 
 /**
- * Marks an access point at your GPS position (#63, #119). Without a position
- * yet it asks for one first; without a fix it switches to placing the point
- * on the map, so the next map tap places it. `onMarked` gets the new point's id.
+ * The flag button: opens the details of the new point placed on the map (the
+ * draft). With no draft it places one at your GPS position first, asking for a
+ * position when there is none yet; without a fix it asks you to tap the map.
+ * `onMarked` opens the draft's details.
  */
 export function useMarkAccessPoint(
   access: AccessPointsState,
   position: MyPosition,
   showPosition: (onFirst?: (first: MyPosition) => void) => void,
-  onMarked: (id: string) => void,
+  onMarked: () => void,
 ) {
   // Waiting for a position fix (or a failure) to mark the point.
   const [locating, setLocating] = useState(false);
+  // No fix: the next map tap places the point. Cleared once a draft is placed.
+  const [needsTap, setNeedsTap] = useState(false);
 
-  const markAt = (at: LatLng) => onMarked(access.placeAt(at));
   const mark = () => {
+    setNeedsTap(false);
+    if (access.draft) {
+      onMarked();
+      return;
+    }
     if (position.state === "shown") {
-      markAt(position.at);
+      access.placeDraft(position.at);
+      onMarked();
       return;
     }
     setLocating(true);
     showPosition((first) => {
       setLocating(false);
-      if (first.state === "shown") markAt(first.at);
-      else access.startPlacing();
+      if (first.state === "shown") {
+        access.placeDraft(first.at);
+        onMarked();
+      } else setNeedsTap(true);
     });
   };
 
-  return { mark, locating };
+  return { mark, locating, needsTap: needsTap && access.draft === null, clearNeedsTap: () => setNeedsTap(false) };
 }

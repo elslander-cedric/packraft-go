@@ -8,6 +8,15 @@ export const accessUseColours: Record<AccessPointUse, string> = {
   both: "#0e7c86",
 };
 
+/**
+ * Your access points' markers say the planner's mode, not their use (ADR 0036): grey while they
+ * are inert in normal mode, green while access point editing lets you change them.
+ */
+export const accessPointModeColours = {
+  normal: "#8a8a8a",
+  editing: "#1f9d55",
+} as const;
+
 /** One colour per access status, shared by the map and its legend. Red is only for explicit bans. */
 export const accessColours: Record<AccessState, string> = {
   open: "#1f9d55",

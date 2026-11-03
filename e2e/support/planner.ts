@@ -2,7 +2,7 @@
 // trip panel on the right, the floating buttons over the map and the menu top left.
 import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../../src/ui/strings";
-import { editAccessPointsButton, enterAccessPointEditing, markAccessPointButton } from "./accessPointEditing";
+import { draftMarker, enterAccessPointEditing, isEditing, markAccessPointButton } from "./accessPointEditing";
 
 const text = strings.planner;
 
@@ -286,15 +286,15 @@ export async function mouseHold(page: Page, at: { x: number; y: number }, ms = 5
 export const accessPointDialog = (page: Page) => page.getByRole("dialog", { name: text.accessPointDialogTitle });
 
 /**
- * Marks an access point by the floating button, then a click on the map at `at` (without a
- * position fix the button starts place mode), entering access point editing first when the
- * planner is in normal mode (ADR 0036). Leaves the new point's dialog open.
+ * Marks an access point: a click on the map at `at` places the new point, then the flag button
+ * opens its details, entering access point editing first when the planner is in normal mode
+ * (ADR 0036). Leaves the new point's dialog open; Save stores it.
  */
 export async function markAccessPointAt(page: Page, at: { x: number; y: number }) {
-  if (await editAccessPointsButton(page).isVisible()) await enterAccessPointEditing(page);
-  await markAccessPointButton(page).click();
-  await expect(page.getByRole("status").filter({ hasText: text.placingState })).toBeVisible();
+  if (!(await isEditing(page))) await enterAccessPointEditing(page);
   await page.mouse.click(at.x, at.y);
+  await expect(draftMarker(page)).toHaveCount(1);
+  await markAccessPointButton(page).click();
   await expect(accessPointDialog(page)).toBeVisible();
 }
 

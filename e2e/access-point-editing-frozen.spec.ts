@@ -1,6 +1,7 @@
 // Access point editing freezes the trip (ADR 0036, #227): the trip stays drawn, but its points
 // have no hit areas, holding a leg inserts nothing, undo, delete and camp are off (buttons and
-// keys), snap offers wait for Done, and a tap on the empty map does nothing. Your access points
+// keys), snap offers wait until leaving, and a tap on the empty map only places a new access point
+// (not stored until its details are saved), never a route point. Your access points
 // drag without panning the map, even on a route point (by touch and by mouse); official aires
 // still open their details.
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
@@ -139,7 +140,7 @@ test.describe("on a phone", () => {
     await expect.poll(async () => (await storedAccessPoints(page))[0].position.lng).toBeGreaterThan(trip.points[0].lng);
   });
 
-  test("a press on a route point does nothing to it and holding a leg inserts no point; after Done it does", async ({
+  test("a press on a route point does nothing to it and holding a leg inserts no point; after leaving it does", async ({
     page,
   }) => {
     const network = await openEditing(page);
@@ -169,7 +170,10 @@ test.describe("on a phone", () => {
     await expect(points(page)).toHaveCount(3);
   });
 
-  test("with a fix, a tap on the empty map does nothing", async ({ page, context }) => {
+  test("with a fix, a tap on the empty map places a new access point there, not a route point, and stores nothing", async ({
+    page,
+    context,
+  }) => {
     await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({
       latitude: 50.268,
@@ -185,8 +189,10 @@ test.describe("on a phone", () => {
     await page.touchscreen.tap(box.x + box.width / 2 - 60, box.y + box.height / 4);
     await inputHandled(page);
     await expect(points(page)).toHaveCount(0);
-    await expect(markers(page)).toHaveCount(0);
+    await expect(markers(page)).toHaveCount(1);
+    await expect(markers(page)).toHaveClass(/access-point-draft/);
     await expect(page.getByRole("dialog", { name: text.accessPointDialogTitle })).toHaveCount(0);
+    expect(await page.evaluate((key) => localStorage.getItem(key), ACCESS_POINTS_KEY)).not.toContain("position");
   });
 });
 
@@ -245,7 +251,7 @@ test.describe("on a wide screen", () => {
     await expect.poll(async () => (await storedAccessPoints(page))[0].position.lng).toBeGreaterThan(trip.points[0].lng);
   });
 
-  test("undo, delete and camp are off, by button and by key; Done brings them back", async ({ page }) => {
+  test("undo, delete and camp are off, by button and by key; leaving brings them back", async ({ page }) => {
     await serveOffline(page, hiking);
     await openPlanner(page);
     const click = await mapClicker(page);
@@ -270,7 +276,7 @@ test.describe("on a wide screen", () => {
     await expect(points(page)).toHaveCount(1);
   });
 
-  test("snap offers are hidden while editing access points and come back on Done", async ({ page }) => {
+  test("snap offers are hidden while editing access points and come back on leaving", async ({ page }) => {
     const start = { lat: 50.3427, lng: 5.4563 };
     const putIn = { lat: 50.3527, lng: 5.4563 };
     const nearby = { lat: 50.3537, lng: 5.4563 }; // about 111 m from the put-in

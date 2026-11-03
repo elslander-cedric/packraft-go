@@ -91,6 +91,8 @@ export const strings = {
     // "Access point: Hotton bridge (Put-in, Slipway)" or "Access point: Put-in, Official aire".
     marker: (heading: string, detail: string | null) =>
       detail === null ? `Access point: ${heading}` : `Access point: ${heading} (${detail})`,
+    // The marker of a new access point placed on the map and not saved yet (ADR 0036).
+    draftMarker: "New access point, not saved yet",
     // Its use and kind, e.g. "Put-in, Official aire": a list entry's detail line, or its heading
     // when it has no name or note (#136).
     useAndKind: (use: string, kind: string) => `${use}, ${kind}`,
@@ -197,20 +199,17 @@ export const strings = {
     // Your access points in the planner (#119; first #63, ADR 0023).
     accessPointsLabel: "Your access points",
     // Access point editing (ADR 0036, #225): the planner's mode for changing your access points.
-    // The floating button bottom left that enters it, icon-only.
+    // The floating button bottom left that enters it and, pressed again, leaves it; icon-only,
+    // coloured while in it.
     editAccessPointsButton: "Edit access points",
-    // The banner while in it, and its button that leaves it.
-    editingAccessPointsState: "Editing access points",
-    editingAccessPointsDone: "Done",
     // The floating button bottom left in access point editing, icon-only.
     markAccessPointButton: "Mark an access point",
     // The delete and camp buttons shown while a point is selected (#120) are icon-only;
     // their names are `deletePointButton` and `campButton`.
     markLocating: "Finding your position to mark the access point…",
-    // The state line while the next map tap places an access point.
-    placingState: "Placing an access point",
-    placingCancel: "Cancel",
-    noAccessPoints: "No access points yet. Mark one with the button at the bottom of the map.",
+    // Without a position fix, the flag button asks for a tap on the map.
+    markTapMap: "Tap the map to place the access point.",
+    noAccessPoints: "No access points yet. Tap the map to place one, drag it into place, then tap the flag button.",
     // The tab's two lists while the trip has a route (#156): on the route in route order, then the rest nearest you.
     onRouteHeading: "On the route",
     notOnRouteHeading: "Not on the route",

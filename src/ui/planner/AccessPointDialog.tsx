@@ -9,6 +9,8 @@ import { strings } from "../strings";
 export type AccessPointDialogProps = {
   /** The point being edited, or null while the dialog is closed. */
   point: AccessPoint | null;
+  /** A new point not stored yet: Save stores it even without changes. */
+  unsaved?: boolean;
   /** Save, with only the fields the planner changed. */
   onSave: (id: string, changes: AccessPointChanges) => void;
   onClose: () => void;
@@ -16,11 +18,11 @@ export type AccessPointDialogProps = {
 
 /**
  * An access point's details: a dialog from a row's edit button,
- * or opened for each new point. What the planner changes is a draft; Save
+ * or from the flag button for the new point placed on the map, which Save stores. What the planner changes is a draft; Save
  * stores only the changed fields, so a default name that arrives meanwhile
  * (ADR 0027) is not overwritten. Cancel drops the draft.
  */
-export default function AccessPointDialog({ point, onSave, onClose }: AccessPointDialogProps) {
+export default function AccessPointDialog({ point, unsaved = false, onSave, onClose }: AccessPointDialogProps) {
   const [draft, setDraft] = useState<AccessPointChanges>({});
   // Each opening, or another point, starts from the stored point again.
   const [editing, setEditing] = useState(point?.id ?? null);
@@ -38,7 +40,7 @@ export default function AccessPointDialog({ point, onSave, onClose }: AccessPoin
       confirmLabel={strings.planner.accessPointSave}
       cancelLabel={strings.confirmCancel}
       onConfirm={() => {
-        if (point && Object.keys(draft).length > 0) onSave(point.id, draft);
+        if (point && (unsaved || Object.keys(draft).length > 0)) onSave(point.id, draft);
         onClose();
       }}
       onCancel={onClose}

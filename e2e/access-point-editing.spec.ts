@@ -1,14 +1,16 @@
 // Access point editing, entered and left (ADR 0036, #225): the planner opens in normal mode
 // with the Sections and Days tabs only; the floating button enters the mode, which shows only
-// the Access points tab and the mark button; Done restores the earlier tab and panel or sheet.
+// the Access points tab and the mark button; leaving restores the earlier tab and panel or sheet.
 // Entering and leaving clear the selection. On a wide screen and on a phone.
 import { devices, expect, test, type Page } from "@playwright/test";
+import { accessPointModeColours } from "../src/map/accessColours";
+import { icons } from "../src/ui/icons/icons";
 import { strings } from "../src/ui/strings";
+import { iconIn } from "./support/icons";
 import {
-  doneButton,
   editAccessPointsButton,
-  editingBanner,
   enterAccessPointEditing,
+  draftMarker,
   leaveAccessPointEditing,
   markAccessPointButton,
 } from "./support/accessPointEditing";
@@ -34,13 +36,16 @@ const deletePoint = (page: Page) => page.getByRole("button", { name: strings.del
 const accessRows = (page: Page) =>
   page.getByRole("region", { name: text.accessPointsLabel, exact: true }).getByRole("listitem");
 const markers = (page: Page) => page.locator(".leaflet-container .access-point-marker");
+// The fill of the first marker's shape.
+const markerFill = (page: Page) => markers(page).first().locator("svg > g").first().locator("[fill]");
 const storedPoints = (page: Page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null")?.accessPoints?.length ?? 0, ACCESS_POINTS_KEY);
 const planner = (page: Page) => page.locator(".planner");
 
 async function expectNormalMode(page: Page) {
-  await expect(editAccessPointsButton(page)).toBeVisible();
-  await expect(editingBanner(page)).toHaveCount(0);
+  await expect(editAccessPointsButton(page)).toHaveAttribute("aria-pressed", "false");
+  await expect(editAccessPointsButton(page)).not.toHaveCSS("background-color", "rgb(27, 111, 181)");
+  await expect(iconIn(editAccessPointsButton(page), icons.editAccessPoints)).toHaveCount(1);
   await expect(markAccessPointButton(page)).toHaveCount(0);
   await expect(tabNames(page)).toHaveText([text.tabs.sections, text.tabs.days]);
 }
@@ -65,17 +70,21 @@ test.describe("on a wide screen", () => {
     await enterAccessPointEditing(page);
     await expect(tabNames(page)).toHaveText([text.tabs.accessPoints]);
     await expect(markAccessPointButton(page)).toBeVisible();
-    await expect(editAccessPointsButton(page)).toHaveCount(0);
-    const done = (await doneButton(page).boundingBox())!;
-    expect(done.width).toBeGreaterThanOrEqual(44);
-    expect(done.height).toBeGreaterThanOrEqual(44);
+    // No banner: the same button stays, coloured, pressed.
+    await expect(page.getByText("Editing access points")).toHaveCount(0);
+    await expect(editAccessPointsButton(page)).toHaveAttribute("aria-pressed", "true");
+    await expect(editAccessPointsButton(page)).toHaveCSS("background-color", "rgb(27, 111, 181)");
+    // Two icons: the flag marks, the exit icon leaves.
+    await expect(iconIn(markAccessPointButton(page), icons.accessPoint)).toHaveCount(1);
+    await expect(iconIn(editAccessPointsButton(page), icons.leaveAccessPointEditing)).toHaveCount(1);
+    await expectAtLeast44(page);
 
     await page.reload();
     await expect(tripPanel(page)).toBeVisible();
     await expectNormalMode(page);
   });
 
-  test("entering opens the Access points tab from a collapsed panel; Done restores the tab and the collapsed panel", async ({
+  test("entering opens the Access points tab from a collapsed panel; leaving restores the tab and the collapsed panel", async ({
     page,
   }) => {
     await serveOffline(page);
@@ -129,23 +138,31 @@ test.describe("on a wide screen", () => {
     await enterAccessPointEditing(page);
     await expect(deletePoint(page)).toHaveCount(0);
 
-    // An access point selected while editing is cleared by Done.
+    // An access point selected while editing is cleared by leaving.
     const free = await freeMapCentre(page);
     await markAccessPointAt(page, { x: free.x + 150, y: free.y - 120 });
     await saveAccessPoint(page);
     await expect(markers(page)).toHaveClass(/access-point-selected/);
+    // Green while editing, grey in normal mode.
+    await expect(markerFill(page)).toHaveAttribute("fill", accessPointModeColours.editing);
     await leaveAccessPointEditing(page);
     await expect(markers(page)).not.toHaveClass(/access-point-selected/);
+    await expect(markerFill(page)).toHaveAttribute("fill", accessPointModeColours.normal);
   });
 
   test("marking works in access point editing by tapping the map without a fix", async ({ page }) => {
     await serveOffline(page);
     await openPlanner(page);
     await enterAccessPointEditing(page);
+    // Without a fix and no new point, the flag asks for a tap on the map.
     await markAccessPointButton(page).click();
-    await expect(page.getByRole("status").filter({ hasText: text.placingState })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: text.markTapMap })).toBeVisible();
+    await expect(accessPointDialog(page)).toHaveCount(0);
     const free = await freeMapCentre(page);
     await page.mouse.click(free.x, free.y);
+    await expect(page.getByRole("status").filter({ hasText: text.markTapMap })).toHaveCount(0);
+    await expect(draftMarker(page)).toHaveCount(1);
+    await markAccessPointButton(page).click();
     await expect(accessPointDialog(page)).toBeVisible();
     await saveAccessPoint(page);
     await expect(markers(page)).toHaveCount(1);
@@ -158,7 +175,7 @@ test.describe("on a phone", () => {
   const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
   test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
 
-  test("normal mode has Sections and Days; entering raises the sheet on Access points, Done restores the peek and the tab", async ({
+  test("normal mode has Sections and Days; entering raises the sheet on Access points, leaving restores the peek and the tab", async ({
     page,
   }) => {
     await serveOffline(page);
@@ -199,11 +216,11 @@ test.describe("on a phone", () => {
     await enterAccessPointEditing(page);
     await expect(deletePoint(page)).toHaveCount(0);
 
-    // An access point selected while editing is cleared by Done.
-    await markAccessPointButton(page).click();
-    await expect(page.getByRole("status").filter({ hasText: text.placingState })).toBeVisible();
-    // Left of the position message, above the state lines and the raised sheet.
+    // An access point selected while editing is cleared by leaving.
+    // Above the state lines and the raised sheet.
     await page.touchscreen.tap(at(-150, -100).x, at(-150, -100).y);
+    await expect(draftMarker(page)).toHaveCount(1);
+    await markAccessPointButton(page).click();
     await saveAccessPoint(page);
     await expect(markers(page)).toHaveClass(/access-point-selected/);
     await leaveAccessPointEditing(page);
@@ -217,8 +234,12 @@ test.describe("on a phone", () => {
     await openPlanner(page);
     await expect(markAccessPointButton(page)).toHaveCount(0);
     await enterAccessPointEditing(page);
+    // With a fix and no new point on the map, the flag places it at your position and opens it.
     await markAccessPointButton(page).click();
     await expect(accessPointDialog(page)).toBeVisible();
+    await expect(draftMarker(page)).toHaveCount(1);
+    expect(await storedPoints(page)).toBe(0);
+    await saveAccessPoint(page);
     await expect.poll(() => storedPoints(page)).toBe(1);
   });
 });

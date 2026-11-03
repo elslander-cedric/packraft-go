@@ -38,6 +38,7 @@ import {
   faMapLocationDot,
   faMountain,
   faPen,
+  faRightFromBracket,
   faRotateLeft,
   faShoePrints,
   faStairs,
@@ -74,8 +75,9 @@ export const icons = {
   backToStart: faArrowsSpin,
   // Your access point: its marker on the map, and the button that marks one (access point editing).
   accessPoint: faFlag,
-  // Enters access point editing (ADR 0036).
+  // Enters access point editing (ADR 0036), and the same button while in it, which leaves it.
   editAccessPoints: faMapLocationDot,
+  leaveAccessPointEditing: faRightFromBracket,
   deletePoint: faXmark,
   // An official aire's marker and legend (ADR 0035): down onto the water, up off it.
   airePutIn: faArrowDown,

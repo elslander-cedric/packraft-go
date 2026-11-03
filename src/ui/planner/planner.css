@@ -105,6 +105,13 @@
   font-size: 1rem;
 }
 
+/* A toggle that is on, e.g. Edit access points while editing them (ADR 0036). */
+.planner-fab.planner-fab-active,
+.planner-fab.planner-fab-active:hover:not([data-disabled]) {
+  background: var(--color-primary);
+  color: var(--color-on-accent);
+}
+
 .planner-message {
   max-width: 16rem;
   margin: 0;

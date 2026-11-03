@@ -67,7 +67,7 @@ test("deleting the access point an offer points at removes the offer", async ({ 
     .click();
   await page.getByRole("alertdialog").getByRole("button", { name: text.deleteConfirm.confirm }).click();
   await expect(page.locator(".access-point-marker")).toHaveCount(0);
-  // Offers are hidden while editing access points (#227): on Done it is gone.
+  // Offers are hidden while editing access points (#227): on leaving it is gone.
   await leaveAccessPointEditing(page);
   await expect(offer(page)).toHaveCount(0);
 });
