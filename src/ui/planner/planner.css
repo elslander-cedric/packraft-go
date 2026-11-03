@@ -92,6 +92,13 @@
   transition: bottom 250ms;
 }
 
+/* With the sheet at full the map is a strip under the top row, with no room for the bottom
+   buttons or the cards and snap offers above the sheet; they come back when it is lowered. */
+.planner-stop-full .planner-buttons-bottom,
+.planner-stop-full .planner-snap-offers {
+  visibility: hidden;
+}
+
 .planner-buttons-left {
   right: auto;
   left: var(--space-3);
@@ -652,6 +659,32 @@
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* The selected point's card: "Point n · distance" on one line, breaking before the distance only
+   when the line can't fit; its delete and camp buttons as close together as the leg card's toggle. */
+.planner-point-card-title {
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.planner-point-card-title > span {
+  white-space: nowrap;
+}
+
+.planner-point-card-actions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 2px;
+}
+
+.planner-snap-offers .button.planner-point-card-button {
+  min-width: calc(2.75rem - 4px);
+  min-height: calc(2.75rem - 4px);
+  padding: 0;
+  border: none;
+  background: none;
 }
 
 .planner-snap-offers .button.planner-leg-card-close {

@@ -39,6 +39,7 @@ import SectionsList from "./SectionsList";
 import MapMenu from "./MapMenu";
 import PlannerMenu from "./PlannerMenu";
 import PlaceSearch from "./PlaceSearch";
+import PointCard from "./PointCard";
 import TripTotals from "./TripTotals";
 import { positionMessage } from "./position";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
@@ -461,22 +462,7 @@ export default function Planner({ router }: { router?: Router }) {
         </Button>
       </div>
       <div className="planner-buttons planner-buttons-bottom">
-        {/* While editing access points the trip is frozen (#227): no delete, camp, undo or back to start. */}
-        {!editingAccessPoints && selectedPoint !== null && (
-          <>
-            <Button className="planner-fab" aria-label={strings.deletePointButton} onClick={deleteSelectedPoint}>
-              <Icon icon={icons.deletePoint} />
-            </Button>
-            <Button
-              className="planner-fab"
-              aria-label={strings.campButton}
-              aria-pressed={isCamp(trip, selectedPoint)}
-              onClick={() => dispatch({ type: "toggleCampOnSelectedPoint" })}
-            >
-              <Icon icon={icons.camp} />
-            </Button>
-          </>
-        )}
+        {/* While editing access points the trip is frozen (#227): no undo or back to start. */}
         {/* The next leg's mode means nothing while the trip is frozen (ADR 0036). */}
         {!editingAccessPoints && (
           <ToggleGroup
@@ -547,6 +533,17 @@ export default function Planner({ router }: { router?: Router }) {
         onClose={() => setDetailsSection(null)}
       />
       <div className="planner-snap-offers">
+        {/* The selected point's card; none while editing access points, which clears it. */}
+        {!editingAccessPoints && selectedPoint !== null && (
+          <PointCard
+            point={selectedPoint}
+            distanceKm={summary.legs.slice(0, selectedPoint).reduce((km, leg) => km + leg.distanceKm, 0)}
+            camp={isCamp(trip, selectedPoint)}
+            onDelete={deleteSelectedPoint}
+            onCamp={() => dispatch({ type: "toggleCampOnSelectedPoint" })}
+            onClose={() => dispatch({ type: "deselect" })}
+          />
+        )}
         {/* The selected leg's mode (#230); none while editing access points, which clears it. */}
         {session.selectedLeg !== null && summary.legs[session.selectedLeg] && (
           <LegModeCard

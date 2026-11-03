@@ -1,5 +1,5 @@
 // Point editing by touch on the phone (#120, ADR 0026): tap a point to select it, delete and
-// camp buttons while it is selected, press and drag a point or an access point (the map
+// camp buttons in its card while it is selected, press and drag a point or an access point (the map
 // never pans). Marking a selected point as an access point is gone (ADR 0036).
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { serialiseAccessPoints, type AccessPoint } from "../src/core/accessPoints";
@@ -110,6 +110,49 @@ test("a tap selects a point; delete and camp appear; delete removes it", async (
   await deleteButton(page).click();
   await expect(points(page)).toHaveCount(1);
   await expect(deleteButton(page)).toHaveCount(0);
+});
+
+// The point's buttons sit in its card, so the bottom-right stack stays short: with the sheet at
+// half it clears the top row, and at full (no map left for them) it and the card are hidden.
+test("the selected point's card holds delete and camp; the bottom buttons never overlap the top ones", async ({
+  page,
+}) => {
+  const box = async (locator: Locator) => (await locator.boundingBox())!;
+  // Its title says how far along the route the point is: the second is one leg from the start.
+  const card = page.getByRole("group", { name: /^Point 2 · [\d.]+ km$/ });
+  const topRight = page.locator(".planner-buttons-top:not(.planner-buttons-left)");
+  const bottomRight = page.locator(".planner-buttons-bottom:not(.planner-buttons-left)");
+  await serveOffline(page, routed);
+  await openPhone(page);
+  await twoPoints(page);
+  await tapAt(page, await centreOf(points(page).nth(1)));
+  await expect(card.getByRole("button", { name: strings.deletePointButton })).toBeVisible();
+  await expect(card.getByRole("button", { name: strings.campButton })).toBeVisible();
+  await expect(bottomRight.getByRole("button", { name: strings.deletePointButton })).toHaveCount(0);
+  // Its number and distance are shown whole, never cut short (#70: measured once the font is in).
+  await page.evaluate(() => document.fonts.ready);
+  for (const line of await card.locator(".planner-point-card-title > span").all())
+    expect(await line.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+
+  await raiseSheet(page);
+  await sheetSettled(page);
+  const stack = await box(bottomRight);
+  expect(stack.y).toBeGreaterThanOrEqual((await box(topRight)).y + (await box(topRight)).height);
+  const shown = await box(card);
+  expect(shown.x + shown.width).toBeLessThanOrEqual(stack.x);
+  expect(shown.y + shown.height).toBeLessThanOrEqual((await box(sheet(page))).y);
+
+  await page.getByRole("slider", { name: text.resizeSheetHandle }).focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(page.locator(".planner")).toHaveClass(/planner-stop-full/);
+  await expect(undoButton(page)).toBeHidden();
+  await expect(card).toBeHidden();
+
+  // Lowered again, the card's close button unselects the point.
+  await page.keyboard.press("Home");
+  await card.getByRole("button", { name: text.selectedPointClose }).click();
+  await expect(points(page).nth(1)).not.toHaveClass(/point-selected/);
+  await expect(card).toHaveCount(0);
 });
 
 test("camp marks the selected point, and a map tap with a selection only deselects", async ({ page }) => {
