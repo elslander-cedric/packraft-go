@@ -208,8 +208,12 @@ export const strings = {
     editAccessPointsButton: "Edit access points",
     // The floating button bottom left in access point editing, icon-only.
     markAccessPointButton: "Mark an access point",
-    // The delete and camp buttons shown while a point is selected (#120) are icon-only;
-    // their names are `deletePointButton` and `campButton`.
+    // The selected point's card, floating above the sheet or panel: its title, with how far along
+    // the route it is from the start. Its delete
+    // and camp buttons are icon-only; their names are `deletePointButton` and `campButton`.
+    selectedPointTitle: (n: number, distance: string) => `Point ${n} · ${distance}`,
+    selectedPointName: (n: number) => `Point ${n}`,
+    selectedPointClose: "Unselect the point",
     markLocating: "Finding your position to mark the access point…",
     // Without a position fix, the flag button asks for a tap on the map.
     markTapMap: "Tap the map to place the access point.",

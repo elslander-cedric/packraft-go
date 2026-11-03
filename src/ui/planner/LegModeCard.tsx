@@ -45,7 +45,7 @@ export default function LegModeCard({ leg, mode, distanceKm, onChange, onClose }
         className="planner-leg-card-mode"
       />
       <Button className="planner-leg-card-close" aria-label={strings.planner.selectedLegClose} onClick={onClose}>
-        <Icon icon={icons.deletePoint} />
+        <Icon icon={icons.unselect} />
       </Button>
     </div>
   );

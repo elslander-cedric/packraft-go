@@ -78,7 +78,10 @@ export const icons = {
   // Enters access point editing (ADR 0036), and the same button while in it, which leaves it.
   editAccessPoints: faMapLocationDot,
   leaveAccessPointEditing: faRightFromBracket,
-  deletePoint: faXmark,
+  // The selected point's delete button, in its card; the trash can of an access point row.
+  deletePoint: faTrashCan,
+  // Unselects the selected leg or point, in its card.
+  unselect: faXmark,
   // An official aire's marker and legend (ADR 0035): down onto the water, up off it.
   airePutIn: faArrowDown,
   aireTakeOut: faArrowUp,
