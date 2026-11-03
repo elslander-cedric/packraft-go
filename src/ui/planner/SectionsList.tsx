@@ -1,8 +1,8 @@
 import type { AireWarning } from "@/core/aire";
 import type { TripSummary } from "@/core/summarise";
 import { legsAccess, type TripAccess } from "@/core/tripAccess";
-import type { Leg } from "@/core/trip";
-import { useEffect, useRef } from "react";
+import type { Leg, LegMode } from "@/core/trip";
+import { useEffect, useRef, type ReactNode } from "react";
 import { strings } from "../strings";
 import { hasLegDetails } from "./LegDetailsDialog";
 import { RoutingFailure, RoutingStatus, TripRow } from "./TripRow";
@@ -30,6 +30,8 @@ export type SectionsListProps = {
   selectedLeg?: number;
   /** The first legs of the sections whose legs are shown. */
   open: readonly number[];
+  /** PROTOTYPE (leg mode change): a row's mode control, for its legs from `first` to `last`. */
+  modeControl?: (what: string, first: number, last: number, mode: LegMode) => ReactNode;
 };
 
 /**
@@ -53,6 +55,7 @@ export default function SectionsList({
   onShowDetails,
   onShowLegDetails,
   onRetry,
+  modeControl,
 }: SectionsListProps) {
   const list = useRef<HTMLOListElement>(null);
   const { sections } = summary;
@@ -83,6 +86,7 @@ export default function SectionsList({
             aire={aire.filter((warning) => indices.includes(warning.leg))}
             selected={i === selected}
             onSelect={() => onSelect(i)}
+            modeControl={modeControl?.(strings.sectionLabel(i + 1), section.firstLeg, section.lastLeg, section.mode)}
             {...(indices.length > 1 && { open: legsOpen })}
             {...(indices.some((leg) => hasLegDetails(access, aire, leg)) && {
               details: { label: strings.planner.sectionDetailsButton(i + 1), onShow: () => onShowDetails(i) },
@@ -122,6 +126,7 @@ export default function SectionsList({
                     aire={aire.filter((warning) => warning.leg === leg)}
                     selected={leg === selectedLeg}
                     onSelect={() => onSelectLeg(leg)}
+                    modeControl={modeControl?.(strings.legLabel(leg + 1), leg, leg, legs[leg].mode)}
                     {...(hasLegDetails(access, aire, leg) && {
                       details: { label: strings.planner.legDetailsButton(leg + 1), onShow: () => onShowLegDetails(leg) },
                     })}

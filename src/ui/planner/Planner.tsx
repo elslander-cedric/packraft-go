@@ -44,6 +44,16 @@ import { useMarkAccessPoint } from "./useMarkAccessPoint";
 import { useSideways } from "./usePlannerLayout";
 import { usePosition } from "./usePosition";
 import "./planner.css";
+import { PrototypeSwitcher, useVariant } from "../prototype/PrototypeSwitcher";
+import { formatDistance } from "../format";
+import {
+  LegModeCard,
+  legModeVariants,
+  prototypeCss,
+  RowModeControl,
+  SelectedModeToggle,
+  type LegModeVariant,
+} from "./legModePrototype";
 
 /** A tab of normal mode (`normalTabs`, in the core), or the Access points tab of access point editing. */
 type PlannerTab = NormalTab | "accessPoints";
@@ -106,6 +116,8 @@ export default function Planner({ router }: { router?: Router }) {
     openFile,
   } = usePlanner(router);
   const { trip, selectedPoint, offers } = session;
+  // PROTOTYPE (leg mode change): which variant is shown (`?variant=`).
+  const variant = useVariant(legModeVariants) as LegModeVariant;
   const undoReasonId = useId();
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
@@ -191,6 +203,11 @@ export default function Planner({ router }: { router?: Router }) {
   const onMapTap = (at: LatLng) => {
     if (editingAccessPoints) access.placeDraft(at);
     else if (selectedPoint !== null) dispatch({ type: "deselect" });
+    else if (variant === "D" && tappedLeg !== null) setTappedLeg(null);
+    else if (variant === "B" && modeTarget !== null) {
+      setSelectedLeg(undefined);
+      setSelectedSection(undefined);
+    }
     else {
       if (held !== null && trip.points.length === 0) setPick({ ...held, carry: true });
       dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points, officialAires });
@@ -228,6 +245,33 @@ export default function Planner({ router }: { router?: Router }) {
     raise();
     setFocus({ area: legsArea(trip, section), ...covered() });
   };
+  // PROTOTYPE (leg mode change): changes the legs from `first` to `last` to `mode`, one
+  // setLegMode each. A changed section can merge with its neighbours, so the section that holds
+  // `first` is selected again once the summary has it.
+  const [reselect, setReselect] = useState<number | null>(null);
+  const [tappedLeg, setTappedLeg] = useState<number | null>(null);
+  const setModes = (first: number, last: number, mode: LegMode) => {
+    for (let index = first; index <= last; index++)
+      dispatch({ type: "setLegMode", index, mode, accessPoints: access.points, officialAires });
+    if (selectedSection !== undefined) setReselect(first);
+  };
+  if (reselect !== null) {
+    const index = summary.sections.findIndex((section) => section.firstLeg <= reselect && reselect <= section.lastLeg);
+    setReselect(null);
+    setSelectedSection(index === -1 ? undefined : index);
+  }
+  if (tappedLeg !== null && !trip.legs[tappedLeg]) setTappedLeg(null);
+  const modeTarget =
+    selectedLeg !== undefined && trip.legs[selectedLeg]
+      ? { what: strings.legLabel(selectedLeg + 1), first: selectedLeg, last: selectedLeg }
+      : selectedSection !== undefined && summary.sections[selectedSection]
+        ? {
+            what: strings.sectionLabel(selectedSection + 1),
+            first: summary.sections[selectedSection].firstLeg,
+            last: summary.sections[selectedSection].lastLeg,
+          }
+        : null;
+
   // Entering access point editing opens the panel or sheet on the Access points tab; leaving
   // restores the tab and the panel or sheet as they were. Both clear the selection (ADR 0036).
   const enterAccessPointEditing = () => {
@@ -327,6 +371,11 @@ export default function Planner({ router }: { router?: Router }) {
               onShowDetails={setDetailsSection}
               onShowLegDetails={setDetailsLeg}
               onRetry={(index) => dispatch({ type: "retryLeg", index })}
+              {...((variant === "A" || variant === "C") && {
+                modeControl: (what: string, first: number, last: number, mode: LegMode) => (
+                  <RowModeControl variant={variant} what={what} mode={mode} onChange={(to) => setModes(first, last, to)} />
+                ),
+              })}
             />
           </TabPanel>
           <TabPanel value="days">
@@ -370,6 +419,7 @@ export default function Planner({ router }: { router?: Router }) {
         onPointTap={(index) => dispatch({ type: "pointClicked", index })}
         onPointDrop={(index, to) => dispatch({ type: "movePoint", index, to })}
         onLegHold={(index, near) => dispatch({ type: "insertPoint", index, near })}
+        {...(variant === "D" && { onLegTap: setTappedLeg })}
         frozen={editingAccessPoints}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
@@ -493,13 +543,21 @@ export default function Planner({ router }: { router?: Router }) {
             </Button>
           </>
         )}
-        <ToggleGroup
-          label={strings.planner.nextLegModeLabel}
-          value={nextMode}
-          options={legModeOptions}
-          onChange={(mode) => setPick({ mode, ...pickedFor(trip) })}
-          className="planner-next-mode"
-        />
+        {variant === "B" && !editingAccessPoints && modeTarget !== null ? (
+          <SelectedModeToggle
+            what={modeTarget.what}
+            mode={trip.legs[modeTarget.first].mode}
+            onChange={(mode) => setModes(modeTarget.first, modeTarget.last, mode)}
+          />
+        ) : (
+          <ToggleGroup
+            label={strings.planner.nextLegModeLabel}
+            value={nextMode}
+            options={legModeOptions}
+            onChange={(mode) => setPick({ mode, ...pickedFor(trip) })}
+            className="planner-next-mode"
+          />
+        )}
         {/* Disabled, it stays a Tab stop and says why (#31). */}
         {!editingAccessPoints && (
           <Button
@@ -544,6 +602,15 @@ export default function Planner({ router }: { router?: Router }) {
         onClose={() => setDetailsSection(null)}
       />
       <div className="planner-snap-offers">
+        {variant === "D" && !editingAccessPoints && tappedLeg !== null && summary.legs[tappedLeg] && (
+          <LegModeCard
+            leg={tappedLeg}
+            distance={formatDistance(summary.legs[tappedLeg].distanceKm)}
+            mode={trip.legs[tappedLeg].mode}
+            onChange={(mode) => setModes(tappedLeg, tappedLeg, mode)}
+            onClose={() => setTappedLeg(null)}
+          />
+        )}
         <SnapOffers
           // Hidden while editing access points; they wait until leaving (#227).
           offers={editingAccessPoints ? [] : offers}
@@ -602,6 +669,8 @@ export default function Planner({ router }: { router?: Router }) {
           setEditingDraft(false);
         }}
       />
+      <style>{prototypeCss}</style>
+      <PrototypeSwitcher variants={legModeVariants} current={variant} />
     </div>
   );
 }

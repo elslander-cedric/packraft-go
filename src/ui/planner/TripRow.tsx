@@ -68,6 +68,8 @@ export type TripRowProps = {
   status?: ReactNode;
   /** An open section's legs. */
   children?: ReactNode;
+  /** PROTOTYPE (leg mode change): a mode control at the right of the row's head. */
+  modeControl?: ReactNode;
 };
 
 /** The button to a row's details; a tap only opens them, the row stays as it is. */
@@ -101,6 +103,7 @@ export function TripRow({
   details,
   status,
   children,
+  modeControl,
 }: TripRowProps) {
   const [time, ...elevation] = figures(row);
   return (
@@ -130,6 +133,7 @@ export function TripRow({
           )}
           <LegAccessIcons state={state} access={access} aire={aire} className="planner-row-access" />
         </Button>
+        {modeControl}
         {details && !status && <DetailsButton details={details} />}
       </div>
       {status}

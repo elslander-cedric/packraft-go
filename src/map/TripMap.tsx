@@ -1,7 +1,7 @@
 "use client";
 
-import type { CircleMarker as LeafletCircleMarker, Polyline as LeafletPolyline } from "leaflet";
-import { latLngBounds, type Point } from "leaflet";
+import type { CircleMarker as LeafletCircleMarker, LeafletMouseEvent, Polyline as LeafletPolyline } from "leaflet";
+import { DomEvent, latLngBounds, type Point } from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import {
   Circle,
@@ -50,6 +50,8 @@ export type TripMapProps = {
   onPointDrop: (index: number, to: LatLng) => void;
   /** A finger held still on a leg for 0.4 s, or a right-click on it, at `at` (#122). */
   onLegHold: (leg: number, at: LatLng) => void;
+  /** PROTOTYPE (leg mode change): a tap on a leg; when given, the tap no longer reaches the map. */
+  onLegTap?: (leg: number) => void;
   /**
    * The trip is drawn but can't be touched (access point editing, ADR 0036, #227): its points and
    * legs have no hit areas, so a press reaches your access points or the map beneath.
@@ -307,9 +309,36 @@ const legHitStyle = { color: "#000", opacity: 0, weight: LEG_HIT_WIDTH_PX, fill:
  * A leg's transparent 28 px hit line: hold it 0.4 s (or right-click it) to
  * insert a point (#122). A tap on it is still a tap on the map.
  */
-function LegHitLine({ positions, onHold }: { positions: LatLng[]; onHold: (at: LatLng) => void }) {
+function LegHitLine({
+  positions,
+  onHold,
+  onTap,
+}: {
+  positions: LatLng[];
+  onHold: (at: LatLng) => void;
+  onTap?: () => void;
+}) {
   const line = useRef<LeafletPolyline>(null);
   useHold(line, onHold);
+  // PROTOTYPE (leg mode change): a tap, not the click that ends a hold, goes to `onTap` only.
+  useEffect(() => {
+    const layer = line.current;
+    const element = layer?.getElement();
+    if (!layer || !element || !onTap) return;
+    let downAt = 0;
+    const down = (event: Event) => (downAt = event.timeStamp);
+    const click = (event: LeafletMouseEvent) => {
+      if (event.originalEvent.timeStamp - downAt >= HOLD_MS) return;
+      DomEvent.stopPropagation(event);
+      onTap();
+    };
+    element.addEventListener("pointerdown", down);
+    layer.on("click", click);
+    return () => {
+      element.removeEventListener("pointerdown", down);
+      layer.off("click", click);
+    };
+  }, [onTap]);
   return <Polyline ref={line} positions={positions} className="leg-hit" pathOptions={legHitStyle} />;
 }
 
@@ -340,8 +369,9 @@ function TripLayers({
   onPointTap,
   onPointDrop,
   onLegHold,
+  onLegTap,
   frozen,
-}: Pick<TripMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold" | "frozen">) {
+}: Pick<TripMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold" | "onLegTap" | "frozen">) {
   const [preview, setPreview] = useState<{ index: number; at: LatLng } | null>(null);
   const points = preview ? trip.points.with(preview.index, preview.at) : trip.points;
   const handlers = (index: number): PressDragHandlers => ({
@@ -378,7 +408,12 @@ function TripLayers({
       <Pane name="trip-leg-hits" style={{ zIndex: paneZIndex.tripLegHits }}>
         {!frozen &&
           legs.map(({ positions }, i) => (
-            <LegHitLine key={`leg-hit-${i}`} positions={positions} onHold={(at) => onLegHold(i, at)} />
+            <LegHitLine
+              key={`leg-hit-${i}`}
+              positions={positions}
+              onHold={(at) => onLegHold(i, at)}
+              {...(onLegTap && { onTap: () => onLegTap(i) })}
+            />
           ))}
       </Pane>
       {putInsAndTakeOuts(trip).map(({ kind, point }) => (
@@ -427,6 +462,7 @@ export default function TripMap({
   onPointTap,
   onPointDrop,
   onLegHold,
+  onLegTap,
   frozen,
   position,
   accessPoints,
@@ -457,6 +493,7 @@ export default function TripMap({
         onPointTap={onPointTap}
         onPointDrop={onPointDrop}
         onLegHold={onLegHold}
+        onLegTap={onLegTap}
         frozen={frozen}
       />
       {accessPoints && <AccessPointLayer {...accessPoints} />}
