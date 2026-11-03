@@ -13,7 +13,7 @@ import { strings } from "../src/ui/strings";
 import { enterAccessPointEditing, leaveAccessPointEditing } from "./support/accessPointEditing";
 import { toggleAccessLayer } from "./support/mapMenu";
 import { serveOffline } from "./support/offline";
-import { mapRegion, points } from "./support/planner";
+import { mapOffset, mapRegion, points, settled } from "./support/planner";
 
 // Hotton, on the Ourthe. 0.0005 degrees of latitude is about 55 m.
 const start: LatLng = { lat: 50.268, lng: 5.446 };
@@ -62,7 +62,7 @@ async function openWith(page: Page, accessAt: LatLng) {
   await expect(markers(page)).toHaveCount(1);
   // Let the map settle on the trip before measuring.
   await expect(mapRegion(page).locator(".leaflet-map-pane")).not.toHaveClass(/leaflet-zoom-anim/);
-  await page.waitForTimeout(300);
+  await settled(async () => [await mapOffset(page), await centreOf(markers(page).first())]);
   return network;
 }
 

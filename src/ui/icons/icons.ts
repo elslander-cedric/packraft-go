@@ -72,7 +72,7 @@ export const icons = {
   undo: faRotateLeft,
   // Back to start (GLOSSARY "Loop"), on the map.
   backToStart: faArrowsSpin,
-  // Marks an access point, in access point editing.
+  // Your access point: its marker on the map, and the button that marks one (access point editing).
   accessPoint: faFlag,
   // Enters access point editing (ADR 0036).
   editAccessPoints: faMapLocationDot,

@@ -13,9 +13,9 @@ const nearA: LatLng = { lat: 50.3532, lng: 5.4563 }; // about 55 m from A
 const T = "2026-10-14T08:00:00.000Z";
 const trip = [A, B].reduce((t, at) => applyEdit(t, { type: "addPoint", at }), emptyTrip());
 
-const daysClosed: PanelView = { tab: "days", sheet: "peek", panelOpen: false };
+const daysPeek: PanelView = { tab: "days", sheet: "peek" };
 const selected = (): PlannerSession => ({ ...firstSession({ trip }), selectedPoint: 1 });
-const enter = (s: PlannerSession, returnTo: PanelView = daysClosed) =>
+const enter = (s: PlannerSession, returnTo: PanelView = daysPeek) =>
   plannerSession(s, { type: "enterAccessPointEditing", returnTo });
 
 describe("planner modes", () => {
@@ -27,14 +27,14 @@ describe("planner modes", () => {
   it("entering access point editing keeps the view to return to and clears the selection", () => {
     const before = selected();
     const after = enter(before);
-    expect(after.mode).toEqual({ kind: "accessPointEditing", returnTo: daysClosed });
+    expect(after.mode).toEqual({ kind: "accessPointEditing", returnTo: daysPeek });
     expect(after.selectedPoint).toBeNull();
     expect(after.trip).toBe(before.trip);
   });
 
   it("entering again while editing changes nothing", () => {
     const editing = enter(selected());
-    expect(enter(editing, { tab: "sections", sheet: "full", panelOpen: true })).toBe(editing);
+    expect(enter(editing, { tab: "sections", sheet: "full" })).toBe(editing);
   });
 
   it("Done goes back to normal mode and clears the selection", () => {

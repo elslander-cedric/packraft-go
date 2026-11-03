@@ -1,12 +1,18 @@
 "use client";
 
 import { useId, useRef, useState, type CSSProperties } from "react";
+import {
+  editingAccessPoints as isEditingAccessPoints,
+  normalTabs,
+  type NormalTab,
+  type SheetStop,
+} from "@/core/plannerSession";
 import type { Router } from "@/core/router";
 import { canGoBackToStart, canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import type { MapFocus } from "@/map/TripMap";
 import type { MapCover } from "@/map/SearchResultLayer";
-import { BottomSheet, sheetStopShare, type SheetStop } from "../components/BottomSheet";
+import { BottomSheet, sheetStopShare } from "../components/BottomSheet";
 import { Button } from "../components/Button";
 import { SidePanel, useSidePanelWidth } from "../components/SidePanel";
 import { sidePanelCover } from "../components/sidePanelWidth";
@@ -39,10 +45,8 @@ import { useSideways } from "./usePlannerLayout";
 import { usePosition } from "./usePosition";
 import "./planner.css";
 
-type PlannerTab = keyof typeof strings.planner.tabs;
-/** A tab of normal mode; access point editing shows only the Access points tab (ADR 0036). */
-type NormalTab = Exclude<PlannerTab, "accessPoints">;
-const normalTabs: readonly PlannerTab[] = ["sections", "days"];
+/** A tab of normal mode (`normalTabs`, in the core), or the Access points tab of access point editing. */
+type PlannerTab = NormalTab | "accessPoints";
 const editingTabs: readonly PlannerTab[] = ["accessPoints"];
 
 /**
@@ -106,7 +110,7 @@ export default function Planner({ router }: { router?: Router }) {
   const [position, showPosition] = usePosition();
   const message = positionMessage(position);
   // Access point editing (ADR 0036): the planner's other mode, kept in the planner session.
-  const editingAccessPoints = session.mode.kind === "accessPointEditing";
+  const editingAccessPoints = isEditingAccessPoints(session);
   // Normal mode's tab; kept while editing access points, so Done brings it back.
   const [tab, setTab] = useState<NormalTab>("sections");
   const shownTab: PlannerTab = editingAccessPoints ? "accessPoints" : tab;
@@ -117,8 +121,13 @@ export default function Planner({ router }: { router?: Router }) {
   // Except on a narrow screen in portrait, the side panel replaces the sheet (ADR 0034). Its width
   // and whether it is open are settings on this device, kept as they were whatever the sheet's stop.
   const sideways = useSideways();
-  const [{ width: panelWidth, open: panelOpen }, changePanel] = useSidePanel();
-  const setPanelOpen = (open: boolean) => changePanel({ open });
+  const [{ width: panelWidth, open: storedPanelOpen }, changePanel] = useSidePanel();
+  // While editing access points the panel's open state is not stored: a reload made while editing
+  // comes back in normal mode with the panel as it was before entering (ADR 0036).
+  const [panelOpenWhileEditing, setPanelOpenWhileEditing] = useState(true);
+  const panelOpen = editingAccessPoints ? panelOpenWhileEditing : storedPanelOpen;
+  const setPanelOpen = (open: boolean) =>
+    editingAccessPoints ? setPanelOpenWhileEditing(open) : changePanel({ open });
   const shownPanelWidth = useSidePanelWidth(panelWidth);
   // Shows the content: the sheet raised to half, or the panel opened.
   const raise = () => (sideways ? setPanelOpen(true) : setStop("half"));
@@ -222,19 +231,21 @@ export default function Planner({ router }: { router?: Router }) {
   // Entering access point editing opens the panel or sheet on the Access points tab; Done
   // restores the tab and the panel or sheet as they were. Both clear the selection (ADR 0036).
   const enterAccessPointEditing = () => {
-    dispatch({ type: "enterAccessPointEditing", returnTo: { tab, sheet: stop, panelOpen } });
+    dispatch({ type: "enterAccessPointEditing", returnTo: { tab, sheet: stop } });
     access.select(null);
-    raiseFromPeek();
+    // The panel opens for this visit only; the stored setting keeps the earlier state.
+    setPanelOpenWhileEditing(true);
+    if (!sideways && stop === "peek") setStop("half");
   };
   const leaveAccessPointEditing = () => {
-    if (session.mode.kind !== "accessPointEditing") return;
+    if (session.mode.kind === "normal") return;
     const { returnTo } = session.mode;
     dispatch({ type: "leaveAccessPointEditing" });
     access.select(null);
     if (access.placing) access.togglePlacing();
     setTab(returnTo.tab);
     setStop(returnTo.sheet);
-    if (panelOpen !== returnTo.panelOpen) setPanelOpen(returnTo.panelOpen);
+    // The stored panel state was left as it was on entering, so normal mode shows it again.
   };
 
   // A marker tap selects the point; while editing access points it also shows its row, raised to

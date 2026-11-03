@@ -404,3 +404,35 @@ export async function closeLegDetails(page: Page) {
   await legDetailsDialog(page).getByRole("button", { name: text.legDetailsClose }).click();
   await expect(legDetailsDialog(page)).toHaveCount(0);
 }
+
+/** Where the map's pane is shifted to: it changes when the map pans. */
+export const mapOffset = (page: Page) =>
+  mapRegion(page)
+    .locator(".leaflet-map-pane")
+    .evaluate((element) => {
+      const m = new DOMMatrix(getComputedStyle(element).transform);
+      return { x: m.m41, y: m.m42 };
+    });
+
+/** Waits until `read` gives the same answer twice in a row, 200 ms apart (e.g. the map has stopped moving). */
+export async function settled(read: () => Promise<unknown>) {
+  let last = "";
+  await expect
+    .poll(
+      async () => {
+        const now = JSON.stringify(await read());
+        const same = now === last;
+        last = now;
+        return same;
+      },
+      { intervals: [200] },
+    )
+    .toBe(true);
+}
+
+/**
+ * Waits until the page has handled what came before: two animation frames, by which React has
+ * rendered what the last input did and run its effects (autosave). For "nothing happened" checks.
+ */
+export const inputHandled = (page: Page) =>
+  page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));

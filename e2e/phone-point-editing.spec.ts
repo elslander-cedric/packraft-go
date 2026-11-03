@@ -245,6 +245,7 @@ test("a route point under an access point can still be selected and dragged", as
   await expect(markers(page)).toHaveCount(1);
   await expect(legLines(page).first()).toHaveClass(/leg-routed/);
   await sheetSettled(page);
+  const storedBefore = (await stored(page)).accessPoints[0];
   const at = await centreOf(points(page).nth(0));
   const onTop = await centreOf(markers(page).first());
   expect(Math.abs(onTop.x - at.x)).toBeLessThan(3);
@@ -264,6 +265,8 @@ test("a route point under an access point can still be selected and dragged", as
   expect(Math.abs(marker.x - at.x)).toBeLessThan(3);
   expect(Math.abs(marker.y - at.y)).toBeLessThan(3);
   expect(await mapOffset(page)).toEqual(offsetBefore);
+  // The stored access point is unchanged too.
+  expect((await stored(page)).accessPoints[0]).toEqual(storedBefore);
 });
 
 const slipway: AccessPoint = {

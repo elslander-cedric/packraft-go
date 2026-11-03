@@ -1,13 +1,13 @@
 import { Drawer } from "@base-ui/react/drawer";
 import { useCallback, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { sheetStops, type SheetStop } from "@/core/plannerSession";
 import "./BottomSheet.css";
 
-/** Where the sheet rests: just the header, half the screen, or nearly all of it. */
-export type SheetStop = "peek" | "half" | "full";
+export type { SheetStop };
 
 /** The peek's least height; it grows when its content needs more, e.g. a wrapped header. */
 const MIN_PEEK_PX = 128;
-const stops: readonly SheetStop[] = ["peek", "half", "full"];
+const stops: readonly SheetStop[] = sheetStops;
 /** The share of the screen's height the sheet covers at the stops above the peek. */
 export const sheetStopShare: Record<Exclude<SheetStop, "peek">, number> = { half: 0.5, full: 0.9 };
 

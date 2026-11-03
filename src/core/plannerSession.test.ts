@@ -80,7 +80,7 @@ const actions: [name: string, make: Make][] = [
   ["accept offer", (s) => ({ type: "acceptOffer", offer: s.offers[0] })],
   ["decline offer", (s) => ({ type: "declineOffer", offer: s.offers[0] })],
   ["file downloaded", { type: "fileDownloaded" }],
-  ["enter access point editing", { type: "enterAccessPointEditing", returnTo: { tab: "sections", sheet: "peek", panelOpen: true } }],
+  ["enter access point editing", { type: "enterAccessPointEditing", returnTo: { tab: "sections", sheet: "peek" } }],
   ["route requested", (s) => ({ type: "routeRequested", request: requestOfLeg(s.trip, 1) })],
   ["route arrived", (s) => ({ type: "routeArrived", request: requestOfLeg(s.trip, 1), route: routed })],
 ];

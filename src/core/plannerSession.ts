@@ -48,19 +48,31 @@ export type ReplaceQuestion = "newTrip" | "openFile";
 /** Why a file could not be opened. */
 export type FileError = "unknown-version" | "invalid";
 
-/** The panel or sheet as it was before access point editing: Done restores it (ADR 0036). */
+/** Where the bottom sheet rests: just the header, half the screen, or nearly all of it. */
+export const sheetStops = ["peek", "half", "full"] as const;
+export type SheetStop = (typeof sheetStops)[number];
+
+/** The panel's tabs in normal mode; access point editing shows only the Access points tab (ADR 0036). */
+export const normalTabs = ["sections", "days"] as const;
+export type NormalTab = (typeof normalTabs)[number];
+
+/**
+ * The panel or sheet as it was before access point editing: Done restores it (ADR 0036). The side
+ * panel's open state isn't here: it is a stored setting, left alone while editing.
+ */
 export type PanelView = {
-  readonly tab: "sections" | "days";
+  readonly tab: NormalTab;
   /** The bottom sheet's stop. */
-  readonly sheet: "peek" | "half" | "full";
-  /** Whether the side panel was open. */
-  readonly panelOpen: boolean;
+  readonly sheet: SheetStop;
 };
 
 /** The planner's mode (GLOSSARY "Access point editing", ADR 0036): always normal on load. */
 export type PlannerMode =
   | { readonly kind: "normal" }
   | { readonly kind: "accessPointEditing"; readonly returnTo: PanelView };
+
+/** Whether the planner is editing access points, so the trip is frozen (#227). */
+export const editingAccessPoints = (session: PlannerSession): boolean => session.mode.kind === "accessPointEditing";
 
 export type PlannerSession = {
   readonly mode: PlannerMode;
@@ -188,7 +200,7 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
   if (action.type === "confirmReplace") return session.pendingTrip ? replaced(session, session.pendingTrip) : session;
   if (action.type === "cancelReplace") return session.pendingTrip ? { ...session, pendingTrip: null } : session;
   if (session.pendingTrip) return session;
-  if (session.mode.kind === "accessPointEditing" && frozenWhileEditing.has(action.type)) return session;
+  if (editingAccessPoints(session) && frozenWhileEditing.has(action.type)) return session;
 
   const { trip } = session;
   switch (action.type) {
@@ -262,10 +274,10 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
     case "fileDownloaded":
       return session.fileError === null ? session : { ...session, fileError: null };
     case "enterAccessPointEditing":
-      return session.mode.kind === "accessPointEditing"
+      return editingAccessPoints(session)
         ? session
         : { ...session, mode: { kind: "accessPointEditing", returnTo: action.returnTo }, selectedPoint: null };
     case "leaveAccessPointEditing":
-      return session.mode.kind === "normal" ? session : { ...session, mode: { kind: "normal" }, selectedPoint: null };
+      return editingAccessPoints(session) ? { ...session, mode: { kind: "normal" }, selectedPoint: null } : session;
   }
 }
