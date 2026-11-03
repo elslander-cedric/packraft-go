@@ -185,8 +185,9 @@ test.describe("on a phone", () => {
     await openWith(page, north);
     await enterAccessPointEditing(page);
     const marker = markers(page).first();
-    // Entering raises the sheet: tap the marker where it now is, if it is still in view.
+    // Entering raises the sheet and redraws the marker: tap it once both have settled.
     await expect(marker).toBeInViewport();
+    await settled(async () => [await mapOffset(page), await centreOf(marker)]);
     const at = await centreOf(marker);
     await page.touchscreen.tap(at.x, at.y);
     await expect(marker).toHaveClass(/access-point-selected/);
