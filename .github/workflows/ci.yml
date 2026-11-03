@@ -11,9 +11,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  static:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -34,16 +34,45 @@ jobs:
       - name: Unit tests
         run: npm test
 
+  # The e2e tests run in shards, each job building the app and running a third
+  # of the tests, so the whole suite takes a few minutes instead of ten.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
       - name: End-to-end tests
-        run: npm run e2e
+        run: npm run e2e -- --shard=${{ matrix.shard }}/3
 
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
+
+  # The one required status check on main: it passes only when every job above did.
+  check:
+    runs-on: ubuntu-latest
+    needs: [static, e2e]
+    if: always()
+    steps:
+      - name: All jobs passed
+        run: test "${{ needs.static.result }}" = success && test "${{ needs.e2e.result }}" = success
