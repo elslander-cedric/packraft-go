@@ -1,8 +1,10 @@
 "use client";
 
 // Your access points on the map (#55, ADR 0023): one marker each, coloured by
-// use and shaped by kind, with a white flag in it (ADR 0028). Tap a marker
-// to select it; press and drag it to move it (#120).
+// use and shaped by kind, with a white flag in it (ADR 0028). While `editable`
+// (access point editing, ADR 0036), tap a marker to select it; press and drag
+// it to move it (#120). Otherwise the markers are inert (#226): a press passes
+// through to the route point, leg or map under it.
 // Its own layer, apart from the trip's, and only loaded through TripMap.
 import type { Marker as LeafletMarker } from "leaflet";
 import { divIcon } from "leaflet";
@@ -21,6 +23,8 @@ import "./AccessPointLayer.css";
 
 export type AccessPointLayerProps = {
   points: AccessPoints;
+  /** Access point editing: the markers take taps and drags. Otherwise they don't react. */
+  editable: boolean;
   /** The id of the selected access point, if any. */
   selectedId: string | null;
   /** The planner clicked an access point's marker. */
@@ -54,17 +58,19 @@ const markerIcons = new Map<string, ReturnType<typeof divIcon>>();
  * Drawn in a 44 px hit box, for press-and-drag (#120) instead of Leaflet's marker drag,
  * which a finger can't use.
  */
-function accessPointIcon(point: AccessPoint, selected: boolean) {
+function accessPointIcon(point: AccessPoint, selected: boolean, editable: boolean) {
   const { use, kind } = point;
   const { heading, detail } = accessPointText(point);
   const label = strings.accessPoints.marker(heading, detail);
-  const key = `${use}|${kind}|${selected}|${label}`;
+  const key = `${use}|${kind}|${selected}|${editable}|${label}`;
   const known = markerIcons.get(key);
   if (known) return known;
   // Labels follow names and notes as you type: don't keep every one.
   if (markerIcons.size > 200) markerIcons.clear();
   const icon = divIcon({
-    className: `access-point-marker use-${use} kind-${kind}${selected ? " access-point-selected" : ""}`,
+    className:
+      `access-point-marker use-${use} kind-${kind}` +
+      `${editable ? " access-point-editable" : ""}${selected ? " access-point-selected" : ""}`,
     html:
       `<svg role="img" aria-label="${escapeAttribute(label)}" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}">` +
       `<title>${escapeText(label)}</title>` +
@@ -85,7 +91,7 @@ function PressDragMarker({
   onMove,
 }: { point: AccessPoint; selected: boolean } & Pick<AccessPointLayerProps, "onSelect" | "onMove">) {
   const marker = useRef<LeafletMarker>(null);
-  const icon = accessPointIcon(point, selected);
+  const icon = accessPointIcon(point, selected, true);
   usePressDrag(
     marker,
     {
@@ -100,18 +106,35 @@ function PressDragMarker({
   return <Marker ref={marker} position={point.position} icon={icon} />;
 }
 
-export default function AccessPointLayer({ points, selectedId, onSelect, onMove }: AccessPointLayerProps) {
+/** A marker that doesn't react: not interactive (no pointer events), not focusable. */
+function InertMarker({ point, selected }: { point: AccessPoint; selected: boolean }) {
+  return (
+    <Marker
+      position={point.position}
+      icon={accessPointIcon(point, selected, false)}
+      interactive={false}
+      keyboard={false}
+    />
+  );
+}
+
+export default function AccessPointLayer({ points, editable, selectedId, onSelect, onMove }: AccessPointLayerProps) {
+  // Leaflet reads `interactive` only when it adds a marker: a change of mode remounts them.
   return (
     <>
-      {points.map((point) => (
-        <PressDragMarker
-          key={point.id}
-          point={point}
-          selected={point.id === selectedId}
-          onSelect={onSelect}
-          onMove={onMove}
-        />
-      ))}
+      {points.map((point) =>
+        editable ? (
+          <PressDragMarker
+            key={point.id}
+            point={point}
+            selected={point.id === selectedId}
+            onSelect={onSelect}
+            onMove={onMove}
+          />
+        ) : (
+          <InertMarker key={point.id} point={point} selected={point.id === selectedId} />
+        ),
+      )}
     </>
   );
 }
