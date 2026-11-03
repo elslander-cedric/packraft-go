@@ -16,3 +16,11 @@
 .access-point-marker.access-point-selected > svg {
   filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 3px #ffd400);
 }
+
+/* The new point placed while editing and not saved yet (ADR 0036): see-through, with a dashed ring. */
+.access-point-marker.access-point-draft > svg {
+  opacity: 0.75;
+  border-radius: 50%;
+  outline: 2px dashed #000;
+  outline-offset: 3px;
+}

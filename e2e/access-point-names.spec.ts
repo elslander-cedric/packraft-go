@@ -68,16 +68,15 @@ test.describe("on a desktop-sized window", () => {
     const network = await serveOffline(page, { nominatim: nominatimFixture("reverse-road.json") });
     await openMap(page);
 
-    // Offline: the point is added and saved at once, without a name, and nothing is asked.
+    // Offline: the new point has no name, nothing is asked, and nothing is stored before Save.
     await context.setOffline(true);
     await markAccessPointAt(page, await freeMapCentre(page));
     await expect(dialogName(page)).toHaveValue("");
     await expect(dialogName(page)).toHaveAttribute("placeholder", text.namePlaceholder);
-    await expect.poll(async () => (await stored(page))?.[0]?.nameSource).toBe("to-look-up");
-    expect((await stored(page))[0].name).toBe("");
+    expect((await stored(page)) ?? []).toEqual([]);
     expect(network.nominatim).toHaveLength(0);
 
-    // Back online: the default name shows in the field, greyed, leads the marker's name, and is saved.
+    // Back online: the default name shows in the field, greyed, leads the marker's name, and Save stores it.
     await context.setOffline(false);
     await expect(dialogName(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
     await expect(dialogName(page)).toHaveValue("");
@@ -155,7 +154,7 @@ test.describe("on the phone", () => {
     await context.setOffline(true);
     await page.getByRole("button", { name: plannerText.markAccessPointButton }).click();
     await expect(dialog(page)).toBeVisible();
-    await expect.poll(async () => (await stored(page))?.[0]?.nameSource).toBe("to-look-up");
+    expect((await stored(page)) ?? []).toEqual([]);
     await expect(nameField(page)).toHaveAttribute("placeholder", text.namePlaceholder);
     expect(network.nominatim).toHaveLength(0);
 
@@ -182,7 +181,7 @@ test.describe("on the phone", () => {
 
     await context.setOffline(true);
     await page.getByRole("button", { name: plannerText.markAccessPointButton }).click();
-    await dialog(page).getByRole("button", { name: strings.confirmCancel }).click();
+    await dialog(page).getByRole("button", { name: plannerText.accessPointSave }).click();
     await expect(rows(page)).toHaveCount(1);
     await expect.poll(async () => (await stored(page))?.[0]?.nameSource).toBe("to-look-up");
     // Unnamed, without a note: its use and kind lead.

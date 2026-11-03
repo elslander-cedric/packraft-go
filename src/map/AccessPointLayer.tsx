@@ -1,10 +1,13 @@
 "use client";
 
-// Your access points on the map (#55, ADR 0023): one marker each, coloured by
-// use and shaped by kind, with a white flag in it (ADR 0028). While `editable`
+// Your access points on the map (#55, ADR 0023): one marker each, shaped by
+// kind, with a white flag in it (ADR 0028), grey in normal mode and green in
+// access point editing (ADR 0036). While `editable`
 // (access point editing, ADR 0036), tap a marker to select it; press and drag
 // it to move it (#120). Otherwise the markers are inert (#226): a press passes
-// through to the route point, leg or map under it.
+// through to the route point, leg or map under it. The new point placed while
+// editing and not saved yet (the draft) has its own marker: drag it into place;
+// a tap on it does nothing, as only the flag button opens its details.
 // Its own layer, apart from the trip's, and only loaded through TripMap.
 import type { Marker as LeafletMarker } from "leaflet";
 import { divIcon } from "leaflet";
@@ -16,7 +19,7 @@ import { accessPointText } from "@/ui/accessPointText";
 import { icons } from "@/ui/icons/icons";
 import { iconSvg, type IconPlacement } from "@/ui/icons/iconSvg";
 import { strings } from "@/ui/strings";
-import { accessUseColours } from "./accessColours";
+import { accessPointModeColours } from "./accessColours";
 import { escapeAttribute, escapeText } from "./escapeHtml";
 import { HIT_SIZE_PX, usePressDrag } from "./pressDrag";
 import "./AccessPointLayer.css";
@@ -31,6 +34,10 @@ export type AccessPointLayerProps = {
   onSelect: (id: string) => void;
   /** The planner dragged an access point's marker and dropped it at `to`. */
   onMove: (id: string, to: LatLng) => void;
+  /** The new point placed on the map and not saved yet, if any. */
+  draft?: AccessPoint | null;
+  /** The planner dragged the new point's marker and dropped it at `to`. */
+  onDraftMove?: (to: LatLng) => void;
 };
 
 // Each kind has its own shape, in a 24 × 24 box.
@@ -58,11 +65,11 @@ const markerIcons = new Map<string, ReturnType<typeof divIcon>>();
  * Drawn in a 44 px hit box, for press-and-drag (#120) instead of Leaflet's marker drag,
  * which a finger can't use.
  */
-function accessPointIcon(point: AccessPoint, selected: boolean, editable: boolean) {
+function accessPointIcon(point: AccessPoint, selected: boolean, editable: boolean, draft = false) {
   const { use, kind } = point;
   const { heading, detail } = accessPointText(point);
-  const label = strings.accessPoints.marker(heading, detail);
-  const key = `${use}|${kind}|${selected}|${editable}|${label}`;
+  const label = draft ? strings.accessPoints.draftMarker : strings.accessPoints.marker(heading, detail);
+  const key = `${use}|${kind}|${selected}|${editable}|${draft}|${label}`;
   const known = markerIcons.get(key);
   if (known) return known;
   // Labels follow names and notes as you type: don't keep every one.
@@ -70,11 +77,12 @@ function accessPointIcon(point: AccessPoint, selected: boolean, editable: boolea
   const icon = divIcon({
     className:
       `access-point-marker use-${use} kind-${kind}` +
-      `${editable ? " access-point-editable" : ""}${selected ? " access-point-selected" : ""}`,
+      `${editable ? " access-point-editable" : ""}${selected ? " access-point-selected" : ""}` +
+      `${draft ? " access-point-draft" : ""}`,
     html:
       `<svg role="img" aria-label="${escapeAttribute(label)}" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}">` +
       `<title>${escapeText(label)}</title>` +
-      `<g stroke="#fff" stroke-width="2" stroke-linejoin="round">${kindShape[kind](accessUseColours[use])}</g>` +
+      `<g stroke="#fff" stroke-width="2" stroke-linejoin="round">${kindShape[kind](accessPointModeColours[editable ? "editing" : "normal"])}</g>` +
       `<g color="#fff">${iconSvg(icons.accessPoint, flagPlacement[kind])}</g></svg>`,
     iconSize: [HIT_SIZE_PX, HIT_SIZE_PX],
     iconAnchor: [HIT_SIZE_PX / 2, HIT_SIZE_PX / 2],
@@ -87,11 +95,12 @@ function accessPointIcon(point: AccessPoint, selected: boolean, editable: boolea
 function PressDragMarker({
   point,
   selected,
+  draft = false,
   onSelect,
   onMove,
-}: { point: AccessPoint; selected: boolean } & Pick<AccessPointLayerProps, "onSelect" | "onMove">) {
+}: { point: AccessPoint; selected: boolean; draft?: boolean } & Pick<AccessPointLayerProps, "onSelect" | "onMove">) {
   const marker = useRef<LeafletMarker>(null);
-  const icon = accessPointIcon(point, selected, true);
+  const icon = accessPointIcon(point, selected, true, draft);
   usePressDrag(
     marker,
     {
@@ -118,7 +127,15 @@ function InertMarker({ point, selected }: { point: AccessPoint; selected: boolea
   );
 }
 
-export default function AccessPointLayer({ points, editable, selectedId, onSelect, onMove }: AccessPointLayerProps) {
+export default function AccessPointLayer({
+  points,
+  editable,
+  selectedId,
+  onSelect,
+  onMove,
+  draft,
+  onDraftMove,
+}: AccessPointLayerProps) {
   // Leaflet reads `interactive` only when it adds a marker: a change of mode remounts them.
   return (
     <>
@@ -134,6 +151,16 @@ export default function AccessPointLayer({ points, editable, selectedId, onSelec
         ) : (
           <InertMarker key={point.id} point={point} selected={point.id === selectedId} />
         ),
+      )}
+      {draft && (
+        <PressDragMarker
+          key={draft.id}
+          point={draft}
+          selected={false}
+          draft
+          onSelect={() => {}}
+          onMove={(_, to) => onDraftMove?.(to)}
+        />
       )}
     </>
   );

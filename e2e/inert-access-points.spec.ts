@@ -125,7 +125,7 @@ test.describe("on a wide screen", () => {
     await page.mouse.up();
     await expect.poll(() => storedAccessPoint(page)).not.toEqual(north);
 
-    // Done: inert again.
+    // Left: inert again.
     await leaveAccessPointEditing(page);
     const moved = await storedAccessPoint(page);
     const now = await centreOf(marker);
