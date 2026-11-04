@@ -200,6 +200,29 @@ path.leg-pending {
   display: block;
 }
 
+/* A route point's number on its badge (TripMap). */
+.point-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #222;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.point-number-selected {
+  color: #000;
+  font-size: 13px;
+}
+
+/* Three digits fit the badge only smaller. */
+.point-number-long {
+  font-size: 9px;
+}
+
 .map-loading {
   display: flex;
   align-items: center;

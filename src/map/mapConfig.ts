@@ -183,6 +183,12 @@ export const aireFullMarkersMinZoom = 13;
 export const obstacleFullMarkersMinZoom = aireFullMarkersMinZoom;
 
 /**
+ * Every route point shows its number from this zoom on (prototype/point-numbers). Further out
+ * the badges would lie on each other, so only the first, last and selected points are numbered.
+ */
+export const pointNumbersMinZoom = 13;
+
+/**
  * The z-index of each of our Leaflet panes, in one place, so their order reads at a glance.
  * Leaflet's own: tiles 200, overlays (paths) 400, shadows 500, markers 600 (your access
  * points), tooltips 650, popups 700.
@@ -200,7 +206,9 @@ export const paneZIndex = {
   tripModeChanges: 400,
   /** The trip's points, above the legs, so a leg never covers a point. */
   tripPoints: 401,
-  tripCamps: 402,
+  /** The points' numbers, on their badges. */
+  tripPointNumbers: 402,
+  tripCamps: 403,
   /** The legs' hit lines: above the drawn trip, below the access-point markers and point hit areas. */
   tripLegHits: 450,
   /** The lock, official aire and obstacle markers: above the leg hit lines, so a tap on one on a leg opens it. */

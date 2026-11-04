@@ -130,10 +130,16 @@ test("on aerial photos at zoom 19 the trails stay drawn, enlarged from their zoo
   }
   await expect.poll(() => network.tiles.some((tile) => tile.source === "wallonia" && tile.z === 19)).toBe(true);
   await expect(trailTiles(page).first()).toBeVisible();
-  const widths = await trailTiles(page).evaluateAll((images) =>
-    images.map((image) => Math.round(image.getBoundingClientRect().width)),
-  );
-  expect(new Set(widths)).toEqual(new Set([512]));
+  // Measured once the last zoom has settled: right after it a tile can still be mid-scale (484 px).
+  await expect
+    .poll(async () =>
+      new Set(
+        await trailTiles(page).evaluateAll((images) =>
+          images.map((image) => Math.round(image.getBoundingClientRect().width)),
+        ),
+      ),
+    )
+    .toEqual(new Set([512]));
   const trailZooms = network.tiles.filter((tile) => tile.source === "hiking-trails").map((tile) => tile.z);
   expect(Math.max(...trailZooms)).toBe(18);
   expect(network.blocked).toEqual([]);
