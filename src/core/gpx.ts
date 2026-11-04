@@ -1,19 +1,22 @@
-// GPX export (#11, #41; ADR 0006, ADR 0021): plans leave the app as GPX 1.1 for
-// GPS devices and outdoor apps, one file per section so each imports as one
-// course. Pure text building; zipping and the download happen outside the core.
-import { safeFileName, tripFileName } from "./fileName";
+// GPX export (#11, #41; ADR 0006, ADR 0037): plans leave the app as one GPX 1.1
+// file for GPS devices and outdoor apps: one track through the whole trip, so it
+// imports as one course, and a waypoint where each section starts, which course
+// importers show as course points. Pure text building; the download happens outside the core.
+import { tripFileName } from "./fileName";
 import { tripSections, type Section } from "./sections";
 import type { LatLng, LegMode, Trip } from "./trip";
 
-/** The names written into the files; user-facing text, so passed in (ADR 0013). */
+/** The names written into the file; user-facing text, so passed in (ADR 0013). */
 export type GpxNames = {
   /** Used as the trip's name when it has none. */
   readonly untitledTrip: string;
   /**
-   * A section's name from the trip's name, its 1-based position and mode, and
-   * its day when the trip has camps, e.g. "Ourthe – 2 – Day 1 – paddle".
+   * The name of the waypoint where a section starts, from its 1-based position
+   * and mode, and its day when the trip has camps, e.g. "2 – Day 1 – paddle".
    */
-  readonly section: (tripName: string, n: number, mode: LegMode, day?: number) => string;
+  readonly section: (n: number, mode: LegMode, day?: number) => string;
+  /** The name of the waypoint where the trip ends. */
+  readonly end: string;
 };
 
 /** A point as written to the file; `elevation` in metres, absent when unknown. */
@@ -62,26 +65,36 @@ function legGeometry(trip: Trip, index: number): readonly GpxPoint[] {
 }
 
 /**
- * The section's points in order. Each leg after the first starts where the one
- * before it ends, so its first point is left out rather than repeated.
+ * The trip's points in order, and where in them each section starts. Each leg
+ * after the first starts where the one before it ends, so its first point is
+ * left out rather than repeated.
  */
-function sectionGeometry(trip: Trip, section: Section): GpxPoint[] {
+function tripGeometry(trip: Trip, sections: readonly Section[]): { points: GpxPoint[]; sectionStarts: number[] } {
   const points: GpxPoint[] = [];
-  for (let leg = section.firstLeg; leg <= section.lastLeg; leg += 1) {
-    const geometry = legGeometry(trip, leg);
-    points.push(...(leg === section.firstLeg ? geometry : geometry.slice(1)));
+  const sectionStarts: number[] = [];
+  for (const section of sections) {
+    sectionStarts.push(Math.max(0, points.length - 1));
+    for (let leg = section.firstLeg; leg <= section.lastLeg; leg += 1) {
+      const geometry = legGeometry(trip, leg);
+      points.push(...(leg === 0 ? geometry : geometry.slice(1)));
+    }
   }
-  return points;
+  return { points, sectionStarts };
 }
 
-/** GPX 1.1 text with `name` in its metadata and one track of one segment through `points`. */
-function gpxText(name: string, points: readonly GpxPoint[]): string {
+/** A named waypoint as GPX: position, then elevation, then name (the schema's order). */
+const waypoint = (point: GpxPoint, name: string) =>
+  `  <wpt ${position(point)}>${elevationOf(point)}<name>${escapeXml(name)}</name></wpt>`;
+
+/** GPX 1.1 text: `name` in its metadata, the waypoints, then one track of one segment through `points`. */
+function gpxText(name: string, waypoints: readonly string[], points: readonly GpxPoint[]): string {
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<gpx version="1.1" creator="packraft-go" xmlns="http://www.topografix.com/GPX/1/1" ' +
       'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
       'xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">',
     `  <metadata><name>${escapeXml(name)}</name></metadata>`,
+    ...waypoints,
     `  <trk>`,
     `    <name>${escapeXml(name)}</name>`,
     `    <trkseg>`,
@@ -93,33 +106,32 @@ function gpxText(name: string, points: readonly GpxPoint[]): string {
   ].join("\n");
 }
 
-/** Ending of an exported GPX file's name. */
+/** Ending of the exported GPX file's name. */
 export const GPX_FILE_EXTENSION = ".gpx";
 
-/** One exported GPX file: its file name and its text. */
+/** The exported GPX file: its file name and its text. */
 export type GpxFile = { readonly fileName: string; readonly text: string };
 
 /**
- * The trip as GPX 1.1 files, one per section in trip order (ADR 0021). The
- * section's name is the metadata and track name; the file name is that name
- * made safe for file systems. A trip without legs gives no files.
+ * The trip as one GPX 1.1 file (ADR 0037): the trip's name as metadata and
+ * track name, one track of one segment through every leg, and a waypoint where
+ * each section starts plus one where the trip ends. The file is named after the
+ * trip, made safe for file systems. A trip without legs gives no file.
  */
-export function tripToGpxFiles(trip: Trip, names: GpxNames): GpxFile[] {
+export function tripToGpx(trip: Trip, names: GpxNames): GpxFile | undefined {
+  const sections = tripSections(trip);
+  if (sections.length === 0) return undefined;
   const tripName = trip.name.trim() || names.untitledTrip;
   const hasCamps = (trip.camps ?? []).length > 0;
-  return tripSections(trip).map((section, i) => {
-    const name = names.section(tripName, i + 1, section.mode, hasCamps ? section.day : undefined);
-    return {
-      fileName: safeFileName(name, names.untitledTrip, GPX_FILE_EXTENSION),
-      text: gpxText(name, sectionGeometry(trip, section)),
-    };
-  });
-}
-
-/** Ending of the exported ZIP file's name. */
-export const GPX_ZIP_FILE_EXTENSION = ".zip";
-
-/** The ZIP file holding the GPX files: the trip's name, or `untitledName` for a trip without one. */
-export function gpxZipFileName(trip: Trip, untitledName: string): string {
-  return tripFileName(trip, untitledName, GPX_ZIP_FILE_EXTENSION);
+  const { points, sectionStarts } = tripGeometry(trip, sections);
+  const waypoints = [
+    ...sections.map((section, i) =>
+      waypoint(points[sectionStarts[i]], names.section(i + 1, section.mode, hasCamps ? section.day : undefined)),
+    ),
+    waypoint(points[points.length - 1], names.end),
+  ];
+  return {
+    fileName: tripFileName(trip, names.untitledTrip, GPX_FILE_EXTENSION),
+    text: gpxText(tripName, waypoints, points),
+  };
 }

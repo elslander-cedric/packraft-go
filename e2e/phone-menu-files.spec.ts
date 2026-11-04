@@ -10,7 +10,7 @@ import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { parseGpx11 } from "../src/testing/gpx11";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
-import { downloadGpxZip } from "./support/gpxZip";
+import { downloadGpx } from "./support/gpx";
 import { serveOffline } from "./support/offline";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
@@ -216,7 +216,7 @@ test("Save trip asks for the name, prefilled; the file and the trip take the nam
   await expectTripName(page, name);
 });
 
-test("Export GPX asks for the name; the GPX files are well-formed, named from it, and stay below 180°", async ({
+test("Export GPX asks for the name; the GPX file is well-formed, named from it, and stays below 180°", async ({
   page,
 }) => {
   await serveOffline(page);
@@ -229,14 +229,14 @@ test("Export GPX asks for the name; the GPX files are well-formed, named from it
   await expect(field).toHaveValue("Ourthe");
   await field.fill("Tom & Jerry: <Semois>/\u0001 trip");
   // Enter confirms, like the button.
-  const zip = await downloadGpxZip(page, () => field.press("Enter"));
+  const file = await downloadGpx(page, () => field.press("Enter"));
 
-  expect(zip.name).toBe("Tom & Jerry- -Semois- trip.zip");
-  expect(zip.files.map((file) => file.name)).toEqual(["Tom & Jerry- -Semois- trip – 1 – hike.gpx"]);
-  const gpx = parseGpx11(zip.files[0].text);
-  expect(gpx.metadataName).toBe("Tom & Jerry: <Semois>/ trip – 1 – hike");
+  // Updated: ADR 0037. One GPX file named after the trip.
+  expect(file.name).toBe("Tom & Jerry- -Semois- trip.gpx");
+  const gpx = parseGpx11(file.text);
+  expect(gpx.metadataName).toBe("Tom & Jerry: <Semois>/ trip");
   expect(gpx.tracks[0].name).toBe(gpx.metadataName);
-  for (const point of gpx.tracks[0].points) expect(point.lon).toBeLessThan(180);
+  for (const point of [...gpx.tracks[0].points, ...gpx.waypoints]) expect(point.lon).toBeLessThan(180);
   await expectTripName(page, "Tom & Jerry: <Semois>/\u0001 trip");
   expect((await storedTrip(page)).name).toBe("Tom & Jerry: <Semois>/\u0001 trip");
 });

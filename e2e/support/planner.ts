@@ -258,7 +258,7 @@ export async function expectTripName(page: Page, name: string) {
   await expect.poll(() => shownTripName(page)).toBe(name);
 }
 
-/** Menu → Export GPX → Export, keeping the prefilled name: starts the ZIP's download (with `downloadGpxZip`). */
+/** Menu → Export GPX → Export, keeping the prefilled name: starts the GPX file's download (with `downloadGpx`). */
 export async function startGpxExport(page: Page) {
   await menuItem(page, text.menu.exportGpx);
   const dialog = page.getByRole("dialog", { name: text.menu.exportTitle });

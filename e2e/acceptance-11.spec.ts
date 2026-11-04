@@ -7,7 +7,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { parseGpx11 } from "../src/testing/gpx11";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation } from "./support/confirmDialog";
-import { downloadGpxZip } from "./support/gpxZip";
+import { downloadGpx } from "./support/gpx";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
 import {
   exportGpxDisabled,
@@ -47,7 +47,8 @@ async function openMap(page: Page) {
 
 // Updated: ADR 0021 (#41). Export downloads a ZIP with one GPX file per section.
 // Updated for ADR 0034: Export GPX is in the menu and asks for the name first.
-const exportGpx = (page: Page) => downloadGpxZip(page, () => startGpxExport(page));
+// Updated: ADR 0037. Export downloads one GPX file: one track, a waypoint per section.
+const exportGpx = (page: Page) => downloadGpx(page, () => startGpxExport(page));
 
 /** Strict XML parse: throws on any well-formedness error. */
 function strictXml(text: string) {
@@ -83,38 +84,31 @@ test("#11: hike + paddle legs and a camp export as GPX 1.1 with routed elevation
   await expect.poll(async () => (await storedTrip(page)).camps).toEqual([1]);
   const calls = net.brouter.length;
 
-  const zip = await exportGpx(page);
+  const file = await exportGpx(page);
 
-  // Updated: ADR 0021. A ZIP named after the trip, one GPX file per section.
-  // File names are the trip name made safe: no characters that Windows/macOS/Linux reject.
-  for (const fileName of [zip.name, ...zip.files.map((f) => f.name)]) {
-    expect(fileName).toMatch(/\.(zip|gpx)$/);
-    expect(fileName).not.toMatch(/[/\\:*?"<>|]/);
-    expect(fileName).toContain("Lesse & Lomme");
-    expect(fileName).toContain("été");
-  }
-  expect(zip.name.endsWith(".zip")).toBe(true);
-  expect(zip.files).toHaveLength(2);
+  // Updated: ADR 0037. One GPX file named after the trip, made safe: no characters
+  // that Windows/macOS/Linux reject.
+  expect(file.name).toMatch(/\.gpx$/);
+  expect(file.name).not.toMatch(/[/\\:*?"<>|]/);
+  expect(file.name).toContain("Lesse & Lomme");
+  expect(file.name).toContain("été");
 
-  // Updated: ADR 0021. The camp ends the hike section, so each file names its day.
-  const sectionNames = [`${name} – 1 – Day 1 – hike`, `${name} – 2 – Day 2 – paddle`];
-  for (const [i, fixture] of [TRAIL_TEXT, RIVER_TEXT].entries()) {
-    // Well-formed, GPX 1.1 structure, name round-trips exactly through a strict parser.
-    const doc = strictXml(zip.files[i].text);
-    expect(doc.documentElement!.getAttribute("version")).toBe("1.1");
-    const gpx = parseGpx11(zip.files[i].text);
-    expect(gpx.metadataName).toBe(sectionNames[i]);
-    expect(gpx.tracks.map((t) => t.name)).toEqual([sectionNames[i]]);
-    const expected = recorded(fixture);
-    expect(gpx.tracks[0].points).toHaveLength(expected.length);
-    gpx.tracks[0].points.forEach((p, j) => {
-      expect(p.lat).toBeCloseTo(expected[j].lat, 6);
-      expect(p.lon).toBeCloseTo(expected[j].lng, 6);
-      expect(p.ele).toBeCloseTo(expected[j].ele, 1);
-    });
-    // Updated: ADR 0021. Camps are no longer exported as waypoints.
-    expect(gpx.waypoints).toEqual([]);
-  }
+  // Well-formed, GPX 1.1 structure, name round-trips exactly through a strict parser.
+  const doc = strictXml(file.text);
+  expect(doc.documentElement!.getAttribute("version")).toBe("1.1");
+  const gpx = parseGpx11(file.text);
+  expect(gpx.metadataName).toBe(name);
+  expect(gpx.tracks.map((t) => t.name)).toEqual([name]);
+  // Updated: ADR 0037. One track through both legs, the point where they meet written once.
+  const expected = [...recorded(TRAIL_TEXT), ...recorded(RIVER_TEXT).slice(1)];
+  expect(gpx.tracks[0].points).toHaveLength(expected.length);
+  gpx.tracks[0].points.forEach((p, j) => {
+    expect(p.lat).toBeCloseTo(expected[j].lat, 6);
+    expect(p.lon).toBeCloseTo(expected[j].lng, 6);
+    expect(p.ele).toBeCloseTo(expected[j].ele, 1);
+  });
+  // Updated: ADR 0037. The camp starts the paddle section, so its waypoint names the day.
+  expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – Day 1 – hike", "2 – Day 2 – paddle", "End"]);
 
   // Exporting calls no routing and no other service.
   await page.waitForTimeout(300);
@@ -132,14 +126,13 @@ test("#11: an unnamed trip with unrouted legs exports straight lines at the draw
   await expect(legLines(page).nth(1)).toHaveClass(/leg-failed/);
   const stored = await storedTrip(page);
 
-  // Updated: ADR 0021. Two hike legs are one section: one file, one track through the three drawn points.
-  const zip = await exportGpx(page);
-  expect(zip.name).toBe("Untitled trip.zip");
-  expect(zip.files.map((f) => f.name)).toEqual(["Untitled trip – 1 – hike.gpx"]);
-  const gpx = parseGpx11(zip.files[0].text);
-  expect(gpx.metadataName).toBe("Untitled trip – 1 – hike");
-  expect(gpx.waypoints).toEqual([]);
-  expect(gpx.tracks.map((t) => t.name)).toEqual(["Untitled trip – 1 – hike"]);
+  // Updated: ADR 0037. Two hike legs are one section: one track through the three drawn points.
+  const file = await exportGpx(page);
+  expect(file.name).toBe("Untitled trip.gpx");
+  const gpx = parseGpx11(file.text);
+  expect(gpx.metadataName).toBe("Untitled trip");
+  expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – hike", "End"]);
+  expect(gpx.tracks.map((t) => t.name)).toEqual(["Untitled trip"]);
   expect(gpx.tracks[0].points).toHaveLength(3);
   for (const [i, p] of gpx.tracks[0].points.entries()) {
     expect(p.ele).toBeUndefined();
@@ -189,12 +182,11 @@ test("#11: the export reflects a reloaded trip and renaming, without re-routing"
   await expect(legLines(page)).toHaveCount(1);
   const calls = net.brouter.length;
   await renameTrip(page, "Semois day");
-  // Updated: ADR 0021. A ZIP named after the trip with one file for the one section.
-  const zip = await exportGpx(page);
-  expect(zip.name).toBe("Semois day.zip");
-  expect(zip.files.map((f) => f.name)).toEqual(["Semois day – 1 – hike.gpx"]);
-  const gpx = parseGpx11(zip.files[0].text);
-  expect(gpx.metadataName).toBe("Semois day – 1 – hike");
+  // Updated: ADR 0037. One GPX file named after the trip.
+  const file = await exportGpx(page);
+  expect(file.name).toBe("Semois day.gpx");
+  const gpx = parseGpx11(file.text);
+  expect(gpx.metadataName).toBe("Semois day");
   expect(gpx.tracks[0].points.length).toBe(recorded(TRAIL_TEXT).length);
   expect(gpx.tracks[0].points.every((p) => typeof p.ele === "number")).toBe(true);
   expect(net.brouter).toHaveLength(calls);
@@ -212,10 +204,8 @@ test("#11: a trip name with a control character (from an opened file) still expo
     legs: [{ mode: "hike" }],
   });
   await expect(legLines(page)).toHaveCount(1);
-  // Updated: ADR 0021. The GPX file comes inside the ZIP.
-  const zip = await exportGpx(page);
-  expect(zip.files).toHaveLength(1);
-  const [file] = zip.files;
+  // Updated: ADR 0037. One GPX file.
+  const file = await exportGpx(page);
   expect(file.name).not.toMatch(/[\u0000-\u001F]/);
   expect(() => parseGpx11(file.text)).not.toThrow();
   // XML 1.0 forbids these characters even when escaped; xmldom is lenient, so check directly.
@@ -234,10 +224,10 @@ test("#11: a point at the antimeridian (from an opened file) exports a longitude
     legs: [{ mode: "hike" }],
   });
   await expect(pointMarkers(page)).toHaveCount(2);
-  // Updated: ADR 0021. The GPX file comes inside the ZIP.
-  const [file] = (await exportGpx(page)).files;
+  // Updated: ADR 0037. One GPX file: two track points and two waypoints (the start and the end).
+  const file = await exportGpx(page);
   const lons = [...file.text.matchAll(/lon="([^"]+)"/g)].map((m) => Number(m[1]));
-  expect(lons).toHaveLength(2);
+  expect(lons).toHaveLength(4);
   // GPX 1.1 longitudeType: -180 <= lon < 180.
   for (const lon of lons) expect(lon >= -180 && lon < 180).toBe(true);
 });

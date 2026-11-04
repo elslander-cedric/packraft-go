@@ -3,7 +3,7 @@
 Date: 2026-10-10
 
 ## Status
-Accepted. The "one track per leg" consequence is superseded by ADR 0021 (one file per section, as a ZIP).
+Accepted. The "one track per leg" consequence is superseded by ADR 0021 (one file per section, as a ZIP), itself superseded by ADR 0037 (one file, one track, a waypoint per section).
 
 ## Context
 People already carry GPS devices and outdoor apps that import GPX. Building in-field navigation is out of scope (ADR 0001).

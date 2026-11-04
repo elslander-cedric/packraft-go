@@ -3,7 +3,7 @@
 Date: 2026-10-12
 
 ## Status
-Accepted. Supersedes the "one track per leg" consequence of ADR 0006.
+Superseded by ADR 0037 (one file, one track, a waypoint per section). Superseded the "one track per leg" consequence of ADR 0006.
 
 ## Context
 v1 exported a trip as a single GPX file with one `<trk>` per leg (ADR 0006, #11). Garmin Connect's course import reads only the **first** track of a file and silently drops the rest, so a multi-leg trip imported as a course showed only leg 1. Garmin users have reported this for years, and other course importers behave the same way. Course importers expect one track with one segment.

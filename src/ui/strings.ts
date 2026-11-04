@@ -36,10 +36,12 @@ export const strings = {
   autosaveUnknownVersion:
     "Your saved trip is from a newer or unknown version of packraft-go. Reload the page to update. " +
     "It is kept until you start a new trip or open a file; changes made here are not saved.",
-  // A section's name in the GPX export (ADR 0021), used for its file, metadata and track,
-  // e.g. "Ourthe – 2 – paddle", or "Ourthe – 2 – Day 1 – paddle" when the trip has camps.
-  gpxSectionName: (trip: string, n: number, mode: "hike" | "paddle", day?: number) =>
-    [trip, String(n), ...(day === undefined ? [] : [`Day ${day}`]), mode === "hike" ? "hike" : "paddle"].join(" – "),
+  // The GPX export's waypoints (ADR 0037), shown as course points on a watch: where each
+  // section starts, e.g. "2 – paddle", or "2 – Day 1 – paddle" when the trip has camps,
+  // and where the trip ends.
+  gpxSectionName: (n: number, mode: "hike" | "paddle", day?: number) =>
+    [String(n), ...(day === undefined ? [] : [`Day ${day}`]), mode === "hike" ? "hike" : "paddle"].join(" – "),
+  gpxEnd: "End",
   undoButton: "Undo",
   undoDisabledReason: "Nothing to undo yet.",
   // Back to start (GLOSSARY "Loop"): a leg from the last point back to the start point.
