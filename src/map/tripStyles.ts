@@ -1,4 +1,4 @@
-import { divIcon } from "leaflet";
+import { divIcon, type DivIcon } from "leaflet";
 import type { LegMode, ModeChange } from "@/core/trip";
 import { icons } from "@/ui/icons/icons";
 import { iconSvg } from "@/ui/icons/iconSvg";
@@ -42,3 +42,24 @@ export const campIcon = divIcon({
   iconSize: [20, 18],
   iconAnchor: [-7, -5],
 });
+
+// A route point's number, drawn on its badge (the point's dot, made larger while numbered). The
+// screen reader gets it from the point card, so it is hidden here. One icon per number and
+// state, so a redraw doesn't replace the marker's element.
+const pointNumberIcons = new Map<string, DivIcon>();
+export function pointNumberIcon(n: number, selected: boolean): DivIcon {
+  const key = `${n}-${selected}`;
+  let icon = pointNumberIcons.get(key);
+  if (!icon) {
+    icon = divIcon({
+      className: ["point-number", selected && "point-number-selected", n >= 100 && "point-number-long"]
+        .filter(Boolean)
+        .join(" "),
+      html: `<span aria-hidden="true">${n}</span>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+    pointNumberIcons.set(key, icon);
+  }
+  return icon;
+}

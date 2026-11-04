@@ -2,7 +2,7 @@
 
 import type { CircleMarker as LeafletCircleMarker, Polyline as LeafletPolyline } from "leaflet";
 import { latLngBounds, type Point } from "leaflet";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import {
   Circle,
   CircleMarker,
@@ -18,13 +18,21 @@ import type { BaseMapId, OverlayId } from "@/core/settings";
 import { putInsAndTakeOuts, type LatLng, type LegMode, type Trip } from "@/core/trip";
 import BaseMapTiles from "./BaseMapTiles";
 import { initialMapView, paneZIndex } from "./mapConfig";
+import { isPointNumbered } from "./pointNumbers";
 import OverlayTiles from "./OverlayTiles";
 import SearchResultLayer, { type MapCover } from "./SearchResultLayer";
 import AccessLayer, { type AccessLayerProps } from "./AccessLayer";
 import AccessPointLayer, { type AccessPointLayerProps } from "./AccessPointLayer";
 import { HOLD_MS, isPrimaryPress, useHold } from "./hold";
 import { HIT_SIZE_PX, usePressDrag, type PressDragHandlers } from "./pressDrag";
-import { campIcon, legCasingStyle, legStyle, modeChangeStyle, selectedLegCasingStyle } from "./tripStyles";
+import {
+  campIcon,
+  legCasingStyle,
+  legStyle,
+  modeChangeStyle,
+  pointNumberIcon,
+  selectedLegCasingStyle,
+} from "./tripStyles";
 
 /**
  * A place to show in the part of the map the sheet leaves free (it covers
@@ -248,6 +256,20 @@ function Taps({ onTap, onLegTap }: { onTap: (at: LatLng) => void; onLegTap: (leg
   return null;
 }
 
+/** The map's zoom; a zoom redraws the caller. */
+function useZoom(): number {
+  const map = useMap();
+  const [, redraw] = useReducer((n: number) => n + 1, 0);
+  // Attached before any effect runs, so the zoom of MapView's opening fit isn't missed.
+  useLayoutEffect(() => {
+    map.on("zoomend", redraw);
+    return () => {
+      map.off("zoomend", redraw);
+    };
+  }, [map]);
+  return map.getZoom();
+}
+
 /** A point's invisible 44 px hit area: tap it to select the point, press and drag it to move the point. */
 function PointHitArea({ at, handlers }: { at: LatLng; handlers: PressDragHandlers }) {
   const hit = useRef<LeafletCircleMarker>(null);
@@ -340,15 +362,15 @@ function LegHitLine({ leg, positions, onHold }: { leg: number; positions: LatLng
   return <Polyline ref={line} positions={positions} className="leg-hit" pathOptions={legHitStyle} />;
 }
 
-/** A trip point as drawn; its hit area is separate and larger. */
-function PointDot({ at, selected }: { at: LatLng; selected: boolean }) {
+/** A trip point as drawn, a badge for its number while numbered; its hit area is separate and larger. */
+function PointDot({ at, selected, numbered }: { at: LatLng; selected: boolean; numbered: boolean }) {
   const dot = useRef<LeafletCircleMarker>(null);
   useClass(dot, "point-selected", selected);
   return (
     <CircleMarker
       ref={dot}
       center={at}
-      radius={selected ? 7 : 5}
+      radius={numbered ? (selected ? 12 : 10) : selected ? 7 : 5}
       className="point"
       interactive={false}
       pathOptions={selected ? selectedPointStyle : pointStyle}
@@ -371,6 +393,7 @@ function TripLayers({
   frozen,
 }: Pick<TripMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold" | "selectedLeg" | "frozen">) {
   const [preview, setPreview] = useState<{ index: number; at: LatLng } | null>(null);
+  const zoom = useZoom();
   const points = preview ? trip.points.with(preview.index, preview.at) : trip.points;
   const handlers = (index: number): PressDragHandlers => ({
     onTap: () => onPointTap(index),
@@ -428,8 +451,28 @@ function TripLayers({
       {/* Points get their own pane above the legs, so a leg never covers a point. */}
       <Pane name="trip-points" pane="overlayPane" style={{ zIndex: paneZIndex.tripPoints }}>
         {points.map((point, i) => (
-          <PointDot key={`point-${i}`} at={point} selected={i === selectedPoint} />
+          <PointDot
+            key={`point-${i}`}
+            at={point}
+            selected={i === selectedPoint}
+            numbered={isPointNumbered(i, points.length, selectedPoint, zoom)}
+          />
         ))}
+      </Pane>
+      {/* Their numbers, the one the point card shows, on the badges (prototype/point-numbers). */}
+      <Pane name="trip-point-numbers" pane="overlayPane" style={{ zIndex: paneZIndex.tripPointNumbers }}>
+        {points.map(
+          (point, i) =>
+            isPointNumbered(i, points.length, selectedPoint, zoom) && (
+              <Marker
+                key={`point-number-${i}`}
+                position={point}
+                icon={pointNumberIcon(i + 1, i === selectedPoint)}
+                interactive={false}
+                keyboard={false}
+              />
+            ),
+        )}
       </Pane>
       {/* Their hit areas sit above the access-point markers (Leaflet's marker pane is 600), so a
           route point that is also an access point can still be selected and dragged (#120). */}
