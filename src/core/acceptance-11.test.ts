@@ -5,18 +5,21 @@
 // Updated: ADR 0021 (#41). The export is now one GPX file per section, each
 // with one track and one segment, and camps are no longer waypoints. Tests that
 // assumed one track per leg are replaced below and marked "Updated: ADR 0021".
+// Updated: ADR 0037. The export is one file again: one track and one segment
+// through the whole trip, named after it, and a waypoint where each section
+// starts plus one at the end. Tests changed for it are marked "Updated: ADR 0037".
 import { DOMParser } from "@xmldom/xmldom";
 import { describe, expect, it } from "vitest";
 import { parseGpx11 } from "../testing/gpx11";
 import { strings } from "../ui/strings";
-import { gpxZipFileName, tripToGpxFiles, type GpxNames } from "./gpx";
+import { tripToGpx, type GpxNames } from "./gpx";
 import type { RouteResult, RoutedPoint } from "./router";
 import { createAutoRouter } from "./routing";
 import { routingInto } from "./testing/routingDispatch";
 import { createFakeRouter } from "./testing/fakeRouter";
 import { applyEdit, emptyTrip, renameTrip, type Edit, type LatLng, type Trip } from "./trip";
 
-const names: GpxNames = { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName };
+const names: GpxNames = { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName, end: strings.gpxEnd };
 
 const P0 = { lat: 50.3527, lng: 5.4561 };
 const P1 = { lat: 50.2678, lng: 5.4469 };
@@ -50,8 +53,12 @@ const routedGeometry = (trip: Trip, leg: number): readonly RoutedPoint[] => {
   return route.geometry;
 };
 
-/** The export's files, each parsed with the GPX 1.1 structure check. */
-const exported = (trip: Trip) => tripToGpxFiles(trip, names).map((file) => ({ ...file, gpx: parseGpx11(file.text) }));
+/** The export's file (the trip has legs), parsed with the GPX 1.1 structure check. */
+function exported(trip: Trip) {
+  const file = tripToGpx(trip, names);
+  if (!file) throw new Error("no GPX for this trip");
+  return { ...file, gpx: parseGpx11(file.text) };
+}
 
 /** Parses with a strict XML parser that throws on any error, returning the document. */
 function xml(text: string) {
@@ -67,8 +74,8 @@ describe("#11 AC1: export produces valid GPX 1.1", () => {
     const trip = await routeAll(edit(renameTrip(emptyTrip(), "Ourthe"), add(P0), add(P1)), {
       hike: routedBetween(P0, P1, 100),
     });
-    // Updated: ADR 0021. The export is a list of files; this trip has one section.
-    const [file] = tripToGpxFiles(trip, names);
+    // Updated: ADR 0037. The export is one file.
+    const file = exported(trip);
     const doc = xml(file.text);
     const root = doc.documentElement!;
     expect(root.localName).toBe("gpx");
@@ -78,55 +85,57 @@ describe("#11 AC1: export produces valid GPX 1.1", () => {
     expect(() => parseGpx11(file.text)).not.toThrow();
   });
 
-  it("Updated: ADR 0021. Each file holds metadata then exactly one track, with no waypoints, also with camps", async () => {
+  it("Updated: ADR 0037. The file holds metadata, a waypoint per section and the end, then exactly one track", async () => {
     const trip = await routeAll(
       edit(emptyTrip(), add(P0), add(P1), add(P2), { type: "toggleCamp", index: 1 }),
       { hike: routedBetween(P0, P1, 100) },
     );
-    const files = tripToGpxFiles(trip, names);
-    expect(files).toHaveLength(2);
-    for (const file of files) {
-      const order = [...(xml(file.text).documentElement!.childNodes as unknown as Node[])]
-        .filter((n) => n.nodeType === 1)
-        .map((n) => (n as Element).localName);
-      expect(order).toEqual(["metadata", "trk"]);
-      expect(xml(file.text).getElementsByTagName("trkseg")).toHaveLength(1);
-    }
+    const { text } = exported(trip);
+    const order = [...(xml(text).documentElement!.childNodes as unknown as Node[])]
+      .filter((n) => n.nodeType === 1)
+      .map((n) => (n as Element).localName);
+    expect(order).toEqual(["metadata", "wpt", "wpt", "wpt", "trk"]);
+    expect(xml(text).getElementsByTagName("trkseg")).toHaveLength(1);
   });
 });
 
-describe("#11 AC2, Updated: ADR 0021: one file per section, named after it, including elevations", () => {
-  it("exports a hike leg and a paddle leg as two files with their routed geometry", async () => {
+describe("#11 AC2, Updated: ADR 0037: one track through every leg, with a waypoint per section, including elevations", () => {
+  it("exports a hike leg and a paddle leg as one track with their routed geometry", async () => {
     let trip = edit(emptyTrip(), add(P0), add(P1), add(P2), { type: "setLegMode", index: 1, mode: "paddle" });
     // The fake router answers by mode; give each mode a distinct geometry.
     trip = await routeAll(trip, { hike: routedBetween(P0, P1, 300), paddle: routedBetween(P1, P2, 150) });
-    const files = exported(trip);
+    const { gpx } = exported(trip);
 
-    expect(files.map((f) => f.gpx.tracks[0].name)).toEqual(["Untitled trip – 1 – hike", "Untitled trip – 2 – paddle"]);
-    for (const [i, file] of files.entries()) {
-      expect(file.gpx.tracks).toHaveLength(1);
-      // Coordinates may be rounded for the file; 1e-6 degrees is about 10 cm.
-      const expected = routedGeometry(trip, i);
-      const points = file.gpx.tracks[0].points;
-      expect(points).toHaveLength(expected.length);
-      points.forEach((point, j) => {
-        expect(point.lat).toBeCloseTo(expected[j].lat, 6);
-        expect(point.lon).toBeCloseTo(expected[j].lng, 6);
-        expect(point.ele).toBeCloseTo(expected[j].elevation, 1);
-      });
-    }
+    expect(gpx.tracks).toHaveLength(1);
+    expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – hike", "2 – paddle", "End"]);
+    // Coordinates may be rounded for the file; 1e-6 degrees is about 10 cm.
+    const expected = [...routedGeometry(trip, 0), ...routedGeometry(trip, 1).slice(1)];
+    const points = gpx.tracks[0].points;
+    expect(points).toHaveLength(expected.length);
+    points.forEach((point, j) => {
+      expect(point.lat).toBeCloseTo(expected[j].lat, 6);
+      expect(point.lon).toBeCloseTo(expected[j].lng, 6);
+      expect(point.ele).toBeCloseTo(expected[j].elevation, 1);
+    });
+    // The paddle section's waypoint is where the hike's geometry ends, on the track.
+    expect(gpx.waypoints[1]).toEqual({ ...points[2], name: "2 – paddle" });
   });
 
-  it("joins consecutive same-mode legs into one file, uses an en dash and numbers sections from 1 in trip order", async () => {
+  it("joins consecutive same-mode legs into one section, uses an en dash and numbers sections from 1 in trip order", async () => {
     const trip = edit(emptyTrip(), add(P0), add(P1), add(P2), add(P3), { type: "setLegMode", index: 2, mode: "paddle" });
-    const files = exported(trip);
-    expect(files.map((f) => f.gpx.tracks[0].name)).toEqual(["Untitled trip – 1 – hike", "Untitled trip – 2 – paddle"]);
-    expect(files[0].gpx.tracks[0].name).toContain("–");
-    // The hike section runs P0 → P1 → P2 with P1 written once.
-    expect(files[0].gpx.tracks[0].points).toEqual([
+    const { gpx } = exported(trip);
+    expect(gpx.waypoints).toEqual([
+      { lat: P0.lat, lon: P0.lng, name: "1 – hike" },
+      { lat: P2.lat, lon: P2.lng, name: "2 – paddle" },
+      { lat: P3.lat, lon: P3.lng, name: "End" },
+    ]);
+    expect(gpx.waypoints[0].name).toContain("–");
+    // The track runs P0 → P1 → P2 → P3 with each point written once.
+    expect(gpx.tracks[0].points).toEqual([
       { lat: P0.lat, lon: P0.lng },
       { lat: P1.lat, lon: P1.lng },
       { lat: P2.lat, lon: P2.lng },
+      { lat: P3.lat, lon: P3.lng },
     ]);
   });
 
@@ -138,36 +147,32 @@ describe("#11 AC2, Updated: ADR 0021: one file per section, named after it, incl
     const pending: Trip = { ...drawn, legs: drawn.legs.map((l) => ({ ...l, route: { status: "pending" } })) };
 
     for (const trip of [drawn, failed, pending]) {
-      const files = exported(trip);
-      expect(files).toHaveLength(1);
-      expect(files[0].gpx.tracks[0].points).toEqual([
+      const { gpx, text } = exported(trip);
+      expect(gpx.tracks[0].points).toEqual([
         { lat: P0.lat, lon: P0.lng },
         { lat: P1.lat, lon: P1.lng },
         { lat: P2.lat, lon: P2.lng },
       ]);
-      expect(files[0].text).not.toContain("<ele>");
+      expect(text).not.toContain("<ele>");
     }
   });
 
   it("mixes routed and failed legs in one trip", async () => {
     let trip = edit(emptyTrip(), add(P0), add(P1), add(P2), { type: "setLegMode", index: 1, mode: "paddle" });
     trip = await routeAll(trip, { hike: routedBetween(P0, P1, 200) }); // paddle fails
-    const [hike, paddle] = exported(trip);
-    expect(hike.gpx.tracks[0].points).toHaveLength(3);
-    expect(hike.gpx.tracks[0].points.every((p) => typeof p.ele === "number")).toBe(true);
-    expect(paddle.gpx.tracks[0].points).toEqual([
-      { lat: P1.lat, lon: P1.lng },
-      { lat: P2.lat, lon: P2.lng },
-    ]);
+    const points = exported(trip).gpx.tracks[0].points;
+    expect(points).toHaveLength(4);
+    expect(points.slice(0, 3).every((p) => typeof p.ele === "number")).toBe(true);
+    expect(points[3]).toEqual({ lat: P2.lat, lon: P2.lng });
   });
 
-  it("has no files for a trip without legs", () => {
-    for (const trip of [emptyTrip(), edit(emptyTrip(), add(P0))]) expect(tripToGpxFiles(trip, names)).toEqual([]);
+  it("has no file for a trip without legs", () => {
+    for (const trip of [emptyTrip(), edit(emptyTrip(), add(P0))]) expect(tripToGpx(trip, names)).toBeUndefined();
   });
 });
 
-describe("#11 AC3, Updated: ADR 0021: camps split sections and add the day, instead of being waypoints", () => {
-  it("ends a section at each camp and names sections with their day", async () => {
+describe("#11 AC3, Updated: ADR 0037: camps start a section, whose waypoint names its day", () => {
+  it("starts a section at each camp and names the sections' waypoints with their day", async () => {
     let trip = edit(
       emptyTrip(),
       add(P0),
@@ -178,16 +183,12 @@ describe("#11 AC3, Updated: ADR 0021: camps split sections and add the day, inst
       { type: "toggleCamp", index: 1 },
     );
     trip = await routeAll(trip, { hike: routedBetween(P0, P1, 100) });
-    const files = exported(trip);
-    expect(files.map((f) => f.gpx.tracks[0].name)).toEqual([
-      "Untitled trip – 1 – Day 1 – hike",
-      "Untitled trip – 2 – Day 2 – hike",
-      "Untitled trip – 3 – Day 3 – hike",
-    ]);
-    for (const file of files) expect(file.gpx.waypoints).toEqual([]);
+    const { gpx } = exported(trip);
+    expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – Day 1 – hike", "2 – Day 2 – hike", "3 – Day 3 – hike", "End"]);
+    expect(gpx.tracks).toHaveLength(1);
   });
 
-  it("follows camp edits: an unmarked camp splits nothing and adds no day", () => {
+  it("follows camp edits: an unmarked camp starts nothing and adds no day", () => {
     const trip = edit(
       emptyTrip(),
       add(P0),
@@ -196,7 +197,7 @@ describe("#11 AC3, Updated: ADR 0021: camps split sections and add the day, inst
       { type: "toggleCamp", index: 1 },
       { type: "toggleCamp", index: 1 },
     );
-    expect(exported(trip).map((f) => f.gpx.tracks[0].name)).toEqual(["Untitled trip – 1 – hike"]);
+    expect(exported(trip).gpx.waypoints.map((w) => w.name)).toEqual(["1 – hike", "End"]);
   });
 
   it("follows point edits: a camp moves with its point and survives deleting an earlier point", () => {
@@ -211,78 +212,74 @@ describe("#11 AC3, Updated: ADR 0021: camps split sections and add the day, inst
       { type: "movePoint", index: 2, to: moved },
       { type: "deletePoint", index: 1 },
     );
-    const files = exported(trip);
-    expect(files).toHaveLength(2);
-    expect(files[0].gpx.tracks[0].points.at(-1)).toEqual({ lat: moved.lat, lon: moved.lng });
-    expect(files[1].gpx.tracks[0].points[0]).toEqual({ lat: moved.lat, lon: moved.lng });
+    const { gpx } = exported(trip);
+    expect(gpx.waypoints).toHaveLength(3);
+    expect(gpx.waypoints[1]).toEqual({ lat: moved.lat, lon: moved.lng, name: "2 – Day 2 – hike" });
+    expect(gpx.tracks[0].points[1]).toEqual({ lat: moved.lat, lon: moved.lng });
   });
 });
 
 describe("#11: trip name in metadata and file name (story 39)", () => {
-  it("Updated: ADR 0021. Writes the section's name, starting with the trip name, into the metadata; the ZIP is named after the trip", () => {
+  it("Updated: ADR 0037. Writes the trip name into the metadata and the track, and names the file after it", () => {
     const trip = renameTrip(edit(emptyTrip(), add(P0), add(P1)), "Ourthe weekend");
-    const [file] = exported(trip);
-    expect(file.gpx.metadataName).toBe("Ourthe weekend – 1 – hike");
-    expect(file.fileName).toBe("Ourthe weekend – 1 – hike.gpx");
-    expect(gpxZipFileName(trip, names.untitledTrip)).toBe("Ourthe weekend.zip");
+    const { gpx, fileName } = exported(trip);
+    expect(gpx.metadataName).toBe("Ourthe weekend");
+    expect(gpx.tracks[0].name).toBe("Ourthe weekend");
+    expect(fileName).toBe("Ourthe weekend.gpx");
   });
 
   it("uses 'Untitled trip' for an unnamed or blank-named trip", () => {
     expect(strings.tripNamePlaceholder).toBe("Untitled trip");
     for (const name of ["", "   "]) {
-      const trip = renameTrip(edit(emptyTrip(), add(P0), add(P1)), name);
-      const [file] = exported(trip);
-      expect(file.gpx.metadataName).toBe("Untitled trip – 1 – hike");
-      expect(gpxZipFileName(trip, names.untitledTrip)).toBe("Untitled trip.zip");
+      const { gpx, fileName } = exported(renameTrip(edit(emptyTrip(), add(P0), add(P1)), name));
+      expect(gpx.metadataName).toBe("Untitled trip");
+      expect(fileName).toBe("Untitled trip.gpx");
     }
   });
 
   it("escapes &, <, >, quotes and keeps accents in the XML", () => {
     const name = `Tom & Jerry's <"Sûre"> trip é ü ç ø`;
-    const [{ text }] = tripToGpxFiles(renameTrip(edit(emptyTrip(), add(P0), add(P1)), name), names);
+    const { text } = exported(renameTrip(edit(emptyTrip(), add(P0), add(P1)), name));
     // Reads back exactly through a strict XML parser.
     const metadataName = xml(text).getElementsByTagName("metadata")[0].getElementsByTagName("name")[0].textContent;
-    expect(metadataName).toBe(`${name} – 1 – hike`);
-    expect(parseGpx11(text).metadataName).toBe(`${name} – 1 – hike`);
+    expect(metadataName).toBe(name);
+    expect(parseGpx11(text).metadataName).toBe(name);
     // No raw markup characters leaked into the document.
     expect(text).not.toContain("Tom & Jerry");
     expect(text).not.toContain('<"Sûre">');
   });
 
-  it("makes the ZIP and GPX file names safe on Windows, macOS and Linux and keeps accents", () => {
-    const trip = renameTrip(edit(emptyTrip(), add(P0), add(P1)), `Sûre: "a/b" <c> | d? *e\\f`);
-    for (const fileName of [gpxZipFileName(trip, names.untitledTrip), tripToGpxFiles(trip, names)[0].fileName]) {
-      expect(fileName).toMatch(/\.(zip|gpx)$/);
-      expect(fileName).not.toMatch(/[/\\:*?"<>|\u0000-\u001f]/);
-      expect(fileName).toContain("Sûre");
-    }
+  it("makes the GPX file name safe on Windows, macOS and Linux and keeps accents", () => {
+    const { fileName } = exported(renameTrip(edit(emptyTrip(), add(P0), add(P1)), `Sûre: "a/b" <c> | d? *e\\f`));
+    expect(fileName).toMatch(/\.gpx$/);
+    expect(fileName).not.toMatch(/[/\\:*?"<>|\u0000-\u001f]/);
+    expect(fileName).toContain("Sûre");
   });
 
   it("falls back to 'Untitled trip' when the name is only unsafe characters", () => {
-    expect(gpxZipFileName(renameTrip(emptyTrip(), "///"), names.untitledTrip)).not.toBe(".zip");
+    expect(exported(renameTrip(edit(emptyTrip(), add(P0), add(P1)), "///")).fileName).not.toBe(".gpx");
   });
 
-  it("names the ZIP file like the save file, with .zip instead of the save extension", () => {
-    const trip = renameTrip(emptyTrip(), "Lesse & Lomme");
-    expect(gpxZipFileName(trip, names.untitledTrip)).toBe("Lesse & Lomme.zip");
+  it("Updated: ADR 0037. Names the GPX file like the save file, with .gpx instead of the save extension", () => {
+    expect(exported(renameTrip(edit(emptyTrip(), add(P0), add(P1)), "Lesse & Lomme")).fileName).toBe("Lesse & Lomme.gpx");
   });
 });
 
 describe("#11 AC1 edge cases: the file stays valid GPX 1.1 for any trip the app accepts", () => {
   it("stays well-formed XML when the trip name holds a control character (e.g. from an opened file)", () => {
     const trip = renameTrip(edit(emptyTrip(), add(P0), add(P1)), "Bell\u0007 trip");
-    for (const { text, fileName } of tripToGpxFiles(trip, names)) {
-      expect(() => parseGpx11(text)).not.toThrow();
-      // XML 1.0 forbids these characters even when escaped; xmldom is lenient, so check directly.
-      expect(text).not.toMatch(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/);
-      expect(fileName).not.toMatch(/[\u0000-\u001f]/);
-    }
+    const { text, fileName } = exported(trip);
+    expect(() => parseGpx11(text)).not.toThrow();
+    // XML 1.0 forbids these characters even when escaped; xmldom is lenient, so check directly.
+    expect(text).not.toMatch(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/);
+    expect(fileName).not.toMatch(/[\u0000-\u001f]/);
   });
 
   it("writes longitudes within -180 <= lon < 180 after rounding, also just below 180", () => {
     const trip = edit(emptyTrip(), add({ lat: 10, lng: 179.99999999 }), add({ lat: 10.1, lng: 180 }));
-    const lons = tripToGpxFiles(trip, names).flatMap(({ text }) => [...text.matchAll(/lon="([^"]+)"/g)].map((m) => Number(m[1])));
-    expect(lons).toHaveLength(2);
+    const lons = [...exported(trip).text.matchAll(/lon="([^"]+)"/g)].map((m) => Number(m[1]));
+    // Updated: ADR 0037. Two track points and two waypoints (the start and the end).
+    expect(lons).toHaveLength(4);
     for (const lon of lons) expect(lon >= -180 && lon < 180).toBe(true);
   });
 });

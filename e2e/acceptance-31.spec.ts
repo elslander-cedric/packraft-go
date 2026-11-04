@@ -261,7 +261,8 @@ test.describe("keyboard alone", () => {
     await expect(exportDialog.getByLabel(strings.tripNameLabel)).toBeFocused();
     const [gpx] = await Promise.all([page.waitForEvent("download"), page.keyboard.press("Enter")]);
     // Updated: ADR 0021 (#41). Export GPX downloads a ZIP of GPX files.
-    expect(gpx.suggestedFilename()).toMatch(/\.zip$/);
+    // Updated: ADR 0037. Export GPX downloads one GPX file.
+    expect(gpx.suggestedFilename()).toMatch(/\.gpx$/);
     await expect(exportDialog).toHaveCount(0);
 
     const undo = button(page, strings.undoButton);

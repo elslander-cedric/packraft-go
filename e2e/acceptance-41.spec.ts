@@ -1,10 +1,12 @@
 // Acceptance tests for #41 (ADR 0021): Export GPX downloads
 // one ZIP holding one GPX file per section. BRouter is answered from recorded
 // responses; the ZIP is unzipped in the test.
+// Updated: ADR 0037. Export GPX downloads one GPX file: one track through the
+// whole trip and a waypoint where each section starts, plus one at the end.
 import { expect, test, type Page } from "@playwright/test";
 import { parseGpx11 } from "../src/testing/gpx11";
 import { strings } from "../src/ui/strings";
-import { downloadGpxZip } from "./support/gpxZip";
+import { downloadGpx } from "./support/gpx";
 import {
   brouterFixture,
   serveOffline,
@@ -75,9 +77,9 @@ async function camp(page: Page, point: { x: number; y: number }) {
   await campButton(page).click();
 }
 
-const base = (fileName: string) => fileName.replace(/\.gpx$/, "");
+const waypointNames = (text: string) => parseGpx11(text).waypoints.map((w) => w.name);
 
-test("portage trip (paddle, hike, paddle) exports a ZIP of three single-track GPX files", async ({
+test("Updated: ADR 0037. Portage trip (paddle, hike, paddle) exports one single-track GPX with three section waypoints", async ({
   page,
 }) => {
   const network = await serveOffline(page, { brouter: byProfile });
@@ -87,22 +89,16 @@ test("portage trip (paddle, hike, paddle) exports a ZIP of three single-track GP
     await expect(legLines(page).nth(leg)).toHaveClass(/leg-routed/);
   const before = network.brouter.length;
 
-  const zip = await downloadGpxZip(page, exportButton(page));
+  const file = await downloadGpx(page, exportButton(page));
 
-  expect(zip.name).toBe("Lesse.zip");
-  expect(zip.files.map((f) => f.name)).toEqual([
-    "Lesse – 1 – paddle.gpx",
-    "Lesse – 2 – hike.gpx",
-    "Lesse – 3 – paddle.gpx",
-  ]);
-  for (const file of zip.files) {
-    const gpx = parseGpx11(file.text);
-    expect(gpx.tracks).toHaveLength(1);
-    expect(file.text.match(/<trk>/g)).toHaveLength(1);
-    expect(file.text.match(/<trkseg>/g)).toHaveLength(1);
-    expect(gpx.metadataName).toBe(base(file.name));
-    expect(gpx.tracks[0].name).toBe(base(file.name));
-  }
+  expect(file.name).toBe("Lesse.gpx");
+  const gpx = parseGpx11(file.text);
+  expect(gpx.tracks).toHaveLength(1);
+  expect(file.text.match(/<trk>/g)).toHaveLength(1);
+  expect(file.text.match(/<trkseg>/g)).toHaveLength(1);
+  expect(gpx.metadataName).toBe("Lesse");
+  expect(gpx.tracks[0].name).toBe("Lesse");
+  expect(waypointNames(file.text)).toEqual(["1 – paddle", "2 – hike", "3 – paddle", "End"]);
   expect(network.brouter).toHaveLength(before);
   expect(network.blocked).toEqual([]);
 });
@@ -119,17 +115,13 @@ test("camp at a mode change and a camp at the end: day numbers match the days pa
   await camp(page, at[3]); // at the end point: adds no day
   await expect(await dayRows(page)).toHaveCount(2);
 
-  const zip = await downloadGpxZip(page, exportButton(page));
+  const file = await downloadGpx(page, exportButton(page));
 
-  expect(zip.files.map((f) => f.name)).toEqual([
-    "Ourthe – 1 – Day 1 – hike.gpx",
-    "Ourthe – 2 – Day 2 – paddle.gpx",
-  ]);
-  for (const file of zip.files)
-    expect(parseGpx11(file.text).waypoints).toEqual([]);
+  // Updated: ADR 0037. The day is in the section waypoints' names.
+  expect(waypointNames(file.text)).toEqual(["1 – Day 1 – hike", "2 – Day 2 – paddle", "End"]);
 });
 
-test("a camp in the middle of a paddle run splits it into two files on consecutive days", async ({
+test("Updated: ADR 0037. A camp in the middle of a paddle run starts a section on the next day", async ({
   page,
 }) => {
   await serveOffline(page, { brouter: byProfile });
@@ -137,49 +129,42 @@ test("a camp in the middle of a paddle run splits it into two files on consecuti
   await camp(page, at[1]);
   await expect(await dayRows(page)).toHaveCount(2);
 
-  const zip = await downloadGpxZip(page, exportButton(page));
+  const file = await downloadGpx(page, exportButton(page));
 
-  expect(zip.name).toBe(`${strings.tripNamePlaceholder}.zip`);
-  expect(zip.files.map((f) => f.name)).toEqual([
-    `${strings.tripNamePlaceholder} – 1 – Day 1 – paddle.gpx`,
-    `${strings.tripNamePlaceholder} – 2 – Day 2 – paddle.gpx`,
-  ]);
+  expect(file.name).toBe(`${strings.tripNamePlaceholder}.gpx`);
+  expect(waypointNames(file.text)).toEqual(["1 – Day 1 – paddle", "2 – Day 2 – paddle", "End"]);
+  expect(parseGpx11(file.text).tracks).toHaveLength(1);
 });
 
-test("a single leg exports a ZIP with one GPX", async ({ page }) => {
+test("Updated: ADR 0037. A single leg exports one GPX with one track", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await draw(page, 2);
-  const zip = await downloadGpxZip(page, exportButton(page));
-  expect(zip.files).toHaveLength(1);
-  expect(parseGpx11(zip.files[0].text).tracks).toHaveLength(1);
+  const file = await downloadGpx(page, exportButton(page));
+  expect(parseGpx11(file.text).tracks).toHaveLength(1);
+  expect(waypointNames(file.text)).toEqual(["1 – hike", "End"]);
 });
 
-test("repeated exports give the same ZIP contents", async ({ page }) => {
+test("Updated: ADR 0037. Repeated exports give the same GPX file", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await draw(page, 3, [1]);
   for (const leg of [0, 1])
     await expect(legLines(page).nth(leg)).toHaveClass(/leg-routed/);
-  const first = await downloadGpxZip(page, exportButton(page));
-  const second = await downloadGpxZip(page, exportButton(page));
+  const first = await downloadGpx(page, exportButton(page));
+  const second = await downloadGpx(page, exportButton(page));
   expect(second).toEqual(first);
 });
 
-test("a name with characters illegal in file names gives flat, safe ZIP entries", async ({
+test("Updated: ADR 0037. A name with characters illegal in file names gives a safe file name", async ({
   page,
 }) => {
   await serveOffline(page, { brouter: byProfile });
   await draw(page, 3, [1]);
   await renameTrip(page, "Lesse / Ourthe");
 
-  const zip = await downloadGpxZip(page, exportButton(page));
+  const file = await downloadGpx(page, exportButton(page));
 
-  expect(zip.name).not.toMatch(/[/\\:*?"<>|]/);
-  expect(zip.name.endsWith(".zip")).toBe(true);
-  expect(zip.files).toHaveLength(2);
-  for (const file of zip.files) {
-    expect(file.name).not.toMatch(/[/\\:*?"<>|]/);
-    expect(file.name.endsWith(".gpx")).toBe(true);
-  }
+  expect(file.name).toBe("Lesse - Ourthe.gpx");
+  expect(parseGpx11(file.text).metadataName).toBe("Lesse / Ourthe");
 });
 
 test("Export stays disabled until there is a leg", async ({

@@ -9,7 +9,7 @@ import type { Trip } from "../src/core/trip";
 import { SETTINGS_KEY } from "../src/persistence/settingsStorage";
 import { TRIP_KEY } from "../src/persistence/tripStorage";
 import { strings } from "../src/ui/strings";
-import { downloadGpxZip } from "./support/gpxZip";
+import { downloadGpx } from "./support/gpx";
 import { baseMapItem, chooseBaseMap, mapMenuButton, toggleAccessLayer, toggleOverlay } from "./support/mapMenu";
 import { serveOffline, tileSourceOf, type TileSource } from "./support/offline";
 import { freeMapCentre, openPlanner, saveTripFile, startGpxExport, tripPanel } from "./support/planner";
@@ -204,9 +204,9 @@ test("the trip, its file and its GPX never hold the base map or the overlays; th
 
   const download = await saveTripFile(page);
   const file = await readFile((await download.path())!, "utf8");
-  const gpx = await downloadGpxZip(page, () => startGpxExport(page));
+  const gpx = await downloadGpx(page, () => startGpxExport(page));
 
-  for (const text of [stored[0] ?? "", file, ...gpx.files.map((entry) => entry.text)]) {
+  for (const text of [stored[0] ?? "", file, gpx.text]) {
     expect(text).not.toBe("");
     expect(text).not.toMatch(/baseMap|aerial-be|opentopomap|ngi-topo|overlays|hiking-trails/i);
   }

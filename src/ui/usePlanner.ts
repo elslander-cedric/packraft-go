@@ -9,7 +9,7 @@ import { defaultSettings, withSetting, type PaceSetting } from "@/core/settings"
 import { summarise } from "@/core/summarise";
 import { renameTrip } from "@/core/trip";
 import { tripAccess } from "@/core/tripAccess";
-import { downloadGpxZip, downloadTripFile, readTripFile } from "@/persistence/tripFile";
+import { downloadGpx, downloadTripFile, readTripFile } from "@/persistence/tripFile";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
 import { strings } from "./strings";
@@ -78,7 +78,7 @@ export function usePlanner(router?: Router) {
   const exportGpx = (name?: string) => {
     const exported = toDownload(name);
     dispatch({ type: "fileDownloaded" });
-    downloadGpxZip(exported, { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName });
+    downloadGpx(exported, { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName, end: strings.gpxEnd });
   };
   const openFile = async (file: File) => {
     const opened = await readTripFile(file);

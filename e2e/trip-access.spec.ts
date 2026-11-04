@@ -98,7 +98,7 @@ test("a paddle leg on a forbidden Flemish canal shows a warning with its reason;
   const save = await saveTripFile(page);
   expect(save.suggestedFilename()).toMatch(/\.packraft\.json$/);
   const gpx = await exportGpxFile(page);
-  expect(gpx.suggestedFilename()).toMatch(/\.zip$/);
+  expect(gpx.suggestedFilename()).toMatch(/\.gpx$/);
   // Off the legs, which cross the middle of the map: a click on a leg selects it (#230).
   const centre = await freeMapCentre(page);
   await page.mouse.click(centre.x + 120, centre.y + 120);

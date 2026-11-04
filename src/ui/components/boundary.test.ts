@@ -24,7 +24,6 @@ const TEST_ONLY = [path.join(SRC, "testing"), path.join(SRC, "core", "testing")]
 const ALLOWED_RUNTIME_PACKAGES = [
   "@base-ui/react", // ADR 0020
   "@fortawesome/free-solid-svg-icons", // UI icons, ADR 0028
-  "fflate", // ZIP for the GPX export, ADR 0021
   "leaflet", // ADR 0014
   "next", // ADR 0015
   "react",

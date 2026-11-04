@@ -2,7 +2,7 @@
 // (spec #51, #58). Rule data is injected as small fakes.
 import { describe, expect, it } from "vitest";
 import type { AccessRecord } from "./access";
-import { tripToGpxFiles } from "./gpx";
+import { tripToGpx } from "./gpx";
 import type { LegRoute } from "./router";
 import { parseTrip, serialiseTrip } from "./saveFile";
 import { applyEdit, type LatLng, type Leg, type Trip } from "./trip";
@@ -237,8 +237,7 @@ describe("warnings never block", () => {
     const saved = parseTrip(serialiseTrip(forbiddenTrip));
     expect(saved).toMatchObject({ ok: true, trip: { name: "Canal", legs: [{ mode: "paddle" }] } });
 
-    const files = tripToGpxFiles(forbiddenTrip, { untitledTrip: "Untitled", section: (name) => name });
-    expect(files).toHaveLength(1);
+    expect(tripToGpx(forbiddenTrip, { untitledTrip: "Untitled", section: String, end: "End" })).toBeDefined();
   });
 });
 
