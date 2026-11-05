@@ -13,7 +13,7 @@ Accepted
 - **It is the only writer of the trip.** Route answers arrive as a plain-data action (`routeArrived` with the request and the route), applied by a pure function from `src/core/routing.ts`. The auto router no longer takes a `setTrip`.
 - **One rule per piece of state:**
   - The selected point is cleared when points are added, moved or deleted, a leg changes mode, on undo, when an offer is accepted and when the trip is replaced.
-  - Snap offers are dropped when points or leg modes change. When access points change, offers for a deleted one are dropped and offers for a moved one follow it.
+  - Snap offers are dropped when points or leg modes change, then worked out again for the new put-ins and take-outs of a mode change or added point, and for a moved put-in or take-out. When access points change, offers for a deleted one are dropped and offers for a moved one follow it.
   - The file error is cleared by anything the planner does, but not by a route arriving.
   - While a replace question is open, the session ignores every action except confirm, cancel and a route arriving.
 - **Side effects stay in the component:** autosave, starting route requests, reading and downloading files, and the key bindings (which map keys to actions; the "typing in a field" check is about the DOM and stays there).

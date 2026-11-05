@@ -83,7 +83,10 @@ describe("the trip is frozen while editing access points (#227)", () => {
 
   const frozen: [name: string, make: (s: PlannerSession) => PlannerAction][] = [
     ["add point", () => ({ type: "addPoint", at: { lat: 50.4, lng: 5.5 }, accessPoints: [], officialAires: [] })],
-    ["move point", () => ({ type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 } })],
+    [
+      "move point",
+      () => ({ type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 }, accessPoints: [], officialAires: [] }),
+    ],
     ["delete selected point", () => ({ type: "deleteSelectedPoint" })],
     ["back to start", () => ({ type: "backToStart" })],
     ["insert point", () => ({ type: "insertPoint", index: 0, near: { lat: 50.3577, lng: 5.4563 } })],

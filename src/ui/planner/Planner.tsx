@@ -360,7 +360,9 @@ export default function Planner({ router }: { router?: Router }) {
         onMapTap={onMapTap}
         selectedPoint={selectedPoint}
         onPointTap={(index) => dispatch({ type: "pointClicked", index })}
-        onPointDrop={(index, to) => dispatch({ type: "movePoint", index, to })}
+        onPointDrop={(index, to) =>
+          dispatch({ type: "movePoint", index, to, accessPoints: access.points, officialAires })
+        }
         onLegHold={(index, near) => dispatch({ type: "insertPoint", index, near })}
         selectedLeg={session.selectedLeg}
         onLegTap={(index) => dispatch({ type: "legClicked", index })}
