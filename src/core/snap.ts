@@ -79,6 +79,21 @@ export function snapOffers(
   return newModeChanges(before, after).flatMap((change) => snapCandidate(after, change, points, officialAires) ?? []);
 }
 
+/**
+ * The offer to snap a point you moved when it is a put-in or take-out, or none:
+ * a move keeps the leg modes, so only that point can be offered.
+ */
+export function movedPointOffers(
+  after: Trip,
+  index: number,
+  points: AccessPoints,
+  officialAires: readonly OfficialAire[],
+): SnapOffer[] {
+  return putInsAndTakeOuts(after)
+    .filter((change) => change.point === index)
+    .flatMap((change) => snapCandidate(after, change, points, officialAires) ?? []);
+}
+
 /** Moves the offer's point onto its target: one undoable edit of the trip, and nothing else. */
 export function acceptSnap(trip: Trip, offer: SnapOffer): Trip {
   return applyEdit(trip, { type: "movePoint", index: offer.change.point, to: targetPosition(offer.target) });

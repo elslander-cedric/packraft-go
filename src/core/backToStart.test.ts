@@ -42,7 +42,7 @@ describe("back to start", () => {
   });
 
   it("is available again once the end is moved off the start", () => {
-    const moved = run(add(A), add(B), { type: "backToStart" }, { type: "movePoint", index: 2, to: C });
+    const moved = run(add(A), add(B), { type: "backToStart" }, { type: "movePoint", index: 2, to: C, accessPoints: [], officialAires: [] });
     expect(canGoBackToStart(moved.trip)).toBe(true);
   });
 

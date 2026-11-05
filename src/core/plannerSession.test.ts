@@ -64,7 +64,10 @@ const build = (make: Make, session: PlannerSession) => (typeof make === "functio
 // Every action that applies to a busy session while no question is open.
 const actions: [name: string, make: Make][] = [
   ["add point", { type: "addPoint", at: { lat: 50.4, lng: 5.5 }, accessPoints: [], officialAires: [] }],
-  ["move point", { type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 } }],
+  [
+    "move point",
+    { type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 }, accessPoints: access, officialAires: [] },
+  ],
   ["delete selected point", { type: "deleteSelectedPoint" }],
   ["back to start", { type: "backToStart" }],
   ["insert point", { type: "insertPoint", index: 0, near: { lat: 50.3577, lng: 5.4563 } }],
@@ -142,12 +145,12 @@ table(
   (s) => s.selectedPoint,
 );
 
-// Set leg mode and add point set the offers; their rows are in "snap offers from ..." below.
+// Set leg mode, add point and move point set the offers; their rows are in "snap offers from ..." below.
 table(
   "snap offers (one offer is listed)",
   {
     "add point": cleared([]), // replaced by its own offers, none here
-    "move point": cleared([]),
+    "move point": cleared([]), // replaced by its own offers, none this far away
     "delete selected point": cleared([]),
     "back to start": cleared([]), // the closing point gets no offer of its own
     "insert point": cleared([]),
@@ -368,6 +371,49 @@ describe("snap offers from add point", () => {
   });
 });
 
+describe("snap offers from move point", () => {
+  // A paddle leg A -> B, then a hike leg to C: A is the put-in, B the take-out. "b" is a slipway about 55 m from B.
+  const nearB: LatLng = { lat: 50.3632, lng: 5.4563 };
+  const atB = slipway("b", nearB);
+  const besideB: LatLng = { lat: 50.3632, lng: 5.4565 }; // about 14 m from "b"
+  const besideA: LatLng = { lat: 50.3532, lng: 5.4565 }; // about 14 m from the official aire
+  const paddling = () =>
+    run(firstSession({ trip: through(A, B, C) }), {
+      type: "setLegMode",
+      index: 0,
+      mode: "paddle",
+      accessPoints: [],
+      officialAires: [],
+    });
+  const moveTo = (index: number, to: LatLng): PlannerAction => ({
+    type: "movePoint",
+    index,
+    to,
+    accessPoints: atB,
+    officialAires: [officialAire],
+  });
+
+  it("offer to snap a take-out moved near one of your access points", () => {
+    const after = plannerSession(paddling(), moveTo(1, besideB));
+    expect(after.offers.map((o) => [o.change, targetId(o)])).toEqual([[{ kind: "take-out", point: 1 }, "b"]]);
+  });
+
+  it("offer to snap a put-in moved near an official aire", () => {
+    const after = plannerSession(paddling(), moveTo(0, besideA));
+    expect(after.offers.map((o) => [o.change, o.target.kind])).toEqual([[{ kind: "put-in", point: 0 }, "official-aire"]]);
+  });
+
+  it("replace the earlier offers; a moved point that is no put-in or take-out offers nothing", () => {
+    const after = run(paddling(), moveTo(1, besideB), moveTo(2, besideB));
+    expect(after.offers).toEqual([]);
+  });
+
+  it("accepting it moves the point onto the access point", () => {
+    const after = plannerSession(paddling(), moveTo(1, besideB));
+    expect(plannerSession(after, { type: "acceptOffer", offer: after.offers[0] }).trip.points[1]).toEqual(nearB);
+  });
+});
+
 describe("snap offers from access points changed", () => {
   it("drops the offer to a deleted access point and keeps the others", () => {
     const both = [...slipway("near", nearA), ...slipway("c", { lat: 50.3632, lng: 5.4563 })]; // "c" is near B
@@ -464,7 +510,11 @@ describe("route answers", () => {
   it("a stale answer is ignored", () => {
     const session = firstSession({ trip: through(A, B) });
     const request = requestOfLeg(session.trip, 0);
-    const moved = run(session, { type: "movePoint", index: 1, to: C }, { type: "routeArrived", request, route: routed });
+    const moved = run(
+      session,
+      { type: "movePoint", index: 1, to: C, accessPoints: [], officialAires: [] },
+      { type: "routeArrived", request, route: routed },
+    );
     expect(moved.trip.legs[0].route).toBeUndefined();
   });
 
@@ -473,7 +523,7 @@ describe("route answers", () => {
     const request = requestOfLeg(session.trip, 0);
     const back = run(
       session,
-      { type: "movePoint", index: 1, to: C },
+      { type: "movePoint", index: 1, to: C, accessPoints: [], officialAires: [] },
       { type: "undo" },
       { type: "routeArrived", request, route: routed },
     );

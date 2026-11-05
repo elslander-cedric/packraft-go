@@ -11,8 +11,9 @@
 //   clicked, deselect, entering access point editing and every edit of the points, undo, accept
 //   offer and any replace; kept by set leg mode, so its mode can be switched back, and by
 //   everything else. A selected point and a selected leg never go together.
-// - snap offers: set leg mode and add point replace them with the offers worked
-//   out from the trip they produced; move, insert, delete, back to start, undo and replace drop them; accept and
+// - snap offers: set leg mode, add point and move point replace them with the offers worked
+//   out from the trip they produced (a move offers only for the moved point); insert, delete,
+//   back to start, undo and replace drop them; accept and
 //   decline remove that one offer; access points changed drops the offers to a
 //   deleted access point, makes the offers to a moved one follow it and leaves
 //   the offers to official aires alone.
@@ -33,7 +34,7 @@ import type { CalendarDate } from "./calendarDate";
 import type { OfficialAire } from "./officialAire";
 import { applyRoutingAction, retryLeg, type RoutingAction } from "./routing";
 import { distanceM } from "./geo";
-import { acceptSnap, snapOffers, type SnapOffer } from "./snap";
+import { acceptSnap, movedPointOffers, snapOffers, type SnapOffer } from "./snap";
 import {
   applyEdit,
   canGoBackToStart,
@@ -100,7 +101,7 @@ type SnapTargets = { readonly accessPoints: AccessPoints; readonly officialAires
 
 export type PlannerAction =
   | ({ readonly type: "addPoint"; readonly at: LatLng; readonly mode?: LegMode } & SnapTargets)
-  | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
+  | ({ readonly type: "movePoint"; readonly index: number; readonly to: LatLng } & SnapTargets)
   /** Adds a leg from the last point back to the start (GLOSSARY "Loop"), in `mode` when given. */
   | { readonly type: "backToStart"; readonly mode?: LegMode }
   | { readonly type: "deleteSelectedPoint" }
@@ -220,8 +221,10 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
       const after = applyEdit(trip, { type: "addPoint", at: action.at, mode: action.mode });
       return edited(session, after, snapOffers(trip, after, action.accessPoints, action.officialAires));
     }
-    case "movePoint":
-      return edited(session, applyEdit(trip, action));
+    case "movePoint": {
+      const after = applyEdit(trip, { type: "movePoint", index: action.index, to: action.to });
+      return edited(session, after, movedPointOffers(after, action.index, action.accessPoints, action.officialAires));
+    }
     case "backToStart":
       if (!canGoBackToStart(trip)) return session;
       return edited(session, applyEdit(trip, { type: "addPoint", at: trip.points[0], mode: action.mode }));
