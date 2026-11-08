@@ -29,8 +29,11 @@ export default function BaseMapTiles({ id }: { id: BaseMapId }) {
       ...(source.minZoom !== undefined && { minZoom: source.minZoom }),
       ...(source.bounds && { bounds: leafletBounds(source.bounds) }),
     };
+    // `params` must keep its identity across renders: react-leaflet compares it by reference
+    // and a new object calls setParams, which redraws every tile (the aerial photos blinked
+    // on each re-render, e.g. every position fix).
     return source.kind === "wms" ? (
-      <WMSTileLayer key={`${id}-${i}`} url={source.url} params={{ ...source.params }} {...options} />
+      <WMSTileLayer key={`${id}-${i}`} url={source.url} params={source.params} {...options} />
     ) : (
       <TileLayer
         key={`${id}-${i}`}
