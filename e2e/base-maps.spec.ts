@@ -97,6 +97,36 @@ test("the layers button switches to aerial photos, NGI topo and back to OpenTopo
   expect(network.blocked).toEqual([]);
 });
 
+test("aerial photos stay put while the position updates: the Walloon tiles are not redrawn", async ({
+  page,
+  context,
+}) => {
+  // Each re-render of the planner (here: a new position fix, about every second on a phone)
+  // must leave the WMS layer alone; it used to redraw every tile, so the photos blinked.
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 50.268, longitude: 5.446, accuracy: 12 });
+  const network = await openMap(page);
+  await chooseBaseMap(page, "aerial-be");
+  await page.getByRole("button", { name: strings.planner.showPositionButton }).click();
+  await expect(mapRegion(page).locator(".leaflet-overlay-pane path.my-position")).toHaveCount(1);
+  await expect(mapRegion(page).locator(".leaflet-map-pane")).not.toHaveClass(/leaflet-zoom-anim/);
+  const walloonTiles = mapRegion(page).locator(".leaflet-tile-pane img.leaflet-tile-loaded[src*='wallonie']");
+  await expect(walloonTiles.first()).toBeVisible();
+  await page.waitForTimeout(1000);
+  // Mark the drawn tiles: a redraw replaces every img, dropping the mark.
+  await walloonTiles.evaluateAll((images) => images.forEach((image) => image.setAttribute("data-seen", "")));
+  for (let fix = 1; fix <= 4; fix++) {
+    await context.setGeolocation({ latitude: 50.268 + fix * 0.00002, longitude: 5.446, accuracy: 12 });
+    await page.waitForTimeout(400);
+  }
+  expect(await walloonTiles.count()).toBeGreaterThan(0);
+  const redrawn = await walloonTiles.evaluateAll(
+    (images) => images.filter((image) => !image.hasAttribute("data-seen")).length,
+  );
+  expect(redrawn).toBe(0);
+  expect(network.blocked).toEqual([]);
+});
+
 test("the chosen base map survives a reload", async ({ page }) => {
   const network = await openMap(page);
   await chooseBaseMap(page, "aerial-be");
