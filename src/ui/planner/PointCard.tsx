@@ -30,7 +30,7 @@ export default function PointCard({ point, distanceKm, camp, onDelete, onCamp, o
     <div className="planner-leg-card planner-point-card" role="group" aria-label={title}>
       {/* One line like the leg card's; on a screen too narrow for it, the distance goes under the number. */}
       <span className="planner-leg-card-title planner-point-card-title" aria-hidden>
-        <span>{strings.planner.selectedPointName(point + 1)} ·</span> <span>{distance}</span>
+        <span>{strings.planner.selectedPointShortName(point + 1)} ·</span> <span>{distance}</span>
       </span>
       {/* Side by side like the leg card's Hike / Paddle toggle, so the title keeps the room. */}
       <div className="planner-point-card-actions">

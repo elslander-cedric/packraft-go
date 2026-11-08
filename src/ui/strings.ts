@@ -186,7 +186,9 @@ export const strings = {
     resizeSheetHandle: "Resize the trip sheet",
     sheetStops: { peek: "Header only", half: "Half the screen", full: "Full screen" },
     // The card a tap on a leg on the map shows (#230): its toggle's name is `legModeLabel`.
+    // Its accessible name is the title; it shows the short form, e.g. "L2 · 1.2 km".
     selectedLegTitle: (n: number, distance: string) => `Leg ${n} · ${distance}`,
+    selectedLegShortTitle: (n: number, distance: string) => `L${n} · ${distance}`,
     selectedLegClose: "Unselect the leg",
     // The floating hike / paddle toggle for the leg the next map tap adds (#121).
     nextLegModeLabel: "Next leg's mode",
@@ -211,10 +213,10 @@ export const strings = {
     // The floating button bottom left in access point editing, icon-only.
     markAccessPointButton: "Mark an access point",
     // The selected point's card, floating above the sheet or panel: its title, with how far along
-    // the route it is from the start. Its delete
+    // the route it is from the start; it shows the short name, e.g. "P2 · 1.2 km". Its delete
     // and camp buttons are icon-only; their names are `deletePointButton` and `campButton`.
     selectedPointTitle: (n: number, distance: string) => `Point ${n} · ${distance}`,
-    selectedPointName: (n: number) => `Point ${n}`,
+    selectedPointShortName: (n: number) => `P${n}`,
     selectedPointClose: "Unselect the point",
     markLocating: "Finding your position to mark the access point…",
     // Without a position fix, the flag button asks for a tap on the map.
