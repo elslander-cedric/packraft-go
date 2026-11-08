@@ -33,10 +33,13 @@ export type LegModeCardProps = {
  * show: which leg it is, its mode as a Hike / Paddle toggle, and a button that unselects it.
  */
 export default function LegModeCard({ leg, mode, distanceKm, onChange, onClose }: LegModeCardProps) {
-  const title = strings.planner.selectedLegTitle(leg + 1, formatDistance(distanceKm));
+  const distance = formatDistance(distanceKm);
+  const title = strings.planner.selectedLegTitle(leg + 1, distance);
   return (
     <div className="planner-leg-card" role="group" aria-label={title}>
-      <span className="planner-leg-card-title">{title}</span>
+      <span className="planner-leg-card-title" aria-hidden>
+        {strings.planner.selectedLegShortTitle(leg + 1, distance)}
+      </span>
       <ToggleGroup
         label={strings.legModeLabel(leg + 1)}
         value={mode}
