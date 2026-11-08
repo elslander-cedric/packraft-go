@@ -6,14 +6,16 @@
 // (access point editing, ADR 0036), tap a marker to select it; press and drag
 // it to move it (#120). Otherwise the markers are inert (#226): a press passes
 // through to the route point, leg or map under it, and the trip is drawn over
-// them (their own pane below the legs). The new point placed while
+// them (their own pane below the legs). In normal mode, points whose markers would
+// overlap at the current zoom show as one marker with their count (`accessPointGroups.ts`);
+// while editing each keeps its own, to tap and drag. The new point placed while
 // editing and not saved yet (the draft) has its own marker: drag it into place;
 // a tap on it does nothing, as only the flag button opens its details.
 // Its own layer, apart from the trip's, and only loaded through TripMap.
 import type { Marker as LeafletMarker } from "leaflet";
 import { divIcon } from "leaflet";
-import { useRef } from "react";
-import { Marker, Pane } from "react-leaflet";
+import { useMemo, useRef, useState } from "react";
+import { Marker, Pane, useMap, useMapEvents } from "react-leaflet";
 import type { AccessPoint, AccessPointKind, AccessPoints } from "@/core/accessPoints";
 import type { LatLng } from "@/core/trip";
 import { accessPointText } from "@/ui/accessPointText";
@@ -21,6 +23,7 @@ import { icons } from "@/ui/icons/icons";
 import { iconSvg, type IconPlacement } from "@/ui/icons/iconSvg";
 import { strings } from "@/ui/strings";
 import { accessPointModeColours } from "./accessColours";
+import { groupNearby } from "./accessPointGroups";
 import { paneZIndex } from "./mapConfig";
 import { escapeAttribute, escapeText } from "./escapeHtml";
 import { HIT_SIZE_PX, usePressDrag } from "./pressDrag";
@@ -117,6 +120,66 @@ function PressDragMarker({
   return <Marker ref={marker} position={point.position} icon={icon} />;
 }
 
+const groupIcons = new Map<number, ReturnType<typeof divIcon>>();
+
+/** Access points whose markers would overlap, shown as one grey circle with their count. */
+function groupIcon(count: number) {
+  const known = groupIcons.get(count);
+  if (known) return known;
+  const label = strings.accessPoints.groupMarker(count);
+  const icon = divIcon({
+    className: "access-point-marker access-point-group",
+    html:
+      `<svg role="img" aria-label="${escapeAttribute(label)}" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}">` +
+      `<title>${escapeText(label)}</title>` +
+      `<circle cx="12" cy="12" r="11" fill="${accessPointModeColours.normal}" stroke="#fff" stroke-width="2"/>` +
+      `<text x="12" y="12" dy="0.35em" text-anchor="middle" fill="#fff" font-size="${count > 99 ? 8 : 11}" font-weight="700">${count}</text></svg>`,
+    iconSize: [SIZE, SIZE],
+    iconAnchor: [SIZE / 2, SIZE / 2],
+  });
+  groupIcons.set(count, icon);
+  return icon;
+}
+
+/** Inert like the single markers, at the middle of its members. */
+function GroupMarker({ members }: { members: AccessPoint[] }) {
+  const lat = members.reduce((sum, p) => sum + p.position.lat, 0) / members.length;
+  const lng = members.reduce((sum, p) => sum + p.position.lng, 0) / members.length;
+  return <Marker position={{ lat, lng }} icon={groupIcon(members.length)} interactive={false} keyboard={false} />;
+}
+
+/**
+ * Normal mode: points whose markers would overlap at the current zoom are grouped (the selected one
+ * never is), so zoomed out they don't pile up. Regrouped when the zoom changes.
+ */
+function InertMarkers({ points, selectedId }: { points: AccessPoints; selectedId: string | null }) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(() => map.getZoom());
+  useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
+  const groups = useMemo(
+    () =>
+      groupNearby(
+        points
+          .filter((point) => point.id !== selectedId)
+          .map((point) => ({ item: point, ...map.project(point.position, zoom) })),
+      ),
+    [points, selectedId, map, zoom],
+  );
+  const selected = points.find((point) => point.id === selectedId);
+  return (
+    <>
+      {groups.map((members) =>
+        members.length === 1 ? (
+          <InertMarker key={members[0].id} point={members[0]} selected={false} />
+        ) : (
+          <GroupMarker key={`group-${members[0].id}`} members={members} />
+        ),
+      )}
+      {selected && <InertMarker key={selected.id} point={selected} selected />}
+    </>
+  );
+}
+
 /** A marker that doesn't react: not interactive (no pointer events), not focusable. */
 function InertMarker({ point, selected }: { point: AccessPoint; selected: boolean }) {
   return (
@@ -154,9 +217,7 @@ export default function AccessPointLayer({
         ))
       ) : (
         <Pane name="access-points" pane="overlayPane" style={{ zIndex: paneZIndex.accessPoints }}>
-          {points.map((point) => (
-            <InertMarker key={point.id} point={point} selected={point.id === selectedId} />
-          ))}
+          <InertMarkers points={points} selectedId={selectedId} />
         </Pane>
       )}
       {draft && (

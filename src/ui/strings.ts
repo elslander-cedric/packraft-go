@@ -95,6 +95,8 @@ export const strings = {
       detail === null ? `Access point: ${heading}` : `Access point: ${heading} (${detail})`,
     // The marker of a new access point placed on the map and not saved yet (ADR 0036).
     draftMarker: "New access point, not saved yet",
+    // Zoomed out, access points whose markers would overlap show as one marker with their count.
+    groupMarker: (count: number) => `${count} access points`,
     // Its use and kind, e.g. "Put-in, Official aire": a list entry's detail line, or its heading
     // when it has no name or note (#136).
     useAndKind: (use: string, kind: string) => `${use}, ${kind}`,
