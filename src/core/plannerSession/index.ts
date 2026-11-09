@@ -9,29 +9,30 @@
 // - selected point: cleared by add, move and delete point, back to start, set leg mode, undo,
 //   accept offer and any replace of the trip; insert point makes it follow the
 //   selected point when the insert shifts its index; leg clicked and map tapped clear it; kept by
-//   everything else.
+//   toggle camp (the camp is on it and no point moves) and everything else.
 // - selected leg (#230): set by leg clicked (cleared by a click on it again), cleared by point
 //   clicked, deselect, map tapped, entering access point editing and every edit of the points, undo,
 //   accept offer and any replace; kept by set leg mode, so its mode can be switched back, and by
-//   everything else. A selected point and a selected leg never go together.
+//   everything else (toggle camp needs a selected point, so no leg is selected then). A selected
+//   point and a selected leg never go together.
 // - map tapped (#120, #230, #227): while editing access points it places the draft or moves it
 //   there; else, with a point or a leg selected, it only clears the selection; else it adds a point
 //   in `nextLegMode`.
 // - snap offers: set leg mode, add point and move point replace them with the offers worked
 //   out from the trip they produced (a move offers only for the moved point); insert, delete,
-//   back to start, undo and replace drop them; accept and decline remove that one offer. Every
-//   change to your access points (deleted, moved, updated, newly named, a saved draft) drops the
-//   offers to a deleted access point, makes the offers to a changed one follow it and leaves the
-//   offers to official aires alone. `shownOffers` is empty while editing access points.
+//   back to start, undo and replace drop them; accept and decline remove that one offer; toggle
+//   camp keeps them (no point moves). Every change to your access points (deleted, moved, updated,
+//   newly named, a saved draft) drops the offers to a deleted access point, makes the offers to a
+//   changed one follow it and leaves the offers to official aires alone. `shownOffers` is empty while editing access points.
 // - file error: set by file rejected; cleared by every other action except a route being requested
 //   or arriving, the official aires loading, entering and leaving access point editing, the access
 //   point actions and a default name found.
-// - next mode (#121, #241): the next leg's picked mode, null for none (then `nextLegMode` is the
-//   last leg's mode). Set by next mode picked; cleared by every edit of the points or leg modes
-//   (add, move, insert and delete point, back to start, set leg mode, toggle camp, undo, accept
-//   offer) and any replace; kept by routing and everything else. Add point on an empty trip keeps
-//   it, so the first point carries the pick over to the second. Add point and back to start draw
-//   their leg in `nextLegMode`.
+// - next mode pick (#121, #241): the next leg's picked mode, null for none (then `nextLegMode` is
+//   the last leg's mode). Set by next mode picked; cleared by every edit of the points, leg modes
+//   or camps (add, move, insert and delete point, back to start, set leg mode, undo, accept offer,
+//   and toggle camp, an edit with its own undo step that keeps the selection) and any replace; kept
+//   by routing and everything else. Add point on an empty trip keeps it, so the first point carries
+//   the pick over to the second. Add point and back to start draw their leg in `nextLegMode`.
 // - official aires (#241): set by official aires loaded, which applies in any mode and while the
 //   replace question is open; kept by everything else, replacing the trip included. Add, move
 //   point and set leg mode offer snaps to them; an edit before they load offers none.
@@ -49,33 +50,34 @@
 //   cleared by entering and leaving access point editing, by placing or moving the draft and by
 //   deleting that access point; kept by everything else.
 // - panel view (#243): tab chosen sets normal mode's tab, ignored while editing access points,
-//   which shows the Access points tab (`shownTab`) and keeps normal mode's tab for Done. Sheet moved
-//   sets the sheet's stop in any mode. Entering keeps the stop to restore and opens the panel for
-//   the visit; panel toggled opens or closes it only while editing (in normal mode it is a stored
-//   setting); Done restores the stop. Kept by everything else.
+//   which shows the Access points tab (`shownTab`) and keeps normal mode's tab for leaving. Sheet
+//   moved sets the sheet's stop in any mode. Entering keeps the stop to restore and opens the panel
+//   for the visit; panel toggled opens or closes it only while editing (in normal mode it is a
+//   stored setting); leaving restores the stop. Kept by everything else.
 // - row highlight (#243): set by row tapped (a tap on the highlighted day clears it; on the
 //   highlighted leg or section keeps it); cleared by every edit of the points, leg modes or camps
-//   (add, move, insert and delete point, back to start, set leg mode, toggle camp, undo, accept
-//   offer) and any replace; kept by routing, the map selection, the panel view and everything else.
+//   (add, move, insert and delete point, back to start, set leg mode, undo, accept offer, and toggle
+//   camp, which keeps the selection but can shift the days' indexes) and any replace; kept by
+//   routing, the map selection, the panel view and everything else.
 //   Row tapped is ignored while editing access points.
 // - replace question: new trip and file opened ask it when the current trip needs
 //   confirmation. While it is open only confirm, cancel, the routing actions, official
 //   aires loaded and default name found apply.
 // - mode (ADR 0036, #225): normal on load (never stored); enter access point editing sets it and
-//   Done sets it back (the panel view is above). Both clear the selection and the
-//   selected access point; Done drops the draft.
+//   leave access point editing sets it back (the panel view is above). Both clear the selection and
+//   the selected access point; leaving drops the draft.
 //   While editing access points the trip is frozen (#227): the actions that edit its points or
 //   leg modes, select or deselect a point or a leg or answer a snap offer return the same session;
-//   the offers wait for Done (still following your access points). The access point actions apply
+//   the offers wait for leaving (still following your access points). The access point actions apply
 //   only while editing.
 // Actions that can't apply return the same session.
-import type { AccessPoints } from "../accessPoints";
+import type { AccessPoint, AccessPoints } from "../accessPoints";
 import { applyRoutingAction, type RoutingAction } from "../routing";
 import type { SnapOffer } from "../snap";
 import type { Trip } from "../trip";
 import { accessPointEdit, defaultNameFound, placeDraft } from "./accessPoints";
 import { replaced, tripAction } from "./trip";
-import type { AccessPointAction, PlannerAction, PlannerSession, PlannerTab } from "./types";
+import type { AccessPointAction, PlannerAction, PlannerSession, PlannerTab, TripAction } from "./types";
 
 export * from "./types";
 export { nextLegMode } from "./trip";
@@ -89,9 +91,20 @@ const noOffers: readonly SnapOffer[] = [];
 export const shownTab = (session: PlannerSession): PlannerTab =>
   editingAccessPoints(session) ? "accessPoints" : session.panel.tab;
 
-/** The snap offers to show: none while editing access points, where they wait for Done (#227). */
+/** The snap offers to show: none while editing access points, where they wait for leaving (#227). */
 export const shownOffers = (session: PlannerSession): readonly SnapOffer[] =>
   editingAccessPoints(session) ? noOffers : session.offers;
+
+/**
+ * What the map lets you change, from the mode (#227, #242): in normal mode the trip; while editing
+ * access points only your access points and the draft, the trip frozen.
+ */
+export const mapEditing = (
+  session: PlannerSession,
+): { readonly frozen: boolean; readonly accessPointsEditable: boolean; readonly draft: AccessPoint | null } => {
+  const editing = editingAccessPoints(session);
+  return { frozen: editing, accessPointsEditable: editing, draft: editing ? session.draft : null };
+};
 
 /** The first session, from what loading the stored trip and your stored access points returned. */
 export function firstSession(stored: {
@@ -109,7 +122,7 @@ export function firstSession(stored: {
     keepStoredSave: stored.unknownVersion ?? false,
     question: "newTrip",
     pendingTrip: null,
-    nextMode: null,
+    nextModePick: null,
     officialAires: [],
     tripGeneration: 0,
     accessPoints: stored.accessPoints ?? [],
@@ -126,7 +139,7 @@ const routing = (session: PlannerSession, action: RoutingAction): PlannerSession
 };
 
 /** What can't apply while editing access points: the trip is frozen (#227). */
-const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set([
+const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set<TripAction["type"]>([
   "addPoint",
   "movePoint",
   "backToStart",

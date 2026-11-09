@@ -167,7 +167,7 @@ table(
     "access point updated": kept(1),
     "access point deleted": kept(1),
     "default name found": kept(1),
-    "toggle camp": kept(1),
+    "toggle camp": kept(1), // the camp is on the selected point and no point moves
     undo: cleared(null),
     rename: kept(1),
     "set start date": kept(1),
@@ -212,7 +212,7 @@ table(
     "access point updated": kept(1),
     "access point deleted": kept(1),
     "default name found": kept(1),
-    "toggle camp": kept(1),
+    "toggle camp": kept(1), // no point moves
     rename: kept(1),
     "set start date": kept(1),
     "retry leg": kept(1),
@@ -403,7 +403,7 @@ table(
     "route requested": kept("paddle"),
     "route arrived": kept("paddle"),
   },
-  (s) => s.nextMode,
+  (s) => s.nextModePick,
   paddlePicked,
 );
 
@@ -412,7 +412,7 @@ describe("the next leg's mode (#121)", () => {
     plannerSession(session, { type: "nextModePicked", mode });
 
   it("starts with no pick: the last leg's mode, hike for a trip without legs", () => {
-    expect(firstSession({ trip: emptyTrip() }).nextMode).toBeNull();
+    expect(firstSession({ trip: emptyTrip() }).nextModePick).toBeNull();
     expect(nextLegMode(firstSession({ trip: emptyTrip() }))).toBe("hike");
     const paddling = run(firstSession({ trip: through(A, B) }), { type: "setLegMode", index: 0, mode: "paddle" });
     expect(nextLegMode(paddling)).toBe("paddle");
@@ -436,25 +436,25 @@ describe("the next leg's mode (#121)", () => {
       type: "addPoint",
       at: A,
     });
-    expect(first.nextMode).toBe("paddle");
+    expect(first.nextModePick).toBe("paddle");
     const second = plannerSession(first, { type: "addPoint", at: B });
     expect(second.trip.legs.map((leg) => leg.mode)).toEqual(["paddle"]);
-    expect(second.nextMode).toBeNull();
+    expect(second.nextModePick).toBeNull();
   });
 
   it("back to start draws the closing leg in the picked mode", () => {
     const after = plannerSession(pick(firstSession({ trip: through(A, B, C) }), "paddle"), { type: "backToStart" });
     expect(after.trip.legs.map((leg) => leg.mode)).toEqual(["hike", "hike", "paddle"]);
-    expect(after.nextMode).toBeNull();
+    expect(after.nextModePick).toBeNull();
   });
 
   it("is cleared when the trip is replaced, at once or after the question", () => {
     const empty = pick(firstSession({ trip: emptyTrip() }), "paddle");
-    expect(plannerSession(empty, { type: "fileOpened", trip: through(A, B) }).nextMode).toBeNull();
+    expect(plannerSession(empty, { type: "fileOpened", trip: through(A, B) }).nextModePick).toBeNull();
     const asked = run(paddlePicked(), { type: "newTrip" });
-    expect(asked.nextMode).toBe("paddle");
-    expect(plannerSession(asked, { type: "cancelReplace" }).nextMode).toBe("paddle");
-    expect(plannerSession(asked, { type: "confirmReplace" }).nextMode).toBeNull();
+    expect(asked.nextModePick).toBe("paddle");
+    expect(plannerSession(asked, { type: "cancelReplace" }).nextModePick).toBe("paddle");
+    expect(plannerSession(asked, { type: "confirmReplace" }).nextModePick).toBeNull();
   });
 
   it("can't be picked while the replace question is open", () => {
@@ -508,7 +508,7 @@ table(
     "back to start": cleared(null),
     "insert point": cleared(null),
     "set leg mode": cleared(null), // the sections may change
-    "toggle camp": cleared(null), // the days may change
+    "toggle camp": cleared(null), // the days' indexes may shift, though the selected point is kept
     undo: cleared(null),
     rename: kept(leg1),
     "set start date": kept(leg1),
@@ -766,7 +766,7 @@ describe("official aires loaded", () => {
   });
 });
 
-// Offers follow your access points (#97): the edits while editing change them, and the offers wait for Done.
+// Offers follow your access points (#97): the edits while editing change them, and the offers wait for leaving.
 describe("snap offers follow your access points", () => {
   const nearC = slipway("c", { lat: 50.3632, lng: 5.4563 }); // near B
   /** Editing, with offers to "near" (A's put-in) and "c" (B's take-out). */
@@ -785,7 +785,7 @@ describe("snap offers follow your access points", () => {
     expect(after.offers.map(targetId)).toEqual(["c"]);
   });
 
-  it("makes the offer to a moved access point follow it; accepting after Done moves the point there", () => {
+  it("makes the offer to a moved access point follow it; accepting after leaving moves the point there", () => {
     const to: LatLng = { lat: 50.3537, lng: 5.4563 }; // about 111 m from A
     const moved = plannerSession(offered(), { type: "accessPointMoved", id: "near", to, now: T2 });
     const offer = moved.offers.find((o) => targetId(o) === "near")!;
@@ -824,7 +824,7 @@ describe("snap offers follow your access points", () => {
 
 // Access point editing (ADR 0036, #242): your access points, the new point being placed (the draft)
 // and the selected access point. This session is editing, with "near" and "far" stored, the draft
-// placed at D and "far" selected; one snap offer (to "near") waits for Done.
+// placed at D and "far" selected; one snap offer (to "near") waits for leaving.
 const far = slipway("far", F);
 const editingBusy = (): PlannerSession =>
   run(

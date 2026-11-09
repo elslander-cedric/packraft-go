@@ -16,7 +16,7 @@ function defaultNameSource(): Promise<DefaultNameSource> {
 export type SavingPaused = "unknown-version" | "damaged";
 
 /** What the planner shows about storing your access points. */
-export type AccessPointsStorage = ReturnType<typeof useAccessPoints>;
+export type AccessPointStorage = ReturnType<typeof useAccessPointStorage>;
 
 /**
  * The side effects of your access points (#55, ADR 0023); the planner session holds them and is
@@ -25,7 +25,7 @@ export type AccessPointsStorage = ReturnType<typeof useAccessPoints>;
  * to the session as `defaultNameFound`. `stored` is what loading them returned.
  * Only rendered in the browser (see ClientTripPlanner).
  */
-export function useAccessPoints(
+export function useAccessPointStorage(
   stored: LoadedAccessPoints,
   points: AccessPoints,
   draft: AccessPoint | null,

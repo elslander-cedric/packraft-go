@@ -21,7 +21,7 @@ export default function DaysPanel({
   access,
   aire = [],
   onSelectDay,
-  selectedDay,
+  highlightedDay,
   onShowLeg,
 }: {
   days: readonly DaySummary[];
@@ -29,8 +29,8 @@ export default function DaysPanel({
   aire?: readonly AireWarning[];
   /** A day card was tapped: the planner zooms the map to that day (#123). */
   onSelectDay: (day: number) => void;
-  /** The tapped card; none when undefined. */
-  selectedDay?: number;
+  /** The highlighted card (the row highlight); none when undefined. */
+  highlightedDay?: number;
   /** A warning chip was tapped: show that leg with its warnings. */
   onShowLeg: (leg: number) => void;
 }) {
@@ -45,7 +45,7 @@ export default function DaysPanel({
             day={day}
             index={i}
             warnings={<DayWarningChips legs={dayWarnings(i, access?.[i], aire)} onShowLeg={onShowLeg} />}
-            selected={i === selectedDay}
+            highlighted={i === highlightedDay}
             onSelect={() => onSelectDay(i)}
           />
         ))}
@@ -79,23 +79,23 @@ function DayCard({
   day,
   index,
   warnings,
-  selected,
+  highlighted,
   onSelect,
 }: {
   day: DaySummary;
   index: number;
   warnings: ReactNode;
-  selected: boolean;
+  highlighted: boolean;
   onSelect: () => void;
 }) {
   const date = day.date && dayDateParts(day.date);
   return (
-    <li className={`day-row day-card${selected ? " day-row-selected" : ""}`} onClick={onSelect}>
+    <li className={`day-row day-card${highlighted ? " day-row-selected" : ""}`} onClick={onSelect}>
       {/* The card takes the tap; the tile is the way to it for keyboards and screen readers. */}
       <button
         type="button"
         className="day-tile"
-        aria-expanded={selected}
+        aria-expanded={highlighted}
         aria-label={day.date ? formatDayDate(day.date) : strings.dayLabel(index + 1)}
       >
         {date ? (

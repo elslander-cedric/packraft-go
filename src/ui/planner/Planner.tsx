@@ -3,6 +3,7 @@
 import { useId, useRef, useState, type CSSProperties } from "react";
 import {
   editingAccessPoints as isEditingAccessPoints,
+  mapEditing,
   nextLegMode,
   normalTabs,
   shownOffers,
@@ -90,6 +91,8 @@ export default function Planner({ router }: { router?: Router }) {
   const message = positionMessage(position);
   // Access point editing (ADR 0036): the planner's other mode, kept in the planner session.
   const editingAccessPoints = isEditingAccessPoints(session);
+  // What the map lets you change, from the mode: the trip, or your access points and the draft (#227, #242).
+  const mapEdits = mapEditing(session);
   // The panel view (#243) is in the planner session: the tab, the sheet's stop (kept while sideways,
   // so turning back to portrait restores it; #126) and the panel's open state while editing.
   const { panel, highlightedRow } = session;
@@ -176,7 +179,7 @@ export default function Planner({ router }: { router?: Router }) {
     raise();
     setFocus({ area, ...covered() });
   };
-  // A section row tap does the same for the whole section, and a tap on the selected one of
+  // A section row tap does the same for the whole section, and a tap on the highlighted one of
   // several legs also opens it (#200). It always zooms, as the map may have been panned away.
   const [detailsSection, setDetailsSection] = useState<number | null>(null);
   // The sections showing their legs, by first leg as sections have no identity of their own: an
@@ -217,7 +220,7 @@ export default function Planner({ router }: { router?: Router }) {
     setFocus({ at: point.position, ...covered() });
   };
   // A day card tap shows the whole day on the map, above the half-raised sheet (#123).
-  // Tapping the selected card again unselects it (the session clears it).
+  // Tapping the highlighted card again clears the highlight (the session does it).
   const openDay = (index: number) => {
     const day = summary.days[index];
     if (!day) return;
@@ -270,8 +273,8 @@ export default function Planner({ router }: { router?: Router }) {
               legs={trip.legs}
               access={waterAccess}
               aire={aire}
-              selected={highlightedSection}
-              selectedLeg={highlightedLeg}
+              highlightedSection={highlightedSection}
+              highlightedLeg={highlightedLeg}
               open={stillOpen}
               onSelect={selectSectionRow}
               onSelectLeg={selectLegRow}
@@ -287,7 +290,7 @@ export default function Planner({ router }: { router?: Router }) {
               access={waterAccess?.days}
               aire={aire}
               onSelectDay={openDay}
-              selectedDay={highlightedDay}
+              highlightedDay={highlightedDay}
               // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
               onShowLeg={setDetailsLeg}
             />
@@ -324,16 +327,15 @@ export default function Planner({ router }: { router?: Router }) {
         onLegHold={(index, near) => dispatch({ type: "insertPoint", index, near })}
         selectedLeg={session.selectedLeg}
         onLegTap={(index) => dispatch({ type: "legClicked", index })}
-        frozen={editingAccessPoints}
+        frozen={mapEdits.frozen}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
           points: session.accessPoints,
-          editable: editingAccessPoints,
+          editable: mapEdits.accessPointsEditable,
           selectedId: session.selectedAccessPoint,
           onSelect: onSelectAccessPoint,
           onMove: (id, to) => dispatch({ type: "accessPointMoved", id, to, now: stamp().now }),
-          // The session has a draft only while editing access points.
-          draft,
+          draft: mapEdits.draft,
           onDraftMove: (to) => dispatch({ type: "draftMoved", to, now: stamp().now }),
         }}
         focus={focus}

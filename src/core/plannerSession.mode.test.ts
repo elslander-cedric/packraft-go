@@ -3,7 +3,14 @@
 // editing access points the trip is frozen (#227).
 import { describe, expect, it } from "vitest";
 import { addAccessPoint, updateAccessPoint } from "./accessPoints";
-import { firstSession, plannerSession, shownTab, type PlannerAction, type PlannerSession } from "./plannerSession";
+import {
+  firstSession,
+  mapEditing,
+  plannerSession,
+  shownTab,
+  type PlannerAction,
+  type PlannerSession,
+} from "./plannerSession";
 import { applyEdit, emptyTrip, type LatLng } from "./trip";
 
 const A: LatLng = { lat: 50.3527, lng: 5.4563 };
@@ -36,7 +43,7 @@ describe("planner modes", () => {
     expect(enter(editing)).toBe(editing);
   });
 
-  it("Done goes back to normal mode and clears the selection", () => {
+  it("leaving goes back to normal mode and clears the selection", () => {
     const editing = { ...enter(selected()), selectedPoint: 0 };
     const after = plannerSession(editing, { type: "leaveAccessPointEditing" });
     expect(after.mode).toEqual({ kind: "normal" });
@@ -48,9 +55,16 @@ describe("planner modes", () => {
     expect(enter(before).selectedLeg).toBeNull();
   });
 
-  it("Done in normal mode changes nothing", () => {
+  it("leaving in normal mode changes nothing", () => {
     const s = selected();
     expect(plannerSession(s, { type: "leaveAccessPointEditing" })).toBe(s);
+  });
+
+  it("the map edits the trip in normal mode, and your access points and the draft while editing (#227, #242)", () => {
+    expect(mapEditing(selected())).toEqual({ frozen: false, accessPointsEditable: false, draft: null });
+    const editing = plannerSession(enter(selected()), { type: "draftPlaced", at: C, newId: "d", now: T });
+    expect(editing.draft).not.toBeNull();
+    expect(mapEditing(editing)).toEqual({ frozen: true, accessPointsEditable: true, draft: editing.draft });
   });
 
   it("the mode outlasts replacing the trip", () => {
@@ -103,7 +117,7 @@ describe("the trip is frozen while editing access points (#227)", () => {
     });
   }
 
-  it("the snap offers wait for Done, following a moved access point", () => {
+  it("the snap offers wait for leaving, following a moved access point", () => {
     const before = editing();
     const to = { lat: 50.3531, lng: 5.4563 };
     const after = [
@@ -115,7 +129,7 @@ describe("the trip is frozen while editing access points (#227)", () => {
     expect(after.accessPoints[0].position).toEqual(to);
   });
 
-  it("the trip can change again after Done", () => {
+  it("the trip can change again after leaving", () => {
     const done = plannerSession(editing(), { type: "leaveAccessPointEditing" });
     expect(plannerSession(done, { type: "undo" }).trip).not.toBe(done.trip);
   });

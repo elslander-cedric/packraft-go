@@ -14,7 +14,7 @@ import { downloadGpx, downloadTripFile, readTripFile } from "@/persistence/tripF
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
 import { strings } from "./strings";
-import { useAccessPoints } from "./useAccessPoints";
+import { useAccessPointStorage } from "./useAccessPointStorage";
 import { localToday, useAccessRules, useBuiltInLocks, useBuiltInObstacles, useBuiltInOfficialAires } from "./useAccessRules";
 import { useSettings } from "./useSettings";
 import { useOfficialIncidents, useOfficialStatus } from "./useOfficialStatus";
@@ -71,7 +71,7 @@ export function usePlanner(router?: Router) {
   };
 
   // Storing your access points and looking up their default names.
-  const accessStorage = useAccessPoints(storedAccessPoints, session.accessPoints, session.draft, dispatch);
+  const accessStorage = useAccessPointStorage(storedAccessPoints, session.accessPoints, session.draft, dispatch);
 
   // With a `name` (the planner asks for it first, #124), the trip is renamed, then saved or exported
   // under that name.

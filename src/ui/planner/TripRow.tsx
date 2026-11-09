@@ -56,8 +56,8 @@ export type TripRowProps = {
   access: Pick<AccessSummary, "warnings" | "lockWarnings" | "incidentWarnings" | "obstacleWarnings"> | undefined;
   /** Walloon aire warnings of this row's legs. */
   aire: readonly AireWarning[];
-  /** Marked by the row's left bar. */
-  selected: boolean;
+  /** Highlighted (the row highlight, not the map selection): marked by the row's left bar. */
+  highlighted: boolean;
   /** The row was tapped. */
   onSelect: () => void;
   /** Whether a section of several legs shows them under it; none on a leg or a one-leg section. */
@@ -85,7 +85,7 @@ function DetailsButton({ details }: { details: NonNullable<TripRowProps["details
  * the time on the right, and under it the climb and descent (drop on a paddle row), each
  * after its icon, then icons for the access and each kind of warning, with the button to its
  * details at the right of that last line, or under the routing state while there is one.
- * The rest of the row is one button: a tap zooms the map, and on a selected section of several
+ * The rest of the row is one button: a tap zooms the map, and on a highlighted section of several
  * legs also opens it (#200).
  */
 export function TripRow({
@@ -95,7 +95,7 @@ export function TripRow({
   state,
   access,
   aire,
-  selected,
+  highlighted,
   onSelect,
   open,
   details,
@@ -106,7 +106,7 @@ export function TripRow({
   return (
     <li className={`planner-row planner-row-${row.mode}`}>
       <div className="planner-row-head">
-        <Button className="planner-row-toggle" aria-current={selected || undefined} aria-expanded={open} onClick={onSelect}>
+        <Button className="planner-row-toggle" aria-current={highlighted || undefined} aria-expanded={open} onClick={onSelect}>
           <span className="visually-hidden">{`${label} `}</span>
           <span className="planner-row-headline">
             <FigureView

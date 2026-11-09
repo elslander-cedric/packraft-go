@@ -12,24 +12,34 @@ import {
   type LegMode,
   type Trip,
 } from "../trip";
-import type { AccessPointAction, PlannerAction, PlannerSession, ReplaceQuestion } from "./types";
+import type { PlannerSession, ReplaceQuestion, TripAction } from "./types";
 
 /** The mode the next leg gets (#121): the planner's pick, else the last leg's mode, hike for a trip without legs. */
 export const nextLegMode = (session: PlannerSession): LegMode =>
-  session.nextMode ?? session.trip.legs[session.trip.legs.length - 1]?.mode ?? "hike";
+  session.nextModePick ?? session.trip.legs[session.trip.legs.length - 1]?.mode ?? "hike";
 
-export const replaced = (session: PlannerSession, trip: Trip): PlannerSession => ({
+/**
+ * An edit of the points, leg modes or camps: the selection, the offers, the next leg's picked mode
+ * and the row highlight are dropped. The one place that lists what an edit clears; an edit that
+ * keeps some of it (set leg mode, insert point, toggle camp, accept offer) overrides those fields.
+ */
+const edited = (session: PlannerSession, trip: Trip, offers: readonly SnapOffer[] = []): PlannerSession => ({
   ...session,
   trip,
   selectedPoint: null,
   selectedLeg: null,
-  offers: [],
+  offers,
   fileError: null,
+  nextModePick: null,
+  highlightedRow: null,
+});
+
+/** The trip replaced (New trip, Open trip): what an edit clears, and the stored save and the question too. */
+export const replaced = (session: PlannerSession, trip: Trip): PlannerSession => ({
+  ...edited(session, trip),
   keepStoredSave: false,
   pendingTrip: null,
-  nextMode: null,
   tripGeneration: session.tripGeneration + 1,
-  highlightedRow: null,
 });
 
 /** Replaces the trip, asking first when that would lose points (it cannot be undone). */
@@ -38,33 +48,12 @@ const replace = (session: PlannerSession, next: Trip, question: ReplaceQuestion)
     ? { ...session, question, pendingTrip: next, fileError: null }
     : replaced(session, next);
 
-/** An edit of the points or leg modes: selection, offers and the next leg's picked mode are dropped. */
-const edited = (session: PlannerSession, trip: Trip, offers: readonly SnapOffer[] = []): PlannerSession => ({
-  ...session,
-  trip,
-  selectedPoint: null,
-  selectedLeg: null,
-  offers,
-  fileError: null,
-  nextMode: null,
-  highlightedRow: null,
-});
-
 const deselected = (session: PlannerSession): PlannerSession => ({
   ...session,
   selectedPoint: null,
   selectedLeg: null,
   fileError: null,
 });
-
-/** The actions about the trip, in normal mode or while the trip is frozen ones are filtered out by the caller. */
-export type TripAction = Exclude<
-  PlannerAction,
-  | AccessPointAction
-  | { type: "routeRequested" | "routeArrived" | "officialAiresLoaded" | "defaultNameFound" }
-  | { type: "confirmReplace" | "cancelReplace" | "enterAccessPointEditing" | "leaveAccessPointEditing" }
-  | { type: "tabChosen" | "sheetMoved" | "panelToggled" }
->;
 
 export function tripAction(session: PlannerSession, action: TripAction): PlannerSession {
   const { trip, accessPoints, officialAires } = session;
@@ -73,7 +62,7 @@ export function tripAction(session: PlannerSession, action: TripAction): Planner
       const after = applyEdit(trip, { type: "addPoint", at: action.at, mode: nextLegMode(session) });
       const next = edited(session, after, snapOffers(trip, after, accessPoints, officialAires));
       // The first point adds no leg: the pick carries over to the second.
-      return trip.points.length === 0 ? { ...next, nextMode: session.nextMode } : next;
+      return trip.points.length === 0 ? { ...next, nextModePick: session.nextModePick } : next;
     }
     case "mapTapped":
       // Normal mode: a tap with a point or a leg selected only clears the selection (#120, #230).
@@ -109,11 +98,11 @@ export function tripAction(session: PlannerSession, action: TripAction): Planner
       return session.selectedPoint === null
         ? session
         : {
-            ...session,
-            trip: applyEdit(trip, { type: "toggleCamp", index: session.selectedPoint }),
-            fileError: null,
-            nextMode: null,
-            highlightedRow: null,
+            // An edit with its own undo step: a camp can shift the days' indexes, so the row
+            // highlight and the next leg's pick go. The points don't move: the selection and the
+            // offers stay.
+            ...edited(session, applyEdit(trip, { type: "toggleCamp", index: session.selectedPoint }), session.offers),
+            selectedPoint: session.selectedPoint,
           };
     case "undo":
       return edited(session, applyEdit(trip, { type: "undo" }));
@@ -142,16 +131,11 @@ export function tripAction(session: PlannerSession, action: TripAction): Planner
       return deselected(session);
     case "acceptOffer":
       return session.offers.includes(action.offer)
-        ? {
-            ...session,
-            trip: acceptSnap(trip, action.offer),
-            selectedPoint: null,
-            selectedLeg: null,
-            offers: session.offers.filter((o) => o !== action.offer),
-            fileError: null,
-            nextMode: null,
-            highlightedRow: null,
-          }
+        ? edited(
+            session,
+            acceptSnap(trip, action.offer),
+            session.offers.filter((o) => o !== action.offer),
+          )
         : session;
     case "declineOffer":
       return session.offers.includes(action.offer)
@@ -166,7 +150,7 @@ export function tripAction(session: PlannerSession, action: TripAction): Planner
     case "fileDownloaded":
       return session.fileError === null ? session : { ...session, fileError: null };
     case "nextModePicked":
-      return { ...session, nextMode: action.mode, fileError: null };
+      return { ...session, nextModePick: action.mode, fileError: null };
     case "rowTapped": {
       const { row } = action;
       const current = session.highlightedRow;

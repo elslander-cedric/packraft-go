@@ -18,7 +18,7 @@ import { icons } from "../icons/icons";
 import { accessPointText } from "../accessPointText";
 import { formatDistance } from "../format";
 import { strings } from "../strings";
-import type { AccessPointsStorage } from "../useAccessPoints";
+import type { AccessPointStorage } from "../useAccessPointStorage";
 
 const text = strings.planner;
 const pointText = strings.accessPoints;
@@ -29,7 +29,7 @@ type Props = {
   /** The selected access point's id, or null. */
   selectedId: string | null;
   /** Whether they are being stored, and where a damaged save was backed up. */
-  storage: AccessPointsStorage;
+  storage: AccessPointStorage;
   /** The trip, whose route splits the list (#156). */
   trip: Trip;
   /** The official aires; the ones on the route are listed among your points (#208). */
@@ -60,7 +60,7 @@ function alongRoute({ alongKm, role }: OnRoute | OnRouteAire): string {
  * come first in route order, then the rest nearest to you (#156). Official
  * aires on the route sit among them, read-only (#208). Marking is the floating
  * button on the map; the details are a dialog. Every change is saved on the
- * device at once by `useAccessPoints`, with or without signal.
+ * device at once by `useAccessPointStorage`, with or without signal.
  */
 export default function AccessPoints({
   points,

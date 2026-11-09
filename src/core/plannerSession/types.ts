@@ -61,7 +61,7 @@ export type PlannerSession = {
   /** The trip waiting to replace the current one until the question is answered. */
   readonly pendingTrip: Trip | null;
   /** The next leg's mode the planner picked (#121), or null: then it is the last leg's (`nextLegMode`). */
-  readonly nextMode: LegMode | null;
+  readonly nextModePick: LegMode | null;
   /** The official aires (ADR 0035) the edits' snap offers may go to: empty until they load. */
   readonly officialAires: readonly OfficialAire[];
   /** How many times the trip was replaced (New trip, Open trip): the map fits the trip when it changes (#241). */
@@ -99,14 +99,15 @@ export type AccessPointAction =
   | ({ readonly type: "accessPointUpdated"; readonly id: string; readonly changes: AccessPointChanges } & Stamp)
   | { readonly type: "accessPointDeleted"; readonly id: string };
 
-export type PlannerAction =
+/** The actions about the trip (`trip.ts`): its edits, the selection, the offers, replacing it, the row highlight. */
+export type TripAction =
   /** Adds a point; its leg has the next leg's mode (`nextLegMode`). */
   | { readonly type: "addPoint"; readonly at: LatLng }
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   /** Adds a leg from the last point back to the start (GLOSSARY "Loop"), in the next leg's mode. */
   | { readonly type: "backToStart" }
   | { readonly type: "deleteSelectedPoint" }
-  /** Inserts a point on leg `leg` of the route, nearest to `near` (#122). */
+  /** Inserts a point on leg `index` of the route, nearest to `near` (#122). */
   | { readonly type: "insertPoint"; readonly index: number; readonly near: LatLng }
   | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode }
   | { readonly type: "toggleCampOnSelectedPoint" }
@@ -129,26 +130,44 @@ export type PlannerAction =
   | { readonly type: "newTrip"; readonly startDate?: CalendarDate }
   | { readonly type: "fileOpened"; readonly trip: Trip }
   | { readonly type: "fileRejected"; readonly reason: FileError }
-  | { readonly type: "confirmReplace" }
-  | { readonly type: "cancelReplace" }
   | { readonly type: "fileDownloaded" }
+  /** A leg, section or day row was tapped (#243). */
+  | { readonly type: "rowTapped"; readonly row: PanelRow }
+  /** The planner picked the next leg's mode (#121): no edit, no undo step. */
+  | { readonly type: "nextModePicked"; readonly mode: LegMode };
+
+/** The answers to the replace question. */
+export type ReplaceAnswer = { readonly type: "confirmReplace" } | { readonly type: "cancelReplace" };
+
+/** Entering and leaving access point editing (ADR 0036). */
+export type ModeAction =
   /** Enters access point editing, on the Access points tab at the sheet's stop, with the panel open. */
   | { readonly type: "enterAccessPointEditing" }
-  /** Done: back to normal mode, with the tab and the sheet's stop as they were on entering. */
-  | { readonly type: "leaveAccessPointEditing" }
+  /** Leaves it: back to normal mode, with the tab and the sheet's stop as they were on entering. */
+  | { readonly type: "leaveAccessPointEditing" };
+
+/** Changes to the panel view (#243). */
+export type PanelAction =
   /** A tab of normal mode was chosen. */
   | { readonly type: "tabChosen"; readonly tab: NormalTab }
   /** The bottom sheet was moved to a stop. */
   | { readonly type: "sheetMoved"; readonly stop: SheetStop }
   /** The side panel was opened or closed while editing access points (in normal mode a stored setting). */
-  | { readonly type: "panelToggled"; readonly open: boolean }
-  /** A leg, section or day row was tapped (#243). */
-  | { readonly type: "rowTapped"; readonly row: PanelRow }
-  /** The planner picked the next leg's mode (#121): no edit, no undo step. */
-  | { readonly type: "nextModePicked"; readonly mode: LegMode }
+  | { readonly type: "panelToggled"; readonly open: boolean };
+
+/** Data arriving from outside the planner's own taps: they apply in any mode, even while the question is open. */
+export type ArrivalAction =
   /** The built-in official aires arrived (they load once the trip has a point). */
   | { readonly type: "officialAiresLoaded"; readonly aires: readonly OfficialAire[] }
   /** The default name looked up for access point `id` at `at` (ADR 0027): for a stored point or the draft. */
-  | { readonly type: "defaultNameFound"; readonly id: string; readonly at: LatLng; readonly name: string }
+  | { readonly type: "defaultNameFound"; readonly id: string; readonly at: LatLng; readonly name: string };
+
+/** Every action of the planner session; each is declared once, in its group above. */
+export type PlannerAction =
+  | TripAction
+  | ReplaceAnswer
+  | ModeAction
+  | PanelAction
+  | ArrivalAction
   | AccessPointAction
   | RoutingAction;

@@ -24,10 +24,10 @@ export type SectionsListProps = {
   /** A leg's details button was tapped. */
   onShowLegDetails: (legIndex: number) => void;
   onRetry: (legIndex: number) => void;
-  /** The section last tapped, marked by the row's left bar. */
-  selected?: number;
-  /** The leg last tapped, marked the same way; a tap on a section or a leg clears the other. */
-  selectedLeg?: number;
+  /** The highlighted section (the row highlight, apart from the map selection), marked by the row's left bar. */
+  highlightedSection?: number;
+  /** The highlighted leg, marked the same way; a tap on a section or a leg clears the other. */
+  highlightedLeg?: number;
   /** The first legs of the sections whose legs are shown. */
   open: readonly number[];
 };
@@ -36,7 +36,7 @@ export type SectionsListProps = {
  * The Sections tab: one row per section (GLOSSARY), like a leg row with the totals of its legs
  * and which legs those are. The warnings and routing state are its legs', gathered (ADR 0029):
  * one "Routing" line while any leg waits, and each failed leg, by number when there are several, with its own Retry.
- * A tap on the selected section of several legs shows them under it (#200): figures, access and
+ * A tap on the highlighted section of several legs shows them under it (#200): figures, access and
  * warning icons, a tap that zooms to the leg and a button to its own details. Retry stays on the
  * section.
  */
@@ -45,8 +45,8 @@ export default function SectionsList({
   legs,
   access,
   aire,
-  selected,
-  selectedLeg,
+  highlightedSection,
+  highlightedLeg,
   open,
   onSelect,
   onSelectLeg,
@@ -60,7 +60,7 @@ export default function SectionsList({
   // Keep the row just tapped in view, with what it opened: the tap lowers a raised sheet.
   useEffect(() => {
     list.current?.querySelector("[aria-current]")?.closest("li")?.scrollIntoView?.({ block: "nearest" });
-  }, [selected, selectedLeg, open]);
+  }, [highlightedSection, highlightedLeg, open]);
 
   if (sections.length === 0) return <p className="planner-empty">{strings.sectionsPanelEmpty}</p>;
   return (
@@ -81,7 +81,7 @@ export default function SectionsList({
             state={together?.state}
             access={together}
             aire={aire.filter((warning) => indices.includes(warning.leg))}
-            selected={i === selected}
+            highlighted={i === highlightedSection}
             onSelect={() => onSelect(i)}
             {...(indices.length > 1 && { open: legsOpen })}
             {...(indices.some((leg) => hasLegDetails(access, aire, leg)) && {
@@ -120,7 +120,7 @@ export default function SectionsList({
                     state={access?.legs[leg]?.status.state}
                     access={access?.legs[leg]}
                     aire={aire.filter((warning) => warning.leg === leg)}
-                    selected={leg === selectedLeg}
+                    highlighted={leg === highlightedLeg}
                     onSelect={() => onSelectLeg(leg)}
                     {...(hasLegDetails(access, aire, leg) && {
                       details: { label: strings.planner.legDetailsButton(leg + 1), onShow: () => onShowLegDetails(leg) },
