@@ -6,6 +6,8 @@ The one planner (ADRs 0026, 0034), on every screen, with `src/map/TripMap.tsx`. 
 
 - A full-screen map with floating buttons and, in portrait at width ≤ 640 px, a bottom sheet; everywhere else the resizable side panel on the right (`SHEET_QUERY` in `usePlannerLayout.ts`).
 - The panel has the Sections and Days tabs (the Access points tab in access point editing).
+- The panel view is in the planner session (#243): `panel.tab` (normal mode's tab; `shownTab(session)` gives the one to show), `panel.sheetStop` and, while editing, `panel.openWhileEditing`, changed by `tabChosen`, `sheetMoved` and `panelToggled`. The side panel's width and its open state in normal mode stay settings (`useSidePanel`). `Planner` keeps the effects: raising the sheet or the panel, zooming to a row (`setFocus`), sideways, widths and the peek's height.
+- The row highlight (`highlightedRow` in the session, set by `rowTapped`) marks one leg, section or day row; edits and replacing the trip clear it, so it never marks a row that took another's place. It doesn't select the leg on the map.
 - A layers button opens the Map menu: base maps, access layer and overlay switches (#179, #180).
 - The menu: New trip, Edit trip, Save trip, Open trip | Export GPX | Settings, with icons. The trip's name and start date (Edit trip, #154) and the settings (#151) are dialogs from it.
 - The next leg's mode toggle (bottom right, #121) shows `nextLegMode(session)` and sends `nextModePicked`; the session keeps the pick and drops it on the next edit or replace.
@@ -27,11 +29,11 @@ The one planner (ADRs 0026, 0034), on every screen, with `src/map/TripMap.tsx`. 
 
 Your access points (`AccessPoints.tsx`, `AccessPointDialog.tsx`; #63, ADR 0023) are changed only in *access point editing* (ADR 0036, #225), the planner's second mode.
 
-- The mode is `mode` in the planner session (`{ kind: "normal" }` or `{ kind: "accessPointEditing", returnTo }`, set by the `enterAccessPointEditing` and `leaveAccessPointEditing` actions), never in settings, so the planner always opens in normal mode.
+- The mode is `mode` in the planner session (`{ kind: "normal" }` or `{ kind: "accessPointEditing" }`, set by the `enterAccessPointEditing` and `leaveAccessPointEditing` actions), never in settings, so the planner always opens in normal mode.
 - Your access points, the draft and the selected access point are in the planner session too (#242), changed by its access point actions (`draftPlaced`, `draftMoved`, `draftSaved`, `draftDiscarded`, `accessPointClicked`, `accessPointMoved`, `accessPointUpdated`, `accessPointDeleted`), which apply only while editing. Ids and times come from `stamp()` in `usePlanner`. `useAccessPoints` only stores them, keeps the backup key and looks up default names, sent back as `defaultNameFound`.
 - A floating button bottom left enters it and, pressed again, leaves it (`aria-pressed`, coloured `planner-fab-active` with the exit icon `leaveAccessPointEditing` while in it, above it the flag that marks; no banner).
 - Normal mode shows only the Sections and Days tabs and no mark button; access point editing only the Access points tab and the mark button.
-- Entering opens the panel on that tab, also from closed, and switches the sheet to it at its stop. Leaving restores the tab, the sheet's stop and whether the panel was open (`returnTo`). Both clear the selection and the selected access point; leaving drops the draft (all in the session).
+- Entering opens the panel on that tab, also from closed, and switches the sheet to it at its stop. Leaving restores the tab, the sheet's stop and whether the panel was open (the session's `panel`; the stored setting was never changed). Both clear the selection and the selected access point; leaving drops the draft (all in the session, each one dispatch).
 
 ### Markers
 

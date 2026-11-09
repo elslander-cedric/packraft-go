@@ -4,7 +4,15 @@
 import { describe, expect, it } from "vitest";
 import { addAccessPoint, updateAccessPoint, type AccessPoint, type AccessPoints } from "./accessPoints";
 import type { OfficialAire } from "./officialAire";
-import { firstSession, nextLegMode, plannerSession, type PlannerAction, type PlannerSession } from "./plannerSession";
+import {
+  editingAccessPoints,
+  firstSession,
+  nextLegMode,
+  plannerSession,
+  shownTab,
+  type PlannerAction,
+  type PlannerSession,
+} from "./plannerSession";
 import type { LegRoute } from "./router";
 import type { RouteRequest } from "./routing";
 import type { SnapOffer } from "./snap";
@@ -62,7 +70,7 @@ const busy = (): PlannerSession => {
   return { ...withOffer, selectedPoint: 1, fileError: "invalid" };
 };
 
-const editAccessPoints: PlannerAction = { type: "enterAccessPointEditing", returnTo: { tab: "sections", sheet: "peek" } };
+const editAccessPoints: PlannerAction = { type: "enterAccessPointEditing" };
 
 type Make = PlannerAction | ((session: PlannerSession) => PlannerAction);
 const build = (make: Make, session: PlannerSession) => (typeof make === "function" ? make(session) : make);
@@ -89,7 +97,7 @@ const actions: [name: string, make: Make][] = [
   ["accept offer", (s) => ({ type: "acceptOffer", offer: s.offers[0] })],
   ["decline offer", (s) => ({ type: "declineOffer", offer: s.offers[0] })],
   ["file downloaded", { type: "fileDownloaded" }],
-  ["enter access point editing", { type: "enterAccessPointEditing", returnTo: { tab: "sections", sheet: "peek" } }],
+  ["enter access point editing", { type: "enterAccessPointEditing" }],
   ["next mode picked", { type: "nextModePicked", mode: "hike" }],
   ["official aires loaded", { type: "officialAiresLoaded", aires: [officialAire] }],
   ["leave access point editing", { type: "leaveAccessPointEditing" }],
@@ -103,6 +111,10 @@ const actions: [name: string, make: Make][] = [
   ["access point updated", { type: "accessPointUpdated", id: "near", changes: { name: "Bridge" }, now: T2 }],
   ["access point deleted", { type: "accessPointDeleted", id: "far" }],
   ["default name found", { type: "defaultNameFound", id: "draft", at: D, name: "Rue du Moulin" }],
+  ["tab chosen", { type: "tabChosen", tab: "days" }],
+  ["sheet moved", { type: "sheetMoved", stop: "full" }],
+  ["panel toggled", { type: "panelToggled", open: true }],
+  ["row tapped", { type: "rowTapped", row: { kind: "leg", index: 0 } }],
   ["route requested", (s) => ({ type: "routeRequested", request: requestOfLeg(s.trip, 1) })],
   ["route arrived", (s) => ({ type: "routeArrived", request: requestOfLeg(s.trip, 1), route: routed })],
 ];
@@ -169,6 +181,10 @@ table(
     "enter access point editing": cleared(null),
     "next mode picked": kept(1),
     "official aires loaded": kept(1),
+    "tab chosen": kept(1),
+    "sheet moved": kept(1),
+    "panel toggled": kept(1),
+    "row tapped": kept(1),
     "route requested": kept(1),
     "route arrived": kept(1),
   },
@@ -209,6 +225,10 @@ table(
     "enter access point editing": kept(1),
     "next mode picked": kept(1),
     "official aires loaded": kept(1),
+    "tab chosen": kept(1),
+    "sheet moved": kept(1),
+    "panel toggled": kept(1),
+    "row tapped": kept(1),
     "route requested": kept(1),
     "route arrived": kept(1),
   },
@@ -249,6 +269,10 @@ table(
     "enter access point editing": kept("invalid"),
     "next mode picked": cleared(null),
     "official aires loaded": kept("invalid"), // data arriving, like a route
+    "tab chosen": kept("invalid"),
+    "sheet moved": kept("invalid"),
+    "panel toggled": kept("invalid"),
+    "row tapped": kept("invalid"),
     "route requested": kept("invalid"),
     "route arrived": kept("invalid"),
   },
@@ -292,6 +316,10 @@ table(
     "enter access point editing": cleared(null),
     "next mode picked": kept(1),
     "official aires loaded": kept(1),
+    "tab chosen": kept(1),
+    "sheet moved": kept(1),
+    "panel toggled": kept(1),
+    "row tapped": kept(1), // a row tap doesn't select a leg on the map (#243)
     "route requested": kept(1),
     "route arrived": kept(1),
   },
@@ -368,6 +396,10 @@ table(
     "enter access point editing": kept("paddle"),
     "next mode picked": set("hike"),
     "official aires loaded": kept("paddle"),
+    "tab chosen": kept("paddle"),
+    "sheet moved": kept("paddle"),
+    "panel toggled": kept("paddle"),
+    "row tapped": kept("paddle"),
     "route requested": kept("paddle"),
     "route arrived": kept("paddle"),
   },
@@ -461,6 +493,115 @@ describe("trip generation (#241)", () => {
   });
 });
 
+// The row highlight (#243): a leg, section or day row marked in the panel, as an index. Edits and
+// replaces clear it, so it never points at another row. This session has leg 1's row highlighted.
+const rowHighlighted = (): PlannerSession =>
+  plannerSession(busy(), { type: "rowTapped", row: { kind: "leg", index: 1 } });
+const leg1 = { kind: "leg", index: 1 };
+
+table(
+  "row highlight (leg 1's row is highlighted)",
+  {
+    "add point": cleared(null),
+    "move point": cleared(null),
+    "delete selected point": cleared(null),
+    "back to start": cleared(null),
+    "insert point": cleared(null),
+    "set leg mode": cleared(null), // the sections may change
+    "toggle camp": cleared(null), // the days may change
+    undo: cleared(null),
+    rename: kept(leg1),
+    "set start date": kept(leg1),
+    "retry leg": kept(leg1),
+    "point clicked": kept(leg1), // the map selection is apart from it
+    "leg clicked": kept(leg1),
+    deselect: kept(leg1),
+    "map tapped": kept(leg1), // a deselect
+    "accept offer": cleared(null),
+    "decline offer": kept(leg1),
+    "file downloaded": kept(leg1),
+    "enter access point editing": kept(leg1),
+    "leave access point editing": kept(leg1),
+    "next mode picked": kept(leg1),
+    "official aires loaded": kept(leg1),
+    "draft placed": kept(leg1),
+    "draft moved": kept(leg1),
+    "draft saved": kept(leg1),
+    "draft discarded": kept(leg1),
+    "access point clicked": kept(leg1),
+    "access point moved": kept(leg1),
+    "access point updated": kept(leg1),
+    "access point deleted": kept(leg1),
+    "default name found": kept(leg1),
+    "tab chosen": kept(leg1),
+    "sheet moved": kept(leg1),
+    "panel toggled": kept(leg1),
+    "row tapped": set({ kind: "leg", index: 0 }),
+    "route requested": kept(leg1),
+    "route arrived": kept(leg1),
+  },
+  (s) => s.highlightedRow,
+  rowHighlighted,
+);
+
+describe("row tapped (#243)", () => {
+  const tap = (kind: "leg" | "section" | "day", index: number): PlannerAction => ({
+    type: "rowTapped",
+    row: { kind, index },
+  });
+
+  it("starts with no row highlighted", () => {
+    expect(firstSession({ trip: through(A, B, C) }).highlightedRow).toBeNull();
+  });
+
+  it("highlights one row at a time, of any kind", () => {
+    expect(run(rowHighlighted(), tap("section", 0)).highlightedRow).toEqual({ kind: "section", index: 0 });
+    expect(run(rowHighlighted(), tap("day", 0)).highlightedRow).toEqual({ kind: "day", index: 0 });
+  });
+
+  it("on the highlighted leg or section keeps it; on the highlighted day clears it", () => {
+    expect(run(rowHighlighted(), tap("leg", 1)).highlightedRow).toEqual(leg1);
+    expect(run(busy(), tap("section", 0), tap("section", 0)).highlightedRow).toEqual({ kind: "section", index: 0 });
+    expect(run(busy(), tap("day", 0), tap("day", 0)).highlightedRow).toBeNull();
+  });
+
+  it("doesn't select anything on the map or clear the file error", () => {
+    const after = run({ ...busy(), selectedPoint: null }, tap("leg", 1));
+    expect(after.selectedLeg).toBeNull();
+    expect(after.selectedPoint).toBeNull();
+    expect(after.fileError).toBe("invalid");
+  });
+
+  it("a map tap that adds a point clears it", () => {
+    const highlighted = run({ ...busy(), selectedPoint: null }, tap("leg", 1));
+    expect(run(highlighted, { type: "mapTapped", at: E, newId: "x", now: T2 }).highlightedRow).toBeNull();
+  });
+});
+
+// The panel view (#243): the tab, the sheet's stop and, while editing, whether the side panel is open.
+// This session is in normal mode on the Sections tab, with the sheet at half.
+const atHalf = (): PlannerSession => plannerSession(busy(), { type: "sheetMoved", stop: "half" });
+/** What the planner shows: the tab, the stop and the panel's open state (the stored setting in normal mode). */
+const view = (s: PlannerSession) => ({
+  tab: shownTab(s),
+  stop: s.panel.sheetStop,
+  open: editingAccessPoints(s) ? s.panel.openWhileEditing : "stored",
+});
+const sectionsHalf = { tab: "sections", stop: "half", open: "stored" };
+
+table(
+  "panel view (Sections, sheet at half)",
+  {
+    ...Object.fromEntries(actions.map(([name]) => [name, kept(sectionsHalf)])),
+    "enter access point editing": set({ tab: "accessPoints", stop: "half", open: true }),
+    "tab chosen": set({ ...sectionsHalf, tab: "days" }),
+    "sheet moved": set({ ...sectionsHalf, stop: "full" }),
+    "panel toggled": kept(sectionsHalf), // in normal mode the panel's open state is a stored setting
+  },
+  view,
+  atHalf,
+);
+
 describe("rule table: replacing the trip", () => {
   const replacing = [
     ["new trip", { type: "newTrip" }, emptyTrip(), "newTrip"],
@@ -484,6 +625,7 @@ describe("rule table: replacing the trip", () => {
         fileError: null,
         keepStoredSave: false,
         pendingTrip: null,
+        highlightedRow: null,
       });
     });
 
@@ -496,6 +638,7 @@ describe("rule table: replacing the trip", () => {
         fileError: null,
         keepStoredSave: false,
         pendingTrip: null,
+        highlightedRow: null,
       });
     });
   }
@@ -613,7 +756,6 @@ describe("official aires loaded", () => {
     expect(plannerSession(asked, aires).officialAires).toEqual([officialAire]);
     const editing = run(firstSession({ trip: through(A, B) }), {
       type: "enterAccessPointEditing",
-      returnTo: { tab: "sections", sheet: "peek" },
     });
     expect(plannerSession(editing, aires).officialAires).toEqual([officialAire]);
   });
@@ -718,6 +860,10 @@ const untouchedRows = (value: unknown): Record<string, Outcome> =>
       "file downloaded",
       "enter access point editing", // already editing
       "next mode picked",
+      "tab chosen",
+      "sheet moved",
+      "panel toggled",
+      "row tapped",
       "official aires loaded",
       "route requested",
       "route arrived",
@@ -788,6 +934,45 @@ table(
   (s) => s.accessPoints.map(seen),
   editingBusy,
 );
+
+// The panel view while editing: entered from Days with the sheet at half, then the sheet moved to the
+// peek and the panel closed. Leaving restores the tab and the stop; the panel shows its stored setting.
+const editingView = (): PlannerSession =>
+  run(
+    plannerSession(atHalf(), { type: "tabChosen", tab: "days" }),
+    editAccessPoints,
+    { type: "sheetMoved", stop: "peek" },
+    { type: "panelToggled", open: false },
+  );
+const editingPeekClosed = { tab: "accessPoints", stop: "peek", open: false };
+table(
+  "panel view while editing (from Days at half; now at the peek, panel closed)",
+  {
+    ...Object.fromEntries(actions.map(([name]) => [name, kept(editingPeekClosed)])),
+    "leave access point editing": set({ tab: "days", stop: "half", open: "stored" }),
+    "tab chosen": kept(editingPeekClosed), // editing has only the Access points tab
+    "sheet moved": set({ ...editingPeekClosed, stop: "full" }),
+    "panel toggled": set({ ...editingPeekClosed, open: true }),
+  },
+  view,
+  editingView,
+);
+
+describe("the panel view and access point editing (#243, ADR 0036)", () => {
+  it("starts on the Sections tab with the sheet at the peek", () => {
+    expect(view(firstSession({ trip: emptyTrip() }))).toEqual({ tab: "sections", stop: "peek", open: "stored" });
+  });
+
+  it("each visit opens the panel again", () => {
+    const again = run(editingView(), { type: "leaveAccessPointEditing" }, editAccessPoints);
+    expect(view(again)).toEqual({ tab: "accessPoints", stop: "half", open: true });
+  });
+
+  it("a tab chosen in normal mode is the one leaving brings back", () => {
+    const left = run(atHalf(), editAccessPoints, { type: "leaveAccessPointEditing" }, { type: "tabChosen", tab: "days" });
+    expect(shownTab(left)).toBe("days");
+  });
+});
 
 describe("map tapped (#120, #230, #227)", () => {
   const tapAt = (at: LatLng): PlannerAction => ({ type: "mapTapped", at, newId: "new", now: T2 });

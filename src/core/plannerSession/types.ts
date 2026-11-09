@@ -20,20 +20,30 @@ export type SheetStop = (typeof sheetStops)[number];
 export const normalTabs = ["sections", "days"] as const;
 export type NormalTab = (typeof normalTabs)[number];
 
+/** A tab of normal mode, or the Access points tab, the only one of access point editing. */
+export type PlannerTab = NormalTab | "accessPoints";
+
 /**
- * The panel or sheet as it was before access point editing: Done restores it (ADR 0036). The side
- * panel's open state isn't here: it is a stored setting, left alone while editing.
+ * The panel view (#243): the side panel or the bottom sheet, its tab and stop. The side panel's
+ * width and its open state in normal mode aren't here: they are stored settings, left alone while
+ * editing access points (ADR 0036).
  */
 export type PanelView = {
+  /** Normal mode's tab; kept while editing access points, which shows the Access points tab. */
   readonly tab: NormalTab;
-  /** The bottom sheet's stop. */
-  readonly sheet: SheetStop;
+  /** The bottom sheet's stop; kept while sideways, so turning back to portrait restores it. */
+  readonly sheetStop: SheetStop;
+  /** Whether the side panel is open while editing access points: opened for each visit, never stored. */
+  readonly openWhileEditing: boolean;
+  /** The sheet's stop on entering access point editing, which leaving restores; null in normal mode. */
+  readonly sheetStopToRestore: SheetStop | null;
 };
 
+/** A leg, section or day row of the panel, by index. */
+export type PanelRow = { readonly kind: "leg" | "section" | "day"; readonly index: number };
+
 /** The planner's mode (GLOSSARY "Access point editing", ADR 0036): always normal on load. */
-export type PlannerMode =
-  | { readonly kind: "normal" }
-  | { readonly kind: "accessPointEditing"; readonly returnTo: PanelView };
+export type PlannerMode = { readonly kind: "normal" } | { readonly kind: "accessPointEditing" };
 
 export type PlannerSession = {
   readonly mode: PlannerMode;
@@ -62,6 +72,10 @@ export type PlannerSession = {
   readonly draft: AccessPoint | null;
   /** The id of the selected access point while editing, or null. */
   readonly selectedAccessPoint: string | null;
+  /** The panel view (#243): its tab, the sheet's stop and the panel's open state while editing. */
+  readonly panel: PanelView;
+  /** The row marked in the panel (#243), or null; apart from the selection on the map. */
+  readonly highlightedRow: PanelRow | null;
 };
 
 /** What the planner passes with an action that creates or changes an access point: the core stays pure. */
@@ -118,10 +132,18 @@ export type PlannerAction =
   | { readonly type: "confirmReplace" }
   | { readonly type: "cancelReplace" }
   | { readonly type: "fileDownloaded" }
-  /** Enters access point editing; Done returns to `returnTo`. */
-  | { readonly type: "enterAccessPointEditing"; readonly returnTo: PanelView }
-  /** Done: back to normal mode. */
+  /** Enters access point editing, on the Access points tab at the sheet's stop, with the panel open. */
+  | { readonly type: "enterAccessPointEditing" }
+  /** Done: back to normal mode, with the tab and the sheet's stop as they were on entering. */
   | { readonly type: "leaveAccessPointEditing" }
+  /** A tab of normal mode was chosen. */
+  | { readonly type: "tabChosen"; readonly tab: NormalTab }
+  /** The bottom sheet was moved to a stop. */
+  | { readonly type: "sheetMoved"; readonly stop: SheetStop }
+  /** The side panel was opened or closed while editing access points (in normal mode a stored setting). */
+  | { readonly type: "panelToggled"; readonly open: boolean }
+  /** A leg, section or day row was tapped (#243). */
+  | { readonly type: "rowTapped"; readonly row: PanelRow }
   /** The planner picked the next leg's mode (#121): no edit, no undo step. */
   | { readonly type: "nextModePicked"; readonly mode: LegMode }
   /** The built-in official aires arrived (they load once the trip has a point). */

@@ -29,6 +29,7 @@ export const replaced = (session: PlannerSession, trip: Trip): PlannerSession =>
   pendingTrip: null,
   nextMode: null,
   tripGeneration: session.tripGeneration + 1,
+  highlightedRow: null,
 });
 
 /** Replaces the trip, asking first when that would lose points (it cannot be undone). */
@@ -46,6 +47,7 @@ const edited = (session: PlannerSession, trip: Trip, offers: readonly SnapOffer[
   offers,
   fileError: null,
   nextMode: null,
+  highlightedRow: null,
 });
 
 const deselected = (session: PlannerSession): PlannerSession => ({
@@ -61,6 +63,7 @@ export type TripAction = Exclude<
   | AccessPointAction
   | { type: "routeRequested" | "routeArrived" | "officialAiresLoaded" | "defaultNameFound" }
   | { type: "confirmReplace" | "cancelReplace" | "enterAccessPointEditing" | "leaveAccessPointEditing" }
+  | { type: "tabChosen" | "sheetMoved" | "panelToggled" }
 >;
 
 export function tripAction(session: PlannerSession, action: TripAction): PlannerSession {
@@ -110,6 +113,7 @@ export function tripAction(session: PlannerSession, action: TripAction): Planner
             trip: applyEdit(trip, { type: "toggleCamp", index: session.selectedPoint }),
             fileError: null,
             nextMode: null,
+            highlightedRow: null,
           };
     case "undo":
       return edited(session, applyEdit(trip, { type: "undo" }));
@@ -146,6 +150,7 @@ export function tripAction(session: PlannerSession, action: TripAction): Planner
             offers: session.offers.filter((o) => o !== action.offer),
             fileError: null,
             nextMode: null,
+            highlightedRow: null,
           }
         : session;
     case "declineOffer":
@@ -162,5 +167,13 @@ export function tripAction(session: PlannerSession, action: TripAction): Planner
       return session.fileError === null ? session : { ...session, fileError: null };
     case "nextModePicked":
       return { ...session, nextMode: action.mode, fileError: null };
+    case "rowTapped": {
+      const { row } = action;
+      const current = session.highlightedRow;
+      const same = current?.kind === row.kind && current.index === row.index;
+      // A tap on the highlighted day clears it; on the highlighted leg or section it keeps it (#200).
+      if (same) return row.kind === "day" ? { ...session, highlightedRow: null } : session;
+      return { ...session, highlightedRow: row };
+    }
   }
 }

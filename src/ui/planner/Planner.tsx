@@ -6,7 +6,9 @@ import {
   nextLegMode,
   normalTabs,
   shownOffers,
-  type NormalTab,
+  shownTab,
+  type PanelRow,
+  type PlannerTab,
   type SheetStop,
 } from "@/core/plannerSession";
 import type { Router } from "@/core/router";
@@ -49,8 +51,6 @@ import { useSideways } from "./usePlannerLayout";
 import { usePosition } from "./usePosition";
 import "./planner.css";
 
-/** A tab of normal mode (`normalTabs`, in the core), or the Access points tab of access point editing. */
-type PlannerTab = NormalTab | "accessPoints";
 const editingTabs: readonly PlannerTab[] = ["accessPoints"];
 
 /** Where a day or a section goes: its points and its legs' routes. */
@@ -90,23 +90,22 @@ export default function Planner({ router }: { router?: Router }) {
   const message = positionMessage(position);
   // Access point editing (ADR 0036): the planner's other mode, kept in the planner session.
   const editingAccessPoints = isEditingAccessPoints(session);
-  // Normal mode's tab; kept while editing access points, so leaving brings it back.
-  const [tab, setTab] = useState<NormalTab>("sections");
-  const shownTab: PlannerTab = editingAccessPoints ? "accessPoints" : tab;
-  // The sheet's last stop; kept while sideways, so turning back to portrait restores it (#126).
-  const [stop, setStop] = useState<SheetStop>("peek");
+  // The panel view (#243) is in the planner session: the tab, the sheet's stop (kept while sideways,
+  // so turning back to portrait restores it; #126) and the panel's open state while editing.
+  const { panel, highlightedRow } = session;
+  const stop = panel.sheetStop;
+  const setStop = (to: SheetStop) => dispatch({ type: "sheetMoved", stop: to });
   // The peek's height, so the bottom buttons sit just above it.
   const [peekPx, setPeekPx] = useState<number | null>(null);
   // Except on a narrow screen in portrait, the side panel replaces the sheet (ADR 0034). Its width
   // and whether it is open are settings on this device, kept as they were whatever the sheet's stop.
   const sideways = useSideways();
   const [{ width: panelWidth, open: storedPanelOpen }, changePanel] = useSidePanel();
-  // While editing access points the panel's open state is not stored: a reload made while editing
-  // comes back in normal mode with the panel as it was before entering (ADR 0036).
-  const [panelOpenWhileEditing, setPanelOpenWhileEditing] = useState(true);
-  const panelOpen = editingAccessPoints ? panelOpenWhileEditing : storedPanelOpen;
+  // While editing access points the panel's open state is in the session, not stored: a reload made
+  // while editing comes back in normal mode with the panel as it was before entering (ADR 0036).
+  const panelOpen = editingAccessPoints ? panel.openWhileEditing : storedPanelOpen;
   const setPanelOpen = (open: boolean) =>
-    editingAccessPoints ? setPanelOpenWhileEditing(open) : changePanel({ open });
+    editingAccessPoints ? dispatch({ type: "panelToggled", open }) : changePanel({ open });
   const shownPanelWidth = useSidePanelWidth(panelWidth);
   // Shows the content: the sheet raised to half, or the panel opened.
   const raise = () => (sideways ? setPanelOpen(true) : setStop("half"));
@@ -164,19 +163,21 @@ export default function Planner({ router }: { router?: Router }) {
   // The session decides what a tap does (#120, #230, #227): place the new access point, clear the
   // selection or add a point.
   const onMapTap = (at: LatLng) => dispatch({ type: "mapTapped", at, ...stamp() });
+  // The highlighted row (#243), in the session: edits clear it, so it never marks another row.
+  const highlighted = (kind: PanelRow["kind"]) => (highlightedRow?.kind === kind ? highlightedRow.index : undefined);
+  const highlightedLeg = highlighted("leg");
+  const highlightedSection = highlighted("section");
+  const highlightedDay = highlighted("day");
   // A leg row tap shows its leg above the half-raised sheet and marks the row.
-  const [selectedLeg, setSelectedLeg] = useState<number | undefined>(undefined);
   const selectLegRow = (index: number) => {
     const route = trip.legs[index]?.route;
     const area = route?.status === "routed" ? route.geometry : trip.points.slice(index, index + 2);
-    setSelectedLeg(index);
-    setSelectedSection(undefined);
+    dispatch({ type: "rowTapped", row: { kind: "leg", index } });
     raise();
     setFocus({ area, ...covered() });
   };
   // A section row tap does the same for the whole section, and a tap on the selected one of
   // several legs also opens it (#200). It always zooms, as the map may have been panned away.
-  const [selectedSection, setSelectedSection] = useState<number | undefined>(undefined);
   const [detailsSection, setDetailsSection] = useState<number | null>(null);
   // The sections showing their legs, by first leg as sections have no identity of their own: an
   // edit that leaves no section of several legs starting there closes it.
@@ -190,29 +191,16 @@ export default function Planner({ router }: { router?: Router }) {
   const selectSectionRow = (index: number) => {
     const section = summary.sections[index];
     if (!section) return;
-    if (index === selectedSection && section.lastLeg > section.firstLeg) toggleSection(section.firstLeg);
-    setSelectedSection(index);
-    setSelectedLeg(undefined);
+    if (index === highlightedSection && section.lastLeg > section.firstLeg) toggleSection(section.firstLeg);
+    dispatch({ type: "rowTapped", row: { kind: "section", index } });
     raise();
     setFocus({ area: legsArea(trip, section), ...covered() });
   };
-  // Entering access point editing opens the panel, or switches the sheet at its stop, on the Access
-  // points tab; leaving restores the tab and the panel or sheet as they were. The session clears the
-  // selections and drops the draft (ADR 0036).
-  const enterAccessPointEditing = () => {
-    dispatch({ type: "enterAccessPointEditing", returnTo: { tab, sheet: stop } });
-    // The panel opens for this visit only; the stored setting keeps the earlier state.
-    setPanelOpenWhileEditing(true);
-  };
-  const leaveAccessPointEditing = () => {
-    dispatch({ type: "leaveAccessPointEditing" });
-    // Until the panel view moves into the session (#243), the tab and the sheet's stop are restored
-    // here. The stored panel state was left as it was on entering, so normal mode shows it again.
-    if (session.mode.kind === "accessPointEditing") {
-      setTab(session.mode.returnTo.tab);
-      setStop(session.mode.returnTo.sheet);
-    }
-  };
+  // Entering access point editing opens the panel for this visit, or switches the sheet at its stop,
+  // on the Access points tab; leaving restores the tab and the sheet's stop, and the panel shows its
+  // stored state again. The session does it all, and clears the selections and drops the draft (ADR 0036).
+  const enterAccessPointEditing = () => dispatch({ type: "enterAccessPointEditing" });
+  const leaveAccessPointEditing = () => dispatch({ type: "leaveAccessPointEditing" });
 
   // A marker tap selects the point; while editing access points it also shows its row, raised to
   // half from the peek.
@@ -229,16 +217,12 @@ export default function Planner({ router }: { router?: Router }) {
     setFocus({ at: point.position, ...covered() });
   };
   // A day card tap shows the whole day on the map, above the half-raised sheet (#123).
-  // Tapping the selected card again unselects it.
-  const [selectedDay, setSelectedDay] = useState<number | undefined>(undefined);
+  // Tapping the selected card again unselects it (the session clears it).
   const openDay = (index: number) => {
     const day = summary.days[index];
     if (!day) return;
-    if (index === selectedDay) {
-      setSelectedDay(undefined);
-      return;
-    }
-    setSelectedDay(index);
+    dispatch({ type: "rowTapped", row: { kind: "day", index } });
+    if (index === highlightedDay) return;
     raise();
     setFocus({ area: legsArea(trip, day), ...covered() });
   };
@@ -286,8 +270,8 @@ export default function Planner({ router }: { router?: Router }) {
               legs={trip.legs}
               access={waterAccess}
               aire={aire}
-              selected={selectedSection}
-              selectedLeg={selectedLeg}
+              selected={highlightedSection}
+              selectedLeg={highlightedLeg}
               open={stillOpen}
               onSelect={selectSectionRow}
               onSelectLeg={selectLegRow}
@@ -303,7 +287,7 @@ export default function Planner({ router }: { router?: Router }) {
               access={waterAccess?.days}
               aire={aire}
               onSelectDay={openDay}
-              selectedDay={selectedDay}
+              selectedDay={highlightedDay}
               // A day card's warning chip shows its leg's warnings in the dialog, over the Days tab (#58, #158).
               onShowLeg={setDetailsLeg}
             />
@@ -541,7 +525,10 @@ export default function Planner({ router }: { router?: Router }) {
           onDecline={(offer) => dispatch({ type: "declineOffer", offer })}
         />
       </div>
-      <Tabs value={shownTab} onChange={(next) => next !== "accessPoints" && setTab(next)}>
+      <Tabs
+        value={shownTab(session)}
+        onChange={(next: PlannerTab) => next !== "accessPoints" && dispatch({ type: "tabChosen", tab: next })}
+      >
         {sideways ? (
           <SidePanel
             label={strings.planner.sheetLabel}

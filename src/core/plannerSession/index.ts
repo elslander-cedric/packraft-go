@@ -48,11 +48,21 @@
 // - selected access point (#242): set by access point clicked and draft saved (the stored draft);
 //   cleared by entering and leaving access point editing, by placing or moving the draft and by
 //   deleting that access point; kept by everything else.
+// - panel view (#243): tab chosen sets normal mode's tab, ignored while editing access points,
+//   which shows the Access points tab (`shownTab`) and keeps normal mode's tab for Done. Sheet moved
+//   sets the sheet's stop in any mode. Entering keeps the stop to restore and opens the panel for
+//   the visit; panel toggled opens or closes it only while editing (in normal mode it is a stored
+//   setting); Done restores the stop. Kept by everything else.
+// - row highlight (#243): set by row tapped (a tap on the highlighted day clears it; on the
+//   highlighted leg or section keeps it); cleared by every edit of the points, leg modes or camps
+//   (add, move, insert and delete point, back to start, set leg mode, toggle camp, undo, accept
+//   offer) and any replace; kept by routing, the map selection, the panel view and everything else.
+//   Row tapped is ignored while editing access points.
 // - replace question: new trip and file opened ask it when the current trip needs
 //   confirmation. While it is open only confirm, cancel, the routing actions, official
 //   aires loaded and default name found apply.
-// - mode (ADR 0036, #225): normal on load (never stored); enter access point editing sets it,
-//   keeping the panel view to return to, and Done sets it back. Both clear the selection and the
+// - mode (ADR 0036, #225): normal on load (never stored); enter access point editing sets it and
+//   Done sets it back (the panel view is above). Both clear the selection and the
 //   selected access point; Done drops the draft.
 //   While editing access points the trip is frozen (#227): the actions that edit its points or
 //   leg modes, select or deselect a point or a leg or answer a snap offer return the same session;
@@ -65,7 +75,7 @@ import type { SnapOffer } from "../snap";
 import type { Trip } from "../trip";
 import { accessPointEdit, defaultNameFound, placeDraft } from "./accessPoints";
 import { replaced, tripAction } from "./trip";
-import type { AccessPointAction, PlannerAction, PlannerSession } from "./types";
+import type { AccessPointAction, PlannerAction, PlannerSession, PlannerTab } from "./types";
 
 export * from "./types";
 export { nextLegMode } from "./trip";
@@ -74,6 +84,10 @@ export { nextLegMode } from "./trip";
 export const editingAccessPoints = (session: PlannerSession): boolean => session.mode.kind === "accessPointEditing";
 
 const noOffers: readonly SnapOffer[] = [];
+
+/** The panel's tab to show: normal mode's, or the Access points tab while editing access points. */
+export const shownTab = (session: PlannerSession): PlannerTab =>
+  editingAccessPoints(session) ? "accessPoints" : session.panel.tab;
 
 /** The snap offers to show: none while editing access points, where they wait for Done (#227). */
 export const shownOffers = (session: PlannerSession): readonly SnapOffer[] =>
@@ -101,6 +115,8 @@ export function firstSession(stored: {
     accessPoints: stored.accessPoints ?? [],
     draft: null,
     selectedAccessPoint: null,
+    panel: { tab: "sections", sheetStop: "peek", openWhileEditing: true, sheetStopToRestore: null },
+    highlightedRow: null,
   };
 }
 
@@ -124,6 +140,7 @@ const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set([
   "deselect",
   "acceptOffer",
   "declineOffer",
+  "rowTapped",
 ]);
 
 /** What applies only while editing access points (#242). */
@@ -157,15 +174,42 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
         ? session
         : {
             ...session,
-            mode: { kind: "accessPointEditing", returnTo: action.returnTo },
+            mode: { kind: "accessPointEditing" },
             selectedPoint: null,
             selectedLeg: null,
             selectedAccessPoint: null,
+            // The Access points tab at the sheet's stop, the panel open for this visit (ADR 0036).
+            panel: { ...session.panel, openWhileEditing: true, sheetStopToRestore: session.panel.sheetStop },
           };
     case "leaveAccessPointEditing":
       return editing
-        ? { ...session, mode: { kind: "normal" }, selectedPoint: null, selectedLeg: null, selectedAccessPoint: null, draft: null }
+        ? {
+            ...session,
+            mode: { kind: "normal" },
+            selectedPoint: null,
+            selectedLeg: null,
+            selectedAccessPoint: null,
+            draft: null,
+            // Normal mode's tab was kept; the sheet goes back to its stop. The panel shows its stored setting.
+            panel: {
+              ...session.panel,
+              sheetStop: session.panel.sheetStopToRestore ?? session.panel.sheetStop,
+              sheetStopToRestore: null,
+            },
+          }
         : session;
+    case "tabChosen":
+      return editing || session.panel.tab === action.tab
+        ? session
+        : { ...session, panel: { ...session.panel, tab: action.tab } };
+    case "sheetMoved":
+      return session.panel.sheetStop === action.stop
+        ? session
+        : { ...session, panel: { ...session.panel, sheetStop: action.stop } };
+    case "panelToggled":
+      return !editing || session.panel.openWhileEditing === action.open
+        ? session
+        : { ...session, panel: { ...session.panel, openWhileEditing: action.open } };
     case "mapTapped":
       return editing ? placeDraft(session, action) : tripAction(session, action);
     default:

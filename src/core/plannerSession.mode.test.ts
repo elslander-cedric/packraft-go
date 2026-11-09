@@ -3,7 +3,7 @@
 // editing access points the trip is frozen (#227).
 import { describe, expect, it } from "vitest";
 import { addAccessPoint, updateAccessPoint } from "./accessPoints";
-import { firstSession, plannerSession, type PanelView, type PlannerAction, type PlannerSession } from "./plannerSession";
+import { firstSession, plannerSession, shownTab, type PlannerAction, type PlannerSession } from "./plannerSession";
 import { applyEdit, emptyTrip, type LatLng } from "./trip";
 
 const A: LatLng = { lat: 50.3527, lng: 5.4563 };
@@ -13,10 +13,8 @@ const nearA: LatLng = { lat: 50.3532, lng: 5.4563 }; // about 55 m from A
 const T = "2026-10-14T08:00:00.000Z";
 const trip = [A, B].reduce((t, at) => applyEdit(t, { type: "addPoint", at }), emptyTrip());
 
-const daysPeek: PanelView = { tab: "days", sheet: "peek" };
 const selected = (): PlannerSession => ({ ...firstSession({ trip }), selectedPoint: 1 });
-const enter = (s: PlannerSession, returnTo: PanelView = daysPeek) =>
-  plannerSession(s, { type: "enterAccessPointEditing", returnTo });
+const enter = (s: PlannerSession) => plannerSession(s, { type: "enterAccessPointEditing" });
 
 describe("planner modes", () => {
   it("the planner opens in normal mode", () => {
@@ -24,17 +22,18 @@ describe("planner modes", () => {
     expect(firstSession({ trip: emptyTrip(), unknownVersion: true }).mode).toEqual({ kind: "normal" });
   });
 
-  it("entering access point editing keeps the view to return to and clears the selection", () => {
+  it("entering access point editing shows the Access points tab and clears the selection", () => {
     const before = selected();
     const after = enter(before);
-    expect(after.mode).toEqual({ kind: "accessPointEditing", returnTo: daysPeek });
+    expect(after.mode).toEqual({ kind: "accessPointEditing" });
+    expect(shownTab(after)).toBe("accessPoints");
     expect(after.selectedPoint).toBeNull();
     expect(after.trip).toBe(before.trip);
   });
 
   it("entering again while editing changes nothing", () => {
     const editing = enter(selected());
-    expect(enter(editing, { tab: "sections", sheet: "full" })).toBe(editing);
+    expect(enter(editing)).toBe(editing);
   });
 
   it("Done goes back to normal mode and clears the selection", () => {

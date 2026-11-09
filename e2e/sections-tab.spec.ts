@@ -380,6 +380,29 @@ test("shown legs stay open across tabs, side by side, and through an edit furthe
   await expect(legsOf(page, 1)).toHaveCount(2);
 });
 
+test("deleting a point before the marked leg leaves no row marked, not the leg that took its place (#243)", async ({ page }) => {
+  await serveOffline(page);
+  await seed(page, {
+    points: [D, A, B, C],
+    legs: [
+      { mode: "hike", line: [D, A] },
+      // It turns back by the first point, so zoomed to this leg the map still shows that point.
+      { mode: "hike", line: [A, D, B] },
+      { mode: "hike", line: [B, C] },
+    ],
+  });
+  await openPlanner(page);
+  await toggleSection(page, 1);
+  const leg2 = rowButton(legsOf(page, 1).nth(1), strings.legLabel(2));
+  await leg2.click();
+  await expect(leg2).toHaveAttribute("aria-current", "true");
+
+  // The first point goes: the old leg 3 is now leg 2, and it must not be marked.
+  await deletePoint(page, 0);
+  await expect(legsOf(page, 1)).toHaveCount(2);
+  await expect(marked(page)).toHaveCount(0);
+});
+
 test("a section closes when no section of several legs starts at its first leg", async ({ page }) => {
   await serveOffline(page);
   await seed(page, canalTrip);
