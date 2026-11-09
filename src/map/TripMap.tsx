@@ -48,6 +48,11 @@ export type TripMapProps = {
   /** The switched-on overlays (ADR 0032), drawn over the base map. */
   overlays: readonly OverlayId[];
   trip: Trip;
+  /**
+   * The planner session's count of trip replacements (New trip, Open trip; #241): the map fits the
+   * trip when it opens and whenever this changes while the trip has points.
+   */
+  tripGeneration: number;
   /** A tap on the map (not a double tap, not the end of a pinch, not on a point). */
   onMapTap: (at: LatLng) => void;
   /** Index of the selected point, if any. */
@@ -110,26 +115,32 @@ const selectedPointStyle = { ...pointStyle, color: "#000", weight: 3, fillColor:
 // A point's finger-sized hit area is invisible.
 const hitStyle = { stroke: false, fillColor: "#000", fillOpacity: 0 };
 
-/** Fits the trip on screen when the map opens, and centres on your position when it is first shown. */
-function MapView({ trip, position, cover }: Pick<TripMapProps, "trip" | "position"> & { cover?: () => MapCover }) {
+/**
+ * Fits the trip on screen when the map opens and when the trip is replaced (#241), and centres on
+ * your position when it is first shown.
+ */
+function MapView({
+  trip,
+  tripGeneration,
+  position,
+  cover,
+}: Pick<TripMapProps, "trip" | "tripGeneration" | "position"> & { cover?: () => MapCover }) {
   const map = useMap();
-  // The number of points the map last saw; null until it opens.
+  // The trip generation the map last saw; null until it opens.
   const shown = useRef<number | null>(null);
   useEffect(() => {
-    // Fits the trip the map opens with, and a trip opened over an empty one (it arrives with
-    // several points at once). Otherwise the map is the user's to move: the first point drawn
-    // on an empty trip doesn't move it.
-    const before = shown.current;
-    shown.current = trip.points.length;
-    const opened = before === null ? trip.points.length > 0 : before === 0 && trip.points.length > 1;
-    if (!opened) return;
+    // Fits the trip the map opens with and every trip that replaces it (New trip, Open trip).
+    // Otherwise the map is the user's to move: no edit moves it.
+    if (shown.current === tripGeneration) return;
+    shown.current = tripGeneration;
+    if (trip.points.length === 0) return;
     // Into the part of the map the top row, the sheet or the side panel leave free.
     const { top, right, bottom } = cover?.() ?? { top: 0, right: 0, bottom: 0 };
     map.fitBounds(latLngBounds(trip.points.map((p) => [p.lat, p.lng])), {
       paddingTopLeft: [24, top + 24],
       paddingBottomRight: [right + 24, bottom + 24],
     });
-  }, [map, trip]);
+  }, [map, trip, tripGeneration]);
   const centred = useRef(false);
   useEffect(() => {
     if (!position) {
@@ -494,6 +505,7 @@ export default function TripMap({
   baseMap,
   overlays,
   trip,
+  tripGeneration,
   onMapTap,
   selectedPoint,
   onPointTap,
@@ -522,7 +534,7 @@ export default function TripMap({
       <BaseMapTiles id={baseMap} />
       <OverlayTiles ids={overlays} />
       {access && <AccessLayer {...access} />}
-      <MapView trip={trip} position={position} cover={searchCover} />
+      <MapView trip={trip} tripGeneration={tripGeneration} position={position} cover={searchCover} />
       {focus && <Focus focus={focus} />}
       <Taps onTap={onMapTap} onLegTap={onLegTap} />
       <TripLayers

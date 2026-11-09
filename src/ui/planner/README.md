@@ -8,6 +8,7 @@ The one planner (ADRs 0026, 0034), on every screen, with `src/map/TripMap.tsx`. 
 - The panel has the Sections and Days tabs (the Access points tab in access point editing).
 - A layers button opens the Map menu: base maps, access layer and overlay switches (#179, #180).
 - The menu: New trip, Edit trip, Save trip, Open trip | Export GPX | Settings, with icons. The trip's name and start date (Edit trip, #154) and the settings (#151) are dialogs from it.
+- The next leg's mode toggle (bottom right, #121) shows `nextLegMode(session)` and sends `nextModePicked`; the session keeps the pick and drops it on the next edit or replace.
 - `DaysPanel`, `SnapOffers`, `TripAccessView` and `AccessPanel` (the access legend, date and details) stay in `src/ui/`.
 
 ## Selection

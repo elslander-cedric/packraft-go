@@ -7,6 +7,7 @@ The Leaflet map with OpenTopoMap tiles. Map components must be client-only (Leaf
 - Overlays (ADR 0032, #180): `overlays` in `mapConfig.ts`, for now only Hiking trails (Waymarked Trails, native tiles to z18), drawn by `OverlayTiles.tsx` in their own pane (`paneZIndex.overlays`) above the base map and below the access layer and the trip. The switched-on ones are `overlays` (a list of `overlayIds`) in the settings.
 - Legs: drawn in their own pane (`paneZIndex.tripLegs`) above the access layer's waters, each on a white casing (`leg-casing`, ADR 0033). Their colours and the camp icon are in `tripStyles.ts`.
 - Point numbers (prototype/point-numbers): route points show their number (the point card's) on a badge: every point from `pointNumbersMinZoom`, further out only the first, last and selected (`isPointNumbered` in `pointNumbers.ts`). The badge is the point's own `path.point`, made larger; the number is a non-interactive `.point-number` marker in its own pane (`paneZIndex.tripPointNumbers`), so count route points by `path.point`, not marker icons.
+- Fitting the trip: `MapView` fits it when the map opens and whenever the planner session's `tripGeneration` changes (New trip, Open trip; #241) while it has points. Edits never move the map.
 - The Map menu (`strings.mapMenuButton`) opens from the layers button (`src/ui/planner/MapMenu.tsx`): the base maps, then the access layer and overlay switches.
 
 ## Tests

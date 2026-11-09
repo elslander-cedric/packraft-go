@@ -18,11 +18,22 @@
 //   deleted access point, makes the offers to a moved one follow it and leaves
 //   the offers to official aires alone.
 // - file error: set by file rejected; cleared by every other action except a
-//   route being requested or arriving.
+//   route being requested or arriving and the official aires loading.
+// - next mode (#121, #241): the next leg's picked mode, null for none (then `nextLegMode` is the
+//   last leg's mode). Set by next mode picked; cleared by every edit of the points or leg modes
+//   (add, move, insert and delete point, back to start, set leg mode, toggle camp, undo, accept
+//   offer) and any replace; kept by routing and everything else. Add point on an empty trip keeps
+//   it, so the first point carries the pick over to the second. Add point and back to start draw
+//   their leg in `nextLegMode`.
+// - official aires (#241): set by official aires loaded, which applies in any mode and while the
+//   replace question is open; kept by everything else, replacing the trip included. Add, move
+//   point and set leg mode offer snaps to them; an edit before they load offers none.
+// - trip generation (#241): 0 at first; every replace of the trip adds one. The map fits the trip
+//   when it changes and the trip has points.
 // - stored save kept (#28): cleared when the trip is replaced.
 // - replace question: new trip and file opened ask it when the current trip needs
-//   confirmation. While it is open only confirm, cancel and the routing actions
-//   apply.
+//   confirmation. While it is open only confirm, cancel, the routing actions and
+//   official aires loaded apply.
 // - mode (ADR 0036, #225): normal on load (never stored); enter access point editing sets it,
 //   keeping the panel view to return to, and Done sets it back. Both clear the selection.
 //   While editing access points the trip is frozen (#227): the actions that edit its points or
@@ -94,16 +105,23 @@ export type PlannerSession = {
   readonly question: ReplaceQuestion;
   /** The trip waiting to replace the current one until the question is answered. */
   readonly pendingTrip: Trip | null;
+  /** The next leg's mode the planner picked (#121), or null: then it is the last leg's (`nextLegMode`). */
+  readonly nextMode: LegMode | null;
+  /** The official aires (ADR 0035) the edits' snap offers may go to: empty until they load. */
+  readonly officialAires: readonly OfficialAire[];
+  /** How many times the trip was replaced (New trip, Open trip): the map fits the trip when it changes (#241). */
+  readonly tripGeneration: number;
 };
 
-/** What the new put-ins and take-outs of an edit may be offered: your access points and the official aires. */
-type SnapTargets = { readonly accessPoints: AccessPoints; readonly officialAires: readonly OfficialAire[] };
+/** Your access points, which the new put-ins and take-outs of an edit may be offered (the official aires are in the session). */
+type SnapTargets = { readonly accessPoints: AccessPoints };
 
 export type PlannerAction =
-  | ({ readonly type: "addPoint"; readonly at: LatLng; readonly mode?: LegMode } & SnapTargets)
+  /** Adds a point; its leg has the next leg's mode (`nextLegMode`). */
+  | ({ readonly type: "addPoint"; readonly at: LatLng } & SnapTargets)
   | ({ readonly type: "movePoint"; readonly index: number; readonly to: LatLng } & SnapTargets)
-  /** Adds a leg from the last point back to the start (GLOSSARY "Loop"), in `mode` when given. */
-  | { readonly type: "backToStart"; readonly mode?: LegMode }
+  /** Adds a leg from the last point back to the start (GLOSSARY "Loop"), in the next leg's mode. */
+  | { readonly type: "backToStart" }
   | { readonly type: "deleteSelectedPoint" }
   /** Inserts a point on leg `leg` of the route, nearest to `near` (#122). */
   | { readonly type: "insertPoint"; readonly index: number; readonly near: LatLng }
@@ -131,6 +149,10 @@ export type PlannerAction =
   | { readonly type: "enterAccessPointEditing"; readonly returnTo: PanelView }
   /** Done: back to normal mode. */
   | { readonly type: "leaveAccessPointEditing" }
+  /** The planner picked the next leg's mode (#121): no edit, no undo step. */
+  | { readonly type: "nextModePicked"; readonly mode: LegMode }
+  /** The built-in official aires arrived (they load once the trip has a point). */
+  | { readonly type: "officialAiresLoaded"; readonly aires: readonly OfficialAire[] }
   | RoutingAction;
 
 /** The first session, from what loading the stored trip returned. */
@@ -145,8 +167,15 @@ export function firstSession(stored: { readonly trip: Trip; readonly unknownVers
     keepStoredSave: stored.unknownVersion ?? false,
     question: "newTrip",
     pendingTrip: null,
+    nextMode: null,
+    officialAires: [],
+    tripGeneration: 0,
   };
 }
+
+/** The mode the next leg gets (#121): the planner's pick, else the last leg's mode, hike for a trip without legs. */
+export const nextLegMode = (session: PlannerSession): LegMode =>
+  session.nextMode ?? session.trip.legs[session.trip.legs.length - 1]?.mode ?? "hike";
 
 const replaced = (session: PlannerSession, trip: Trip): PlannerSession => ({
   ...session,
@@ -157,6 +186,8 @@ const replaced = (session: PlannerSession, trip: Trip): PlannerSession => ({
   fileError: null,
   keepStoredSave: false,
   pendingTrip: null,
+  nextMode: null,
+  tripGeneration: session.tripGeneration + 1,
 });
 
 /** Replaces the trip, asking first when that would lose points (it cannot be undone). */
@@ -165,7 +196,7 @@ const replace = (session: PlannerSession, next: Trip, question: ReplaceQuestion)
     ? { ...session, question, pendingTrip: next, fileError: null }
     : replaced(session, next);
 
-/** An edit of the points or leg modes: selection and offers are dropped. */
+/** An edit of the points or leg modes: selection, offers and the next leg's picked mode are dropped. */
 const edited = (session: PlannerSession, trip: Trip, offers: readonly SnapOffer[] = []): PlannerSession => ({
   ...session,
   trip,
@@ -173,6 +204,7 @@ const edited = (session: PlannerSession, trip: Trip, offers: readonly SnapOffer[
   selectedLeg: null,
   offers,
   fileError: null,
+  nextMode: null,
 });
 
 /** Offers after your access points changed: deleted ones drop, moved ones follow; official aires never change. */
@@ -210,6 +242,7 @@ const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set([
 
 export function plannerSession(session: PlannerSession, action: PlannerAction): PlannerSession {
   if (action.type === "routeRequested" || action.type === "routeArrived") return routing(session, action);
+  if (action.type === "officialAiresLoaded") return { ...session, officialAires: action.aires };
   if (action.type === "confirmReplace") return session.pendingTrip ? replaced(session, session.pendingTrip) : session;
   if (action.type === "cancelReplace") return session.pendingTrip ? { ...session, pendingTrip: null } : session;
   if (session.pendingTrip) return session;
@@ -218,16 +251,18 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
   const { trip } = session;
   switch (action.type) {
     case "addPoint": {
-      const after = applyEdit(trip, { type: "addPoint", at: action.at, mode: action.mode });
-      return edited(session, after, snapOffers(trip, after, action.accessPoints, action.officialAires));
+      const after = applyEdit(trip, { type: "addPoint", at: action.at, mode: nextLegMode(session) });
+      const next = edited(session, after, snapOffers(trip, after, action.accessPoints, session.officialAires));
+      // The first point adds no leg: the pick carries over to the second.
+      return trip.points.length === 0 ? { ...next, nextMode: session.nextMode } : next;
     }
     case "movePoint": {
       const after = applyEdit(trip, { type: "movePoint", index: action.index, to: action.to });
-      return edited(session, after, movedPointOffers(after, action.index, action.accessPoints, action.officialAires));
+      return edited(session, after, movedPointOffers(after, action.index, action.accessPoints, session.officialAires));
     }
     case "backToStart":
       if (!canGoBackToStart(trip)) return session;
-      return edited(session, applyEdit(trip, { type: "addPoint", at: trip.points[0], mode: action.mode }));
+      return edited(session, applyEdit(trip, { type: "addPoint", at: trip.points[0], mode: nextLegMode(session) }));
     case "insertPoint": {
       const after = applyEdit(trip, action);
       if (after === trip) return session;
@@ -242,7 +277,7 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
         : edited(session, applyEdit(trip, { type: "deletePoint", index: session.selectedPoint }));
     case "setLegMode": {
       const after = applyEdit(trip, { type: "setLegMode", index: action.index, mode: action.mode });
-      const offers = snapOffers(trip, after, action.accessPoints, action.officialAires);
+      const offers = snapOffers(trip, after, action.accessPoints, session.officialAires);
       // The legs keep their indices: the selected leg stays selected.
       return { ...edited(session, after, offers), selectedLeg: session.selectedLeg };
     }
@@ -251,7 +286,12 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
     case "toggleCampOnSelectedPoint":
       return session.selectedPoint === null
         ? session
-        : { ...session, trip: applyEdit(trip, { type: "toggleCamp", index: session.selectedPoint }), fileError: null };
+        : {
+            ...session,
+            trip: applyEdit(trip, { type: "toggleCamp", index: session.selectedPoint }),
+            fileError: null,
+            nextMode: null,
+          };
     case "undo":
       return edited(session, applyEdit(trip, { type: "undo" }));
     case "rename":
@@ -286,6 +326,7 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
             selectedLeg: null,
             offers: session.offers.filter((o) => o !== action.offer),
             fileError: null,
+            nextMode: null,
           }
         : session;
     case "declineOffer":
@@ -313,5 +354,7 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
       return editingAccessPoints(session)
         ? { ...session, mode: { kind: "normal" }, selectedPoint: null, selectedLeg: null }
         : session;
+    case "nextModePicked":
+      return { ...session, nextMode: action.mode, fileError: null };
   }
 }

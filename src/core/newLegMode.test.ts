@@ -31,13 +31,14 @@ describe("a new leg takes the mode of the last leg", () => {
     expect(undone.legs.map((l) => l.mode)).toEqual(["paddle"]);
   });
 
-  it("works through the session, with and without an explicit mode", () => {
+  it("works through the session, with and without a picked mode", () => {
     let s = firstSession({ trip: emptyTrip() });
-    s = plannerSession(s, { type: "addPoint", at: A, accessPoints: [], officialAires: [] });
-    s = plannerSession(s, { type: "addPoint", at: B, accessPoints: [], officialAires: [] });
-    s = plannerSession(s, { type: "setLegMode", index: 0, mode: "paddle", accessPoints: [], officialAires: [] });
-    s = plannerSession(s, { type: "addPoint", at: C, accessPoints: [], officialAires: [] });
-    s = plannerSession(s, { type: "addPoint", at: D, mode: "hike", accessPoints: [], officialAires: [] });
+    s = plannerSession(s, { type: "addPoint", at: A, accessPoints: [] });
+    s = plannerSession(s, { type: "addPoint", at: B, accessPoints: [] });
+    s = plannerSession(s, { type: "setLegMode", index: 0, mode: "paddle", accessPoints: [] });
+    s = plannerSession(s, { type: "addPoint", at: C, accessPoints: [] });
+    s = plannerSession(s, { type: "nextModePicked", mode: "hike" });
+    s = plannerSession(s, { type: "addPoint", at: D, accessPoints: [] });
     expect(s.trip.legs.map((l) => l.mode)).toEqual(["paddle", "paddle", "hike"]);
   });
 });

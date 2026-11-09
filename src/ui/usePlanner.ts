@@ -144,6 +144,10 @@ export function usePlanner(router?: Router) {
   );
   // Wanted from the first point, not the first paddle leg: that leg's own put-in may be offered one.
   const officialAires = useBuiltInOfficialAires(trip.points.length > 0)?.aires;
+  // The session offers them to the edits' new put-ins and take-outs once they are in.
+  useEffect(() => {
+    if (officialAires) dispatch({ type: "officialAiresLoaded", aires: officialAires });
+  }, [officialAires]);
   // No warnings until the aires are in: a put-in at one must not warn for a moment.
   const aire = useMemo(
     () => (rules && officialAires ? aireWarnings(trip, rules, access.points, officialAires) : []),

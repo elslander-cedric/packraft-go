@@ -166,3 +166,48 @@ test("opening a file over a trip with points asks first; cancelling keeps the cu
   await expect(pointMarkers(page)).toHaveCount(3);
   await expect(confirmDialog(page)).toHaveCount(0);
 });
+
+test("a file opened over a trip with points, once confirmed, is fitted on the map (#241)", async ({ page }) => {
+  const network = await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
+  await drawTrip(page, "Current plan");
+  const requestsBefore = network.brouter.length;
+
+  // A routed trip on the Semois, about 6 km long: at the zoom the current trip was drawn at its
+  // two ends would be a few pixels apart, so only a fit spreads them over the free map.
+  const ends = [
+    { lat: 49.795, lng: 5.04 },
+    { lat: 49.82, lng: 5.1 },
+  ];
+  const save = {
+    format: "packraft-go-trip",
+    version: 1,
+    trip: {
+      name: "Semois",
+      points: ends,
+      legs: [{ mode: "paddle", route: { status: "routed", geometry: ends.map((p) => ({ ...p, elevation: 200 })) } }],
+    },
+  };
+  await openFile(page, {
+    name: "Semois.packraft.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(save)),
+  });
+  await answerConfirmation(page, "openFile", "confirm");
+  await expectTripName(page, "Semois");
+  await expect(pointMarkers(page)).toHaveCount(2);
+
+  const free = await freeMapBox(page);
+  await expect(async () => {
+    const boxes = await Promise.all((await pointMarkers(page).all()).map(async (point) => (await point.boundingBox())!));
+    for (const box of boxes) {
+      expect(box.x).toBeGreaterThanOrEqual(free.x);
+      expect(box.x + box.width).toBeLessThanOrEqual(free.x + free.width);
+      expect(box.y).toBeGreaterThanOrEqual(free.y);
+      expect(box.y + box.height).toBeLessThanOrEqual(free.y + free.height);
+    }
+    const [a, b] = boxes;
+    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(free.width / 3);
+  }).toPass({ timeout: 5000 });
+  expect(network.brouter).toHaveLength(requestsBefore);
+  expect(network.blocked).toEqual([]);
+});

@@ -75,22 +75,21 @@ describe("the trip is frozen while editing access points (#227)", () => {
       index: 0,
       mode: "paddle",
       accessPoints: slipway,
-      officialAires: [],
     });
     expect(withOffer.offers).toHaveLength(1);
     return { ...enter(withOffer), selectedPoint: 1 };
   };
 
   const frozen: [name: string, make: (s: PlannerSession) => PlannerAction][] = [
-    ["add point", () => ({ type: "addPoint", at: { lat: 50.4, lng: 5.5 }, accessPoints: [], officialAires: [] })],
+    ["add point", () => ({ type: "addPoint", at: { lat: 50.4, lng: 5.5 }, accessPoints: [] })],
     [
       "move point",
-      () => ({ type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 }, accessPoints: [], officialAires: [] }),
+      () => ({ type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 }, accessPoints: [] }),
     ],
     ["delete selected point", () => ({ type: "deleteSelectedPoint" })],
     ["back to start", () => ({ type: "backToStart" })],
     ["insert point", () => ({ type: "insertPoint", index: 0, near: { lat: 50.3577, lng: 5.4563 } })],
-    ["set leg mode", () => ({ type: "setLegMode", index: 1, mode: "paddle", accessPoints: [], officialAires: [] })],
+    ["set leg mode", () => ({ type: "setLegMode", index: 1, mode: "paddle", accessPoints: [] })],
     ["toggle camp", () => ({ type: "toggleCampOnSelectedPoint" })],
     ["undo", () => ({ type: "undo" })],
     ["point clicked", () => ({ type: "pointClicked", index: 2 })],

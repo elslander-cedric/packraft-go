@@ -3,12 +3,13 @@
 import { useId, useRef, useState, type CSSProperties } from "react";
 import {
   editingAccessPoints as isEditingAccessPoints,
+  nextLegMode,
   normalTabs,
   type NormalTab,
   type SheetStop,
 } from "@/core/plannerSession";
 import type { Router } from "@/core/router";
-import { canGoBackToStart, canUndo, isCamp, type LatLng, type LegMode, type Trip } from "@/core/trip";
+import { canGoBackToStart, canUndo, isCamp, type LatLng, type Trip } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import type { MapFocus } from "@/map/TripMap";
 import type { MapCover } from "@/map/SearchResultLayer";
@@ -51,20 +52,6 @@ import "./planner.css";
 type PlannerTab = NormalTab | "accessPoints";
 const editingTabs: readonly PlannerTab[] = ["accessPoints"];
 
-/**
- * The next leg's mode the planner picked, and the trip state it was picked for: the trip's
- * points and undo steps, which every edit, undo, New trip and Open trip replace, and routing keeps.
- */
-type NextModePick = {
-  mode: LegMode;
-  points: Trip["points"];
-  undoSteps: Trip["undoSteps"];
-  /** The first point is being added: the pick carries over to the trip with that point. */
-  carry?: boolean;
-};
-const pickedFor = (trip: Trip) => ({ points: trip.points, undoSteps: trip.undoSteps });
-const pickHolds = (pick: NextModePick, trip: Trip) => pick.points === trip.points && pick.undoSteps === trip.undoSteps;
-
 /** Where a day or a section goes: its points and its legs' routes. */
 function legsArea(trip: Trip, { firstLeg, lastLeg }: { firstLeg: number; lastLeg: number }): LatLng[] {
   const area: LatLng[] = trip.points.slice(firstLeg, lastLeg + 2);
@@ -89,7 +76,6 @@ export default function Planner({ router }: { router?: Router }) {
     access,
     waterAccess,
     aire,
-    officialAires,
     undo,
     deleteSelectedPoint,
     saveFile,
@@ -150,17 +136,8 @@ export default function Planner({ router }: { router?: Router }) {
   // Where the map last zoomed to, for an access point row (#119).
   const [focus, setFocus] = useState<MapFocus | null>(null);
 
-  // The next leg's mode (#121): the last leg's mode (hike for an empty trip), unless the planner
-  // picked another since the trip last changed. Any edit (adding a leg with it, delete, undo…),
-  // New trip and Open trip drop the pick; routing doesn't. Only the first point, which adds no leg,
-  // carries it over to the second.
-  const [pick, setPick] = useState<NextModePick | null>(null);
-  let held = pick;
-  if (pick !== null && !pickHolds(pick, trip)) {
-    held = pick.carry && trip.points.length === 1 ? { mode: pick.mode, ...pickedFor(trip) } : null;
-    setPick(held);
-  }
-  const nextMode = held?.mode ?? trip.legs[trip.legs.length - 1]?.mode ?? "hike";
+  // The next leg's mode (#121), kept in the planner session.
+  const nextMode = nextLegMode(session);
   // The leg whose access details dialog is open (#158), if any.
   const [detailsLeg, setDetailsLeg] = useState<number | null>(null);
   // Place search (#174) belongs to the map, not the trip: it lives here, outside the planner session.
@@ -183,10 +160,7 @@ export default function Planner({ router }: { router?: Router }) {
   const onMapTap = (at: LatLng) => {
     if (editingAccessPoints) access.placeDraft(at);
     else if (selectedPoint !== null || session.selectedLeg !== null) dispatch({ type: "deselect" });
-    else {
-      if (held !== null && trip.points.length === 0) setPick({ ...held, carry: true });
-      dispatch({ type: "addPoint", at, mode: nextMode, accessPoints: access.points, officialAires });
-    }
+    else dispatch({ type: "addPoint", at, accessPoints: access.points });
   };
   // A leg row tap shows its leg above the half-raised sheet and marks the row.
   const [selectedLeg, setSelectedLeg] = useState<number | undefined>(undefined);
@@ -357,11 +331,12 @@ export default function Planner({ router }: { router?: Router }) {
         baseMap={baseMap}
         overlays={overlays}
         trip={trip}
+        tripGeneration={session.tripGeneration}
         onMapTap={onMapTap}
         selectedPoint={selectedPoint}
         onPointTap={(index) => dispatch({ type: "pointClicked", index })}
         onPointDrop={(index, to) =>
-          dispatch({ type: "movePoint", index, to, accessPoints: access.points, officialAires })
+          dispatch({ type: "movePoint", index, to, accessPoints: access.points })
         }
         onLegHold={(index, near) => dispatch({ type: "insertPoint", index, near })}
         selectedLeg={session.selectedLeg}
@@ -471,7 +446,7 @@ export default function Planner({ router }: { router?: Router }) {
             label={strings.planner.nextLegModeLabel}
             value={nextMode}
             options={legModeOptions}
-            onChange={(mode) => setPick({ mode, ...pickedFor(trip) })}
+            onChange={(mode) => dispatch({ type: "nextModePicked", mode })}
             className="planner-next-mode"
           />
         )}
@@ -494,7 +469,7 @@ export default function Planner({ router }: { router?: Router }) {
             className="planner-fab"
             aria-label={strings.planner.backToStartButton}
             aria-describedby={canGoBackToStart(trip) ? undefined : backToStartReasonId}
-            onClick={() => dispatch({ type: "backToStart", mode: nextMode })}
+            onClick={() => dispatch({ type: "backToStart" })}
             disabled={!canGoBackToStart(trip)}
             focusableWhenDisabled
           >
@@ -559,7 +534,6 @@ export default function Planner({ router }: { router?: Router }) {
                 index: session.selectedLeg,
                 mode,
                 accessPoints: access.points,
-                officialAires,
               })
             }
             onClose={() => dispatch({ type: "deselect" })}
