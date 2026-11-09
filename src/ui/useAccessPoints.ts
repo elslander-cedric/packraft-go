@@ -1,18 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import {
-  addAccessPoint,
-  type AccessPoint,
-  applyDefaultName,
-  deleteAccessPoint,
-  updateAccessPoint,
-  type AccessPointChanges,
-  type AccessPoints,
-  type DefaultNameSource,
-} from "@/core/accessPoints";
-import type { LatLng } from "@/core/trip";
-import { loadStoredAccessPoints, storeAccessPoints } from "@/persistence/accessPointStorage";
+import { useEffect, useRef, type Dispatch } from "react";
+import type { AccessPoint, AccessPoints, DefaultNameSource } from "@/core/accessPoints";
+import type { PlannerAction } from "@/core/plannerSession";
+import { storeAccessPoints, type LoadedAccessPoints } from "@/persistence/accessPointStorage";
 import { startDefaultNames, type DefaultNames } from "./defaultNames";
 import { sharedNominatim } from "./sharedNominatim";
 
@@ -21,31 +12,25 @@ function defaultNameSource(): Promise<DefaultNameSource> {
   return sharedNominatim().then(({ names }) => names);
 }
 
-/** A new, unique id for an access point. */
-function newId(): string {
-  // randomUUID needs a secure context (https or localhost); fall back elsewhere.
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-}
-
-const now = () => new Date().toISOString();
-
 /** Why autosave is paused: the stored save is kept as it is. */
 export type SavingPaused = "unknown-version" | "damaged";
 
-/** Your access points and what the planner can do with them (#55, ADR 0023). */
-export type AccessPointsState = ReturnType<typeof useAccessPoints>;
+/** What the planner shows about storing your access points. */
+export type AccessPointsStorage = ReturnType<typeof useAccessPoints>;
 
 /**
- * Holds your access points: loaded from browser storage, autosaved on every
- * change, edited through the core. Also the UI state around them: the
- * selected point and the new point being placed (the draft), which is only
- * stored when its details are saved.
+ * The side effects of your access points (#55, ADR 0023); the planner session holds them and is
+ * their only writer (ADR 0025). Stores them on every change, except while saving is paused, and
+ * looks up the default names (ADR 0027) of the stored points and the draft, sending each one found
+ * to the session as `defaultNameFound`. `stored` is what loading them returned.
  * Only rendered in the browser (see ClientTripPlanner).
  */
-export function useAccessPoints() {
-  const [stored] = useState(loadStoredAccessPoints);
-  const [points, setPoints] = useState<AccessPoints>(stored.accessPoints);
+export function useAccessPoints(
+  stored: LoadedAccessPoints,
+  points: AccessPoints,
+  draft: AccessPoint | null,
+  dispatch: Dispatch<PlannerAction>,
+) {
   // Saving is paused, so the stored save is kept rather than overwritten, while
   // it is from an unknown version, or damaged and could not be backed up.
   const savingPaused: SavingPaused | null = stored.unknownVersion
@@ -54,9 +39,6 @@ export function useAccessPoints() {
       ? "damaged"
       : null;
   const keepStoredSave = savingPaused !== null;
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  // A new point placed on the map and not saved yet: it can be dragged, and the flag opens its details.
-  const [draft, setDraft] = useState<AccessPoint | null>(null);
 
   useEffect(() => {
     if (!keepStoredSave) storeAccessPoints(points);
@@ -75,10 +57,7 @@ export function useAccessPoints() {
       defaultNames.current = startDefaultNames({
         source,
         points: () => latest.current,
-        found: (id, at, name) => {
-          setPoints((current) => applyDefaultName(current, id, { at, name }));
-          setDraft((current) => (current?.id === id ? applyDefaultName([current], id, { at, name })[0]! : current));
-        },
+        found: (id, at, name) => dispatch({ type: "defaultNameFound", id, at, name }),
         online: () => navigator.onLine,
       });
       defaultNames.current.wake();
@@ -90,46 +69,16 @@ export function useAccessPoints() {
       defaultNames.current?.stop();
       defaultNames.current = null;
     };
-  }, []);
+  }, [dispatch]);
   useEffect(() => {
     latest.current = draft ? [...points, draft] : points;
     defaultNames.current?.wake();
   }, [points, draft]);
 
-  const selected = points.find((point) => point.id === selectedId) ?? null;
-
   return {
-    points,
-    selected,
-    draft,
     /** Why changes are not being saved, or null while they are. */
     savingPaused,
     /** Where a damaged save was backed up on load, or null. */
     backupKey: stored.backupKey,
-    /** Places the draft at `at`, or moves it there (its default name is looked up again); nothing is stored yet. */
-    placeDraft: (at: LatLng) => {
-      setDraft((current) =>
-        current
-          ? updateAccessPoint([current], current.id, { position: at }, now())[0]!
-          : addAccessPoint([], { id: newId(), at, now: now() })[0]!,
-      );
-      setSelectedId(null);
-    },
-    /** Stores the draft with the planner's changes and selects it. */
-    saveDraft: (changes: AccessPointChanges) => {
-      if (!draft) return;
-      const { id } = draft;
-      setPoints((current) => updateAccessPoint([...current, draft], id, changes, now()));
-      setDraft(null);
-      setSelectedId(id);
-    },
-    discardDraft: () => setDraft(null),
-    select: (id: string | null) => setSelectedId(id),
-    update: (id: string, changes: AccessPointChanges) =>
-      setPoints((current) => updateAccessPoint(current, id, changes, now())),
-    remove: (id: string) => {
-      setPoints((current) => deleteAccessPoint(current, id));
-      setSelectedId((current) => (current === id ? null : current));
-    },
   };
 }

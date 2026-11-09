@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import type { AccessPoint } from "@/core/accessPoints";
+import type { AccessPoint, AccessPoints as Points } from "@/core/accessPoints";
 import type { OfficialAire } from "@/core/officialAire";
 import {
   accessPointsByRoute,
@@ -18,13 +18,18 @@ import { icons } from "../icons/icons";
 import { accessPointText } from "../accessPointText";
 import { formatDistance } from "../format";
 import { strings } from "../strings";
-import type { AccessPointsState } from "../useAccessPoints";
+import type { AccessPointsStorage } from "../useAccessPoints";
 
 const text = strings.planner;
 const pointText = strings.accessPoints;
 
 type Props = {
-  access: AccessPointsState;
+  /** Your access points. */
+  points: Points;
+  /** The selected access point's id, or null. */
+  selectedId: string | null;
+  /** Whether they are being stored, and where a damaged save was backed up. */
+  storage: AccessPointsStorage;
   /** The trip, whose route splits the list (#156). */
   trip: Trip;
   /** The official aires; the ones on the route are listed among your points (#208). */
@@ -37,6 +42,8 @@ type Props = {
   onOpenAire: (id: string) => void;
   /** A row's edit button: open that point's details in the edit dialog. */
   onEdit: (id: string) => void;
+  /** A row's delete button, once confirmed. */
+  onDelete: (id: string) => void;
 };
 
 /** How far along the route an on-route row is, and whether the trip's put-in or take-out is there. */
@@ -55,8 +62,18 @@ function alongRoute({ alongKm, role }: OnRoute | OnRouteAire): string {
  * button on the map; the details are a dialog. Every change is saved on the
  * device at once by `useAccessPoints`, with or without signal.
  */
-export default function AccessPoints({ access, trip, officialAires, position, onOpen, onOpenAire, onEdit }: Props) {
-  const { points, selected } = access;
+export default function AccessPoints({
+  points,
+  selectedId,
+  storage,
+  trip,
+  officialAires,
+  position,
+  onOpen,
+  onOpenAire,
+  onEdit,
+  onDelete,
+}: Props) {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const lists = useRef<HTMLDivElement>(null);
   const onRouteId = useId();
@@ -69,18 +86,18 @@ export default function AccessPoints({ access, trip, officialAires, position, on
 
   // Bring the selected row into view, e.g. after a marker tap.
   useEffect(() => {
-    if (selected) lists.current?.querySelector("[aria-current]")?.scrollIntoView?.({ block: "nearest" });
-  }, [selected]);
+    if (selectedId) lists.current?.querySelector("[aria-current]")?.scrollIntoView?.({ block: "nearest" });
+  }, [selectedId]);
 
-  const savingPausedAlert = access.savingPaused !== null && (
+  const savingPausedAlert = storage.savingPaused !== null && (
     <p role="alert" className="planner-position-alert">
-      {access.savingPaused === "unknown-version" ? pointText.autosaveUnknownVersion : pointText.damagedNotBackedUp}
+      {storage.savingPaused === "unknown-version" ? pointText.autosaveUnknownVersion : pointText.damagedNotBackedUp}
     </p>
   );
   // A damaged save was backed up on load, before it was replaced (round 2 of #55).
-  const backedUpNote = access.backupKey !== null && (
+  const backedUpNote = storage.backupKey !== null && (
     <p role="status" className="planner-position-alert">
-      {pointText.damagedBackedUp(access.backupKey)}
+      {pointText.damagedBackedUp(storage.backupKey)}
     </p>
   );
 
@@ -90,7 +107,7 @@ export default function AccessPoints({ access, trip, officialAires, position, on
       <li key={point.id} className="planner-access-point-item">
         <Button
           className="planner-row planner-access-point-row"
-          aria-current={point.id === selected?.id || undefined}
+          aria-current={point.id === selectedId || undefined}
           onClick={() => onOpen(point.id)}
         >
           <span className="planner-row-heading">{heading}</span>
@@ -174,7 +191,7 @@ export default function AccessPoints({ access, trip, officialAires, position, on
         confirmLabel={pointText.deleteConfirm.confirm}
         cancelLabel={strings.confirmCancel}
         onConfirm={() => {
-          if (pendingDelete !== null) access.remove(pendingDelete);
+          if (pendingDelete !== null) onDelete(pendingDelete);
           setPendingDelete(null);
         }}
         onCancel={() => setPendingDelete(null)}

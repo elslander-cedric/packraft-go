@@ -70,32 +70,32 @@ describe("the trip is frozen while editing access points (#227)", () => {
   const threePoints = [A, B, C].reduce((t, at) => applyEdit(t, { type: "addPoint", at }), emptyTrip());
   /** Editing access points with one snap offer and, as if left from before, point 1 selected. */
   const editing = (): PlannerSession => {
-    const withOffer = plannerSession(firstSession({ trip: threePoints }), {
+    const withOffer = plannerSession(firstSession({ trip: threePoints, accessPoints: slipway }), {
       type: "setLegMode",
       index: 0,
       mode: "paddle",
-      accessPoints: slipway,
     });
     expect(withOffer.offers).toHaveLength(1);
     return { ...enter(withOffer), selectedPoint: 1 };
   };
 
   const frozen: [name: string, make: (s: PlannerSession) => PlannerAction][] = [
-    ["add point", () => ({ type: "addPoint", at: { lat: 50.4, lng: 5.5 }, accessPoints: [] })],
+    ["add point", () => ({ type: "addPoint", at: { lat: 50.4, lng: 5.5 } })],
     [
       "move point",
-      () => ({ type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 }, accessPoints: [] }),
+      () => ({ type: "movePoint", index: 0, to: { lat: 50.4, lng: 5.5 } }),
     ],
     ["delete selected point", () => ({ type: "deleteSelectedPoint" })],
     ["back to start", () => ({ type: "backToStart" })],
     ["insert point", () => ({ type: "insertPoint", index: 0, near: { lat: 50.3577, lng: 5.4563 } })],
-    ["set leg mode", () => ({ type: "setLegMode", index: 1, mode: "paddle", accessPoints: [] })],
+    ["set leg mode", () => ({ type: "setLegMode", index: 1, mode: "paddle" })],
     ["toggle camp", () => ({ type: "toggleCampOnSelectedPoint" })],
     ["undo", () => ({ type: "undo" })],
     ["point clicked", () => ({ type: "pointClicked", index: 2 })],
     ["leg clicked", () => ({ type: "legClicked", index: 0 })],
     ["accept offer", (s) => ({ type: "acceptOffer", offer: s.offers[0] })],
     ["decline offer", (s) => ({ type: "declineOffer", offer: s.offers[0] })],
+    ["deselect", () => ({ type: "deselect" })],
   ];
   for (const [name, make] of frozen) {
     it(`${name} changes nothing`, () => {
@@ -106,12 +106,14 @@ describe("the trip is frozen while editing access points (#227)", () => {
 
   it("the snap offers wait for Done, following a moved access point", () => {
     const before = editing();
-    const moved = updateAccessPoint(slipway, "near", { position: { lat: 50.3531, lng: 5.4563 } }, T);
-    const after = plannerSession(plannerSession(before, { type: "accessPointsChanged", accessPoints: moved }), {
-      type: "leaveAccessPointEditing",
-    });
+    const to = { lat: 50.3531, lng: 5.4563 };
+    const after = [
+      { type: "accessPointMoved", id: "near", to, now: T } as const,
+      { type: "leaveAccessPointEditing" } as const,
+    ].reduce(plannerSession, before);
     expect(after.offers).toHaveLength(1);
-    expect(after.offers[0].target).toEqual({ kind: "access-point", accessPoint: moved[0] });
+    expect(after.offers[0].target).toEqual({ kind: "access-point", accessPoint: after.accessPoints[0] });
+    expect(after.accessPoints[0].position).toEqual(to);
   });
 
   it("the trip can change again after Done", () => {

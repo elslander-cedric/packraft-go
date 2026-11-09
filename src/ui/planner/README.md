@@ -28,9 +28,10 @@ The one planner (ADRs 0026, 0034), on every screen, with `src/map/TripMap.tsx`. 
 Your access points (`AccessPoints.tsx`, `AccessPointDialog.tsx`; #63, ADR 0023) are changed only in *access point editing* (ADR 0036, #225), the planner's second mode.
 
 - The mode is `mode` in the planner session (`{ kind: "normal" }` or `{ kind: "accessPointEditing", returnTo }`, set by the `enterAccessPointEditing` and `leaveAccessPointEditing` actions), never in settings, so the planner always opens in normal mode.
+- Your access points, the draft and the selected access point are in the planner session too (#242), changed by its access point actions (`draftPlaced`, `draftMoved`, `draftSaved`, `draftDiscarded`, `accessPointClicked`, `accessPointMoved`, `accessPointUpdated`, `accessPointDeleted`), which apply only while editing. Ids and times come from `stamp()` in `usePlanner`. `useAccessPoints` only stores them, keeps the backup key and looks up default names, sent back as `defaultNameFound`.
 - A floating button bottom left enters it and, pressed again, leaves it (`aria-pressed`, coloured `planner-fab-active` with the exit icon `leaveAccessPointEditing` while in it, above it the flag that marks; no banner).
 - Normal mode shows only the Sections and Days tabs and no mark button; access point editing only the Access points tab and the mark button.
-- Entering opens the panel on that tab, also from closed, and switches the sheet to it at its stop. Leaving restores the tab, the sheet's stop and whether the panel was open (`returnTo`). Both clear the selection.
+- Entering opens the panel on that tab, also from closed, and switches the sheet to it at its stop. Leaving restores the tab, the sheet's stop and whether the panel was open (`returnTo`). Both clear the selection and the selected access point; leaving drops the draft (all in the session).
 
 ### Markers
 
@@ -42,16 +43,16 @@ Your access points (`AccessPoints.tsx`, `AccessPointDialog.tsx`; #63, ADR 0023) 
 
 While editing the trip is frozen (#227):
 
-- The planner session ignores the actions that change its points or leg modes, select a point or answer a snap offer (`frozenWhileEditing`).
+- The planner session ignores the actions that change its points or leg modes, select or deselect a point or answer a snap offer (`frozenWhileEditing`), so the key bindings need no check of their own.
 - `TripMap` gets `frozen`, so route points and legs have no hit areas and a press reaches your access points.
-- Back to start, delete, camp, undo and their keys are off, the next leg's Hike/Paddle toggle is hidden, the snap offers wait until you leave, and a map tap only places a new access point.
+- Back to start, delete, camp, undo and their keys are off, the next leg's Hike/Paddle toggle is hidden, the snap offers wait until you leave (`shownOffers` is empty), and a map tap only places a new access point (`mapTapped`; the session picks its branch).
 - There is no action that makes the selected route point an access point.
 
 ### Marking a point
 
-- Tapping the map places a new point: the `draft` in `useAccessPoints`, not stored. Another tap on the map moves it, and it drags; a tap on it does nothing.
-- The flag button opens its details dialog, whose Save stores it (`saveDraft`). Cancel keeps it unsaved; leaving drops it. No state line is shown for it.
-- With no draft the flag places it at your GPS position first (`useMarkAccessPoint`).
+- Tapping the map places a new point: the `draft` in the planner session, not stored. Another tap on the map moves it, and it drags (`draftMoved`); a tap on it does nothing.
+- The flag button opens its details dialog, whose Save stores it (`draftSaved`). Cancel keeps it unsaved; leaving drops it. No state line is shown for it.
+- With no draft the flag places it at your GPS position first (`useMarkAccessPoint`, `draftPlaced`); without a fix it asks you to tap the map, a message shown only while editing with no draft.
 - The dialog keeps a draft; Save stores it on the device at once by `useAccessPoints`, with or without signal.
 
 ### The Access points tab

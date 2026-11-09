@@ -53,7 +53,7 @@ describe("auto routing", () => {
     const autoRouter = createAutoRouter(router, state.dispatch);
     await autoRouter.sync(state.trip);
 
-    state.dispatch({ type: "addPoint", at: C, accessPoints: [] });
+    state.dispatch({ type: "addPoint", at: C });
     await autoRouter.sync(state.trip);
     await autoRouter.sync(state.trip);
 
@@ -155,7 +155,7 @@ describe("auto routing", () => {
 
     const first = autoRouter.sync(state.trip);
     // An edit moves B to C: the leg's endpoints change, so its route is dropped.
-    state.dispatch({ type: "movePoint", index: 1, to: C, accessPoints: [] });
+    state.dispatch({ type: "movePoint", index: 1, to: C });
     const second = autoRouter.sync(state.trip);
     answers[0].resolve(TRAIL);
     await first;
@@ -247,7 +247,7 @@ describe("auto routing with undo", () => {
     void autoRouter.sync(state.trip); // AB on the way
 
     // Move B while AB is on the way.
-    state.dispatch({ type: "movePoint", index: 1, to: C, accessPoints: [] });
+    state.dispatch({ type: "movePoint", index: 1, to: C });
     void autoRouter.sync(state.trip); // AC on the way
     calls[0].answer(TRAIL); // AB's answer: no leg AB in the trip any more
     await flush();
@@ -267,7 +267,7 @@ describe("auto routing with undo", () => {
     const state = heldSession(through(A, B));
     const autoRouter = createAutoRouter(router, state.dispatch);
     void autoRouter.sync(state.trip);
-    state.dispatch({ type: "movePoint", index: 1, to: C, accessPoints: [] });
+    state.dispatch({ type: "movePoint", index: 1, to: C });
     calls[0].answer({ ok: false, failure: { kind: "unavailable" } });
     await flush();
 
@@ -312,7 +312,7 @@ describe("auto routing with undo", () => {
     const autoRouter = createAutoRouter(router, state.dispatch);
     await autoRouter.sync(state.trip);
 
-    state.dispatch({ type: "movePoint", index: 1, to: C, accessPoints: [] });
+    state.dispatch({ type: "movePoint", index: 1, to: C });
     await autoRouter.sync(state.trip);
     state.dispatch({ type: "undo" });
     await autoRouter.sync(state.trip);

@@ -5,6 +5,7 @@ import {
   editingAccessPoints as isEditingAccessPoints,
   nextLegMode,
   normalTabs,
+  shownOffers,
   type NormalTab,
   type SheetStop,
 } from "@/core/plannerSession";
@@ -26,7 +27,7 @@ import { strings } from "../strings";
 import { useAccessLayer } from "../useAccessLayer";
 import { useBaseMap, useOverlays, useSidePanel } from "../useSettings";
 import { usePlaceSearch } from "../usePlaceSearch";
-import { usePlanner } from "../usePlanner";
+import { stamp, usePlanner } from "../usePlanner";
 import AccessChip from "./AccessChip";
 import AccessDetailsDialog from "./AccessDetailsDialog";
 import AccessPointDialog from "./AccessPointDialog";
@@ -73,7 +74,7 @@ export default function Planner({ router }: { router?: Router }) {
     summary,
     settings,
     saveSettings,
-    access,
+    accessStorage,
     waterAccess,
     aire,
     undo,
@@ -82,7 +83,7 @@ export default function Planner({ router }: { router?: Router }) {
     exportGpx,
     openFile,
   } = usePlanner(router);
-  const { trip, selectedPoint, offers } = session;
+  const { trip, selectedPoint, draft } = session;
   const undoReasonId = useId();
   const backToStartReasonId = useId();
   const [position, showPosition] = usePosition();
@@ -122,11 +123,17 @@ export default function Planner({ router }: { router?: Router }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState(false);
   const editing = editingDraft
-    ? access.draft
+    ? draft
     : editingId === null
       ? null
-      : (access.points.find((p) => p.id === editingId) ?? null);
-  const marking = useMarkAccessPoint(access, position, showPosition, () => setEditingDraft(true));
+      : (session.accessPoints.find((p) => p.id === editingId) ?? null);
+  const marking = useMarkAccessPoint(
+    { editing: editingAccessPoints, hasDraft: draft !== null },
+    position,
+    showPosition,
+    (at) => dispatch({ type: "draftPlaced", at, ...stamp() }),
+    () => setEditingDraft(true),
+  );
   // The access layer (#125): on or off, its date, and the water or lock whose details are open.
   const layer = useAccessLayer(trip, editingAccessPoints);
   // The base map (ADR 0031): a setting on this device, never in the trip.
@@ -154,14 +161,9 @@ export default function Planner({ router }: { router?: Router }) {
     return { top: rowsBottom - top, right: sideways ? panel : 0, bottom: sideways ? 0 : sheet };
   };
 
-  // While editing access points the tap places the new access point, or moves it there; it does
-  // nothing to the trip, which is frozen (#227). While a point or a leg is selected, it only clears
-  // the selection (#120, #230); otherwise it adds a trip point with the next leg's mode.
-  const onMapTap = (at: LatLng) => {
-    if (editingAccessPoints) access.placeDraft(at);
-    else if (selectedPoint !== null || session.selectedLeg !== null) dispatch({ type: "deselect" });
-    else dispatch({ type: "addPoint", at, accessPoints: access.points });
-  };
+  // The session decides what a tap does (#120, #230, #227): place the new access point, clear the
+  // selection or add a point.
+  const onMapTap = (at: LatLng) => dispatch({ type: "mapTapped", at, ...stamp() });
   // A leg row tap shows its leg above the half-raised sheet and marks the row.
   const [selectedLeg, setSelectedLeg] = useState<number | undefined>(undefined);
   const selectLegRow = (index: number) => {
@@ -195,38 +197,34 @@ export default function Planner({ router }: { router?: Router }) {
     setFocus({ area: legsArea(trip, section), ...covered() });
   };
   // Entering access point editing opens the panel, or switches the sheet at its stop, on the Access
-  // points tab; leaving restores the tab and the panel or sheet as they were. Both clear the
-  // selection (ADR 0036).
+  // points tab; leaving restores the tab and the panel or sheet as they were. The session clears the
+  // selections and drops the draft (ADR 0036).
   const enterAccessPointEditing = () => {
     dispatch({ type: "enterAccessPointEditing", returnTo: { tab, sheet: stop } });
-    access.select(null);
     // The panel opens for this visit only; the stored setting keeps the earlier state.
     setPanelOpenWhileEditing(true);
   };
   const leaveAccessPointEditing = () => {
-    if (session.mode.kind === "normal") return;
-    const { returnTo } = session.mode;
     dispatch({ type: "leaveAccessPointEditing" });
-    access.select(null);
-    // A new point not saved yet is dropped.
-    access.discardDraft();
-    marking.clearNeedsTap();
-    setTab(returnTo.tab);
-    setStop(returnTo.sheet);
-    // The stored panel state was left as it was on entering, so normal mode shows it again.
+    // Until the panel view moves into the session (#243), the tab and the sheet's stop are restored
+    // here. The stored panel state was left as it was on entering, so normal mode shows it again.
+    if (session.mode.kind === "accessPointEditing") {
+      setTab(session.mode.returnTo.tab);
+      setStop(session.mode.returnTo.sheet);
+    }
   };
 
   // A marker tap selects the point; while editing access points it also shows its row, raised to
   // half from the peek.
   const onSelectAccessPoint = (id: string) => {
-    access.select(id);
+    dispatch({ type: "accessPointClicked", id });
     if (editingAccessPoints) raiseFromPeek();
   };
   // A row tap shows the point on the map, above the half-raised sheet.
   const openAccessPoint = (id: string) => {
-    const point = access.points.find((p) => p.id === id);
+    const point = session.accessPoints.find((p) => p.id === id);
     if (!point) return;
-    access.select(id);
+    dispatch({ type: "accessPointClicked", id });
     raise();
     setFocus({ at: point.position, ...covered() });
   };
@@ -265,16 +263,19 @@ export default function Planner({ router }: { router?: Router }) {
       {editingAccessPoints ? (
         <TabPanel value="accessPoints">
           <AccessPoints
-            access={access}
+            points={session.accessPoints}
+            selectedId={session.selectedAccessPoint}
+            storage={accessStorage}
             trip={trip}
             officialAires={layer.officialAires}
             position={position.state === "shown" ? position.at : null}
             onOpen={openAccessPoint}
             onOpenAire={layer.select}
             onEdit={(id) => {
-              access.select(id);
+              dispatch({ type: "accessPointClicked", id });
               setEditingId(id);
             }}
+            onDelete={(id) => dispatch({ type: "accessPointDeleted", id })}
           />
         </TabPanel>
       ) : (
@@ -335,22 +336,21 @@ export default function Planner({ router }: { router?: Router }) {
         onMapTap={onMapTap}
         selectedPoint={selectedPoint}
         onPointTap={(index) => dispatch({ type: "pointClicked", index })}
-        onPointDrop={(index, to) =>
-          dispatch({ type: "movePoint", index, to, accessPoints: access.points })
-        }
+        onPointDrop={(index, to) => dispatch({ type: "movePoint", index, to })}
         onLegHold={(index, near) => dispatch({ type: "insertPoint", index, near })}
         selectedLeg={session.selectedLeg}
         onLegTap={(index) => dispatch({ type: "legClicked", index })}
         frozen={editingAccessPoints}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
-          points: access.points,
+          points: session.accessPoints,
           editable: editingAccessPoints,
-          selectedId: access.selected?.id ?? null,
+          selectedId: session.selectedAccessPoint,
           onSelect: onSelectAccessPoint,
-          onMove: (id, to) => access.update(id, { position: to }),
-          draft: editingAccessPoints ? access.draft : null,
-          onDraftMove: (to) => access.placeDraft(to),
+          onMove: (id, to) => dispatch({ type: "accessPointMoved", id, to, now: stamp().now }),
+          // The session has a draft only while editing access points.
+          draft,
+          onDraftMove: (to) => dispatch({ type: "draftMoved", to, now: stamp().now }),
         }}
         focus={focus}
         access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: layer.select }}
@@ -529,19 +529,14 @@ export default function Planner({ router }: { router?: Router }) {
             distanceKm={summary.legs[session.selectedLeg].distanceKm}
             onChange={(mode) =>
               session.selectedLeg !== null &&
-              dispatch({
-                type: "setLegMode",
-                index: session.selectedLeg,
-                mode,
-                accessPoints: access.points,
-              })
+              dispatch({ type: "setLegMode", index: session.selectedLeg, mode })
             }
             onClose={() => dispatch({ type: "deselect" })}
           />
         )}
         <SnapOffers
-          // Hidden while editing access points; they wait until leaving (#227).
-          offers={editingAccessPoints ? [] : offers}
+          // None while editing access points; they wait until leaving (#227).
+          offers={shownOffers(session)}
           onAccept={(offer) => dispatch({ type: "acceptOffer", offer })}
           onDecline={(offer) => dispatch({ type: "declineOffer", offer })}
         />
@@ -587,9 +582,10 @@ export default function Planner({ router }: { router?: Router }) {
         point={editing}
         unsaved={editingDraft}
         onSave={(id, changes) => {
-          if (!editingDraft) return access.update(id, changes);
+          const { now } = stamp();
+          if (!editingDraft) return dispatch({ type: "accessPointUpdated", id, changes, now });
           // The new point is stored and selected: show its row.
-          access.saveDraft(changes);
+          dispatch({ type: "draftSaved", changes, now });
           raiseFromPeek();
         }}
         onClose={() => {

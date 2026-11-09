@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { aireWarnings } from "@/core/aire";
 import type { Router } from "@/core/router";
-import { editingAccessPoints, firstSession, plannerSession } from "@/core/plannerSession";
+import { firstSession, plannerSession } from "@/core/plannerSession";
 import { createAutoRouter } from "@/core/routing";
 import { defaultSettings, withSetting, type PaceSetting } from "@/core/settings";
 import { summarise } from "@/core/summarise";
 import { renameTrip } from "@/core/trip";
 import { tripAccess } from "@/core/tripAccess";
+import { loadStoredAccessPoints } from "@/persistence/accessPointStorage";
 import { downloadGpx, downloadTripFile, readTripFile } from "@/persistence/tripFile";
 import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
@@ -24,6 +25,16 @@ const typingInField = (event: KeyboardEvent) =>
   event.target instanceof HTMLElement &&
   (event.target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName));
 
+/** A new, unique id for an access point. */
+function newId(): string {
+  // randomUUID needs a secure context (https or localhost); fall back elsewhere.
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** What an action that creates or changes an access point carries: the core stays pure (#242). */
+export const stamp = () => ({ newId: newId(), now: new Date().toISOString() });
+
 /**
  * The planner, shared by every layout (#115, ADR 0026). Runs the planner
  * session (ADR 0025: one pure function `(session, action) -> session` in the
@@ -35,9 +46,12 @@ const typingInField = (event: KeyboardEvent) =>
  * it actions. Starts from the stored trip, so it only runs in the browser.
  */
 export function usePlanner(router?: Router) {
-  const [session, dispatch] = useReducer(plannerSession, undefined, () => firstSession(loadStoredTrip()));
+  // Your access points (#55) are their own collection, apart from the trip, held by the session too (#242).
+  const [storedAccessPoints] = useState(loadStoredAccessPoints);
+  const [session, dispatch] = useReducer(plannerSession, undefined, () =>
+    firstSession({ ...loadStoredTrip(), accessPoints: storedAccessPoints.accessPoints }),
+  );
   const { trip, selectedPoint, keepStoredSave, pendingTrip } = session;
-  const frozen = editingAccessPoints(session);
   const [autoRouter] = useState(() => createAutoRouter(router ?? createBRouterRouter(), dispatch));
 
   // Every change is saved. Restored legs keep their routed results, so syncing routes nothing new.
@@ -56,12 +70,8 @@ export function usePlanner(router?: Router) {
     if (changed !== settings) setSettings(changed);
   };
 
-  // Your access points (#55): their own collection, apart from the trip.
-  const access = useAccessPoints();
-  // Snap offers follow your access points (#97): tell the session whenever they change.
-  useEffect(() => {
-    dispatch({ type: "accessPointsChanged", accessPoints: access.points });
-  }, [access.points]);
+  // Storing your access points and looking up their default names.
+  const accessStorage = useAccessPoints(storedAccessPoints, session.accessPoints, session.draft, dispatch);
 
   // With a `name` (the planner asks for it first, #124), the trip is renamed, then saved or exported
   // under that name.
@@ -92,8 +102,6 @@ export function usePlanner(router?: Router) {
     const onKeyDown = (event: KeyboardEvent) => {
       // While a confirmation is open, keys belong to it (Escape cancels it).
       if (pendingTrip || typingInField(event)) return;
-      // While editing access points the trip is frozen (#227): undo and delete are off.
-      if (frozen) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
         undo();
@@ -150,8 +158,8 @@ export function usePlanner(router?: Router) {
   }, [officialAires]);
   // No warnings until the aires are in: a put-in at one must not warn for a moment.
   const aire = useMemo(
-    () => (rules && officialAires ? aireWarnings(trip, rules, access.points, officialAires) : []),
-    [trip, rules, access.points, officialAires],
+    () => (rules && officialAires ? aireWarnings(trip, rules, session.accessPoints, officialAires) : []),
+    [trip, rules, session.accessPoints, officialAires],
   );
 
   return {
@@ -161,7 +169,7 @@ export function usePlanner(router?: Router) {
     settings,
     changeSetting,
     saveSettings: setSettings,
-    access,
+    accessStorage,
     waterAccess,
     aire,
     officialAires: officialAires ?? [],
