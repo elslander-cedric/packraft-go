@@ -148,11 +148,16 @@ test("a paddle leg dated today uses the live flow: closed on low flow, with the 
     trip: {
       name: "Semois today",
       points: [semois[0], semois[semois.length - 1]],
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: semois.map((p) => ({ ...p, elevation: 200 })) } }],
+      legs: [
+        {
+          mode: "paddle",
+          route: { status: "routed", geometry: semois.map((semoi) => ({ ...semoi, elevation: 200 })) },
+        },
+      ],
       startDate: "2026-10-14",
     },
   };
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
   await openPlanner(page);
 
   const leg = await openSectionDetails(page, 1);
@@ -172,11 +177,16 @@ async function seedSemoisToday(page: Page) {
     trip: {
       name: "Semois today",
       points: [semois[0], semois[semois.length - 1]],
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: semois.map((p) => ({ ...p, elevation: 200 })) } }],
+      legs: [
+        {
+          mode: "paddle",
+          route: { status: "routed", geometry: semois.map((semoi) => ({ ...semoi, elevation: 200 })) },
+        },
+      ],
       startDate: "2026-10-14",
     },
   };
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
 }
 
 test("a leg dated today shows Checking flow first, then closed; never open in between (#85)", async ({ page }) => {
@@ -244,7 +254,7 @@ test("a day with one held flow-dependent leg and one open leg claims nothing abo
   ];
   const line = (pts: { lat: number; lng: number }[]) => ({
     status: "routed",
-    geometry: pts.map((p) => ({ ...p, elevation: 10 })),
+    geometry: pts.map((pt) => ({ ...pt, elevation: 10 })),
   });
   const save = {
     format: "packraft-go-trip",
@@ -259,15 +269,15 @@ test("a day with one held flow-dependent leg and one open leg claims nothing abo
       startDate: "2026-10-14",
     },
   };
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
   await openPlanner(page);
 
   // The open leg settles at once; the Semois leg still reads checking.
   const details = await openSectionDetails(page, 1);
-  const legStatus = (n: number) =>
+  const legStatus = (number: number) =>
     details
       .locator("section")
-      .filter({ hasText: strings.legLabel(n) })
+      .filter({ hasText: strings.legLabel(number) })
       .locator(".leg-access-status");
   await expect(legStatus(2)).toContainText(strings.accessState.open);
   await expect(legStatus(1)).toContainText(strings.accessChecking);

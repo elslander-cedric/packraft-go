@@ -24,12 +24,12 @@ const SERIES_COUNT_TOLERANCE = 0.2;
 export function brusselsOffsetMinutes(instant: Date): number {
   const part = new Intl.DateTimeFormat("en", { timeZone: "Europe/Brussels", timeZoneName: "longOffset" })
     .formatToParts(instant)
-    .find((p) => p.type === "timeZoneName")?.value;
-  const m = /GMT([+-])(\d\d):(\d\d)/.exec(part ?? "");
-  if (!m) {
+    .find((formatToPart) => formatToPart.type === "timeZoneName")?.value;
+  const match = /GMT([+-])(\d\d):(\d\d)/.exec(part ?? "");
+  if (!match) {
     return 0;
   }
-  return (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
+  return (match[1] === "-" ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3]));
 }
 
 const TIMESTAMP = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?([+-]\d\d:\d\d|Z)$/;
@@ -40,16 +40,16 @@ const TIMESTAMP = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?([+-]\d\d:\d\d|Z)$/;
  * the hour straight from the text (the 08:00 reading), so this is what it relies on.
  */
 export function isBrusselsLocalTimestamp(at: string): boolean {
-  const m = TIMESTAMP.exec(at);
-  if (!m || m[1] === "Z") {
+  const match = TIMESTAMP.exec(at);
+  if (!match || match[1] === "Z") {
     return false;
   }
   const instant = new Date(at);
   if (Number.isNaN(instant.getTime())) {
     return false;
   }
-  const sign = m[1][0] === "-" ? -1 : 1;
-  return sign * (Number(m[1].slice(1, 3)) * 60 + Number(m[1].slice(4, 6))) === brusselsOffsetMinutes(instant);
+  const sign = match[1][0] === "-" ? -1 : 1;
+  return sign * (Number(match[1].slice(1, 3)) * 60 + Number(match[1].slice(4, 6))) === brusselsOffsetMinutes(instant);
 }
 
 type Series = { stationNo: string; name: string; id: string };
@@ -66,7 +66,7 @@ export function readSeriesList(body: string): Series[] | string {
     return "series list is not a table (array of rows)";
   }
   const [header, ...rows] = json as unknown[][];
-  const [station, id, name] = ["station_no", "ts_id", "ts_name"].map((c) => header.indexOf(c));
+  const [station, id, name] = ["station_no", "ts_id", "ts_name"].map((column) => header.indexOf(column));
   if (station < 0 || id < 0 || name < 0) {
     return `series list header lacks station_no, ts_id or ts_name (got ${JSON.stringify(header)})`;
   }
@@ -103,7 +103,8 @@ export function readValues(body: string): Entry[] | string {
       return `values entry ${entry.ts_id} has no data array`;
     }
     const bad = entry.data.find(
-      (r) => !Array.isArray(r) || typeof r[0] !== "string" || !(typeof r[1] === "number" || r[1] === null),
+      (entry) =>
+        !Array.isArray(entry) || typeof entry[0] !== "string" || !(typeof entry[1] === "number" || entry[1] === null),
     );
     if (bad !== undefined) {
       return `a row of ${entry.ts_id} is not [timestamp, number]: ${JSON.stringify(bad)}`;
@@ -112,31 +113,31 @@ export function readValues(body: string): Entry[] | string {
   return json as Entry[];
 }
 
-const countBy = (series: Series[], name: string) => series.filter((s) => s.name === name).length;
+const countBy = (series: Series[], name: string) => series.filter((entry) => entry.name === name).length;
 const withinShare = (value: number, reference: number, share: number) =>
   Math.abs(value - reference) <= Math.abs(reference) * share;
 
 function compareList(live: Series[], recorded: Series[], report: Report) {
   report.match("series list is a table with station_no, ts_id and ts_name");
   for (const name of [MEAN_72H_SERIES, HOURLY_SERIES]) {
-    const [l, r] = [countBy(live, name), countBy(recorded, name)];
-    if (l === 0) {
-      report.mismatch(`no "${name}" series any more (fixture: ${r})`);
-    } else if (withinShare(l, r, SERIES_COUNT_TOLERANCE)) {
-      report.match(`${l} "${name}" series (fixture: ${r})`);
+    const [liveCount, recordedCount] = [countBy(live, name), countBy(recorded, name)];
+    if (liveCount === 0) {
+      report.mismatch(`no "${name}" series any more (fixture: ${recordedCount})`);
+    } else if (withinShare(liveCount, recordedCount, SERIES_COUNT_TOLERANCE)) {
+      report.match(`${liveCount} "${name}" series (fixture: ${recordedCount})`);
     } else {
-      report.drift(`${l} "${name}" series, fixture has ${r}`);
+      report.drift(`${liveCount} "${name}" series, fixture has ${recordedCount}`);
     }
   }
-  const liveStations = new Set(live.map((s) => s.stationNo));
-  const lost = [...new Set(recorded.map((s) => s.stationNo))].filter((s) => !liveStations.has(s));
+  const liveStations = new Set(live.map((series) => series.stationNo));
+  const lost = [...new Set(recorded.map((series) => series.stationNo))].filter((text) => !liveStations.has(text));
   if (lost.length > 0) {
     report.drift(`gauges without series now: ${lost.join(", ")}`);
   }
-  const liveIds = new Map(live.map((s) => [`${s.stationNo}/${s.name}`, s.id]));
-  const moved = recorded.filter((s) => {
-    const id = liveIds.get(`${s.stationNo}/${s.name}`);
-    return id !== undefined && id !== s.id;
+  const liveIds = new Map(live.map((series) => [`${series.stationNo}/${series.name}`, series.id]));
+  const moved = recorded.filter((series) => {
+    const id = liveIds.get(`${series.stationNo}/${series.name}`);
+    return id !== undefined && id !== series.id;
   });
   if (moved.length > 0) {
     report.drift(`${moved.length} series have a new ts_id (the app resolves ids at run time, so this is harmless)`);
@@ -145,14 +146,14 @@ function compareList(live: Series[], recorded: Series[], report: Report) {
 
 function compareValues(live: Entry[], liveList: Series[], recorded: Entry[], report: Report) {
   report.match(`values answer: ${live.length} series with columns "Timestamp,Value" (fixture: ${recorded.length})`);
-  const nameOf = new Map(liveList.map((s) => [s.id, s.name]));
-  const stamps = live.flatMap((e) => e.data.map(([at]) => ({ at, name: nameOf.get(e.ts_id) })));
+  const nameOf = new Map(liveList.map((series) => [series.id, series.name]));
+  const stamps = live.flatMap((entry) => entry.data.map(([at]) => ({ at, name: nameOf.get(entry.ts_id) })));
   if (stamps.length === 0) {
     report.mismatch("values answer holds no readings at all");
     return;
   }
 
-  const notBrussels = stamps.filter((s) => !isBrusselsLocalTimestamp(s.at));
+  const notBrussels = stamps.filter((stamp) => !isBrusselsLocalTimestamp(stamp.at));
   if (notBrussels.length > 0) {
     report.mismatch(
       `${notBrussels.length} of ${stamps.length} timestamps are not Brussels local time with its offset (e.g. ${JSON.stringify(notBrussels[0].at)}); the 08:00 reading would be picked wrongly`,
@@ -161,8 +162,8 @@ function compareValues(live: Entry[], liveList: Series[], recorded: Entry[], rep
     report.match("timestamps are Brussels local time with their offset (+01:00 / +02:00)");
   }
 
-  const hourly = stamps.filter((s) => s.name === HOURLY_SERIES);
-  const offHour = hourly.filter((s) => s.at.slice(14, 16) !== "00");
+  const hourly = stamps.filter((stamp) => stamp.name === HOURLY_SERIES);
+  const offHour = hourly.filter((stamp) => stamp.at.slice(14, 16) !== "00");
   if (hourly.length === 0) {
     report.drift("no hourly readings in the values answer");
   } else if (offHour.length > 0) {
@@ -173,10 +174,10 @@ function compareValues(live: Entry[], liveList: Series[], recorded: Entry[], rep
     report.match("hourly readings are stamped on the hour");
   }
 
-  const mean = stamps.filter((s) => s.name === MEAN_72H_SERIES);
+  const mean = stamps.filter((stamp) => stamp.name === MEAN_72H_SERIES);
   if (mean.length === 0) {
     report.drift("no 72-hour mean readings in the values answer");
-  } else if (mean.every((s) => s.at.slice(11, 16) === "01:00")) {
+  } else if (mean.every((stamp) => stamp.at.slice(11, 16) === "01:00")) {
     report.match("72-hour means are stamped 01:00, as recorded");
   } else {
     report.drift("72-hour means are no longer all stamped 01:00");
@@ -192,14 +193,14 @@ export async function compareWithFixture(live: KiwisAnswers, recorded: KiwisAnsw
     mismatch: (message) => findings.push({ level: "mismatch", message }),
   };
 
-  for (const [name, l, r] of [
+  for (const [name, recordedResponse, otherRecordedResponse] of [
     ["series list", live.list, recorded.list],
     ["values", live.values, recorded.values],
   ] as const) {
-    if (l.status === r.status) {
-      report.match(`${name}: HTTP status ${l.status}`);
+    if (recordedResponse.status === otherRecordedResponse.status) {
+      report.match(`${name}: HTTP status ${recordedResponse.status}`);
     } else {
-      report.mismatch(`${name}: HTTP status ${l.status}, fixture has ${r.status}`);
+      report.mismatch(`${name}: HTTP status ${recordedResponse.status}, fixture has ${otherRecordedResponse.status}`);
     }
   }
 
@@ -234,7 +235,7 @@ export async function compareWithFixture(live: KiwisAnswers, recorded: KiwisAnsw
 /** What the app's KiWIS adapter makes of these answers: `ok`, `ok but no gauge has readings`, or `failed`. */
 async function adapterOutcome(answers: KiwisAnswers): Promise<string> {
   const list = readSeriesList(answers.list.body);
-  const stations = typeof list === "string" ? ["unknown"] : [...new Set(list.map((s) => s.stationNo))];
+  const stations = typeof list === "string" ? ["unknown"] : [...new Set(list.map((series) => series.stationNo))];
   const source = createKiwisFlowSource({
     fetch: async (url) => {
       const reply = new URL(url).searchParams.get("request") === "getTimeseriesList" ? answers.list : answers.values;
@@ -267,7 +268,7 @@ export async function runKiwisCheck(deps: KiwisCheckDeps): Promise<KiwisCheckRes
   if (typeof recordedList === "string") {
     throw new Error(`recorded fixture is not a KiWIS answer: ${recordedList}`);
   }
-  const stations = [...new Set(recordedList.map((s) => s.stationNo))];
+  const stations = [...new Set(recordedList.map((series) => series.stationNo))];
 
   const ask = async (url: string): Promise<RecordedResponse> => {
     const response = await deps.fetch(url, { headers: { "User-Agent": KIWIS_CHECK_USER_AGENT } });
@@ -280,7 +281,7 @@ export async function runKiwisCheck(deps: KiwisCheckDeps): Promise<KiwisCheckRes
   try {
     const list = await ask(listUrl);
     const liveList = list.status === 200 ? readSeriesList(list.body) : [];
-    const ids = typeof liveList === "string" ? [] : liveList.map((s) => s.id);
+    const ids = typeof liveList === "string" ? [] : liveList.map((series) => series.id);
     let values: RecordedResponse = { status: 0, body: "[]" };
     if (ids.length > 0) {
       await deps.wait(KIWIS_CHECK_DELAY_MS);
@@ -303,8 +304,8 @@ export async function runKiwisCheck(deps: KiwisCheckDeps): Promise<KiwisCheckRes
   for (const finding of findings) {
     lines.push(`  ${finding.level.toUpperCase().padEnd(8)} ${finding.message}`);
   }
-  const mismatches = findings.filter((f) => f.level === "mismatch").length;
-  const drifts = findings.filter((f) => f.level === "drift").length;
+  const mismatches = findings.filter((finding) => finding.level === "mismatch").length;
+  const drifts = findings.filter((finding) => finding.level === "drift").length;
 
   lines.push("");
   if (mismatches > 0) {

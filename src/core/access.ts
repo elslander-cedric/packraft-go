@@ -275,7 +275,9 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
   const day = date === undefined ? undefined : agwDay(category, date);
   const hours = day
     ? [`Permitted hours on ${date}: ${day.hours.from}-${day.hours.to}`]
-    : agwHoursTable(category).map((p) => `Permitted hours ${p.period}: ${p.from}-${p.to}`);
+    : agwHoursTable(category).map(
+        (agwHoursPeriod) => `Permitted hours ${agwHoursPeriod.period}: ${agwHoursPeriod.from}-${agwHoursPeriod.to}`,
+      );
   const limits = [
     rule.minM3s !== null && `minimum ${m3s(rule.minM3s)} (72-hour mean)`,
     `maximum ${m3s(rule.maxM3s)}`,
@@ -402,7 +404,7 @@ export function combineAccess(statuses: readonly AccessStatus[]): AccessStatus {
     }
   }
   // Most restrictive reasons first, so the "why" leads.
-  reasons.sort((a, b) => restrictiveness[b.state] - restrictiveness[a.state]);
+  reasons.sort((left, right) => restrictiveness[right.state] - restrictiveness[left.state]);
   return { state, reasons };
 }
 

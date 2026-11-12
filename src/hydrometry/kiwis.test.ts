@@ -35,12 +35,11 @@ function fakeServer(replies: { list?: Reply; values?: Reply } = {}) {
     requests.push(url);
     signals.push(init?.signal);
     const request = url.searchParams.get("request");
-    const reply =
-      request === "getTimeseriesList"
-        ? (replies.list ?? { status: 200, body: LIST })
-        : request === "getTimeseriesValues"
-          ? (replies.values ?? { status: 200, body: VALUES })
-          : { status: 400, body: "" };
+    const byRequest: Record<string, Reply> = {
+      getTimeseriesList: replies.list ?? { status: 200, body: LIST },
+      getTimeseriesValues: replies.values ?? { status: 200, body: VALUES },
+    };
+    const reply = byRequest[request ?? ""] ?? { status: 400, body: "" };
     if (reply === "network-error") {
       throw new TypeError("Failed to fetch");
     }
@@ -58,10 +57,10 @@ function fakeServer(replies: { list?: Reply; values?: Reply } = {}) {
     pendingTimers: () => timers.length,
     tick: (ms: number) => {
       clock += ms;
-      const due = timers.filter((t) => t.at <= clock);
-      timers = timers.filter((t) => t.at > clock);
-      for (const t of due) {
-        t.fire();
+      const due = timers.filter((timer) => timer.at <= clock);
+      timers = timers.filter((timer) => timer.at > clock);
+      for (const timer of due) {
+        timer.fire();
       }
     },
     source: createKiwisFlowSource({
@@ -71,7 +70,7 @@ function fakeServer(replies: { list?: Reply; values?: Reply } = {}) {
         const timer = { at: clock + ms, fire };
         timers.push(timer);
         return () => {
-          timers = timers.filter((t) => t !== timer);
+          timers = timers.filter((otherTimer) => otherTimer !== timer);
         };
       },
     }),
@@ -85,17 +84,17 @@ type Stretch = {
 };
 const stretches = (builtIn as unknown as { stretches: (Stretch & { id: string; category: AgwRule["category"] })[] })
   .stretches;
-const rules: AgwRule[] = stretches.map((s) => ({
+const rules: AgwRule[] = stretches.map((stretch) => ({
   type: "agw",
-  category: s.category,
-  minM3s: s.minM3s,
-  maxM3s: s.maxM3s,
-  gauge: s.gauge,
+  category: stretch.category,
+  minM3s: stretch.minM3s,
+  maxM3s: stretch.maxM3s,
+  gauge: stretch.gauge,
 }));
 const stations = gaugeStations(rules);
 /** The recording is older than the Hérock gauge (#205): it has the other 21 gauges. */
 const HEROCK = "L6610";
-const recordedStations = stations.filter((s) => s !== HEROCK);
+const recordedStations = stations.filter((station) => station !== HEROCK);
 
 describe("KiWIS requests", () => {
   it("resolves both series of every gauge in one request, and reads all their values in one more", async () => {
@@ -134,8 +133,8 @@ describe("KiWIS answers", () => {
     }
     // At 08:58 on the recording day (a dry October): what the stretches' gauges said.
     const verdict = (id: string) => {
-      const s = stretches.find((x) => x.id === id)!;
-      return flowCheck(rules[stretches.indexOf(s)]!, readings, RECORDED_ON);
+      const found = stretches.find((x) => x.id === id)!;
+      return flowCheck(rules[stretches.indexOf(found)]!, readings, RECORDED_ON);
     };
     // Amblève at Stavelot: 72-hour mean 4.444 above the minimum of 1, 08:00 flow 4.429 below 21.
     expect(verdict("1B1a")).toMatchObject({ kind: "ok", figures: { mean72h: { m3s: 4.444 }, at8: { m3s: 4.429 } } });
@@ -151,7 +150,7 @@ describe("KiWIS answers", () => {
 
   it("stale data: the same answer a day later is unknown", async () => {
     const readings = await fakeServer().source.readings(stations);
-    const stretch = rules.find((r) => r.gauge)!;
+    const stretch = rules.find((rule) => rule.gauge)!;
     expect(flowCheck(stretch, readings, "2026-10-15")).toMatchObject({ kind: "unknown", why: "stale" });
   });
 
@@ -171,7 +170,7 @@ describe("KiWIS answers", () => {
   it("asks for Hérock, and if KiWIS has no series for it the Lesse from Han to Houyet says so, as any missing gauge (#205)", async () => {
     expect(stations).toContain(HEROCK);
     const readings = await fakeServer().source.readings(stations);
-    const lesse = stretches.find((s) => s.id === "1C2b-2")!;
+    const lesse = stretches.find((stretch) => stretch.id === "1C2b-2")!;
     const rule = rules[stretches.indexOf(lesse)]!;
     expect(flowCheck(rule, readings, RECORDED_ON)).toMatchObject({
       kind: "unknown",
@@ -217,7 +216,7 @@ describe("a request that doesn't answer", () => {
     expect(REQUEST_TIMEOUT_MS).toBe(15_000);
     expect(
       flowCheck(
-        rules.find((r) => r.gauge)!,
+        rules.find((rule) => rule.gauge)!,
         answer,
         RECORDED_ON,
       ),

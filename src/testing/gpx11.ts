@@ -199,7 +199,7 @@ export function parseGpx11(gpx: string): ParsedGpx {
   const parsed: ParsedGpx = { waypoints: [], tracks: [] };
   for (const child of checkSequence(root, GPX_TYPE)) {
     if (child.localName === "metadata") {
-      const name = checkSequence(child, METADATA_TYPE).find((e) => e.localName === "name");
+      const name = checkSequence(child, METADATA_TYPE).find((element) => element.localName === "name");
       if (name) {
         parsed.metadataName = text(name);
       }

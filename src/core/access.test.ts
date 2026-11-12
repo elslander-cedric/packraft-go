@@ -70,7 +70,7 @@ describe("access status: where rules apply", () => {
   it("a port area is forbidden anywhere inside it", () => {
     const status = accessAt(inForbiddenPort, flanders, {});
     expect(status.state).toBe("forbidden");
-    expect(status.reasons.map((r) => r.kind === "rule" && r.recordId)).toEqual(["test-port"]);
+    expect(status.reasons.map((reason) => reason.kind === "rule" && reason.recordId)).toEqual(["test-port"]);
   });
 
   it("a place outside every region is unknown: no rule", () => {
@@ -102,7 +102,10 @@ describe("access status along a paddle leg", () => {
     ];
     const status = accessAlong(leg, flanders, {});
     expect(status.state).toBe("forbidden");
-    expect(status.reasons.map((r) => r.kind === "rule" && r.recordId)).toEqual(["test-canal", "flanders"]);
+    expect(status.reasons.map((reason) => reason.kind === "rule" && reason.recordId)).toEqual([
+      "test-canal",
+      "flanders",
+    ]);
   });
 
   it("a leg entirely on open water is open, with its reason once", () => {
@@ -153,7 +156,7 @@ describe("combining statuses", () => {
 describe("access features for the map", () => {
   it("lists every specific water with its status, but not the regions", () => {
     const features = accessFeatures(flanders, {});
-    expect(features.map((f) => [f.record.id, f.status.state])).toEqual([
+    expect(features.map((feature) => [feature.record.id, feature.status.state])).toEqual([
       ["test-canal", "forbidden"],
       ["test-port", "forbidden"],
       ["test-agreement", "open"],
@@ -206,9 +209,9 @@ describe("access status in Wallonia (AGW stretches, #59)", () => {
 
   it("without a date, 1.A and 1.B are open with every period's hours; 1.C is unknown", () => {
     expect(accessAt(onWalloonNavigable, wallonia, {}).state).toBe("open");
-    const b = accessAt(onWalloonAllYear, wallonia, {});
-    expect(b.state).toBe("open");
-    expect(conditionsOf(b)).toContain("Permitted hours 1 Oct - 15 Jun: 10:00-17:00");
+    const accessStatusB = accessAt(onWalloonAllYear, wallonia, {});
+    expect(accessStatusB.state).toBe("open");
+    expect(conditionsOf(accessStatusB)).toContain("Permitted hours 1 Oct - 15 Jun: 10:00-17:00");
     expect(accessAt(onWalloonWinter, wallonia, {}).state).toBe("unknown");
   });
 
@@ -235,7 +238,7 @@ describe("access status in Wallonia (AGW stretches, #59)", () => {
     expect(accessAlong(leg, wallonia, { date: "2026-07-15" }).state).toBe("closed-today");
     expect(accessAlong(leg, wallonia, { date: "2026-12-15" }).state).toBe("open");
     const stateOf = (date: string) =>
-      accessFeatures(wallonia, { date }).find((f) => f.record.id === "test-1c")!.status.state;
+      accessFeatures(wallonia, { date }).find((accessFeature) => accessFeature.record.id === "test-1c")!.status.state;
     expect(stateOf("2026-07-15")).toBe("closed-today");
     expect(stateOf("2026-12-15")).toBe("open");
   });

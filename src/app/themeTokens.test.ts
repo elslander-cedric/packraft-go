@@ -21,16 +21,16 @@ const dark = { ...light, ...darkOnly };
 
 function luminance(hex: string): number {
   const digits = hex.replace("#", "");
-  const full = digits.length === 3 ? [...digits].map((d) => d + d).join("") : digits;
-  const [r, g, b] = [0, 2, 4].map((i) => {
-    const c = parseInt(full.slice(i, i + 2), 16) / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  const full = digits.length === 3 ? [...digits].map((digit) => digit + digit).join("") : digits;
+  const [red, green, blue] = [0, 2, 4].map((i) => {
+    const channel = parseInt(full.slice(i, i + 2), 16) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
   });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
-function contrast(a: string, b: string): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+function contrast(colourA: string, colourB: string): number {
+  const [hi, lo] = [luminance(colourA), luminance(colourB)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 }
 

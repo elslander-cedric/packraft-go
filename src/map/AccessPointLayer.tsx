@@ -149,8 +149,8 @@ function groupIcon(count: number) {
 
 /** Inert like the single markers, at the middle of its members. */
 function GroupMarker({ members }: { members: AccessPoint[] }) {
-  const lat = members.reduce((sum, p) => sum + p.position.lat, 0) / members.length;
-  const lng = members.reduce((sum, p) => sum + p.position.lng, 0) / members.length;
+  const lat = members.reduce((sum, member) => sum + member.position.lat, 0) / members.length;
+  const lng = members.reduce((sum, member) => sum + member.position.lng, 0) / members.length;
   return <Marker position={{ lat, lng }} icon={groupIcon(members.length)} interactive={false} keyboard={false} />;
 }
 

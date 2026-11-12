@@ -134,15 +134,15 @@ function compareTracks(liveBody: string, recordedBody: string, report: Report) {
   }
   report.match("GeoJSON FeatureCollection with a LineString feature");
 
-  const badPosition = live.coordinates.find((p) => !isPosition(p));
+  const badPosition = live.coordinates.find((coordinate) => !isPosition(coordinate));
   if (badPosition !== undefined) {
     report.mismatch(`coordinates are not [lng, lat, elevation?] numbers, e.g. ${JSON.stringify(badPosition)}`);
     return;
   }
   report.match("coordinates are [lng, lat, elevation?] numbers");
 
-  const fixtureHasElevation = (fixture.coordinates as number[][]).some((p) => p.length >= 3);
-  const liveHasElevation = (live.coordinates as number[][]).some((p) => p.length >= 3);
+  const fixtureHasElevation = (fixture.coordinates as number[][]).some((position) => position.length >= 3);
+  const liveHasElevation = (live.coordinates as number[][]).some((position) => position.length >= 3);
   if (fixtureHasElevation === liveHasElevation) {
     report.match(liveHasElevation ? "track points carry elevations" : "track points carry no elevation, as recorded");
   } else if (fixtureHasElevation) {
@@ -201,8 +201,12 @@ function readTrack(body: string): Track | string {
   return { properties: feature.properties as Record<string, unknown>, coordinates: feature.geometry.coordinates };
 }
 
-function isPosition(p: unknown): boolean {
-  return Array.isArray(p) && (p.length === 2 || p.length === 3) && p.every((n) => typeof n === "number");
+function isPosition(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    (value.length === 2 || value.length === 3) &&
+    value.every((coordinate) => typeof coordinate === "number")
+  );
 }
 
 function compareNumberProperty(
@@ -272,8 +276,8 @@ export async function runLiveCheck(deps: LiveCheckDeps): Promise<LiveCheckResult
     for (const finding of findings) {
       lines.push(`  ${finding.level.toUpperCase().padEnd(8)} ${finding.message}`);
     }
-    mismatches += findings.filter((f) => f.level === "mismatch").length;
-    drifts += findings.filter((f) => f.level === "drift").length;
+    mismatches += findings.filter((finding) => finding.level === "mismatch").length;
+    drifts += findings.filter((finding) => finding.level === "drift").length;
   }
 
   lines.push("");

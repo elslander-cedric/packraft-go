@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { toggleAccessLayer } from "./support/mapMenu";
 import { serveOffline } from "./support/offline";
-import { mouseHold, openPlanner, pointOnPath, tripPanel } from "./support/planner";
+import { mouseHold, openPlanner, pointOnPath } from "./support/planner";
 
 const water = (page: Page, id: string) => page.locator(`path.access-record-${id}`);
 
@@ -12,7 +12,7 @@ test("with the layer on, planning still works off the coloured waters; on them i
   await page.setViewportSize({ width: 1400, height: 900 });
   const network = await serveOffline(page);
   const requests: string[] = [];
-  page.on("request", (r) => requests.push(r.url()));
+  page.on("request", (request) => requests.push(request.url()));
   await openPlanner(page);
   const map = page.getByRole("region", { name: strings.mapLabel });
   await toggleAccessLayer(page);
@@ -35,5 +35,5 @@ test("with the layer on, planning still works off the coloured waters; on them i
   await expect(pts).toHaveCount(2);
 
   expect(network.blocked).toEqual([]);
-  expect(requests.filter((u) => /overpass|openstreetmap\.org\/api/i.test(u))).toEqual([]);
+  expect(requests.filter((request) => /overpass|openstreetmap\.org\/api/i.test(request))).toEqual([]);
 });

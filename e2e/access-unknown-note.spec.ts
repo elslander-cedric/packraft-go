@@ -15,7 +15,7 @@ const netherlands: P[] = [
   { lat: 52.372, lng: 4.9 },
 ];
 
-const routed = (points: P[]) => ({ status: "routed", geometry: points.map((p) => ({ ...p, elevation: 5 })) });
+const routed = (points: P[]) => ({ status: "routed", geometry: points.map((point) => ({ ...point, elevation: 5 })) });
 
 /** Seeds a trip of paddle legs (each on its own water), joined by short hike legs. */
 async function seed(page: Page, waters: P[][]) {

@@ -21,27 +21,27 @@ const PLOPSA = 'Aire "Plopsa" à Coo';
 const FARAVENNES = 'Aire "Les Faravennes" à Coo';
 const CHENEUX = 'Aire "Au Pont de Cheneux"';
 const STAVELOT = 'Aire "Au Pont de l\'Amblève" à Stavelot';
-const P: LatLng[] = [
+const pointsP: LatLng[] = [
   { lat: 50.392, lng: 5.9 },
   { lat: 50.39462, lng: 5.87677 },
   { lat: 50.39772, lng: 5.82264 },
 ];
-const straight = (a: LatLng, b: LatLng) =>
+const straight = (pointA: LatLng, pointB: LatLng) =>
   Array.from({ length: 11 }, (_, i) => ({
-    lat: a.lat + ((b.lat - a.lat) * i) / 10,
-    lng: a.lng + ((b.lng - a.lng) * i) / 10,
+    lat: pointA.lat + ((pointB.lat - pointA.lat) * i) / 10,
+    lng: pointA.lng + ((pointB.lng - pointA.lng) * i) / 10,
     elevation: 200,
   }));
 const TRIP: Trip = {
   name: "Amblève",
-  points: P,
+  points: pointsP,
   legs: [
-    { mode: "hike", route: { status: "routed", geometry: straight(P[0], P[1]) } },
-    { mode: "paddle", route: { status: "routed", geometry: straight(P[1], P[2]) } },
+    { mode: "hike", route: { status: "routed", geometry: straight(pointsP[0], pointsP[1]) } },
+    { mode: "paddle", route: { status: "routed", geometry: straight(pointsP[1], pointsP[2]) } },
   ],
 };
 
-const T = "2026-10-12T08:00:00.000Z";
+const TIMESTAMP = "2026-10-12T08:00:00.000Z";
 const point = (id: string, name: string, lat: number, lng: number): AccessPoint => ({
   id,
   position: { lat, lng },
@@ -51,8 +51,8 @@ const point = (id: string, name: string, lat: number, lng: number): AccessPoint 
   kind: "slipway",
   note: "",
   checkedOnSite: null,
-  createdAt: T,
-  updatedAt: T,
+  createdAt: TIMESTAMP,
+  updatedAt: TIMESTAMP,
 });
 const POINTS = [point("mid", "Mill bank", 50.3962, 5.85), point("far", "Durbuy jetty", 50.34, 5.46)];
 

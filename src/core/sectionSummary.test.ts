@@ -30,7 +30,7 @@ describe("section totals", () => {
 
   it("totals the distance and time of its legs, and says which legs and day it covers", () => {
     const summary = summarise(trip([leg("paddle"), leg("paddle"), leg("hike"), leg("paddle")]));
-    expect(summary.sections.map((s) => [s.mode, s.firstLeg, s.lastLeg, s.day])).toEqual([
+    expect(summary.sections.map((section) => [section.mode, section.firstLeg, section.lastLeg, section.day])).toEqual([
       ["paddle", 0, 1, 1],
       ["hike", 2, 2, 1],
       ["paddle", 3, 3, 1],
@@ -42,7 +42,7 @@ describe("section totals", () => {
 
   it("splits at a camp, so a section falls on one day", () => {
     const { sections } = summarise(trip([leg("hike"), leg("hike"), leg("hike")], [2]));
-    expect(sections.map((s) => [s.firstLeg, s.lastLeg, s.day])).toEqual([
+    expect(sections.map((section) => [section.firstLeg, section.lastLeg, section.day])).toEqual([
       [0, 1, 1],
       [2, 2, 2],
     ]);

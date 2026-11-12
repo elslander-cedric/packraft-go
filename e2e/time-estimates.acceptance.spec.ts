@@ -34,11 +34,11 @@ const byProfile = (url: URL) => (url.searchParams.get("profile") === "river" ? R
 
 /** Total minutes of the first "X h YY min" / "YY min" in some text. */
 function minutesIn(text: string | null): number {
-  const m = (text ?? "").match(/(?:(\d+) h )?(\d+) min/);
-  if (!m) {
+  const match = (text ?? "").match(/(?:(\d+) h )?(\d+) min/);
+  if (!match) {
     throw new Error(`no time in "${text}"`);
   }
-  return Number(m[1] ?? 0) * 60 + Number(m[2]);
+  return Number(match[1] ?? 0) * 60 + Number(match[2]);
 }
 const legMinutes = async (page: Page, leg: number) => minutesIn(await rows(page).nth(leg).textContent());
 /** The trip's total time in the panel's header. */
@@ -174,7 +174,7 @@ for (const [name, stored, pace, speed] of [
 ] as const) {
   test(`unreadable stored settings (${name}) fall back to defaults without crashing`, async ({ page }) => {
     const errors: string[] = [];
-    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("pageerror", (error) => errors.push(error.message));
     await serveOffline(page, { brouter: byProfile });
     await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [SETTINGS_KEY, stored]);
     await openMap(page);
@@ -193,7 +193,7 @@ test("R2: a pending hike leg shows … for its time, and so does the trip total;
   page,
 }) => {
   let release: () => void = () => {};
-  const gate = new Promise<void>((r) => (release = r));
+  const gate = new Promise<void>((resolve) => (release = resolve));
   await serveOffline(page, { brouter: async (url) => (await gate, byProfile(url)) });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
@@ -210,7 +210,7 @@ test("R2: a pending hike leg shows … for its time, and so does the trip total;
 
 test("R2: while a paddle leg is pending its section and the trip total show … until it is routed", async ({ page }) => {
   let release: () => void = () => {};
-  const gate = new Promise<void>((r) => (release = r));
+  const gate = new Promise<void>((resolve) => (release = resolve));
   await serveOffline(page, {
     brouter: async (url) => {
       if (url.searchParams.get("profile") === "river") {
@@ -286,7 +286,7 @@ test("R2: a failed paddle leg is unchanged: plain time, no marker on the leg or 
 test("R2: retrying a failed hike leg goes … while pending, then a plain time without the marker", async ({ page }) => {
   let mode: "fail" | "hold" = "fail";
   let release: () => void = () => {};
-  const gate = new Promise<void>((r) => (release = r));
+  const gate = new Promise<void>((resolve) => (release = resolve));
   await serveOffline(page, {
     brouter: async (url) => {
       if (mode === "fail") {
@@ -313,7 +313,7 @@ test("R2: retrying a failed hike leg goes … while pending, then a plain time w
 
 test("R2: a routed trip restored from autosave shows real times, not a stuck …", async ({ page }) => {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", (error) => errors.push(error.message));
   await serveOffline(page, { brouter: byProfile });
   await drawHikeThenPaddle(page);
   const before = await tripLine(page).textContent();

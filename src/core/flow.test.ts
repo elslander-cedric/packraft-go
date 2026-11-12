@@ -19,9 +19,9 @@ const gauge = (mean72h: number, at8: number | null, meanDate = today): GaugeRead
     ...(at8 === null ? [] : [{ at: `${today}T08:00:00.000+02:00`, m3s: at8 }]),
   ],
 });
-const ok = (g: GaugeReadings): FlowReadings => ({
+const ok = (gaugeReadings: GaugeReadings): FlowReadings => ({
   status: "ok",
-  gauges: { "1234": g },
+  gauges: { "1234": gaugeReadings },
 });
 
 describe("flow check (AGW art. 6)", () => {
@@ -73,25 +73,25 @@ describe("flow check (AGW art. 6)", () => {
   });
 
   it("ignores an 08:00 reading from another day", () => {
-    const g: GaugeReadings = {
+    const gaugeReadings: GaugeReadings = {
       mean72h: [{ at: `${today}T01:00:00.000+02:00`, m3s: 5 }],
       hourly: [{ at: "2026-10-13T08:00:00.000+02:00", m3s: 99 }],
     };
-    expect(flowCheck(rule(), ok(g), today)).toMatchObject({
+    expect(flowCheck(rule(), ok(gaugeReadings), today)).toMatchObject({
       kind: "unknown",
       why: "not-measured-yet",
     });
   });
 
   it("uses the latest 72-hour mean when there are several", () => {
-    const g: GaugeReadings = {
+    const gaugeReadings: GaugeReadings = {
       mean72h: [
         { at: "2026-10-13T01:00:00.000+02:00", m3s: 1 },
         { at: `${today}T01:00:00.000+02:00`, m3s: 5 },
       ],
       hourly: gauge(5, 10).hourly,
     };
-    expect(flowCheck(rule(), ok(g), today).kind).toBe("ok");
+    expect(flowCheck(rule(), ok(gaugeReadings), today).kind).toBe("ok");
   });
 
   it("is unknown when the service failed", () => {

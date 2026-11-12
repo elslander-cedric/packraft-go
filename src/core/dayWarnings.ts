@@ -20,16 +20,25 @@ export type LegWarnings = {
  */
 export function dayWarnings(day: number, access: DayAccess | undefined, aire: readonly AireWarning[]): LegWarnings[] {
   const kinds: { leg: number; kind: DayWarningKind }[] = [
-    ...(access?.warnings ?? []).map((w: AccessWarning) => ({ leg: w.leg, kind: w.kind })),
-    ...(access?.lockWarnings ?? []).map((w) => ({ leg: w.leg, kind: "lock" as const })),
-    ...(access?.incidentWarnings ?? []).map((w) => ({ leg: w.leg, kind: "incident" as const })),
-    ...(access?.obstacleWarnings ?? []).map((w) => ({ leg: w.leg, kind: "obstacle" as const })),
-    ...aire.filter((w) => w.day === day).map((w) => ({ leg: w.leg, kind: "aire" as const })),
+    ...(access?.warnings ?? []).map((accessWarning: AccessWarning) => ({
+      leg: accessWarning.leg,
+      kind: accessWarning.kind,
+    })),
+    ...(access?.lockWarnings ?? []).map((lockWarning) => ({ leg: lockWarning.leg, kind: "lock" as const })),
+    ...(access?.incidentWarnings ?? []).map((incidentWarning) => ({
+      leg: incidentWarning.leg,
+      kind: "incident" as const,
+    })),
+    ...(access?.obstacleWarnings ?? []).map((obstacleWarning) => ({
+      leg: obstacleWarning.leg,
+      kind: "obstacle" as const,
+    })),
+    ...aire.filter((warning) => warning.day === day).map((warning) => ({ leg: warning.leg, kind: "aire" as const })),
   ];
-  const legs = [...new Set(kinds.map((k) => k.leg))].sort((a, b) => a - b);
+  const legs = [...new Set(kinds.map((kind) => kind.leg))].sort((left, right) => left - right);
   return legs.map((leg) => {
-    const own = kinds.filter((k) => k.leg === leg).map((k) => k.kind);
-    const kind = dayWarningKinds.find((k) => own.includes(k))!;
+    const own = kinds.filter((kind) => kind.leg === leg).map((entry) => entry.kind);
+    const kind = dayWarningKinds.find((dayWarningKind) => own.includes(dayWarningKind))!;
     return { leg, kind, count: own.length };
   });
 }

@@ -77,7 +77,10 @@ export type FlowVerdict =
 const dateOf = (reading: FlowReading) => reading.at.slice(0, 10);
 const hourOf = (reading: FlowReading) => reading.at.slice(11, 16);
 const latestOf = (readings: readonly FlowReading[]) =>
-  readings.reduce<FlowReading | undefined>((latest, r) => (!latest || r.at > latest.at ? r : latest), undefined);
+  readings.reduce<FlowReading | undefined>(
+    (latest, reading) => (!latest || reading.at > latest.at ? reading : latest),
+    undefined,
+  );
 
 /** The flow verdict of a Walloon stretch for today, from its gauge's readings (absent when not asked for). */
 export function flowCheck(rule: AgwRule, readings: FlowReadings | undefined, today: CalendarDate): FlowVerdict {
@@ -94,7 +97,7 @@ export function flowCheck(rule: AgwRule, readings: FlowReadings | undefined, tod
   const series = readings.gauges[gauge.stationNo];
   const mean72h = series && latestOf(series.mean72h);
   const latest = series && latestOf(series.hourly);
-  const at8 = series?.hourly.find((r) => dateOf(r) === today && hourOf(r) === "08:00");
+  const at8 = series?.hourly.find((flowReading) => dateOf(flowReading) === today && hourOf(flowReading) === "08:00");
   const figures: FlowFigures = {
     gauge,
     minM3s,

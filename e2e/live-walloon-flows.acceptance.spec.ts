@@ -26,8 +26,8 @@ function highAt8(url: URL) {
     return { status: 200, body: kiwisFixture("timeseries-list.json") };
   }
   const entries = JSON.parse(kiwisFixture("timeseries-values.json")) as { data: [string, number][] }[];
-  for (const e of entries) {
-    for (const row of e.data) {
+  for (const entry of entries) {
+    for (const row of entry.data) {
       if (row[0].includes("T08:00")) {
         row[1] = 9999;
       }

@@ -95,12 +95,13 @@ export type TripSummary = {
 const EARTH_MEAN_RADIUS_KM = 6371.0088;
 
 /** Great-circle distance between two points (haversine formula). */
-export function distanceKm(a: LatLng, b: LatLng): number {
+export function distanceKm(pointA: LatLng, pointB: LatLng): number {
   const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad;
-  const dLng = (b.lng - a.lng) * rad;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
-  return 2 * EARTH_MEAN_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
+  const dLat = (pointB.lat - pointA.lat) * rad;
+  const dLng = (pointB.lng - pointA.lng) * rad;
+  const haversine =
+    Math.sin(dLat / 2) ** 2 + Math.cos(pointA.lat * rad) * Math.cos(pointB.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_MEAN_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(haversine)));
 }
 
 /** Length of a path through the points, in kilometres. */

@@ -10,17 +10,17 @@ import type { RouteRequest } from "./routing";
 import type { SnapOffer } from "./snap";
 import { applyEdit, emptyTrip, type LatLng, type Trip } from "./trip";
 
-const T = "2026-10-14T08:00:00.000Z";
-const A: LatLng = { lat: 50.3527, lng: 5.4563 };
-const B: LatLng = { lat: 50.3627, lng: 5.4563 };
-const C: LatLng = { lat: 50.3727, lng: 5.4563 };
+const TIMESTAMP = "2026-10-14T08:00:00.000Z";
+const pointA: LatLng = { lat: 50.3527, lng: 5.4563 };
+const pointB: LatLng = { lat: 50.3627, lng: 5.4563 };
+const pointC: LatLng = { lat: 50.3727, lng: 5.4563 };
 const nearA: LatLng = { lat: 50.3532, lng: 5.4563 }; // about 55 m from A
 
 const through = (...points: LatLng[]) =>
   points.reduce((trip, at) => applyEdit(trip, { type: "addPoint", at }), emptyTrip());
 
 const slipway = (id: string, at: LatLng): AccessPoints =>
-  updateAccessPoint(addAccessPoint([], { id, at, now: T }), id, { kind: "slipway", use: "both" }, T);
+  updateAccessPoint(addAccessPoint([], { id, at, now: TIMESTAMP }), id, { kind: "slipway", use: "both" }, TIMESTAMP);
 
 const run = (session: PlannerSession, ...actions: PlannerAction[]) => actions.reduce(plannerSession, session);
 
@@ -31,8 +31,8 @@ const requestOfLeg = (trip: Trip, i: number): RouteRequest => ({
 const routed: LegRoute = {
   status: "routed",
   geometry: [
-    { ...A, elevation: 100 },
-    { ...B, elevation: 120 },
+    { ...pointA, elevation: 100 },
+    { ...pointB, elevation: 120 },
   ],
 };
 const access = slipway("near", nearA);
@@ -60,7 +60,7 @@ const targetId = (offer: SnapOffer) => accessPointOf(offer).id;
  * offer, a file error, a stored save that is kept, and a trip with undo history.
  */
 const busy = (): PlannerSession => {
-  const first = firstSession({ trip: through(A, B, C), unknownVersion: true });
+  const first = firstSession({ trip: through(pointA, pointB, pointC), unknownVersion: true });
   const withOffer = plannerSession(first, {
     type: "setLegMode",
     index: 0,
@@ -92,12 +92,12 @@ const actions: [name: string, make: Make][] = [
   ["point clicked", { type: "pointClicked", index: 2 }],
   ["leg clicked", { type: "legClicked", index: 0 }],
   ["deselect", { type: "deselect" }],
-  ["accept offer", (s) => ({ type: "acceptOffer", offer: s.offers[0] })],
-  ["decline offer", (s) => ({ type: "declineOffer", offer: s.offers[0] })],
+  ["accept offer", (session) => ({ type: "acceptOffer", offer: session.offers[0] })],
+  ["decline offer", (session) => ({ type: "declineOffer", offer: session.offers[0] })],
   ["file downloaded", { type: "fileDownloaded" }],
   ["enter access point editing", { type: "enterAccessPointEditing", returnTo: { tab: "sections", sheet: "peek" } }],
-  ["route requested", (s) => ({ type: "routeRequested", request: requestOfLeg(s.trip, 1) })],
-  ["route arrived", (s) => ({ type: "routeArrived", request: requestOfLeg(s.trip, 1), route: routed })],
+  ["route requested", (session) => ({ type: "routeRequested", request: requestOfLeg(session.trip, 1) })],
+  ["route arrived", (session) => ({ type: "routeArrived", request: requestOfLeg(session.trip, 1), route: routed })],
 ];
 
 type Outcome = { label: "cleared" | "kept" | "set"; value: unknown };
@@ -155,7 +155,7 @@ table(
     "route requested": kept(1),
     "route arrived": kept(1),
   },
-  (s) => s.selectedPoint,
+  (session) => session.selectedPoint,
 );
 
 // Set leg mode, add point and move point set the offers; their rows are in "snap offers from ..." below.
@@ -183,7 +183,7 @@ table(
     "route requested": kept(1),
     "route arrived": kept(1),
   },
-  (s) => (s.offers.length === 1 ? 1 : s.offers),
+  (session) => (session.offers.length === 1 ? 1 : session.offers),
 );
 
 table(
@@ -211,7 +211,7 @@ table(
     "route requested": kept("invalid"),
     "route arrived": kept("invalid"),
   },
-  (s) => s.fileError,
+  (session) => session.fileError,
 );
 
 // A selected leg and a selected point never go together: this session has leg 1 selected instead (#230).
@@ -242,7 +242,7 @@ table(
     "route requested": kept(1),
     "route arrived": kept(1),
   },
-  (s) => s.selectedLeg,
+  (session) => session.selectedLeg,
   legSelected,
 );
 
@@ -276,20 +276,20 @@ describe("leg clicked (#230)", () => {
   });
 
   it("starts cleared", () => {
-    expect(firstSession({ trip: through(A, B, C) }).selectedLeg).toBeNull();
+    expect(firstSession({ trip: through(pointA, pointB, pointC) }).selectedLeg).toBeNull();
   });
 });
 
 table(
   "stored save kept (the stored save is kept)",
   Object.fromEntries(actions.map(([name]) => [name, kept(true)])),
-  (s) => s.keepStoredSave,
+  (session) => session.keepStoredSave,
 );
 
 describe("rule table: replacing the trip", () => {
   const replacing = [
     ["new trip", { type: "newTrip" }, emptyTrip(), "newTrip"],
-    ["file opened", { type: "fileOpened", trip: through(C) }, through(C), "openFile"],
+    ["file opened", { type: "fileOpened", trip: through(pointC) }, through(pointC), "openFile"],
   ] as const;
 
   for (const [name, action, next, question] of replacing) {
@@ -336,7 +336,7 @@ describe("rule table: replacing the trip", () => {
 
 describe("snap offers from set leg mode", () => {
   it("are worked out from the trip the change produced", () => {
-    const session = firstSession({ trip: through(A, B) });
+    const session = firstSession({ trip: through(pointA, pointB) });
     const after = plannerSession(session, {
       type: "setLegMode",
       index: 0,
@@ -344,11 +344,13 @@ describe("snap offers from set leg mode", () => {
       accessPoints: access,
       officialAires: [],
     });
-    expect(after.offers.map((o) => [o.change, targetId(o)])).toEqual([[{ kind: "put-in", point: 0 }, "near"]]);
+    expect(after.offers.map((offer) => [offer.change, targetId(offer)])).toEqual([
+      [{ kind: "put-in", point: 0 }, "near"],
+    ]);
   });
 
   it("are the right ones after a route arrived first", () => {
-    const session = firstSession({ trip: through(A, B, C) });
+    const session = firstSession({ trip: through(pointA, pointB, pointC) });
     const request = requestOfLeg(session.trip, 0);
     const arrived = plannerSession(session, { type: "routeArrived", request, route: routed });
     const after = plannerSession(arrived, {
@@ -358,7 +360,7 @@ describe("snap offers from set leg mode", () => {
       accessPoints: access,
       officialAires: [],
     });
-    expect(after.offers.map((o) => o.change)).toEqual([{ kind: "put-in", point: 0 }]);
+    expect(after.offers.map((offer) => offer.change)).toEqual([{ kind: "put-in", point: 0 }]);
   });
 
   it("replace the earlier offers", () => {
@@ -379,19 +381,19 @@ describe("snap offers from add point", () => {
   const atB = slipway("b", nearB);
 
   it("offer to snap the put-in a new paddle leg after a hike leg makes", () => {
-    const session = firstSession({ trip: through(A, B) });
+    const session = firstSession({ trip: through(pointA, pointB) });
     const after = plannerSession(session, {
       type: "addPoint",
-      at: C,
+      at: pointC,
       mode: "paddle",
       accessPoints: atB,
       officialAires: [],
     });
-    expect(after.offers.map((o) => [o.change, targetId(o)])).toEqual([[{ kind: "put-in", point: 1 }, "b"]]);
+    expect(after.offers.map((offer) => [offer.change, targetId(offer)])).toEqual([[{ kind: "put-in", point: 1 }, "b"]]);
   });
 
   it("offer to snap the paddle leg's new end, the trip's take-out", () => {
-    const paddling = run(firstSession({ trip: through(A) }), {
+    const paddling = run(firstSession({ trip: through(pointA) }), {
       type: "addPoint",
       at: nearB,
       mode: "paddle",
@@ -400,12 +402,12 @@ describe("snap offers from add point", () => {
     });
     const after = plannerSession(paddling, {
       type: "addPoint",
-      at: B,
+      at: pointB,
       mode: "paddle",
       accessPoints: atB,
       officialAires: [],
     });
-    expect(after.offers.map((o) => o.change)).toEqual([{ kind: "take-out", point: 2 }]);
+    expect(after.offers.map((offer) => offer.change)).toEqual([{ kind: "take-out", point: 2 }]);
   });
 
   it("replace the earlier offers; a point that makes no put-in or take-out offers nothing", () => {
@@ -427,7 +429,7 @@ describe("snap offers from move point", () => {
   const besideB: LatLng = { lat: 50.3632, lng: 5.4565 }; // about 14 m from "b"
   const besideA: LatLng = { lat: 50.3532, lng: 5.4565 }; // about 14 m from the official aire
   const paddling = () =>
-    run(firstSession({ trip: through(A, B, C) }), {
+    run(firstSession({ trip: through(pointA, pointB, pointC) }), {
       type: "setLegMode",
       index: 0,
       mode: "paddle",
@@ -444,12 +446,14 @@ describe("snap offers from move point", () => {
 
   it("offer to snap a take-out moved near one of your access points", () => {
     const after = plannerSession(paddling(), moveTo(1, besideB));
-    expect(after.offers.map((o) => [o.change, targetId(o)])).toEqual([[{ kind: "take-out", point: 1 }, "b"]]);
+    expect(after.offers.map((offer) => [offer.change, targetId(offer)])).toEqual([
+      [{ kind: "take-out", point: 1 }, "b"],
+    ]);
   });
 
   it("offer to snap a put-in moved near an official aire", () => {
     const after = plannerSession(paddling(), moveTo(0, besideA));
-    expect(after.offers.map((o) => [o.change, o.target.kind])).toEqual([
+    expect(after.offers.map((offer) => [offer.change, offer.target.kind])).toEqual([
       [{ kind: "put-in", point: 0 }, "official-aire"],
     ]);
   });
@@ -468,20 +472,20 @@ describe("snap offers from move point", () => {
 describe("snap offers from access points changed", () => {
   it("drops the offer to a deleted access point and keeps the others", () => {
     const both = [...slipway("near", nearA), ...slipway("c", { lat: 50.3632, lng: 5.4563 })]; // "c" is near B
-    const withOffers = plannerSession(firstSession({ trip: through(A, B, C) }), {
+    const withOffers = plannerSession(firstSession({ trip: through(pointA, pointB, pointC) }), {
       type: "setLegMode",
       index: 0,
       mode: "paddle",
       accessPoints: both,
       officialAires: [],
     });
-    expect(withOffers.offers.map((o) => targetId(o)).sort()).toEqual(["c", "near"]);
+    expect(withOffers.offers.map((offer) => targetId(offer)).sort()).toEqual(["c", "near"]);
     const after = plannerSession(withOffers, { type: "accessPointsChanged", accessPoints: both.slice(1) });
-    expect(after.offers.map((o) => targetId(o))).toEqual(["c"]);
+    expect(after.offers.map((offer) => targetId(offer))).toEqual(["c"]);
   });
 
   it("makes the offer to a moved access point follow it; accepting moves the point there", () => {
-    const offered = plannerSession(firstSession({ trip: through(A, B) }), {
+    const offered = plannerSession(firstSession({ trip: through(pointA, pointB) }), {
       type: "setLegMode",
       index: 0,
       mode: "paddle",
@@ -491,7 +495,7 @@ describe("snap offers from access points changed", () => {
     const to: LatLng = { lat: 50.3537, lng: 5.4563 }; // about 111 m from A
     const moved = plannerSession(offered, {
       type: "accessPointsChanged",
-      accessPoints: updateAccessPoint(access, "near", { position: to }, T),
+      accessPoints: updateAccessPoint(access, "near", { position: to }, TIMESTAMP),
     });
     expect(moved.offers).toHaveLength(1);
     expect(accessPointOf(moved.offers[0]).position).toEqual(to);
@@ -501,14 +505,14 @@ describe("snap offers from access points changed", () => {
   });
 
   it("leaves an offer to an official aire alone; accepting moves the point onto it", () => {
-    const offered = plannerSession(firstSession({ trip: through(A, B) }), {
+    const offered = plannerSession(firstSession({ trip: through(pointA, pointB) }), {
       type: "setLegMode",
       index: 0,
       mode: "paddle",
       accessPoints: [],
       officialAires: [officialAire],
     });
-    expect(offered.offers.map((o) => o.target)).toEqual([{ kind: "official-aire", aire: officialAire }]);
+    expect(offered.offers.map((offer) => offer.target)).toEqual([{ kind: "official-aire", aire: officialAire }]);
     const after = plannerSession(offered, { type: "accessPointsChanged", accessPoints: access });
     expect(after.offers).toEqual(offered.offers);
     expect(plannerSession(after, { type: "acceptOffer", offer: after.offers[0] }).trip.points[0]).toEqual(nearA);
@@ -535,7 +539,7 @@ describe("while the replace question is open", () => {
       expect(plannerSession(session, build(make, session)), name).toBe(session);
     }
     expect(plannerSession(session, { type: "newTrip" })).toBe(session);
-    expect(plannerSession(session, { type: "fileOpened", trip: through(C) })).toBe(session);
+    expect(plannerSession(session, { type: "fileOpened", trip: through(pointC) })).toBe(session);
     expect(plannerSession(session, { type: "fileRejected", reason: "invalid" })).toBe(session);
   });
 
@@ -554,29 +558,29 @@ describe("while the replace question is open", () => {
   });
 
   it("cancel remembers which question was asked, for the closing dialog", () => {
-    const after = run(busy(), { type: "fileOpened", trip: through(C) }, { type: "cancelReplace" });
+    const after = run(busy(), { type: "fileOpened", trip: through(pointC) }, { type: "cancelReplace" });
     expect(after.question).toBe("openFile");
   });
 });
 
 describe("route answers", () => {
   it("a stale answer is ignored", () => {
-    const session = firstSession({ trip: through(A, B) });
+    const session = firstSession({ trip: through(pointA, pointB) });
     const request = requestOfLeg(session.trip, 0);
     const moved = run(
       session,
-      { type: "movePoint", index: 1, to: C, accessPoints: [], officialAires: [] },
+      { type: "movePoint", index: 1, to: pointC, accessPoints: [], officialAires: [] },
       { type: "routeArrived", request, route: routed },
     );
     expect(moved.trip.legs[0].route).toBeUndefined();
   });
 
   it("an answer for a leg that undo brought back is stored", () => {
-    const session = firstSession({ trip: through(A, B) });
+    const session = firstSession({ trip: through(pointA, pointB) });
     const request = requestOfLeg(session.trip, 0);
     const back = run(
       session,
-      { type: "movePoint", index: 1, to: C, accessPoints: [], officialAires: [] },
+      { type: "movePoint", index: 1, to: pointC, accessPoints: [], officialAires: [] },
       { type: "undo" },
       { type: "routeArrived", request, route: routed },
     );
@@ -584,7 +588,7 @@ describe("route answers", () => {
   });
 
   it("route requested marks the waiting leg pending", () => {
-    const session = firstSession({ trip: through(A, B) });
+    const session = firstSession({ trip: through(pointA, pointB) });
     const after = plannerSession(session, { type: "routeRequested", request: requestOfLeg(session.trip, 0) });
     expect(after.trip.legs[0].route).toEqual({ status: "pending" });
   });
@@ -597,9 +601,9 @@ describe("stored save kept", () => {
   });
 
   it("is cleared only by a replace", () => {
-    let session = firstSession({ trip: through(A, B), unknownVersion: true });
+    let session = firstSession({ trip: through(pointA, pointB), unknownVersion: true });
     const others: PlannerAction[] = [
-      { type: "addPoint", at: C, accessPoints: [], officialAires: [] },
+      { type: "addPoint", at: pointC, accessPoints: [], officialAires: [] },
       { type: "undo" },
       { type: "rename", name: "x" },
       { type: "fileRejected", reason: "invalid" },
@@ -617,9 +621,9 @@ describe("stored save kept", () => {
 
 describe("actions that can't apply", () => {
   it("delete or toggle camp with no selected point return the same session", () => {
-    const s = firstSession({ trip: through(A, B) });
-    expect(plannerSession(s, { type: "deleteSelectedPoint" })).toBe(s);
-    expect(plannerSession(s, { type: "toggleCampOnSelectedPoint" })).toBe(s);
+    const session = firstSession({ trip: through(pointA, pointB) });
+    expect(plannerSession(session, { type: "deleteSelectedPoint" })).toBe(session);
+    expect(plannerSession(session, { type: "toggleCampOnSelectedPoint" })).toBe(session);
   });
 
   it("accepting an offer that is no longer listed returns the same session", () => {
@@ -629,9 +633,9 @@ describe("actions that can't apply", () => {
   });
 
   it("confirm or cancel with no question open return the same session", () => {
-    const s = busy();
-    expect(plannerSession(s, { type: "confirmReplace" })).toBe(s);
-    expect(plannerSession(s, { type: "cancelReplace" })).toBe(s);
+    const session = busy();
+    expect(plannerSession(session, { type: "confirmReplace" })).toBe(session);
+    expect(plannerSession(session, { type: "cancelReplace" })).toBe(session);
   });
 });
 
@@ -640,6 +644,6 @@ describe("accepting an offer", () => {
     const session = busy();
     const after = plannerSession(session, { type: "acceptOffer", offer: session.offers[0] });
     expect(after.trip.points[0]).toEqual(nearA);
-    expect(plannerSession(after, { type: "undo" }).trip.points[0]).toEqual(A);
+    expect(plannerSession(after, { type: "undo" }).trip.points[0]).toEqual(pointA);
   });
 });

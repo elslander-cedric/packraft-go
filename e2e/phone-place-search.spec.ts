@@ -66,15 +66,18 @@ async function search(page: Page, what: string) {
 const lastZoom = (tiles: { z: number }[]) => tiles.at(-1)?.z;
 
 type Box = { x: number; y: number; width: number; height: number };
-const apart = (a: Box, b: Box) =>
-  a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+const apart = (boxA: Box, boxB: Box) =>
+  boxA.x + boxA.width <= boxB.x ||
+  boxB.x + boxB.width <= boxA.x ||
+  boxA.y + boxA.height <= boxB.y ||
+  boxB.y + boxB.height <= boxA.y;
 const box = async (locator: Locator) => (await locator.boundingBox())!;
 
 /** Waits for the fonts and for the sheet's, the panel's and the floating controls' animations to end. */
 async function settled(page: Page) {
   await page.evaluate(async () => {
     await document.fonts.ready;
-    await Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined)));
+    await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
   });
 }
 
@@ -239,11 +242,11 @@ test("a tap on the pin reaches the map and adds a point", async ({ page }) => {
 /** Fails unless `element` lies fully inside the viewport. */
 async function expectOnScreen(page: Page, element: Locator) {
   const { width, height } = page.viewportSize()!;
-  const b = await box(element);
-  expect(b.x).toBeGreaterThanOrEqual(0);
-  expect(b.y).toBeGreaterThanOrEqual(0);
-  expect(b.x + b.width).toBeLessThanOrEqual(width);
-  expect(b.y + b.height).toBeLessThanOrEqual(height);
+  const boxB = await box(element);
+  expect(boxB.x).toBeGreaterThanOrEqual(0);
+  expect(boxB.y).toBeGreaterThanOrEqual(0);
+  expect(boxB.x + boxB.width).toBeLessThanOrEqual(width);
+  expect(boxB.y + boxB.height).toBeLessThanOrEqual(height);
 }
 
 /** A trip with a start date, so the access chip can show a trip day: its longest text. */
@@ -367,8 +370,8 @@ test.describe("the on-screen keyboard", () => {
     const height = await page.evaluate(() => window.visualViewport!.height);
     await expect
       .poll(async () => {
-        const b = await box(element);
-        return b.y >= 0 && b.y + b.height <= height;
+        const boxB = await box(element);
+        return boxB.y >= 0 && boxB.y + boxB.height <= height;
       })
       .toBe(true);
   }

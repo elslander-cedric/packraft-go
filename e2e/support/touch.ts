@@ -53,7 +53,10 @@ export async function touch(page: Page): Promise<Touch> {
 
   const send = (type: "touchStart" | "touchMove" | "touchEnd", touchPoints: TouchPoint[]) =>
     cdp.send("Input.dispatchTouchEvent", { type, touchPoints });
-  const lerp = (a: Pixel, b: Pixel, t: number): Pixel => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  const lerp = (pixelA: Pixel, pixelB: Pixel, fraction: number): Pixel => ({
+    x: pixelA.x + (pixelB.x - pixelA.x) * fraction,
+    y: pixelA.y + (pixelB.y - pixelA.y) * fraction,
+  });
 
   return {
     async press(at) {

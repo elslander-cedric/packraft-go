@@ -27,7 +27,7 @@ const DINANT = [
 ];
 const routed = (points: { lat: number; lng: number }[], elevations: number[]) => ({
   status: "routed",
-  geometry: points.map((p, i) => ({ ...p, elevation: elevations[i] })),
+  geometry: points.map((point, i) => ({ ...point, elevation: elevations[i] })),
 });
 /** A hike that climbs and descends to the Meuse, then a paddle leg on it. */
 const hikeAndPaddle = (name: string) => ({
@@ -57,7 +57,9 @@ async function open(page: Page, save?: object) {
 
 /** Waits until nothing on the page is animating (the sheet sliding in or rising). */
 const settled = (page: Page) =>
-  page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  page.evaluate(() =>
+    Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))),
+  );
 
 const box = async (locator: Locator) => (await locator.boundingBox())!;
 
@@ -148,8 +150,12 @@ test("the selected tab looks different from the others", async ({ page }) => {
 
   const style = (name: string) =>
     tab(page, name).evaluate((el) => {
-      const s = getComputedStyle(el);
-      return { weight: s.fontWeight, border: s.borderBottomColor, color: s.color };
+      const cssStyleDeclaration = getComputedStyle(el);
+      return {
+        weight: cssStyleDeclaration.fontWeight,
+        border: cssStyleDeclaration.borderBottomColor,
+        color: cssStyleDeclaration.color,
+      };
     });
   const legs = await style(text.tabs.sections);
   const days = await style(text.tabs.days);

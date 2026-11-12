@@ -27,12 +27,12 @@ type Point = { lat: number; lng: number; elevation?: number };
 type SeedLeg = { mode: "hike" | "paddle"; line?: readonly Point[] };
 
 // On the Brussels canal; the Anderlecht lock is at the second point of the first paddle leg.
-const A = { lat: 50.8175, lng: 4.3005, elevation: 30 };
+const pointA = { lat: 50.8175, lng: 4.3005, elevation: 30 };
 const LOCK = { lat: 50.8196, lng: 4.3017, elevation: 26 };
-const B = { lat: 50.8215, lng: 4.3028, elevation: 24 };
-const C = { lat: 50.8265, lng: 4.3075, elevation: 20 };
-const D = { lat: 50.8275, lng: 4.3085, elevation: 20 };
-const E = { lat: 50.8285, lng: 4.3095, elevation: 20 };
+const pointB = { lat: 50.8215, lng: 4.3028, elevation: 24 };
+const pointC = { lat: 50.8265, lng: 4.3075, elevation: 20 };
+const pointD = { lat: 50.8275, lng: 4.3085, elevation: 20 };
+const pointE = { lat: 50.8285, lng: 4.3095, elevation: 20 };
 
 async function seed(
   page: Page,
@@ -46,7 +46,7 @@ async function seed(
       points: trip.points.map(({ lat, lng }) => ({ lat, lng })),
       legs: trip.legs.map(({ mode, line }) => ({
         mode,
-        ...(line && { route: { status: "routed", geometry: line.map((p) => ({ elevation: 20, ...p })) } }),
+        ...(line && { route: { status: "routed", geometry: line.map((point) => ({ elevation: 20, ...point })) } }),
       })),
       ...(trip.camps && { camps: trip.camps }),
       startDate: "2027-07-10",
@@ -63,12 +63,12 @@ async function seed(
 
 // A hike, then two paddle legs (one through the lock), then a camp and a third paddle leg.
 const canalTrip = {
-  points: [D, A, B, C, E],
+  points: [pointD, pointA, pointB, pointC, pointE],
   legs: [
-    { mode: "hike", line: [D, A] },
-    { mode: "paddle", line: [A, LOCK, B] },
-    { mode: "paddle", line: [B, C] },
-    { mode: "paddle", line: [C, E] },
+    { mode: "hike", line: [pointD, pointA] },
+    { mode: "paddle", line: [pointA, LOCK, pointB] },
+    { mode: "paddle", line: [pointB, pointC] },
+    { mode: "paddle", line: [pointC, pointE] },
   ],
   camps: [3],
 } as const;
@@ -271,10 +271,10 @@ test("the details button sits under the time, at the right of the row's last lin
 test("a section of hike legs opens to its legs alone", async ({ page }) => {
   await serveOffline(page);
   await seed(page, {
-    points: [D, A, B],
+    points: [pointD, pointA, pointB],
     legs: [
-      { mode: "hike", line: [D, A] },
-      { mode: "hike", line: [A, B] },
+      { mode: "hike", line: [pointD, pointA] },
+      { mode: "hike", line: [pointA, pointB] },
     ],
   });
   await openPlanner(page);
@@ -324,13 +324,13 @@ test.describe("on a phone with the sheet raised", () => {
   test("the row tapped stays in view, with the legs it opened", async ({ page }) => {
     await serveOffline(page);
     await seed(page, {
-      points: [D, A, LOCK, B, C, E],
+      points: [pointD, pointA, LOCK, pointB, pointC, pointE],
       legs: [
-        { mode: "hike", line: [D, A] },
-        { mode: "paddle", line: [A, LOCK] },
-        { mode: "hike", line: [LOCK, B] },
-        { mode: "paddle", line: [B, C] },
-        { mode: "paddle", line: [C, E] },
+        { mode: "hike", line: [pointD, pointA] },
+        { mode: "paddle", line: [pointA, LOCK] },
+        { mode: "hike", line: [LOCK, pointB] },
+        { mode: "paddle", line: [pointB, pointC] },
+        { mode: "paddle", line: [pointC, pointE] },
       ],
     });
     await page.goto("/");
@@ -396,12 +396,12 @@ test("tapping a shown leg zooms to it, and one row stays marked between sections
 test("shown legs stay open across tabs, side by side, and through an edit further on", async ({ page }) => {
   await serveOffline(page);
   await seed(page, {
-    points: [D, A, B, C, E],
+    points: [pointD, pointA, pointB, pointC, pointE],
     legs: [
-      { mode: "hike", line: [D, A] },
-      { mode: "hike", line: [A, B] },
-      { mode: "paddle", line: [B, C] },
-      { mode: "paddle", line: [C, E] },
+      { mode: "hike", line: [pointD, pointA] },
+      { mode: "hike", line: [pointA, pointB] },
+      { mode: "paddle", line: [pointB, pointC] },
+      { mode: "paddle", line: [pointC, pointE] },
     ],
   });
   await openPlanner(page);
@@ -435,7 +435,7 @@ test("a section closes when no section of several legs starts at its first leg",
 
 test("a section whose legs are waiting for routes says so once", async ({ page }) => {
   await serveOffline(page, { brouter: () => new Promise<BRouterReply>(() => {}) });
-  await seed(page, { points: [D, A, B], legs: [{ mode: "hike" }, { mode: "hike" }] });
+  await seed(page, { points: [pointD, pointA, pointB], legs: [{ mode: "hike" }, { mode: "hike" }] });
   await openPlanner(page);
   await showSections(page);
   await expect(sectionRows(page).first().getByRole("status")).toHaveText(strings.legRouting);
@@ -445,8 +445,8 @@ test("each failed leg shows by number with its own Retry", async ({ page }) => {
   let up = false;
   const network = await serveOffline(page, { brouter: () => (up ? TRAIL : { status: 503, body: "" }) });
   await seed(page, {
-    points: [D, A, B, C],
-    legs: [{ mode: "hike" }, { mode: "hike", line: [A, B] }, { mode: "hike" }],
+    points: [pointD, pointA, pointB, pointC],
+    legs: [{ mode: "hike" }, { mode: "hike", line: [pointA, pointB] }, { mode: "hike" }],
   });
   await openPlanner(page);
   await showSections(page);
@@ -466,7 +466,7 @@ test("each failed leg shows by number with its own Retry", async ({ page }) => {
 test("a failed section's details button drops under its Retry, and comes back with the route", async ({ page }) => {
   let up = false;
   await serveOffline(page, { brouter: () => (up ? RIVER : { status: 503, body: "" }) });
-  await seed(page, { points: [A, B], legs: [{ mode: "paddle" }] });
+  await seed(page, { points: [pointA, pointB], legs: [{ mode: "paddle" }] });
   await openPlanner(page);
   await showSections(page);
 

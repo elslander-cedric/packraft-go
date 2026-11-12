@@ -44,15 +44,15 @@ async function delayZeroTimers(page: Page) {
 test("a click right after a drag selects the point, even on a busy page", async ({ page }) => {
   await delayZeroTimers(page);
   const { cx, cy } = await openMap(page);
-  const a = { x: cx - 150, y: cy };
-  const b = { x: cx + 150, y: cy };
+  const pointA = { x: cx - 150, y: cy };
+  const pointB = { x: cx + 150, y: cy };
   const moved = { x: cx + 150, y: cy + 100 };
-  for (const p of [a, b]) {
-    await page.mouse.click(p.x, p.y);
+  for (const point of [pointA, pointB]) {
+    await page.mouse.click(point.x, point.y);
   }
   await expect(points(page)).toHaveCount(2);
 
-  await dragThenClick(page, b, moved);
+  await dragThenClick(page, pointB, moved);
   await expect(points(page)).toHaveCount(2);
   await expect(selectedPoints(page)).toHaveCount(1);
   await expect(deleteButton(page)).toBeEnabled();
@@ -64,13 +64,13 @@ const probeRuns = Number(process.env.DRAG_CLICK_PROBE_RUNS ?? 10);
 test(`clicking a point right after dragging it always selects it (${probeRuns} tries)`, async ({ page }) => {
   test.setTimeout(30_000 + probeRuns * 2_000);
   const { cx, cy } = await openMap(page);
-  const a = { x: cx - 150, y: cy };
+  const pointA = { x: cx - 150, y: cy };
   const spots = [
     { x: cx + 100, y: cy - 60 },
     { x: cx + 160, y: cy + 60 },
   ];
-  for (const p of [a, spots[0]]) {
-    await page.mouse.click(p.x, p.y);
+  for (const point of [pointA, spots[0]]) {
+    await page.mouse.click(point.x, point.y);
   }
   await expect(points(page)).toHaveCount(2);
 

@@ -55,7 +55,7 @@ describe("lock markers", () => {
   const markers = lockMarkers(answer, regions);
 
   it("makes one marker per lock, named from the lock name, then the waterway's name, brussels first", () => {
-    expect(markers.map((m) => m.name)).toEqual([
+    expect(markers.map((marker) => marker.name)).toEqual([
       "Écluse d'Anderlecht - Sluis van Anderlecht",
       "Dijle",
       "Sluis Lembeek",

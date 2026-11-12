@@ -80,25 +80,25 @@ const SIMPLIFY_M = 3;
 
 type Feature = { names: string[]; tags: Record<string, string>; geometry: Pt[] };
 
-const geometryOf = (e: OverpassElement): Pt[] =>
-  e.type === "node" && e.lat !== undefined && e.lon !== undefined
-    ? [{ lat: e.lat, lng: e.lon }]
-    : (e.geometry ?? [])
-        .filter((p): p is { lat: number; lon: number } => p !== null)
-        .map((p) => ({ lat: p.lat, lng: p.lon }));
+const geometryOf = (overpassElement: OverpassElement): Pt[] =>
+  overpassElement.type === "node" && overpassElement.lat !== undefined && overpassElement.lon !== undefined
+    ? [{ lat: overpassElement.lat, lng: overpassElement.lon }]
+    : (overpassElement.geometry ?? [])
+        .filter((point): point is { lat: number; lon: number } => point !== null)
+        .map((point) => ({ lat: point.lat, lng: point.lon }));
 
-const featureOf = (e: OverpassElement): Feature => {
-  const tags = e.tags ?? {};
+const featureOf = (overpassElement: OverpassElement): Feature => {
+  const tags = overpassElement.tags ?? {};
   const names = ["name", "bridge:name", "alt_name", "official_name", "name:fr", "old_name"]
-    .map((k) => tags[k])
-    .filter((v): v is string => Boolean(v));
-  return { names, tags, geometry: geometryOf(e) };
+    .map((key) => tags[key])
+    .filter((value): value is string => Boolean(value));
+  return { names, tags, geometry: geometryOf(overpassElement) };
 };
 
 const contains = (names: readonly string[], wanted: string) =>
-  names.some((n) => normaliseName(n).includes(normaliseName(wanted)));
+  names.some((name) => normaliseName(name).includes(normaliseName(wanted)));
 
-const fmt = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`);
+const fmt = (metres: number) => (metres >= 1000 ? `${(metres / 1000).toFixed(1)} km` : `${Math.round(metres)} m`);
 
 type Located = { at: Projection; status: Exclude<EndStatus, "reviewed">; reason: string };
 
@@ -110,17 +110,17 @@ class RiverContext {
     result: OverpassResult,
     readonly border: Pt[][],
   ) {
-    this.features = result.elements.map(featureOf).filter((f) => f.geometry.length > 0);
+    this.features = result.elements.map(featureOf).filter((feature) => feature.geometry.length > 0);
     const ways = this.features
-      .filter((f) => f.tags.waterway === "river" && tagsMatch(f.tags, config.osmNames))
-      .map((f) => f.geometry);
+      .filter((feature) => feature.tags.waterway === "river" && tagsMatch(feature.tags, config.osmNames))
+      .map((feature) => feature.geometry);
     this.stem = mainStem(ways);
   }
 
   nearest(feature: Feature): Projection {
     let best: Projection | undefined;
-    for (const p of feature.geometry) {
-      const pr = project(this.stem, p);
+    for (const point of feature.geometry) {
+      const pr = project(this.stem, point);
       if (!best || pr.distance < best.distance) {
         best = pr;
       }
@@ -130,10 +130,13 @@ class RiverContext {
 
   place(name: string): { feature: Feature; at: Projection } | undefined {
     const matches = this.features
-      .filter((f) => f.tags.place && f.names.some((n) => normaliseName(n) === normaliseName(name)))
+      .filter(
+        (feature) =>
+          feature.tags.place && feature.names.some((otherName) => normaliseName(otherName) === normaliseName(name)),
+      )
       .map((feature) => ({ feature, at: this.nearest(feature) }))
       .filter(({ at }) => at.distance <= PLACE_MAX_M)
-      .sort((a, b) => a.at.distance - b.at.distance);
+      .sort((left, right) => left.at.distance - right.at.distance);
     return matches[0];
   }
 
@@ -146,25 +149,28 @@ class RiverContext {
   ): Located | string {
     const candidates = this.features
       .filter(isKind)
-      .map((f) => ({ f, at: at(f) }))
-      .filter((c): c is { f: Feature; at: Projection } => c.at !== undefined && c.at.distance <= NEAR_RIVER_M);
+      .map((feature) => ({ f: feature, at: at(feature) }))
+      .filter(
+        (candidate): candidate is { f: Feature; at: Projection } =>
+          candidate.at !== undefined && candidate.at.distance <= NEAR_RIVER_M,
+      );
     const anchor = opts.hint ?? (opts.near ? this.place(opts.near)?.feature.geometry[0] : undefined);
-    const byAnchor = (a: { at: Projection }, b: { at: Projection }) =>
-      anchor ? distanceM(a.at.point, anchor) - distanceM(b.at.point, anchor) : 0;
+    const byAnchor = (left: { at: Projection }, right: { at: Projection }) =>
+      anchor ? distanceM(left.at.point, anchor) - distanceM(right.at.point, anchor) : 0;
     const described = [opts.name && `"${opts.name}"`, opts.road && `on ${opts.road}`, opts.near && `near ${opts.near}`]
       .filter(Boolean)
       .join(" ");
     const named = candidates.filter(
-      ({ f }) =>
-        (opts.name !== undefined && contains(f.names, opts.name)) ||
+      ({ f: feature }) =>
+        (opts.name !== undefined && contains(feature.names, opts.name)) ||
         (opts.road !== undefined &&
-          f.tags.name !== undefined &&
-          normaliseName(f.tags.name) === normaliseName(opts.road)),
+          feature.tags.name !== undefined &&
+          normaliseName(feature.tags.name) === normaliseName(opts.road)),
     );
     if (named.length > 0) {
       named.sort(byAnchor);
       // Several ways of one structure (e.g. both carriageways) count as one find.
-      const distinct = named.filter((c) => distanceM(c.at.point, named[0].at.point) > 60);
+      const distinct = named.filter((candidate) => distanceM(candidate.at.point, named[0].at.point) > 60);
       const what = named[0].f.names[0] ?? label;
       if (distinct.length === 0) {
         return { at: named[0].at, status: "confident", reason: `OSM ${label} "${what}".` };
@@ -178,7 +184,7 @@ class RiverContext {
     if (!anchor) {
       return `no OSM ${label} ${described} found`;
     }
-    const near = candidates.filter((c) => distanceM(c.at.point, anchor) <= PLACE_MAX_M).sort(byAnchor);
+    const near = candidates.filter((candidate) => distanceM(candidate.at.point, anchor) <= PLACE_MAX_M).sort(byAnchor);
     if (near.length === 0) {
       return `no OSM ${label} within ${fmt(PLACE_MAX_M)} of ${opts.near ?? "the hint"}`;
     }
@@ -225,21 +231,22 @@ class RiverContext {
       }
       case "confluence": {
         const partners = this.features.filter(
-          (f) => /^(river|stream|canal)$/.test(f.tags.waterway ?? "") && tagsMatch(f.tags, recipe.with),
+          (feature) =>
+            /^(river|stream|canal)$/.test(feature.tags.waterway ?? "") && tagsMatch(feature.tags, recipe.with),
         );
         // The partner either ends on this river (tributary) or this river ends on it (mouth).
         let best: Projection | undefined;
-        for (const f of partners) {
-          for (const p of [f.geometry[0], f.geometry[f.geometry.length - 1]]) {
-            const pr = project(stem, p);
+        for (const partner of partners) {
+          for (const point of [partner.geometry[0], partner.geometry[partner.geometry.length - 1]]) {
+            const pr = project(stem, point);
             if (!best || pr.distance < best.distance) {
               best = pr;
             }
           }
         }
         const mouth = stem[stem.length - 1];
-        for (const f of partners) {
-          const pr = project(f.geometry, mouth);
+        for (const partner of partners) {
+          const pr = project(partner.geometry, mouth);
           if (pr.distance < (best?.distance ?? Infinity)) {
             best = { along: lengthM(stem), point: mouth, distance: pr.distance };
           }
@@ -257,10 +264,10 @@ class RiverContext {
         };
       }
       case "dam": {
-        const isDam = (f: Feature) => f.tags.waterway === "dam" || f.tags.waterway === "weir";
+        const isDam = (feature: Feature) => feature.tags.waterway === "dam" || feature.tags.waterway === "weir";
         // Only dams and weirs on this river: not those on a river it flows into.
-        const onRiver = (f: Feature) => {
-          const at = this.nearest(f);
+        const onRiver = (feature: Feature) => {
+          const at = this.nearest(feature);
           return at.distance <= ON_RIVER_M ? at : undefined;
         };
         if (recipe.fromMouth) {
@@ -268,7 +275,7 @@ class RiverContext {
             .filter(isDam)
             .map(onRiver)
             .filter((at): at is Projection => at !== undefined)
-            .sort((a, b) => b.along - a.along);
+            .sort((left, right) => right.along - left.along);
           if (all.length === 0) {
             return "no OSM dam or weir on the river";
           }
@@ -283,17 +290,20 @@ class RiverContext {
       case "bridge":
         return this.locateFeature(
           "bridge",
-          (f) => f.geometry.length > 1 && (f.tags.bridge !== undefined || f.tags.man_made === "bridge"),
-          (f) => crossings(stem, f.geometry)[0] ?? (f.tags.man_made === "bridge" ? this.nearest(f) : undefined),
+          (feature) =>
+            feature.geometry.length > 1 && (feature.tags.bridge !== undefined || feature.tags.man_made === "bridge"),
+          (feature) =>
+            crossings(stem, feature.geometry)[0] ??
+            (feature.tags.man_made === "bridge" ? this.nearest(feature) : undefined),
           recipe,
         );
       case "hydroPlant": {
         const found = this.locateFeature(
           "hydro power plant",
-          (f) =>
-            (f.tags.power === "plant" || f.tags.power === "generator") &&
-            /hydro|water/.test(f.tags["plant:source"] ?? f.tags["generator:source"] ?? ""),
-          (f) => this.nearest(f),
+          (feature) =>
+            (feature.tags.power === "plant" || feature.tags.power === "generator") &&
+            /hydro|water/.test(feature.tags["plant:source"] ?? feature.tags["generator:source"] ?? ""),
+          (feature) => this.nearest(feature),
           { near: recipe.near },
         );
         if (typeof found !== "string") {
@@ -340,16 +350,16 @@ class RiverContext {
 }
 
 const round = (x: number) => Math.round(x * 1e5) / 1e5;
-const roundPt = (p: Pt): Pt => ({ lat: round(p.lat), lng: round(p.lng) });
+const roundPt = (point: Pt): Pt => ({ lat: round(point.lat), lng: round(point.lng) });
 
 export type BuildResult = { stretches: DraftStretch[]; problems: string[] };
 
 export function buildStretches(input: BuildInput): BuildResult {
-  const border = input.osm.border.elements.map(geometryOf).filter((g) => g.length > 1);
+  const border = input.osm.border.elements.map(geometryOf).filter((points) => points.length > 1);
   const contexts = new Map<string, RiverContext>();
   const contextFor = (river: string) => {
     if (!contexts.has(river)) {
-      const config = input.rivers.find((r) => r.river === river);
+      const config = input.rivers.find((otherRiver) => otherRiver.river === river);
       const result = input.osm.rivers[river];
       if (!config || !result) {
         throw new Error(`no OSM data for the ${river}`);
@@ -414,7 +424,7 @@ export function buildStretches(input: BuildInput): BuildResult {
 
   const stretches: DraftStretch[] = [];
   for (const recipe of input.recipes) {
-    const row = input.annex.find((r) => r.id === recipe.id);
+    const row = input.annex.find((annexRow) => annexRow.id === recipe.id);
     if (!row) {
       throw new Error(`no Annex row ${recipe.id}`);
     }
@@ -437,18 +447,18 @@ export function buildStretches(input: BuildInput): BuildResult {
     const lo = Math.min(from.at.along, to.at.along);
     const hi = Math.max(from.at.along, to.at.along, lo + 1);
     const line = simplify(slice(ctx.stem, lo, hi), SIMPLIFY_M).map(roundPt);
-    const endOf = (text: { fr: string; en: string }, r: typeof from): StretchEnd => ({
+    const endOf = (text: { fr: string; en: string }, end: typeof from): StretchEnd => ({
       ...text,
-      point: roundPt(r.at.point),
-      status: r.status,
-      reason: r.reason,
-      ...(r.sameAs ? { sameAs: r.sameAs } : {}),
+      point: roundPt(end.at.point),
+      status: end.status,
+      reason: end.reason,
+      ...(end.sameAs ? { sameAs: end.sameAs } : {}),
     });
     stretches.push({
       ...row,
       from: endOf(row.from, from),
       to: endOf(row.to, to),
-      line: line.map((p) => [p.lng, p.lat]),
+      line: line.map((point) => [point.lng, point.lat]),
       lengthKm: Math.round((hi - lo) / 100) / 10,
     });
   }
@@ -457,7 +467,9 @@ export function buildStretches(input: BuildInput): BuildResult {
 
 /** The ends a reviewer must look at: needs review and not shared with another (reviewed there). */
 export function endsNeedingReview(stretches: readonly DraftStretch[]): string[] {
-  return stretches.flatMap((s) =>
-    (["from", "to"] as const).filter((e) => s[e].status === "needsReview" && !s[e].sameAs).map((e) => `${s.id}.${e}`),
+  return stretches.flatMap((stretch) =>
+    (["from", "to"] as const)
+      .filter((end) => stretch[end].status === "needsReview" && !stretch[end].sameAs)
+      .map((end) => `${stretch.id}.${end}`),
   );
 }

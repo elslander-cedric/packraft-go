@@ -57,7 +57,7 @@ export function OpeningView({
     }
     // Into the part of the map the top row, the sheet or the side panel leave free.
     const { top, right, bottom } = cover?.() ?? { top: 0, right: 0, bottom: 0 };
-    map.fitBounds(latLngBounds(trip.points.map((p) => [p.lat, p.lng])), {
+    map.fitBounds(latLngBounds(trip.points.map((point) => [point.lat, point.lng])), {
       paddingTopLeft: [24, top + 24],
       paddingBottomRight: [right + 24, bottom + 24],
     });
@@ -110,7 +110,7 @@ export function Focus({ focus }: { focus: MapFocus }) {
         }
         const below = map.getSize().y * focus.coveredBelow;
         const right = map.getSize().x * (focus.coveredRight ?? 0);
-        map.fitBounds(latLngBounds(focus.area.map((p) => [p.lat, p.lng])), {
+        map.fitBounds(latLngBounds(focus.area.map((point) => [point.lat, point.lng])), {
           paddingTopLeft: [FOCUS_PADDING, FOCUS_PADDING],
           paddingBottomRight: [right + FOCUS_PADDING, below + FOCUS_PADDING],
         });

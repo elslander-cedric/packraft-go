@@ -72,7 +72,7 @@ for (const dataset of datasets) {
   writeFileSync(file, serialiseDataset(dataset));
   console.log(`Wrote ${path.relative(ROOT, file)}: ${dataset.records.length} records`);
 }
-const locks = await buildLockData(overpass, datasets.find((d) => d.id === "regions")!.records, today);
+const locks = await buildLockData(overpass, datasets.find((dataset) => dataset.id === "regions")!.records, today);
 const locksFile = path.join(OUT, "locks.json");
 writeFileSync(locksFile, serialiseLocks(locks));
 console.log(`Wrote ${path.relative(ROOT, locksFile)}: ${locks.locks.length} locks`);

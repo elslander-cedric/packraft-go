@@ -6,11 +6,11 @@ import type { OfficialAire } from "./officialAire";
 import { accessPointsByRoute, mergeInRouteOrder, officialAiresOnRoute } from "./onRoute";
 import type { LatLng, LegMode, Trip } from "./trip";
 
-const T = "2026-10-28T08:00:00.000Z";
+const TIMESTAMP = "2026-10-28T08:00:00.000Z";
 // Near Hotton. 0.001 degrees of latitude is about 111 m; 0.001 of longitude about 71 m here.
 const start: LatLng = { lat: 50.27, lng: 5.44 };
-const north = (p: LatLng, degrees: number): LatLng => ({ lat: p.lat + degrees, lng: p.lng });
-const east = (p: LatLng, degrees: number): LatLng => ({ lat: p.lat, lng: p.lng + degrees });
+const north = (point: LatLng, degrees: number): LatLng => ({ lat: point.lat + degrees, lng: point.lng });
+const east = (point: LatLng, degrees: number): LatLng => ({ lat: point.lat, lng: point.lng + degrees });
 
 /** A trip due north from `start`: 0.02 degrees (about 2.2 km) per leg. */
 const trip = (...modes: LegMode[]): Trip => ({
@@ -20,7 +20,7 @@ const trip = (...modes: LegMode[]): Trip => ({
 });
 
 const points = (...at: [id: string, at: LatLng][]): AccessPoints =>
-  at.reduce<AccessPoints>((all, [id, position]) => addAccessPoint(all, { id, at: position, now: T }), []);
+  at.reduce<AccessPoints>((all, [id, position]) => addAccessPoint(all, { id, at: position, now: TIMESTAMP }), []);
 
 const ids = (list: readonly { point: { id: string } }[]) => list.map((entry) => entry.point.id);
 
@@ -57,7 +57,10 @@ describe("accessPointsByRoute", () => {
       legs: [
         {
           mode: "paddle",
-          route: { status: "routed", geometry: [start, bend, north(start, 0.02)].map((p) => ({ ...p, elevation: 0 })) },
+          route: {
+            status: "routed",
+            geometry: [start, bend, north(start, 0.02)].map((point) => ({ ...point, elevation: 0 })),
+          },
         },
       ],
     };
@@ -70,7 +73,7 @@ describe("accessPointsByRoute", () => {
   it("marks the access point the trip's put-in or take-out is at", () => {
     const all = points(["put", north(start, 0.02)], ["take", north(start, 0.04)], ["between", north(start, 0.03)]);
     const split = accessPointsByRoute(trip("hike", "paddle"), all, null);
-    expect(split.onRoute.map((o) => [o.point.id, o.role])).toEqual([
+    expect(split.onRoute.map((onRoute) => [onRoute.point.id, onRoute.role])).toEqual([
       ["put", "put-in"],
       ["between", null],
       ["take", "take-out"],
@@ -89,7 +92,7 @@ describe("accessPointsByRoute", () => {
     const all = points(["far", east(start, -0.05)], ["near", east(start, 0.01)], ["middle", east(start, 0.03)]);
     const split = accessPointsByRoute(trip("hike"), all, null);
     expect(ids(split.notOnRoute)).toEqual(["near", "middle", "far"]);
-    expect(split.notOnRoute.every((o) => o.fromYouKm === null)).toBe(true);
+    expect(split.notOnRoute.every((notOnRoute) => notOnRoute.fromYouKm === null)).toBe(true);
   });
 
   it("without a route, has every point in the rest: nearest to you, or in the order added", () => {
@@ -137,7 +140,9 @@ describe("official aires on the route (#208)", () => {
       aire("between", north(start, 0.03)),
       aire("take", north(start, 0.04)),
     ];
-    expect(officialAiresOnRoute(trip("hike", "paddle"), aires).map((o) => [o.aire.id, o.role])).toEqual([
+    expect(
+      officialAiresOnRoute(trip("hike", "paddle"), aires).map((onRouteAire) => [onRouteAire.aire.id, onRouteAire.role]),
+    ).toEqual([
       ["put", "put-in"],
       ["between", null],
       ["take", "take-out"],
@@ -151,8 +156,8 @@ describe("official aires on the route (#208)", () => {
   it("merges into your on-route points in route order, your point first at the same spot", () => {
     const all = points(["yours-1", north(start, 0.01)], ["yours-2", north(start, 0.03)]);
     const aires = [aire("aire-2", north(start, 0.03)), aire("aire-1", north(start, 0.02))];
-    const t = trip("paddle", "paddle");
-    const merged = mergeInRouteOrder(accessPointsByRoute(t, all, null).onRoute, officialAiresOnRoute(t, aires));
+    const aTrip = trip("paddle", "paddle");
+    const merged = mergeInRouteOrder(accessPointsByRoute(aTrip, all, null).onRoute, officialAiresOnRoute(aTrip, aires));
     expect(merged.map((stop) => ("aire" in stop ? stop.aire.id : stop.point.id))).toEqual([
       "yours-1",
       "aire-1",

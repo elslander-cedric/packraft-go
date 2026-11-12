@@ -181,7 +181,7 @@ const followAccessPoints = (trip: Trip, offers: readonly SnapOffer[], accessPoin
       return [offer];
     }
     const { id } = offer.target.accessPoint;
-    const accessPoint = accessPoints.find((a) => a.id === id);
+    const accessPoint = accessPoints.find((accessPoint) => accessPoint.id === id);
     const at = trip.points[offer.change.point];
     if (!accessPoint || !at) {
       return [];
@@ -307,13 +307,13 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
             trip: acceptSnap(trip, action.offer),
             selectedPoint: null,
             selectedLeg: null,
-            offers: session.offers.filter((o) => o !== action.offer),
+            offers: session.offers.filter((offer) => offer !== action.offer),
             fileError: null,
           }
         : session;
     case "declineOffer":
       return session.offers.includes(action.offer)
-        ? { ...session, offers: session.offers.filter((o) => o !== action.offer), fileError: null }
+        ? { ...session, offers: session.offers.filter((offer) => offer !== action.offer), fileError: null }
         : session;
     case "newTrip":
       return replace(session, setStartDate(emptyTrip(), action.startDate), "newTrip");

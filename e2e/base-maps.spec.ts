@@ -35,8 +35,11 @@ async function openMap(page: Page) {
   return network;
 }
 
-const overlaps = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
-  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+const overlaps = (boxA: { x: number; y: number; width: number; height: number }, boxB: typeof boxA) =>
+  boxA.x < boxB.x + boxB.width &&
+  boxB.x < boxA.x + boxA.width &&
+  boxA.y < boxB.y + boxB.height &&
+  boxB.y < boxA.y + boxA.height;
 
 const box = async (locator: Locator) => (await locator.boundingBox())!;
 

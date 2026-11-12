@@ -34,7 +34,7 @@ const requestOf = (trip: Trip, i: number): Request => ({
   points: [trip.points[i], trip.points[i + 1]],
 });
 
-const sameLatLng = (a: LatLng, b: LatLng) => a.lat === b.lat && a.lng === b.lng;
+const sameLatLng = (pointA: LatLng, pointB: LatLng) => pointA.lat === pointB.lat && pointA.lng === pointB.lng;
 
 const isFor = (trip: Trip, i: number, request: Request) =>
   trip.legs[i].mode === request.mode &&

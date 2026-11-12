@@ -144,7 +144,7 @@ export function splitAtOfficialBoundaries(
   mapping: OfficialMapping = OFFICIAL_MAPPING,
 ): DraftStretch[] {
   return stretches.flatMap((stretch) => {
-    const split = mapping.splits.find((s) => s.id === stretch.id);
+    const split = mapping.splits.find((split) => split.id === stretch.id);
     const within = {
       ...stretch,
       from: sharedEnd(stretch.from, mapping.splits),
@@ -205,13 +205,13 @@ const MARGIN_DEG = 0.003;
 export type OfficialLines = Readonly<Record<string, readonly (readonly Pt[])[]>>;
 export type OfficialRun = { official: string | null; fromKm: number; toKm: number };
 
-const toSegment = (p: Pt, a: Pt, b: Pt) => {
-  const k = Math.cos((p.lat * Math.PI) / 180);
-  const [ax, ay] = [(a.lng - p.lng) * k, a.lat - p.lat];
-  const [dx, dy] = [(b.lng - a.lng) * k, b.lat - a.lat];
+const toSegment = (point: Pt, pointA: Pt, pointB: Pt) => {
+  const metresPerDegreeLng = Math.cos((point.lat * Math.PI) / 180);
+  const [ax, ay] = [(pointA.lng - point.lng) * metresPerDegreeLng, pointA.lat - point.lat];
+  const [dx, dy] = [(pointB.lng - pointA.lng) * metresPerDegreeLng, pointB.lat - pointA.lat];
   const len2 = dx * dx + dy * dy;
-  const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2));
-  return Math.hypot(ax + t * dx, ay + t * dy) * M_PER_DEG;
+  const fraction = len2 === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2));
+  return Math.hypot(ax + fraction * dx, ay + fraction * dy) * M_PER_DEG;
 };
 
 type BoxedPart = { id: string; points: readonly Pt[]; south: number; north: number; west: number; east: number };
@@ -219,8 +219,8 @@ type BoxedPart = { id: string; points: readonly Pt[]; south: number; north: numb
 const boxed = (lines: OfficialLines): BoxedPart[] =>
   Object.entries(lines).flatMap(([id, parts]) =>
     parts.map((points) => {
-      const lats = points.map((p) => p.lat);
-      const lngs = points.map((p) => p.lng);
+      const lats = points.map((point) => point.lat);
+      const lngs = points.map((point) => point.lng);
       return {
         id,
         points,
@@ -232,16 +232,16 @@ const boxed = (lines: OfficialLines): BoxedPart[] =>
     }),
   );
 
-function nearestOfficial(p: Pt, parts: readonly BoxedPart[]): string | null {
+function nearestOfficial(point: Pt, parts: readonly BoxedPart[]): string | null {
   let best: string | null = null;
   let bestM: number = NEAR_OFFICIAL_LINE_M;
   for (const { id, points, south, north, west, east } of parts) {
     // Skip the far parts cheaply: the rivers here run to thousands of segments.
-    if (p.lat < south || p.lat > north || p.lng < west || p.lng > east) {
+    if (point.lat < south || point.lat > north || point.lng < west || point.lng > east) {
       continue;
     }
     for (let i = 1; i < points.length; i++) {
-      const metres = toSegment(p, points[i - 1]!, points[i]!);
+      const metres = toSegment(point, points[i - 1]!, points[i]!);
       if (metres < bestM) {
         [best, bestM] = [id, metres];
       }
@@ -256,13 +256,19 @@ export function officialRuns(line: readonly Pt[], lines: OfficialLines): Officia
   const runs: OfficialRun[] = [];
   let along = 0;
   for (let i = 1; i < line.length; i++) {
-    const [a, b] = [line[i - 1]!, line[i]!];
-    const span = distanceM(a, b);
+    const [pointA, pointB] = [line[i - 1]!, line[i]!];
+    const span = distanceM(pointA, pointB);
     const steps = Math.max(1, Math.ceil(span / SAMPLE_M));
     for (let step = 0; step < steps; step++) {
-      const t = step / steps;
-      const official = nearestOfficial({ lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) }, parts);
-      const metres = along + t * span;
+      const fraction = step / steps;
+      const official = nearestOfficial(
+        {
+          lat: pointA.lat + fraction * (pointB.lat - pointA.lat),
+          lng: pointA.lng + fraction * (pointB.lng - pointA.lng),
+        },
+        parts,
+      );
+      const metres = along + fraction * span;
       const last = runs.at(-1);
       if (last?.official === official) {
         continue;

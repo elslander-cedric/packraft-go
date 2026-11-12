@@ -13,18 +13,18 @@ const zoom = (page: Page) => mapRegion(page).evaluate(tileZoom);
 const offset = (page: Page) =>
   mapRegion(page)
     .locator(".leaflet-map-pane")
-    .evaluate((e) => new DOMMatrix(getComputedStyle(e).transform).m41);
+    .evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).m41);
 const touchAction = (page: Page) =>
   page
     .locator(".leaflet-container")
     .first()
-    .evaluate((e) => getComputedStyle(e).touchAction);
+    .evaluate((element) => getComputedStyle(element).touchAction);
 
 async function open(page: Page) {
   await serveOffline(page, { brouter: () => ({ status: 200, body: brouterFixture("hiking-success.geojson") }) });
   await openPlanner(page);
-  const b = await freeMapBox(page);
-  return { cx: b.x + b.width / 2, cy: b.y + b.height / 2 };
+  const boxB = await freeMapBox(page);
+  return { cx: boxB.x + boxB.width / 2, cy: boxB.y + boxB.height / 2 };
 }
 
 test.describe("touch tablet", () => {
@@ -44,8 +44,8 @@ test.describe("touch tablet", () => {
     const lowest = () =>
       mapRegion(page).evaluate((el) =>
         Math.min(
-          ...[...el.querySelectorAll<HTMLImageElement>("img.leaflet-tile-loaded")].map((t) =>
-            Number(t.src.match(/\/(\d+)\/\d+\/\d+/)?.[1]),
+          ...[...el.querySelectorAll<HTMLImageElement>("img.leaflet-tile-loaded")].map((htmlImageElement) =>
+            Number(htmlImageElement.src.match(/\/(\d+)\/\d+\/\d+/)?.[1]),
           ),
         ),
       );
@@ -66,13 +66,13 @@ test.describe("touch tablet", () => {
     const { cx, cy } = await open(page);
     await page.mouse.click(cx - 100, cy);
     await page.mouse.click(cx + 40, cy);
-    const p = (await points(page).nth(1).boundingBox())!;
-    const t = await touch(page);
-    await t.drag({ x: p.x + p.width / 2, y: p.y + p.height / 2 }, { x: cx + 60, y: cy + 120 });
+    const box = (await points(page).nth(1).boundingBox())!;
+    const aTouch = await touch(page);
+    await aTouch.drag({ x: box.x + box.width / 2, y: box.y + box.height / 2 }, { x: cx + 60, y: cy + 120 });
     await expect(points(page)).toHaveCount(2);
     expect(await touchAction(page)).toBe("none");
     const before = await offset(page);
-    await t.drag({ x: cx - 200, y: cy - 300 }, { x: cx - 100, y: cy - 300 });
+    await aTouch.drag({ x: cx - 200, y: cy - 300 }, { x: cx - 100, y: cy - 300 });
     await expect.poll(() => offset(page)).toBeGreaterThan(before + 50);
   });
 });
@@ -82,15 +82,15 @@ test.describe("desktop mouse", () => {
   test("mouse drag moves a point; wheel zoom works", async ({ page }) => {
     const { cx, cy } = await open(page);
     await page.mouse.click(cx, cy);
-    const p = (await points(page).first().boundingBox())!;
-    const sx = p.x + p.width / 2;
-    const sy = p.y + p.height / 2;
+    const box = (await points(page).first().boundingBox())!;
+    const sx = box.x + box.width / 2;
+    const sy = box.y + box.height / 2;
     await page.mouse.move(sx, sy);
     await page.mouse.down();
     await page.mouse.move(sx + 80, sy + 60, { steps: 8 });
     await page.mouse.up();
-    const q = (await points(page).first().boundingBox())!;
-    expect(Math.abs(q.x + q.width / 2 - (sx + 80))).toBeLessThan(4);
+    const aBox = (await points(page).first().boundingBox())!;
+    expect(Math.abs(aBox.x + aBox.width / 2 - (sx + 80))).toBeLessThan(4);
     const z0 = await zoom(page);
     await page.mouse.move(cx + 200, cy + 200);
     await page.mouse.wheel(0, -600);
@@ -105,9 +105,9 @@ test.describe("phone layout", () => {
     await page.goto("/");
     const map = page.locator(".leaflet-container").first();
     await expect(map.locator("img.leaflet-tile-loaded").first()).toBeVisible();
-    const b = (await map.boundingBox())!;
+    const boxB = (await map.boundingBox())!;
     const z0 = await map.evaluate(tileZoom);
-    await (await touch(page)).pinch({ x: b.x + b.width / 2, y: b.y + b.height / 2 }, 4);
+    await (await touch(page)).pinch({ x: boxB.x + boxB.width / 2, y: boxB.y + boxB.height / 2 }, 4);
     await expect.poll(() => map.evaluate(tileZoom)).toBeGreaterThan(z0);
   });
 });

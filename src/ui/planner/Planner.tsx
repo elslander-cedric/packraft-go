@@ -101,7 +101,7 @@ export default function Planner({ router }: { router?: Router }) {
   // (the draft), which Save stores.
   const [editedId, setEditedId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState(false);
-  const editedPoint = editingDraft ? access.draft : (access.points.find((p) => p.id === editedId) ?? null);
+  const editedPoint = editingDraft ? access.draft : (access.points.find((point) => point.id === editedId) ?? null);
   const marking = useMarkAccessPoint(access, position, showPosition, () => setEditingDraft(true));
 
   const onMapTap = (at: LatLng) => {
@@ -144,7 +144,7 @@ export default function Planner({ router }: { router?: Router }) {
   };
   // A row tap selects it and shows it on the map.
   const showAccessPoint = (id: string) => {
-    const point = access.points.find((p) => p.id === id);
+    const point = access.points.find((point) => point.id === id);
     if (!point) {
       return;
     }

@@ -54,15 +54,16 @@ async function openMap(page: Page) {
 const linesOfText = (scope: Locator, text: string) =>
   scope.evaluate((root, wanted) => {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-      const at = n.textContent!.indexOf(wanted);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const at = node.textContent!.indexOf(wanted);
       if (at < 0) {
         continue;
       }
       const range = document.createRange();
-      range.setStart(n, at);
-      range.setEnd(n, at + wanted.length);
-      return new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top))).size;
+      range.setStart(node, at);
+      range.setEnd(node, at + wanted.length);
+      return new Set([...range.getClientRects()].filter((rect) => rect.width > 0).map((rect) => Math.round(rect.top)))
+        .size;
     }
     return -1; // not found
   }, text);
@@ -75,34 +76,34 @@ const textLineCount = (scope: Locator) =>
   scope.evaluate((root, hidden) => {
     const tops: number[] = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-      if (!n.textContent!.trim()) {
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent!.trim()) {
         continue;
       }
       // Updated: a paddle leg's access status and warnings sit in their own block below
       // the figures and are not part of the two-line rule for the figures (#58).
-      if (n.parentElement?.closest(".leg-access")) {
+      if (node.parentElement?.closest(".leg-access")) {
         continue;
       }
-      if (n.parentElement?.closest(hidden)) {
+      if (node.parentElement?.closest(hidden)) {
         continue;
       }
       const range = document.createRange();
-      range.selectNodeContents(n);
-      for (const r of range.getClientRects()) {
-        if (r.width > 0) {
-          tops.push(r.top);
+      range.selectNodeContents(node);
+      for (const clientRect of range.getClientRects()) {
+        if (clientRect.width > 0) {
+          tops.push(clientRect.top);
         }
       }
     }
-    tops.sort((a, b) => a - b);
+    tops.sort((left, right) => left - right);
     let lines = 0;
     let last = -Infinity;
-    for (const t of tops) {
-      if (t - last > 6) {
+    for (const top of tops) {
+      if (top - last > 6) {
         lines++;
       }
-      last = t;
+      last = top;
     }
     return lines;
   }, readOutOnly);
@@ -119,25 +120,25 @@ async function expectFiguresUnbroken(row: Locator, figures: string[]) {
 /** The visible part of `el` after clipping by every scrolling/clipping ancestor and the viewport. */
 async function fullyUnclipped(el: Locator) {
   return el.evaluate((node) => {
-    const r = node.getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
     let clip = { top: 0, left: 0, right: window.innerWidth, bottom: window.innerHeight };
-    for (let a = node.parentElement; a; a = a.parentElement) {
-      const s = getComputedStyle(a);
-      if (s.overflowX !== "visible" || s.overflowY !== "visible") {
-        const b = a.getBoundingClientRect();
+    for (let elementA = node.parentElement; elementA; elementA = elementA.parentElement) {
+      const cssStyleDeclaration = getComputedStyle(elementA);
+      if (cssStyleDeclaration.overflowX !== "visible" || cssStyleDeclaration.overflowY !== "visible") {
+        const rectB = elementA.getBoundingClientRect();
         clip = {
-          top: Math.max(clip.top, b.top),
-          left: Math.max(clip.left, b.left),
-          right: Math.min(clip.right, b.right),
-          bottom: Math.min(clip.bottom, b.bottom),
+          top: Math.max(clip.top, rectB.top),
+          left: Math.max(clip.left, rectB.left),
+          right: Math.min(clip.right, rectB.right),
+          bottom: Math.min(clip.bottom, rectB.bottom),
         };
       }
     }
     return (
-      r.top >= clip.top - 0.5 &&
-      r.left >= clip.left - 0.5 &&
-      r.right <= clip.right + 0.5 &&
-      r.bottom <= clip.bottom + 0.5
+      rect.top >= clip.top - 0.5 &&
+      rect.left >= clip.left - 0.5 &&
+      rect.right <= clip.right + 0.5 &&
+      rect.bottom <= clip.bottom + 0.5
     );
   });
 }
@@ -165,7 +166,7 @@ async function expectRetryUsable(page: Page, row: Locator, net: { brouter: URL[]
 test.describe("leg rows at 1280×800", () => {
   test("routed hike and paddle rows: every figure on one line, each row at most two lines", async ({ page }) => {
     await serveOffline(page, {
-      brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL),
+      brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL),
     });
     const { click } = await openMap(page);
     await click(-150);
@@ -191,7 +192,7 @@ test.describe("leg rows at 1280×800", () => {
 
   test("a paddle leg with a rise keeps its upstream hint on one line", async ({ page }) => {
     const RISE = riverEndingAbove(5);
-    await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RISE : TRAIL) });
+    await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? RISE : TRAIL) });
     const { click } = await openMap(page);
     await click(-100);
     await click(100, 0, "paddle");
@@ -270,7 +271,7 @@ test.describe("Retry on a failed leg at 1280×800", () => {
 
 test.describe("hike and paddle rows, totals at 1280×800", () => {
   test("hike and paddle rows look different and both are readable", async ({ page }) => {
-    await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
+    await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
     const { click } = await openMap(page);
     await click(-150);
     await click(0);
@@ -297,7 +298,7 @@ test.describe("hike and paddle rows, totals at 1280×800", () => {
   test("day and trip totals: each figure on one line, no sideways overflow, apart from the leg rows", async ({
     page,
   }) => {
-    await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
+    await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
     const { click, centre } = await openMap(page);
     await click(-150);
     await click(0);

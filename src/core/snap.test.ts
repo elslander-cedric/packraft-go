@@ -8,15 +8,15 @@ import { undoLastEdit } from "./edits";
 import type { OfficialAire } from "./officialAire";
 import { applyEdit, type LatLng, type Trip } from "./trip";
 
-const T = "2026-10-14T08:00:00.000Z";
+const TIMESTAMP = "2026-10-14T08:00:00.000Z";
 // Durbuy is in Wallonia; Ghent is in Flanders. 0.001 degrees of latitude is about 111 m.
 const durbuy: LatLng = { lat: 50.3527, lng: 5.4563 };
-const north = (p: LatLng, degrees: number): LatLng => ({ lat: p.lat + degrees, lng: p.lng });
+const north = (point: LatLng, degrees: number): LatLng => ({ lat: point.lat + degrees, lng: point.lng });
 const ghent: LatLng = { lat: 51.05, lng: 3.72 };
 
-const trip = (a: LatLng, mode: "hike" | "paddle" = "hike"): Trip => ({
+const trip = (pointA: LatLng, mode: "hike" | "paddle" = "hike"): Trip => ({
   name: "",
-  points: [a, north(a, 0.01)],
+  points: [pointA, north(pointA, 0.01)],
   legs: [{ mode }],
 });
 const point = (
@@ -24,7 +24,7 @@ const point = (
   at: LatLng,
   kind: "official-aire" | "slipway",
   use: "put-in" | "take-out" | "both" = "both",
-): AccessPoints => updateAccessPoint(addAccessPoint([], { id, at, now: T }), id, { kind, use }, T);
+): AccessPoints => updateAccessPoint(addAccessPoint([], { id, at, now: TIMESTAMP }), id, { kind, use }, TIMESTAMP);
 
 /** A faked official aire: built-in positions are [lng, lat], unlike your access points. */
 const officialAire = (id: string, at: LatLng, use: OfficialAire["use"] = "both"): OfficialAire => ({
@@ -123,14 +123,18 @@ describe("snap offers after a mode change", () => {
       { kind: "put-in", point: 0 },
       { kind: "take-out", point: 1 },
     ]);
-    expect(snapOffers(before, after, points, []).map((o) => o.change)).toEqual([{ kind: "put-in", point: 0 }]);
+    expect(snapOffers(before, after, points, []).map((snapOffer) => snapOffer.change)).toEqual([
+      { kind: "put-in", point: 0 },
+    ]);
   });
 
   it("adding a paddle leg after a hike leg offers to snap its put-in", () => {
     const before = trip(durbuy);
     const after = applyEdit(before, { type: "addPoint", at: north(durbuy, 0.02), mode: "paddle" });
     const near = point("b", north(durbuy, 0.011), "slipway");
-    expect(snapOffers(before, after, near, []).map((o) => o.change)).toEqual([{ kind: "put-in", point: 1 }]);
+    expect(snapOffers(before, after, near, []).map((snapOffer) => snapOffer.change)).toEqual([
+      { kind: "put-in", point: 1 },
+    ]);
   });
 
   it("an edit that shifts the points offers nothing", () => {
@@ -174,19 +178,26 @@ describe("accepting a snap onto an official aire", () => {
 
   it("clears the put-in's warning", () => {
     const aires = [officialAire("a", aire)];
-    expect(aireWarnings(paddling, builtInAccessRules, [], aires).map((w) => w.kind)).toEqual(["take-out"]);
-    expect(aireWarnings(paddling, builtInAccessRules, [], []).map((w) => w.kind)).toEqual(["put-in", "take-out"]);
+    expect(aireWarnings(paddling, builtInAccessRules, [], aires).map((aireWarning) => aireWarning.kind)).toEqual([
+      "take-out",
+    ]);
+    expect(aireWarnings(paddling, builtInAccessRules, [], []).map((aireWarning) => aireWarning.kind)).toEqual([
+      "put-in",
+      "take-out",
+    ]);
     const snapped = acceptSnap(paddling, offer);
-    expect(aireWarnings(snapped, builtInAccessRules, [], aires).map((w) => w.kind)).toEqual(["take-out"]);
+    expect(aireWarnings(snapped, builtInAccessRules, [], aires).map((aireWarning) => aireWarning.kind)).toEqual([
+      "take-out",
+    ]);
   });
 });
 
 describe("the Walloon aire warning", () => {
-  const paddling = (a: LatLng): Trip => trip(a, "paddle");
+  const paddling = (pointA: LatLng): Trip => trip(pointA, "paddle");
 
   it("warns on a Walloon put-in and take-out without an official aire nearby", () => {
     const warnings = aireWarnings(paddling(durbuy), builtInAccessRules, [], []);
-    expect(warnings.map((w) => [w.kind, w.point, w.leg, w.day])).toEqual([
+    expect(warnings.map((warning) => [warning.kind, warning.point, warning.leg, warning.day])).toEqual([
       ["put-in", 0, 0, 0],
       ["take-out", 1, 0, 0],
     ]);
@@ -194,19 +205,25 @@ describe("the Walloon aire warning", () => {
 
   it("an official aire within 200 m removes that warning; a slipway does not", () => {
     const aire = point("aire", north(durbuy, 0.001), "official-aire");
-    expect(aireWarnings(paddling(durbuy), builtInAccessRules, aire, []).map((w) => w.kind)).toEqual(["take-out"]);
+    expect(aireWarnings(paddling(durbuy), builtInAccessRules, aire, []).map((aireWarning) => aireWarning.kind)).toEqual(
+      ["take-out"],
+    );
     const slipway = point("slip", north(durbuy, 0.001), "slipway");
     expect(aireWarnings(paddling(durbuy), builtInAccessRules, slipway, [])).toHaveLength(2);
   });
 
   it("an official aire further than 200 m does not count", () => {
     const aire = point("aire", north(durbuy, 0.003), "official-aire");
-    expect(aireWarnings(paddling(durbuy), builtInAccessRules, aire, []).map((w) => w.kind)).toContain("put-in");
+    expect(
+      aireWarnings(paddling(durbuy), builtInAccessRules, aire, []).map((aireWarning) => aireWarning.kind),
+    ).toContain("put-in");
   });
 
   describe("with built-in official aires", () => {
     const kindsWarned = (use: OfficialAire["use"], at: LatLng) =>
-      aireWarnings(paddling(durbuy), builtInAccessRules, [], [officialAire("a", at, use)]).map((w) => w.kind);
+      aireWarnings(paddling(durbuy), builtInAccessRules, [], [officialAire("a", at, use)]).map(
+        (aireWarning) => aireWarning.kind,
+      );
     const nearPutIn = north(durbuy, 0.001);
     const nearTakeOut = north(durbuy, 0.009);
 
@@ -232,9 +249,9 @@ describe("the Walloon aire warning", () => {
 
   it("your own official-aire mark counts whatever its use", () => {
     const takeOutOnly = point("mark", north(durbuy, 0.001), "official-aire", "take-out");
-    expect(aireWarnings(paddling(durbuy), builtInAccessRules, takeOutOnly, []).map((w) => w.kind)).toEqual([
-      "take-out",
-    ]);
+    expect(
+      aireWarnings(paddling(durbuy), builtInAccessRules, takeOutOnly, []).map((aireWarning) => aireWarning.kind),
+    ).toEqual(["take-out"]);
   });
 
   it("no warning outside Wallonia, and none for a hike", () => {

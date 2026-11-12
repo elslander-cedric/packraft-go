@@ -26,15 +26,15 @@ describe("routing actions", () => {
       },
     };
     const actions: RoutingAction[] = [];
-    const auto = createAutoRouter(router, (a) => actions.push(a));
+    const auto = createAutoRouter(router, (routingActionA) => actions.push(routingActionA));
     const trip = through(P1, P2);
     await auto.sync(trip);
-    expect(actions.map((a) => a.type)).toEqual(["routeRequested", "routeArrived"]);
+    expect(actions.map((action) => action.type)).toEqual(["routeRequested", "routeArrived"]);
     expect(JSON.parse(JSON.stringify(actions))).toEqual(actions);
     actions.length = 0;
     await auto.sync(trip);
     expect(calls).toBe(1);
-    expect(actions.map((a) => a.type)).toEqual(["routeArrived"]);
+    expect(actions.map((action) => action.type)).toEqual(["routeArrived"]);
   });
 
   it("pure functions do not mutate, are idempotent, and ignore stale requests", () => {

@@ -19,7 +19,7 @@ export function iconSvg(icon: IconDefinition, at?: IconPlacement): string {
   const placement = at ? ` x="${at.x}" y="${at.y}" width="${at.width}" height="${at.height}"` : "";
   return (
     `<svg aria-hidden="true" focusable="false" data-icon="${icon.iconName}"${placement} viewBox="${viewBox}" fill="currentColor">` +
-    paths.map((d) => `<path d="${d}"/>`).join("") +
+    paths.map((path) => `<path d="${path}"/>`).join("") +
     "</svg>"
   );
 }

@@ -207,5 +207,5 @@ function readCamps(value: unknown, pointCount: number): number[] {
   if (new Set(camps).size !== camps.length) {
     throw invalid;
   }
-  return camps.sort((a, b) => a - b);
+  return camps.sort((left, right) => left - right);
 }

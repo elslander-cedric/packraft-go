@@ -175,7 +175,9 @@ test("the sheet settles at peek, half or 90% by drag distance, never closes, and
   await expect(sheet(page)).toBeVisible();
   await expect(tab(page, strings.planner.tabs.sections)).toBeVisible();
   // And it stays there: the drawer doesn't bounce back to 90% once its animations end (#126).
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))),
+  );
   await page.waitForTimeout(300);
   expect(await sheetHeight(page)).toBeLessThan(peek + 4);
 });

@@ -40,7 +40,7 @@ async function openMap(page: Page) {
 
 function gate() {
   let open!: (reply: BRouterReply) => void;
-  const reply = new Promise<BRouterReply>((r) => (open = r));
+  const reply = new Promise<BRouterReply>((resolve) => (open = resolve));
   return { reply, open };
 }
 
@@ -48,8 +48,8 @@ test.beforeEach(({ page }) => showAllLegs(page));
 
 test("a snapped hike leg shows pending, then the trail with distance, climb and descent", async ({ page }) => {
   const live = watchLiveTraffic(page);
-  const g = gate();
-  const net = await serveOffline(page, { brouter: () => g.reply });
+  const routeGate = gate();
+  const net = await serveOffline(page, { brouter: () => routeGate.reply });
   const click = await openMap(page);
 
   await click(-120, 40);
@@ -61,7 +61,7 @@ test("a snapped hike leg shows pending, then the trail with distance, climb and 
   await expect(legLines(page)).toHaveClass(/pending/);
   await expect(row).not.toContainText(strings.climbLabel);
 
-  g.open(SNAPPED);
+  routeGate.open(SNAPPED);
 
   await expect(row.getByRole("status")).toHaveCount(0);
   await expect(row).toContainText(/3\.2 km/);
@@ -91,7 +91,7 @@ test("routed legs are not requested again as more points are added", async ({ pa
   // Give any stray re-request a chance to show up.
   await page.waitForTimeout(500);
   expect(net.brouter).toHaveLength(3);
-  expect(new Set(net.brouter.map((u) => u.searchParams.get("lonlats"))).size).toBe(3);
+  expect(new Set(net.brouter.map((url) => url.searchParams.get("lonlats"))).size).toBe(3);
 });
 
 test("a failed leg stays dashed and straight with a message; retry while still down fails again; retry when up snaps it", async ({
@@ -128,8 +128,8 @@ test("a failed leg stays dashed and straight with a message; retry while still d
 
 test("double-clicking retry sends only one request", async ({ page }) => {
   const replies: BRouterReply[] = [DOWN];
-  const g = gate();
-  const net = await serveOffline(page, { brouter: () => replies.shift() ?? g.reply });
+  const routeGate = gate();
+  const net = await serveOffline(page, { brouter: () => replies.shift() ?? routeGate.reply });
   const click = await openMap(page);
 
   await click(-100, 0);
@@ -140,13 +140,13 @@ test("double-clicking retry sends only one request", async ({ page }) => {
   await expect(rows(page).first().getByRole("status")).toBeVisible();
   await page.waitForTimeout(300);
   expect(net.brouter).toHaveLength(2);
-  g.open(SNAPPED);
+  routeGate.open(SNAPPED);
   await expect(legLines(page)).toHaveClass(/routed/);
 });
 
 test("one failing leg does not disturb its routed neighbours", async ({ page }) => {
-  let n = 0;
-  await serveOffline(page, { brouter: () => (++n === 2 ? NO_ROUTE : SNAPPED) });
+  let number = 0;
+  await serveOffline(page, { brouter: () => (++number === 2 ? NO_ROUTE : SNAPPED) });
   const click = await openMap(page);
 
   await click(-150, 0);

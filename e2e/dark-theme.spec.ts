@@ -23,12 +23,12 @@ const style = (page: Page, selector: string, property: string) =>
   page
     .locator(selector)
     .first()
-    .evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
+    .evaluate((el, property) => getComputedStyle(el).getPropertyValue(property), property);
 
 // Rough brightness of a computed rgb() colour, 0 (black) to 1 (white).
 const brightness = (rgb: string) => {
-  const [r, g, b] = rgb.match(/\d+/g)!.map(Number);
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  const [red, green, blue] = rgb.match(/\d+/g)!.map(Number);
+  return (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
 };
 
 test.beforeEach(({ page }) => showAllLegs(page));

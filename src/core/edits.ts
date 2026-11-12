@@ -47,7 +47,7 @@ export function toggleCamp(trip: Trip, index: number): Trip {
   const camps = trip.camps ?? [];
   const toggled = camps.includes(index)
     ? camps.filter((camp) => camp !== index)
-    : [...camps, index].sort((a, b) => a - b);
+    : [...camps, index].sort((left, right) => left - right);
   return { ...trip, camps: toggled };
 }
 

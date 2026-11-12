@@ -4,7 +4,9 @@ import type { AccessDataset, LockDataset } from "../dataset";
 export function serialiseLocks(dataset: LockDataset): string {
   const { locks, ...rest } = dataset;
   const head = JSON.stringify({ ...rest, locks: "@@locks@@" }, null, 2);
-  return head.replace('"@@locks@@"', `[\n${locks.map((l) => `    ${JSON.stringify(l)}`).join(",\n")}\n  ]`) + "\n";
+  return (
+    head.replace('"@@locks@@"', `[\n${locks.map((lock) => `    ${JSON.stringify(lock)}`).join(",\n")}\n  ]`) + "\n"
+  );
 }
 
 /** An SPW snapshot as JSON with one item of `list` per line, so a refresh reads well as a diff. */

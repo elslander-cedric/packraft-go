@@ -50,11 +50,12 @@ export function useAccessPoints() {
   const [points, setPoints] = useState<AccessPoints>(stored.accessPoints);
   // Saving is paused, so the stored save is kept rather than overwritten, while
   // it is from an unknown version, or damaged and could not be backed up.
-  const savingPaused: SavingPaused | null = stored.unknownVersion
-    ? "unknown-version"
-    : stored.damaged && stored.backupKey === null
-      ? "damaged"
-      : null;
+  let savingPaused: SavingPaused | null = null;
+  if (stored.unknownVersion) {
+    savingPaused = "unknown-version";
+  } else if (stored.damaged && stored.backupKey === null) {
+    savingPaused = "damaged";
+  }
   const keepStoredSave = savingPaused !== null;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // A new point placed on the map and not saved yet: it can be dragged, and the flag opens its details.

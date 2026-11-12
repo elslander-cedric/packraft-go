@@ -209,7 +209,11 @@ test.describe("keyboard alone", () => {
     await tabTo(page, button(page, strings.planner.menu.button));
     await page.keyboard.press("Enter");
     await expect(menuItem(page, strings.planner.menu.newTrip)).toBeFocused();
-    for (let i = 0; i < 8 && !(await menuItem(page, item).evaluate((e) => e === document.activeElement)); i++) {
+    for (
+      let i = 0;
+      i < 8 && !(await menuItem(page, item).evaluate((element) => element === document.activeElement));
+      i++
+    ) {
       await page.keyboard.press("ArrowDown");
     }
     await expect(menuItem(page, item)).toBeFocused();

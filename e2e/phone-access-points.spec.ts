@@ -35,7 +35,7 @@ const cancel = (page: Page) => details(page).getByRole("button", { name: strings
 const markButton = (page: Page) => page.getByRole("button", { name: plannerText.markAccessPointButton });
 const rows = (page: Page) => section(page).getByRole("list").getByRole("listitem");
 /** A row's own button, which shows the point on the map (its edit and delete buttons follow it). */
-const rowButton = (page: Page, n: number) => rows(page).nth(n).getByRole("button").first();
+const rowButton = (page: Page, number: number) => rows(page).nth(number).getByRole("button").first();
 const editButton = (page: Page, heading: string) =>
   section(page).getByRole("button", { name: plannerText.editAccessPoint(heading), exact: true });
 const deleteButton = (page: Page, heading: string) =>

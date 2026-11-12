@@ -92,11 +92,13 @@ async function seedSalm(page: Page, startDate: string | undefined) {
     trip: {
       name: "Salm",
       points: salm,
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: salm.map((p) => ({ ...p, elevation: 300 })) } }],
+      legs: [
+        { mode: "paddle", route: { status: "routed", geometry: salm.map((point) => ({ ...point, elevation: 300 })) } },
+      ],
       startDate,
     },
   };
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
 }
 
 test.use({ timezoneId: "Europe/Brussels" });
@@ -364,11 +366,13 @@ test.describe("on a paddle leg (#217)", () => {
       trip: {
         name: "Leie",
         points: line,
-        legs: [{ mode: "paddle", route: { status: "routed", geometry: line.map((p) => ({ ...p, elevation: 5 })) } }],
+        legs: [
+          { mode: "paddle", route: { status: "routed", geometry: line.map((point) => ({ ...point, elevation: 5 })) } },
+        ],
         startDate: "2026-11-20",
       },
     };
-    await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+    await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
     await openWith(page, { incidents: oneIncident({ commene: "River closed" }, { x: 3.725, y: 51.05 }) });
 
     await openSectionDetails(page, 1);

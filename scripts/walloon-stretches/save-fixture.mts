@@ -10,14 +10,16 @@ import { loadOsmData, ROOT } from "./osmCache";
 const [river, name, ...box] = process.argv.slice(2);
 const [south, west, north, east] = box.map(Number);
 const inside = (lat: number, lon: number) => lat >= south && lat <= north && lon >= west && lon <= east;
-const keep = (e: OverpassElement) =>
-  e.type === "node" ? inside(e.lat!, e.lon!) : (e.geometry ?? []).some((p) => p !== null && inside(p.lat, p.lon));
-const slim = (e: OverpassElement): OverpassElement => ({
-  type: e.type,
-  id: e.id,
-  ...(e.lat !== undefined ? { lat: e.lat, lon: e.lon } : {}),
-  ...(e.tags ? { tags: e.tags } : {}),
-  ...(e.geometry ? { geometry: e.geometry } : {}),
+const keep = (overpassElement: OverpassElement) =>
+  overpassElement.type === "node"
+    ? inside(overpassElement.lat!, overpassElement.lon!)
+    : (overpassElement.geometry ?? []).some((point) => point !== null && inside(point.lat, point.lon));
+const slim = (overpassElement: OverpassElement): OverpassElement => ({
+  type: overpassElement.type,
+  id: overpassElement.id,
+  ...(overpassElement.lat !== undefined ? { lat: overpassElement.lat, lon: overpassElement.lon } : {}),
+  ...(overpassElement.tags ? { tags: overpassElement.tags } : {}),
+  ...(overpassElement.geometry ? { geometry: overpassElement.geometry } : {}),
 });
 
 const osm = await loadOsmData({ offline: true });

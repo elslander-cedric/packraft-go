@@ -21,8 +21,8 @@ const mapOffset = (page: Page) =>
   mapRegion(page)
     .locator(".leaflet-map-pane")
     .evaluate((element) => {
-      const m = new DOMMatrix(getComputedStyle(element).transform);
-      return { x: m.m41, y: m.m42 };
+      const matrix = new DOMMatrix(getComputedStyle(element).transform);
+      return { x: matrix.m41, y: matrix.m42 };
     });
 
 const zoomLevel = (page: Page) =>
@@ -43,20 +43,20 @@ test("a finger drags a point, the map does not pan, and the legs are routed agai
   const { network, cx, cy } = await openMap(page, {
     brouter: () => ({ status: 200, body: brouterFixture("hiking-success.geojson") }),
   });
-  const a = { x: cx - 120, y: cy };
-  const b = { x: cx + 40, y: cy };
-  for (const p of [a, b]) {
-    await page.mouse.click(p.x, p.y);
+  const pointA = { x: cx - 120, y: cy };
+  const pointB = { x: cx + 40, y: cy };
+  for (const point of [pointA, pointB]) {
+    await page.mouse.click(point.x, point.y);
   }
   await expect(points(page)).toHaveCount(2);
   await expect(legLines(page).first()).toHaveClass(/leg-routed/);
   expect(network.brouter).toHaveLength(1);
 
   const offsetBefore = await mapOffset(page);
-  const moved = { x: b.x + 20, y: b.y + 140 };
+  const moved = { x: pointB.x + 20, y: pointB.y + 140 };
   await (await touch(page)).drag(await centreOf(points(page).nth(1)), moved);
 
-  await expect.poll(async () => (await centreOf(points(page).nth(1))).y).toBeGreaterThan(b.y + 100);
+  await expect.poll(async () => (await centreOf(points(page).nth(1))).y).toBeGreaterThan(pointB.y + 100);
   const after = await centreOf(points(page).nth(1));
   expect(Math.abs(after.x - moved.x)).toBeLessThan(4);
   expect(Math.abs(after.y - moved.y)).toBeLessThan(4);

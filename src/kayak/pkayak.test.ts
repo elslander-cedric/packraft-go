@@ -57,13 +57,13 @@ function fakeServer(
         setTimer: (fire, ms) => {
           const timer = { at: clock + ms, fire };
           timers.push(timer);
-          return () => (timers = timers.filter((t) => t !== timer));
+          return () => (timers = timers.filter((otherTimer) => otherTimer !== timer));
         },
       }),
     advance(ms: number) {
       clock += ms;
-      const due = timers.filter((t) => t.at <= clock);
-      timers = timers.filter((t) => t.at > clock);
+      const due = timers.filter((timer) => timer.at <= clock);
+      timers = timers.filter((timer) => timer.at > clock);
       for (const timer of due) {
         timer.fire();
       }
@@ -138,7 +138,9 @@ describe("reading the recorded answer", () => {
     if (readings.status !== "ok") {
       throw new Error("expected readings");
     }
-    const stretches = builtIn.stretches.flatMap((s) => ("officialStretch" in s ? [s.officialStretch as string] : []));
+    const stretches = builtIn.stretches.flatMap((stretch) =>
+      "officialStretch" in stretch ? [stretch.officialStretch as string] : [],
+    );
     expect(stretches.length).toBeGreaterThan(0);
     for (const id of stretches) {
       expect(readings.stretches).toHaveProperty([id]);

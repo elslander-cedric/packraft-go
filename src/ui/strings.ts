@@ -39,8 +39,8 @@ export const strings = {
   // The GPX export's waypoints (ADR 0037), shown as course points on a watch: where each
   // section starts, e.g. "2 – paddle", or "2 – Day 1 – paddle" when the trip has camps,
   // and where the trip ends.
-  gpxSectionName: (n: number, mode: "hike" | "paddle", day?: number) =>
-    [String(n), ...(day === undefined ? [] : [`Day ${day}`]), mode === "hike" ? "hike" : "paddle"].join(" – "),
+  gpxSectionName: (number: number, mode: "hike" | "paddle", day?: number) =>
+    [String(number), ...(day === undefined ? [] : [`Day ${day}`]), mode === "hike" ? "hike" : "paddle"].join(" – "),
   gpxEnd: "End",
   undoButton: "Undo",
   undoDisabledReason: "Nothing to undo yet.",
@@ -51,7 +51,7 @@ export const strings = {
   campMarker: "Camp",
   daysPanelLabel: "Days",
   daysPanelEmpty: "Add legs to see the trip's days. Mark a point as a camp to split it into days.",
-  dayLabel: (n: number) => `Day ${n}`,
+  dayLabel: (number: number) => `Day ${number}`,
   // An undated day's calendar tile: "Day" above its number.
   dayTileWord: "Day",
   // A day's calendar date from the trip's start date, e.g. "Sat 31 Oct 2026".
@@ -60,11 +60,11 @@ export const strings = {
   monthNames: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   // Which legs a day covers, e.g. "Legs 1–2" or "Leg 3".
   legRange: (first: number, last: number) => (first === last ? `Leg ${first}` : `Legs ${first}–${last}`),
-  legLabel: (n: number) => `Leg ${n}`,
-  sectionLabel: (n: number) => `Section ${n}`,
+  legLabel: (number: number) => `Leg ${number}`,
+  sectionLabel: (number: number) => `Section ${number}`,
   legModeHike: "Hike",
   legModePaddle: "Paddle",
-  legModeLabel: (n: number) => `Leg ${n} mode`,
+  legModeLabel: (number: number) => `Leg ${number} mode`,
   kilometreUnit: "km",
   metreUnit: "m",
   hourUnit: "h",
@@ -161,14 +161,15 @@ export const strings = {
       rise: "Rise, upstream?",
     },
     // The dialog with a leg's access and warnings, from a day card's chip or its row.
-    legDetailsTitle: (n: number, mode: string, distance: string) => `Leg ${n} · ${mode} · ${distance}`,
+    legDetailsTitle: (number: number, mode: string, distance: string) => `Leg ${number} · ${mode} · ${distance}`,
     legDetailsClose: "Close",
     // The button to a section's or a leg's details, on its row.
-    sectionDetailsButton: (n: number) => `Access details, section ${n}`,
-    legDetailsButton: (n: number) => `Access details, leg ${n}`,
+    sectionDetailsButton: (number: number) => `Access details, section ${number}`,
+    legDetailsButton: (number: number) => `Access details, leg ${number}`,
     rowDetailsLine: "Access details",
-    sectionLegs: (n: number) => `Legs of section ${n}`,
-    sectionDetailsTitle: (n: number, mode: string, distance: string) => `Section ${n} · ${mode} · ${distance}`,
+    sectionLegs: (number: number) => `Legs of section ${number}`,
+    sectionDetailsTitle: (number: number, mode: string, distance: string) =>
+      `Section ${number} · ${mode} · ${distance}`,
     // A failed leg on a section's row, by its number.
     sectionLegFailed: (leg: number, message: string) => `Leg ${leg}: ${message}`,
     // A day card's figures, each after its icon, named for screen readers.
@@ -189,8 +190,8 @@ export const strings = {
     sheetStops: { peek: "Header only", half: "Half the screen", full: "Full screen" },
     // The card a tap on a leg on the map shows: its toggle's name is `legModeLabel`.
     // Its accessible name is the title; it shows the short form, e.g. "L2 · 1.2 km".
-    selectedLegTitle: (n: number, distance: string) => `Leg ${n} · ${distance}`,
-    selectedLegShortTitle: (n: number, distance: string) => `L${n} · ${distance}`,
+    selectedLegTitle: (number: number, distance: string) => `Leg ${number} · ${distance}`,
+    selectedLegShortTitle: (number: number, distance: string) => `L${number} · ${distance}`,
     selectedLegClose: "Unselect the leg",
     // The floating hike / paddle toggle for the leg the next map tap adds.
     nextLegModeLabel: "Next leg's mode",
@@ -218,8 +219,8 @@ export const strings = {
     // The selected point's card, floating above the sheet or panel: its title, with how far along
     // the route it is from the start; it shows the short name, e.g. "P2 · 1.2 km". Its delete
     // and camp buttons are icon-only; their names are `deletePointButton` and `campButton`.
-    selectedPointTitle: (n: number, distance: string) => `Point ${n} · ${distance}`,
-    selectedPointShortName: (n: number) => `P${n}`,
+    selectedPointTitle: (number: number, distance: string) => `Point ${number} · ${distance}`,
+    selectedPointShortName: (number: number) => `P${number}`,
     selectedPointClose: "Unselect the point",
     markLocating: "Finding your position to mark the access point…",
     // Without a position fix, the flag button asks for a tap on the map.
@@ -419,7 +420,7 @@ export const strings = {
       aire: "No aire",
     },
     chip: (leg: number, kind: string) => `Leg ${leg} · ${kind}`,
-    chipMore: (n: number) => `+${n}`,
+    chipMore: (number: number) => `+${number}`,
     chipName: (leg: number, kind: string, count: number) =>
       count === 1 ? `Leg ${leg}: ${kind}. Show the leg` : `Leg ${leg}: ${kind} and ${count - 1} more. Show the leg`,
   },

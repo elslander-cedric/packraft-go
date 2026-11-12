@@ -24,7 +24,9 @@ async function seed(page: Page, water: { lat: number; lng: number }[]) {
     trip: {
       name: "Canal",
       points: [water[0], water[water.length - 1]],
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: water.map((p) => ({ ...p, elevation: 5 })) } }],
+      legs: [
+        { mode: "paddle", route: { status: "routed", geometry: water.map((point) => ({ ...point, elevation: 5 })) } },
+      ],
       startDate: "2027-07-10",
     },
   };

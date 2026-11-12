@@ -13,11 +13,12 @@ const HYDROMETRY_URL = "https://hydrometrie.wallonie.be/";
  */
 export function FlowFiguresView({ figures }: { figures: FlowFigures }) {
   const { gauge, mean72h, at8, latest, minM3s, maxM3s } = figures;
-  const gaugeLine = gauge.assumed
-    ? strings.flow.gaugeAssumed(gauge.name)
-    : gauge.spwPractice
-      ? strings.flow.gaugeSpwPractice(gauge.name)
-      : strings.flow.gauge(gauge.name);
+  let gaugeLine = strings.flow.gauge(gauge.name);
+  if (gauge.assumed) {
+    gaugeLine = strings.flow.gaugeAssumed(gauge.name);
+  } else if (gauge.spwPractice) {
+    gaugeLine = strings.flow.gaugeSpwPractice(gauge.name);
+  }
   return (
     <div className="flow-figures">
       <p className="flow-heading">{strings.flow.heading}</p>

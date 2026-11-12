@@ -30,7 +30,10 @@ const notXmlChar = /[^\u0009\u000A\u000D -퟿-�\u{10000}-\u{10FFFF}]/gu;
 const escapeXml = (value: string) =>
   value
     .replace(notXmlChar, "")
-    .replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!);
+    .replace(
+      /[&<>"']/g,
+      (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[character]!,
+    );
 
 /** A plain decimal (GPX does not allow exponents like 1e-7), without trailing zeros. */
 function decimal(value: number, digits: number): string {

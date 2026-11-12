@@ -29,27 +29,29 @@ async function visibleCentre(page: Page) {
     ([x, y]) => {
       const under = Array.from(document.querySelectorAll("img.leaflet-tile-loaded"))
         .map((img) => ({ img: img as HTMLImageElement, r: img.getBoundingClientRect() }))
-        .filter(({ r }) => x >= r.left && x < r.right && y >= r.top && y < r.bottom)
-        .map((t) => ({ ...t, zi: Number(getComputedStyle(t.img.parentElement!).zIndex) || 0 }))
-        .sort((p, q) => q.zi - p.zi);
-      const t = under[0];
-      return t ? { src: t.img.src, x: t.r.x, y: t.r.y, w: t.r.width, h: t.r.height } : null;
+        .filter(({ r: rect }) => x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom)
+        .map((tile) => ({ ...tile, zi: Number(getComputedStyle(tile.img.parentElement!).zIndex) || 0 }))
+        .sort((left, right) => right.zi - left.zi);
+      const topTile = under[0];
+      return topTile
+        ? { src: topTile.img.src, x: topTile.r.x, y: topTile.r.y, w: topTile.r.width, h: topTile.r.height }
+        : null;
     },
     [cx, cy] as const,
   );
   if (!top) {
     throw new Error("no tile under the map centre");
   }
-  const m = new URL(top.src).pathname.match(/^\/(\d+)\/(\d+)\/(\d+)\.png$/);
-  if (!m) {
+  const match = new URL(top.src).pathname.match(/^\/(\d+)\/(\d+)\/(\d+)\.png$/);
+  if (!match) {
     throw new Error(`unexpected tile url ${top.src}`);
   }
-  const tile = { ...top, z: Number(m[1]), tx: Number(m[2]), ty: Number(m[3]) };
-  const n = 2 ** tile.z;
+  const tile = { ...top, z: Number(match[1]), tx: Number(match[2]), ty: Number(match[3]) };
+  const number = 2 ** tile.z;
   const fx = tile.tx + (cx - tile.x) / tile.w;
   const fy = tile.ty + (cy - tile.y) / tile.h;
-  const lng = (fx / n) * 360 - 180;
-  const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * fy) / n))) * 180) / Math.PI;
+  const lng = (fx / number) * 360 - 180;
+  const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * fy) / number))) * 180) / Math.PI;
   return { lat, lng, z: tile.z };
 }
 
@@ -58,21 +60,21 @@ async function settledZoom(page: Page) {
   let last = NaN;
   for (let i = 0; i < 40; i++) {
     await page.waitForTimeout(250);
-    const z = (await visibleCentre(page)).z;
-    if (z === last) {
-      return z;
+    const zoom = (await visibleCentre(page)).z;
+    if (zoom === last) {
+      return zoom;
     }
-    last = z;
+    last = zoom;
   }
   throw new Error("map zoom never settled");
 }
 
 function collectErrors(page: Page) {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
-  page.on("console", (m) => {
-    if (m.type() === "error") {
-      errors.push(`console: ${m.text()}`);
+  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.push(`console: ${message.text()}`);
     }
   });
   return errors;
@@ -83,13 +85,13 @@ test.describe("app skeleton", () => {
     await serveOffline(page);
     await openPlanner(page);
 
-    const c = await visibleCentre(page);
-    expect(c.lat).toBeGreaterThan(BELGIUM.south);
-    expect(c.lat).toBeLessThan(BELGIUM.north);
-    expect(c.lng).toBeGreaterThan(BELGIUM.west);
-    expect(c.lng).toBeLessThan(BELGIUM.east);
-    expect(c.z).toBeGreaterThanOrEqual(6);
-    expect(c.z).toBeLessThanOrEqual(9);
+    const point = await visibleCentre(page);
+    expect(point.lat).toBeGreaterThan(BELGIUM.south);
+    expect(point.lat).toBeLessThan(BELGIUM.north);
+    expect(point.lng).toBeGreaterThan(BELGIUM.west);
+    expect(point.lng).toBeLessThan(BELGIUM.east);
+    expect(point.z).toBeGreaterThanOrEqual(6);
+    expect(point.z).toBeLessThanOrEqual(9);
   });
 
   test("map is pannable and zoomable with the mouse", async ({ page }) => {
@@ -202,6 +204,6 @@ test.describe("app skeleton", () => {
     await expect(page.getByText(strings.navigationRulesNotice)).toBeVisible();
     await expect(page.locator(".leaflet-control-attribution")).toContainText("BRouter");
     // Failed tile images log resource errors; anything else is a real failure.
-    expect(errors.filter((e) => !/Failed to load resource/.test(e))).toEqual([]);
+    expect(errors.filter((error) => !/Failed to load resource/.test(error))).toEqual([]);
   });
 });

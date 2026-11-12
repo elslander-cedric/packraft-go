@@ -125,10 +125,11 @@ test.describe("on a wide screen", () => {
         .first()
         .evaluate((marker) => {
           const pane = marker.closest(".leaflet-pane")!;
-          const z = (name: string) => Number(getComputedStyle(document.querySelector(`.leaflet-${name}-pane`)!).zIndex);
+          const zIndexOf = (name: string) =>
+            Number(getComputedStyle(document.querySelector(`.leaflet-${name}-pane`)!).zIndex);
           const own = Number(getComputedStyle(pane).zIndex);
           const inOverlay = pane.parentElement!.classList.contains("leaflet-overlay-pane");
-          return { inOverlay, belowTrip: inOverlay && own < z("trip-legs") && own < z("trip-points") };
+          return { inOverlay, belowTrip: inOverlay && own < zIndexOf("trip-legs") && own < zIndexOf("trip-points") };
         });
     expect(await stacking()).toEqual({ inOverlay: true, belowTrip: true });
 
@@ -138,7 +139,7 @@ test.describe("on a wide screen", () => {
     expect(
       await markers(page)
         .first()
-        .evaluate((m) => m.closest(".leaflet-marker-pane") !== null),
+        .evaluate((marker) => marker.closest(".leaflet-marker-pane") !== null),
     ).toBe(true);
 
     await leaveAccessPointEditing(page);

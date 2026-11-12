@@ -23,19 +23,23 @@ export const BASE_MAP_CHECK_USER_AGENT = "packraft-go-basemap-check (+https://gi
 const MERCATOR_HALF = 20037508.342789244;
 
 /** The Web Mercator tile under a place at a zoom. */
-export function tileAt(lat: number, lng: number, z: number): Tile {
-  const n = 2 ** z;
+export function tileAt(lat: number, lng: number, zoom: number): Tile {
+  const number = 2 ** zoom;
   const rad = (lat * Math.PI) / 180;
   return {
-    z,
-    x: Math.floor(((lng + 180) / 360) * n),
-    y: Math.floor(((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * n),
+    z: zoom,
+    x: Math.floor(((lng + 180) / 360) * number),
+    y: Math.floor(((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * number),
   };
 }
 
 /** A WMS GetMap for one 256 px tile in EPSG:3857, as Leaflet asks for it. */
-export function wmsTileUrl(url: string, params: Extract<TileSource, { kind: "wms" }>["params"], { z, x, y }: Tile) {
-  const size = (2 * MERCATOR_HALF) / 2 ** z;
+export function wmsTileUrl(
+  url: string,
+  params: Extract<TileSource, { kind: "wms" }>["params"],
+  { z: zoom, x, y }: Tile,
+) {
+  const size = (2 * MERCATOR_HALF) / 2 ** zoom;
   const query = new URLSearchParams({
     service: "WMS",
     request: "GetMap",
@@ -103,12 +107,11 @@ export async function runBaseMapCheck({ fetch, wait }: BaseMapCheckDeps): Promis
     try {
       const response = await fetch(url, { headers: { "User-Agent": BASE_MAP_CHECK_USER_AGENT } });
       const type = response.headers.get("content-type") ?? "";
-      problem =
-        response.status !== 200
-          ? `HTTP ${response.status}`
-          : type.startsWith("image/")
-            ? null
-            : `not an image (${type || "no content type"})`;
+      if (response.status !== 200) {
+        problem = `HTTP ${response.status}`;
+      } else {
+        problem = type.startsWith("image/") ? null : `not an image (${type || "no content type"})`;
+      }
     } catch (error) {
       problem = error instanceof Error ? error.message : String(error);
     }

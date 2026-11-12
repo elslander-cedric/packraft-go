@@ -17,7 +17,9 @@ export type Line = Position[];
 export type Polygon = Line[];
 
 const toLine = (geometry: OverpassPoint[] | undefined): Line =>
-  (geometry ?? []).filter((p): p is { lat: number; lon: number } => p !== null).map((p) => [p.lon, p.lat] as const);
+  (geometry ?? [])
+    .filter((overpassPoint): overpassPoint is { lat: number; lon: number } => overpassPoint !== null)
+    .map((point) => [point.lon, point.lat] as const);
 
 /**
  * Every way's line in the answer, from ways and from relation members, each
@@ -48,7 +50,8 @@ export function waysOf(
   return lines.filter((line) => line.length >= 2);
 }
 
-const same = (a: Position, b: Position) => a[0] === b[0] && a[1] === b[1];
+const same = (positionA: Position, positionB: Position) =>
+  positionA[0] === positionB[0] && positionA[1] === positionB[1];
 
 /** Joins lines that share end points into as few, longer lines as possible. */
 export function mergeLines(lines: readonly Line[]): Line[] {
@@ -104,14 +107,16 @@ function polygonsFrom(outers: readonly Line[], inners: readonly Line[]): Polygon
 
 /** The area of a boundary or multipolygon relation, as polygons with holes. */
 export function relationArea(response: OverpassResponse, relationId: number): Polygon[] {
-  const relation = response.elements.find((e): e is OverpassRelation => e.type === "relation" && e.id === relationId);
+  const relation = response.elements.find(
+    (element): element is OverpassRelation => element.type === "relation" && element.id === relationId,
+  );
   if (!relation) {
     throw new Error(`relation ${relationId} is not in the Overpass answer`);
   }
   const ways = (role: string) =>
     (relation.members ?? [])
-      .filter((m) => m.type === "way" && m.role === role)
-      .map((m) => toLine(m.geometry))
+      .filter((overpassMember) => overpassMember.type === "way" && overpassMember.role === role)
+      .map((overpassMember) => toLine(overpassMember.geometry))
       .filter((line) => line.length >= 2);
   // Members without a role count as outer, as in OSM's multipolygon rules.
   return polygonsFrom(assembleRings([...ways("outer"), ...ways("")]), assembleRings(ways("inner")));
@@ -140,15 +145,22 @@ const RAD = Math.PI / 180;
 const EARTH_RADIUS_M = 6_371_000;
 
 /** Distance in metres from p to the segment a–b, on a local flat approximation. */
-function offsetM(p: Position, a: Position, b: Position): number {
-  const k = Math.cos(p[1] * RAD) * RAD * EARTH_RADIUS_M;
-  const m = RAD * EARTH_RADIUS_M;
-  const [ax, ay, bx, by, px, py] = [a[0] * k, a[1] * m, b[0] * k, b[1] * m, p[0] * k, p[1] * m];
+function offsetM(position: Position, positionA: Position, positionB: Position): number {
+  const metresPerDegreeLng = Math.cos(position[1] * RAD) * RAD * EARTH_RADIUS_M;
+  const metresPerDegreeLat = RAD * EARTH_RADIUS_M;
+  const [ax, ay, bx, by, px, py] = [
+    positionA[0] * metresPerDegreeLng,
+    positionA[1] * metresPerDegreeLat,
+    positionB[0] * metresPerDegreeLng,
+    positionB[1] * metresPerDegreeLat,
+    position[0] * metresPerDegreeLng,
+    position[1] * metresPerDegreeLat,
+  ];
   const dx = bx - ax;
   const dy = by - ay;
   const lengthSq = dx * dx + dy * dy;
-  const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSq));
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  const fraction = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSq));
+  return Math.hypot(px - (ax + fraction * dx), py - (ay + fraction * dy));
 }
 
 /** Douglas–Peucker: drops vertices that are less than `toleranceM` off the simplified line. Keeps both ends. */
@@ -190,9 +202,9 @@ export function simplifyPolygon(polygon: Polygon, toleranceM: number): Polygon |
 export function clipLine(line: readonly Position[], keep: (p: Position) => boolean): Line[] {
   const parts: Line[] = [];
   let current: Line = [];
-  for (const p of line) {
-    if (keep(p)) {
-      current.push(p);
+  for (const position of line) {
+    if (keep(position)) {
+      current.push(position);
     } else {
       if (current.length >= 2) {
         parts.push(current);
@@ -208,7 +220,7 @@ export function clipLine(line: readonly Position[], keep: (p: Position) => boole
 
 /** True when the position is inside any of the polygons. */
 export function insideAny(polygons: readonly Polygon[]): (p: Position) => boolean {
-  return (p) => polygons.some((polygon) => insidePolygon(asLatLng(p), polygon));
+  return (position) => polygons.some((polygon) => insidePolygon(asLatLng(position), polygon));
 }
 
 const nearestIndex = (line: readonly Position[], to: Position) => {
@@ -223,8 +235,8 @@ const nearestIndex = (line: readonly Position[], to: Position) => {
 
 /** The part of a line between the vertices nearest to `from` and `to`. */
 export function cutBetween(line: readonly Position[], from: Position, to: Position): Line {
-  const [a, b] = [nearestIndex(line, from), nearestIndex(line, to)].sort((x, y) => x - y);
-  return line.slice(a, b + 1);
+  const [fromIndex, toIndex] = [nearestIndex(line, from), nearestIndex(line, to)].sort((x, y) => x - y);
+  return line.slice(fromIndex, toIndex + 1);
 }
 
 /** Rounds to 5 decimals (about a metre), which keeps the shipped files small. */

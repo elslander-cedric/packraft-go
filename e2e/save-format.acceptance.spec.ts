@@ -149,7 +149,7 @@ for (const [label, text, unknownVersion] of [
   }) => {
     await serveOffline(page, { brouter: byProfile });
     const errors: string[] = [];
-    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("pageerror", (error) => errors.push(error.message));
     await seedAutosave(page, text);
     await page.goto("/");
     await waitForMap(page);

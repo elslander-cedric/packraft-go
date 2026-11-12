@@ -34,7 +34,7 @@ const MERCATOR_HALF = 20037508.342789244;
 /** The tile a WMS GetMap in EPSG:3857 asks for, from its BBOX (minx,miny,maxx,maxy). */
 function wmsTile(url: URL): Omit<TileRequest, "source" | "baseMap"> | null {
   const bbox = (url.searchParams.get("bbox") ?? url.searchParams.get("BBOX"))?.split(",").map(Number);
-  if (bbox?.length !== 4 || bbox.some((n) => !Number.isFinite(n))) {
+  if (bbox?.length !== 4 || bbox.some((number) => !Number.isFinite(number))) {
     return null;
   }
   const [minX, , maxX, maxY] = bbox;
@@ -51,8 +51,8 @@ export const tileSourceOf = (src: string): TileSource | null => tileRequest(new 
 
 /** The map tile this URL asks for, or null when it isn't one of the base maps' or overlays' tile requests. */
 function tileRequest(url: URL): TileRequest | null {
-  const tile = (source: TileSource, z: string, x: string, y: string): TileRequest => ({
-    z: Number(z),
+  const tile = (source: TileSource, zoom: string, x: string, y: string): TileRequest => ({
+    z: Number(zoom),
     x: Number(x),
     y: Number(y),
     source,

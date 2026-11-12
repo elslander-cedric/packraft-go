@@ -18,8 +18,8 @@ const shipped = process.argv.includes("--shipped");
 const { draft, finalPath, needingReview, problems } = await buildDataset({ offline, shipped });
 
 console.log(`\n${draft.stretches.length} stretches built.`);
-for (const p of problems) {
-  console.log(`  problem: ${p}`);
+for (const problem of problems) {
+  console.log(`  problem: ${problem}`);
 }
 const draftPath = path.join(import.meta.dirname, "..", "..", ".cache", "walloon-stretches.draft.json");
 await mkdir(path.dirname(draftPath), { recursive: true });

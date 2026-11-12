@@ -38,7 +38,7 @@ async function openPhone(page: Page) {
 async function settled(page: Page) {
   await page.evaluate(async () => {
     await document.fonts.ready;
-    await Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined)));
+    await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
   });
 }
 
@@ -89,7 +89,7 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
   // Every total fits inside the strip.
   const fits = await panel(page)
     .locator(".planner-totals > span")
-    .evaluateAll((spans) => spans.every((s) => s.scrollWidth <= s.parentElement!.parentElement!.clientWidth));
+    .evaluateAll((spans) => spans.every((span) => span.scrollWidth <= span.parentElement!.parentElement!.clientWidth));
   expect(fits).toBe(true);
 
   // With the strip the map takes taps nearly to the right edge.
@@ -99,12 +99,12 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
 
 const sheetTab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
 /** The open leg row's button, in whichever of the sheet or the panel shows the trip. */
-const rowButton = (page: Page, n: number) =>
+const rowButton = (page: Page, number: number) =>
   page
     .getByRole("list", { name: strings.sectionsPanelLabel })
     .locator(leafRows)
-    .nth(n - 1)
-    .getByRole("button", { name: strings.legLabel(n), exact: false })
+    .nth(number - 1)
+    .getByRole("button", { name: strings.legLabel(number), exact: false })
     .first();
 
 /** How much of the screen the sheet covers, in pixels. */
@@ -125,8 +125,8 @@ async function dragSheet(page: Page, dy: number) {
   await page.mouse.up();
 }
 
-async function centreOf(page: Page, n: number) {
-  const box = (await points(page).nth(n).boundingBox())!;
+async function centreOf(page: Page, number: number) {
+  const box = (await points(page).nth(number).boundingBox())!;
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
@@ -244,14 +244,14 @@ test("sideways, the floating buttons stay in their corners over the map, beside 
       expect(box.x + box.width, label).toBeLessThanOrEqual(covered.x);
       // Nothing lies over it: its centre and four spots near its edge (inside a round button) hit it.
       const hit = await button.evaluate((el) => {
-        const r = el.getBoundingClientRect();
-        const [dx, dy] = [r.width * 0.2, r.height * 0.2];
+        const rect = el.getBoundingClientRect();
+        const [dx, dy] = [rect.width * 0.2, rect.height * 0.2];
         const spots = [
-          [r.left + dx, r.top + dy],
-          [r.right - dx, r.top + dy],
-          [r.left + dx, r.bottom - dy],
-          [r.right - dx, r.bottom - dy],
-          [r.left + r.width / 2, r.top + r.height / 2],
+          [rect.left + dx, rect.top + dy],
+          [rect.right - dx, rect.top + dy],
+          [rect.left + dx, rect.bottom - dy],
+          [rect.right - dx, rect.bottom - dy],
+          [rect.left + rect.width / 2, rect.top + rect.height / 2],
         ];
         return spots.every(([x, y]) => el.contains(document.elementFromPoint(x, y)));
       });

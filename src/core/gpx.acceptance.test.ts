@@ -27,12 +27,12 @@ const edit = (trip: Trip, ...edits: Edit[]) => edits.reduce(applyEdit, trip);
 const add = (at: LatLng): Edit => ({ type: "addPoint", at });
 
 /** A routed result for a leg from `a` to `b` through one middle point, with distinct elevations. */
-const routedBetween = (a: LatLng, b: LatLng, base: number): RouteResult => ({
+const routedBetween = (pointA: LatLng, pointB: LatLng, base: number): RouteResult => ({
   ok: true,
   geometry: [
-    { ...a, elevation: base },
-    { lat: (a.lat + b.lat) / 2 + 0.001, lng: (a.lng + b.lng) / 2, elevation: base + 12.5 },
-    { ...b, elevation: base + 3 },
+    { ...pointA, elevation: base },
+    { lat: (pointA.lat + pointB.lat) / 2 + 0.001, lng: (pointA.lng + pointB.lng) / 2, elevation: base + 12.5 },
+    { ...pointB, elevation: base + 3 },
   ],
 });
 
@@ -97,8 +97,8 @@ describe("export produces valid GPX 1.1", () => {
     });
     const { text } = exported(trip);
     const order = [...(xml(text).documentElement!.childNodes as unknown as Node[])]
-      .filter((n) => n.nodeType === 1)
-      .map((n) => (n as Element).localName);
+      .filter((node) => node.nodeType === 1)
+      .map((node) => (node as Element).localName);
     expect(order).toEqual(["metadata", "wpt", "wpt", "wpt", "trk"]);
     expect(xml(text).getElementsByTagName("trkseg")).toHaveLength(1);
   });
@@ -112,15 +112,15 @@ describe("one track through every leg, with a waypoint per section, including el
     const { gpx } = exported(trip);
 
     expect(gpx.tracks).toHaveLength(1);
-    expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – hike", "2 – paddle", "End"]);
+    expect(gpx.waypoints.map((waypoint) => waypoint.name)).toEqual(["1 – hike", "2 – paddle", "End"]);
     // Coordinates may be rounded for the file; 1e-6 degrees is about 10 cm.
     const expected = [...routedGeometry(trip, 0), ...routedGeometry(trip, 1).slice(1)];
     const points = gpx.tracks[0].points;
     expect(points).toHaveLength(expected.length);
-    points.forEach((point, j) => {
-      expect(point.lat).toBeCloseTo(expected[j].lat, 6);
-      expect(point.lon).toBeCloseTo(expected[j].lng, 6);
-      expect(point.ele).toBeCloseTo(expected[j].elevation, 1);
+    points.forEach((point, index) => {
+      expect(point.lat).toBeCloseTo(expected[index].lat, 6);
+      expect(point.lon).toBeCloseTo(expected[index].lng, 6);
+      expect(point.ele).toBeCloseTo(expected[index].elevation, 1);
     });
     // The paddle section's waypoint is where the hike's geometry ends, on the track.
     expect(gpx.waypoints[1]).toEqual({ ...points[2], name: "2 – paddle" });
@@ -152,8 +152,8 @@ describe("one track through every leg, with a waypoint per section, including el
     const drawn = edit(emptyTrip(), add(P0), add(P1), add(P2));
     // Hike legs fail (no-route): the fake router has no hike result.
     const failed = await routeAll(drawn, {});
-    expect(failed.legs.every((l) => l.route?.status === "failed")).toBe(true);
-    const pending: Trip = { ...drawn, legs: drawn.legs.map((l) => ({ ...l, route: { status: "pending" } })) };
+    expect(failed.legs.every((leg) => leg.route?.status === "failed")).toBe(true);
+    const pending: Trip = { ...drawn, legs: drawn.legs.map((leg) => ({ ...leg, route: { status: "pending" } })) };
 
     for (const trip of [drawn, failed, pending]) {
       const { gpx, text } = exported(trip);
@@ -171,7 +171,7 @@ describe("one track through every leg, with a waypoint per section, including el
     trip = await routeAll(trip, { hike: routedBetween(P0, P1, 200) }); // paddle fails
     const points = exported(trip).gpx.tracks[0].points;
     expect(points).toHaveLength(4);
-    expect(points.slice(0, 3).every((p) => typeof p.ele === "number")).toBe(true);
+    expect(points.slice(0, 3).every((gpxPoint) => typeof gpxPoint.ele === "number")).toBe(true);
     expect(points[3]).toEqual({ lat: P2.lat, lon: P2.lng });
   });
 
@@ -195,7 +195,7 @@ describe("camps start a section, whose waypoint names its day", () => {
     );
     trip = await routeAll(trip, { hike: routedBetween(P0, P1, 100) });
     const { gpx } = exported(trip);
-    expect(gpx.waypoints.map((w) => w.name)).toEqual([
+    expect(gpx.waypoints.map((waypoint) => waypoint.name)).toEqual([
       "1 – Day 1 – hike",
       "2 – Day 2 – hike",
       "3 – Day 3 – hike",
@@ -213,7 +213,7 @@ describe("camps start a section, whose waypoint names its day", () => {
       { type: "toggleCamp", index: 1 },
       { type: "toggleCamp", index: 1 },
     );
-    expect(exported(trip).gpx.waypoints.map((w) => w.name)).toEqual(["1 – hike", "End"]);
+    expect(exported(trip).gpx.waypoints.map((waypoint) => waypoint.name)).toEqual(["1 – hike", "End"]);
   });
 
   it("follows point edits: a camp moves with its point and survives deleting an earlier point", () => {
@@ -295,7 +295,7 @@ describe("edge cases: the file stays valid GPX 1.1 for any trip the app accepts"
 
   it("writes longitudes within -180 <= lon < 180 after rounding, also just below 180", () => {
     const trip = edit(emptyTrip(), add({ lat: 10, lng: 179.99999999 }), add({ lat: 10.1, lng: 180 }));
-    const lons = [...exported(trip).text.matchAll(/lon="([^"]+)"/g)].map((m) => Number(m[1]));
+    const lons = [...exported(trip).text.matchAll(/lon="([^"]+)"/g)].map((match) => Number(match[1]));
     // Updated: ADR 0037. Two track points and two waypoints (the start and the end).
     expect(lons).toHaveLength(4);
     for (const lon of lons) {

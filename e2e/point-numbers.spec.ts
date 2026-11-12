@@ -11,7 +11,7 @@ import { mapRegion, openPlanner, points } from "./support/planner";
 const numbers = (page: Page) => mapRegion(page).locator(".point-number");
 /** The numbers shown, in order (a newly numbered point's label is added last). */
 const shownNumbers = (page: Page) =>
-  expect.poll(async () => (await numbers(page).allTextContents()).map(Number).sort((a, b) => a - b));
+  expect.poll(async () => (await numbers(page).allTextContents()).map(Number).sort((left, right) => left - right));
 
 async function seedTrip(page: Page) {
   const trip = {

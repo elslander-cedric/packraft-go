@@ -97,12 +97,12 @@ export type OfficialLineDataset = {
 const LINE_TOLERANCE_M = 3;
 
 const partsOf = (geometry: PkayakAnswer["features"][number]["geometry"]) => {
-  const parts =
-    geometry?.type === "LineString"
-      ? [geometry.coordinates]
-      : geometry?.type === "MultiLineString"
-        ? geometry.coordinates
-        : [];
+  let parts: unknown = [];
+  if (geometry?.type === "LineString") {
+    parts = [geometry.coordinates];
+  } else if (geometry?.type === "MultiLineString") {
+    parts = geometry.coordinates;
+  }
   return (parts ?? []) as readonly (readonly (readonly [number, number])[])[];
 };
 
@@ -128,7 +128,7 @@ export function buildOfficialLines(answer: PkayakAnswer, snapshot: CalendarDate)
     attribution: SPW_ATTRIBUTION,
     source: { title: "SPW, PKAYAK map service, stretches", url: `${PKAYAK}/${PKAYAK_LAYERS.stretches}` },
     snapshot,
-    stretches: stretches.toSorted((a, b) => a.id.localeCompare(b.id)),
+    stretches: stretches.toSorted((left, right) => left.id.localeCompare(right.id)),
   };
 }
 
@@ -146,7 +146,7 @@ export function buildOfficialStretches(answer: PkayakAnswer, snapshot: CalendarD
     return { id, name };
   });
   stretches.forEach(({ id }, i) => {
-    if (stretches.findIndex((s) => s.id === id) !== i) {
+    if (stretches.findIndex((stretch) => stretch.id === id) !== i) {
       throw new Error(`Stretch ${id} appears twice`);
     }
   });
@@ -158,7 +158,7 @@ export function buildOfficialStretches(answer: PkayakAnswer, snapshot: CalendarD
     attribution: SPW_ATTRIBUTION,
     source: { title: "SPW, PKAYAK map service, stretches", url: `${PKAYAK}/${PKAYAK_LAYERS.stretches}` },
     snapshot,
-    stretches: stretches.toSorted((a, b) => a.id.localeCompare(b.id)),
+    stretches: stretches.toSorted((left, right) => left.id.localeCompare(right.id)),
   };
 }
 
@@ -168,7 +168,7 @@ export function buildOfficialAires(
   { stretches }: Pick<OfficialStretchDataset, "stretches">,
   snapshot: CalendarDate,
 ): OfficialAireDataset {
-  const known = new Set(stretches.map((s) => s.id));
+  const known = new Set(stretches.map((stretch) => stretch.id));
   const aires = featuresOf(answer, "aire").map(({ geometry, properties }): StoredOfficialAire => {
     const number = properties.numemb;
     if (typeof number !== "number") {
@@ -197,7 +197,7 @@ export function buildOfficialAires(
     return { number, name, use, officialStretch, position, lastChanged: dateInBrussels(properties.datmod) };
   });
   aires.forEach(({ number }, i) => {
-    if (aires.findIndex((a) => a.number === number) !== i) {
+    if (aires.findIndex((aire) => aire.number === number) !== i) {
       throw new Error(`Aire ${number} appears twice`);
     }
   });
@@ -209,7 +209,7 @@ export function buildOfficialAires(
     attribution: SPW_ATTRIBUTION,
     source: { title: "SPW, PKAYAK map service, aires", url: `${PKAYAK}/${PKAYAK_LAYERS.aires}` },
     snapshot,
-    aires: aires.toSorted((a, b) => a.number - b.number),
+    aires: aires.toSorted((left, right) => left.number - right.number),
   };
 }
 
@@ -238,7 +238,7 @@ export function buildObstacles(answer: PkayakAnswer, snapshot: CalendarDate): Ob
     return { spwId, kind, position, lastChanged: dateInBrussels(properties.datmod) };
   });
   obstacles.forEach(({ spwId }, i) => {
-    if (obstacles.findIndex((o) => o.spwId === spwId) !== i) {
+    if (obstacles.findIndex((obstacle) => obstacle.spwId === spwId) !== i) {
       throw new Error(`Obstacle ${spwId} appears twice`);
     }
   });
@@ -250,6 +250,6 @@ export function buildObstacles(answer: PkayakAnswer, snapshot: CalendarDate): Ob
     attribution: SPW_ATTRIBUTION,
     source: { title: "SPW, PKAYAK map service, obstacles", url: `${PKAYAK}/${PKAYAK_LAYERS.obstacles}` },
     snapshot,
-    obstacles: obstacles.toSorted((a, b) => a.spwId - b.spwId),
+    obstacles: obstacles.toSorted((left, right) => left.spwId - right.spwId),
   };
 }

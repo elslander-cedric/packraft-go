@@ -31,7 +31,7 @@ const start = { lat: 51.085, lng: 3.715 };
 function seededTrip(startDate?: string, water = canal) {
   const routed = (points: { lat: number; lng: number }[]) => ({
     status: "routed",
-    geometry: points.map((p) => ({ ...p, elevation: 5 })),
+    geometry: points.map((point) => ({ ...point, elevation: 5 })),
   });
   return {
     format: "packraft-go-trip",
@@ -63,7 +63,7 @@ async function seed(page: Page, startDate?: string, water = canal) {
 }
 
 const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
-const legRow = (page: Page, n: number) => legsPanel(page).locator(leafRows).nth(n);
+const legRow = (page: Page, number: number) => legsPanel(page).locator(leafRows).nth(number);
 const daysPanel = (page: Page) => page.getByRole("complementary", { name: strings.daysPanelLabel });
 const dayChips = (page: Page) =>
   daysPanel(page).getByRole("group", { name: strings.tripAccess.dayWarningsLabel }).getByRole("button");

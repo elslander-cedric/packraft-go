@@ -55,7 +55,7 @@ test("an old version 2 autosave is handled exactly like a version 3 autosave (em
     const context = await browser.newContext();
     const page = await context.newPage();
     const errors: string[] = [];
-    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("pageerror", (error) => errors.push(error.message));
     const seeded = save(version);
     const stored = await loadWithAutosave(page, seeded);
     const result = {
@@ -78,9 +78,9 @@ test("opening an old version 2 file on an empty planner shows the unknown-versio
 }) => {
   const net = await serveOffline(page);
   const dialogs: string[] = [];
-  page.on("dialog", (d) => {
-    dialogs.push(d.message());
-    void d.accept();
+  page.on("dialog", (dialog) => {
+    dialogs.push(dialog.message());
+    void dialog.accept();
   });
   await page.goto("/");
   await waitForMap(page);

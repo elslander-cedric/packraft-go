@@ -103,7 +103,9 @@ describe("a Walloon stretch's status with today's flow", () => {
   });
 
   it("paints the map with today's flow", () => {
-    const states = accessFeatures(rules, { date: today, today, flows: readings(2, 10) }).map((f) => f.status.state);
+    const states = accessFeatures(rules, { date: today, today, flows: readings(2, 10) }).map(
+      (accessFeature) => accessFeature.status.state,
+    );
     expect(states).toEqual(["closed-today", "closed-today"]);
   });
 });
@@ -116,7 +118,9 @@ describe("paddle legs on a Walloon stretch (#58 with #61)", () => {
   const trip = (startDate: string): Trip => ({
     name: "",
     points: along,
-    legs: [{ mode: "paddle", route: { status: "routed", geometry: along.map((p) => ({ ...p, elevation: 0 })) } }],
+    legs: [
+      { mode: "paddle", route: { status: "routed", geometry: along.map((point) => ({ ...point, elevation: 0 })) } },
+    ],
     startDate,
   });
 
@@ -132,6 +136,6 @@ describe("paddle legs on a Walloon stretch (#58 with #61)", () => {
     const access = tripAccess(trip("2026-12-01"), rules, { today, flows: readings(2, 10) });
     expect(access.legs[0]!.status.state).toBe("open");
     expect(access.legs[0]!.checkFlowOnTheDay).toBe(true);
-    expect(access.legs[0]!.warnings.map((w) => w.kind)).toEqual(["check-flow"]);
+    expect(access.legs[0]!.warnings.map((warning) => warning.kind)).toEqual(["check-flow"]);
   });
 });

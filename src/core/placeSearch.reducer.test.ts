@@ -149,15 +149,15 @@ describe("place search: Retry", () => {
 describe("place search: the shown result", () => {
   // One row per action: what happens to a result already shown.
   it.each<[string, (state: PlaceSearchState) => PlaceSearchState, SearchResult | "kept" | null]>([
-    ["typing", (s) => run(s, { type: "edit", text: "melr" }), "kept"],
-    ["submitting new text", (s) => run(s, { type: "edit", text: "melreux" }, submit()), "kept"],
-    ["new results", (s) => answer(run(s, { type: "edit", text: "melreux" }, submit()), [melreux]), "kept"],
-    ["picking a new result", (s) => run(s, { type: "pick", result: melreux }), melreux],
-    ["nothing found", (s) => answer(run(s, { type: "edit", text: "qxzv" }, submit()), []), null],
-    ["a failed search", (s) => answer(run(s, { type: "edit", text: "melreux" }, submit()), "failed"), "kept"],
-    ["offline", (s) => run(s, { type: "edit", text: "melreux" }, submit(false)), "kept"],
-    ["Escape", (s) => run(s, { type: "dismiss" }), "kept"],
-    ["×", (s) => run(s, { type: "clear" }), null],
+    ["typing", (state) => run(state, { type: "edit", text: "melr" }), "kept"],
+    ["submitting new text", (state) => run(state, { type: "edit", text: "melreux" }, submit()), "kept"],
+    ["new results", (state) => answer(run(state, { type: "edit", text: "melreux" }, submit()), [melreux]), "kept"],
+    ["picking a new result", (state) => run(state, { type: "pick", result: melreux }), melreux],
+    ["nothing found", (state) => answer(run(state, { type: "edit", text: "qxzv" }, submit()), []), null],
+    ["a failed search", (state) => answer(run(state, { type: "edit", text: "melreux" }, submit()), "failed"), "kept"],
+    ["offline", (state) => run(state, { type: "edit", text: "melreux" }, submit(false)), "kept"],
+    ["Escape", (state) => run(state, { type: "dismiss" }), "kept"],
+    ["×", (state) => run(state, { type: "clear" }), null],
   ])("%s", (_, act, expected) => {
     expect(act(showing()).shown).toEqual(expected === "kept" ? hotton : expected);
   });

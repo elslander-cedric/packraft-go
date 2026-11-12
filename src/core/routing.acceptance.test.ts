@@ -53,7 +53,7 @@ function planner(initial: Trip) {
   return { state, update };
 }
 
-const flush = () => new Promise((r) => setTimeout(r, 0));
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("legs without a routed result are routed automatically; routed legs never again", () => {
   it("routes each unrouted hike leg once, with its own endpoints, and stores the geometry", async () => {
@@ -62,7 +62,7 @@ describe("legs without a routed result are routed automatically; routed legs nev
     const auto = createAutoRouter(router, routingInto(update));
 
     const done = auto.sync(state.trip);
-    expect(calls.map((c) => [c.mode, c.points])).toEqual([
+    expect(calls.map((call) => [call.mode, call.points])).toEqual([
       ["hike", [P1, P2]],
       ["hike", [P2, P3]],
     ]);
@@ -70,7 +70,7 @@ describe("legs without a routed result are routed automatically; routed legs nev
     calls[1].answer(track(P2, P3));
     await done;
 
-    expect(state.trip.legs.map((l) => l.route?.status)).toEqual(["routed", "routed"]);
+    expect(state.trip.legs.map((leg) => leg.route?.status)).toEqual(["routed", "routed"]);
     expect(state.trip.legs[1].route).toEqual({ status: "routed", geometry: geometryOf(track(P2, P3)) });
   });
 
@@ -99,12 +99,12 @@ describe("legs without a routed result are routed automatically; routed legs nev
     calls[0].answer(track(P1, P2));
     await flush();
 
-    update((t) => applyEdit(t, { type: "addPoint", at: P3 }));
+    update((trip) => applyEdit(trip, { type: "addPoint", at: P3 }));
     void auto.sync(state.trip);
-    update((t) => applyEdit(t, { type: "addPoint", at: P4 }));
+    update((trip) => applyEdit(trip, { type: "addPoint", at: P4 }));
     void auto.sync(state.trip);
 
-    expect(calls.map((c) => c.points)).toEqual([
+    expect(calls.map((call) => call.points)).toEqual([
       [P1, P2],
       [P2, P3],
       [P3, P4],
@@ -112,7 +112,7 @@ describe("legs without a routed result are routed automatically; routed legs nev
     calls[1].answer(track(P2, P3));
     calls[2].answer(track(P3, P4));
     await flush();
-    expect(state.trip.legs.map((l) => l.route?.status)).toEqual(["routed", "routed", "routed"]);
+    expect(state.trip.legs.map((leg) => leg.route?.status)).toEqual(["routed", "routed", "routed"]);
   });
 
   it("a trip that arrives with routed legs (e.g. reopened) makes no requests at all", async () => {
@@ -120,8 +120,8 @@ describe("legs without a routed result are routed automatically; routed legs nev
     const base = through(P1, P2, P3);
     const routed: Trip = {
       ...base,
-      legs: base.legs.map((l, i) => ({
-        ...l,
+      legs: base.legs.map((leg, i) => ({
+        ...leg,
         route: { status: "routed" as const, geometry: geometryOf(track(base.points[i], base.points[i + 1])) },
       })),
     };
@@ -136,7 +136,7 @@ describe("legs without a routed result are routed automatically; routed legs nev
     const auto = createAutoRouter(router, routingInto(update));
     void auto.sync(state.trip);
     // The leg's end moves (as a future move-point edit would): its route is dropped.
-    update((t) => ({ ...t, points: [P1, P3], legs: [{ mode: "hike" }] }));
+    update((trip) => ({ ...trip, points: [P1, P3], legs: [{ mode: "hike" }] }));
     void auto.sync(state.trip);
     calls[0].answer(track(P1, P2));
     await flush();
@@ -177,7 +177,7 @@ describe("failure keeps the leg and can be retried", () => {
     // Failed legs still have a (straight-line) distance.
     expect(summarise(state.trip).legs[1].distanceKm).toBeGreaterThan(0);
 
-    update((t) => retryLeg(t, 1));
+    update((trip) => retryLeg(trip, 1));
     void auto.sync(state.trip);
     expect(calls).toHaveLength(3);
     expect(calls[2].points).toEqual([P2, P3]);

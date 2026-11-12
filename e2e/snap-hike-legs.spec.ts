@@ -22,7 +22,7 @@ async function openMap(page: Page) {
 /** A reply the test releases when it is ready, so the pending state can be observed. */
 function heldReply() {
   let release!: (reply: BRouterReply) => void;
-  const reply = new Promise<BRouterReply>((r) => (release = r));
+  const reply = new Promise<BRouterReply>((resolve) => (release = resolve));
   return { reply, release };
 }
 
@@ -46,8 +46,8 @@ test("a hike leg shows pending, then follows the trail with its distance, climb 
   // opening zoom the 3 km track is a few pixels wide, so Leaflet simplifies it.)
   await expect(legLines(page)).toHaveCount(1);
   await expect(legLines(page)).toHaveClass(/leg-routed/);
-  const d = (await legLines(page).getAttribute("d")) ?? "";
-  expect((d.match(/L/g) ?? []).length).toBeGreaterThan(1);
+  const pathData = (await legLines(page).getAttribute("d")) ?? "";
+  expect((pathData.match(/L/g) ?? []).length).toBeGreaterThan(1);
 
   // Figures come from the routed track: 3.2 km, BRouter's smoothed climb of 100 m, 59 m smoothed descent.
   const row = rows(page).nth(0);

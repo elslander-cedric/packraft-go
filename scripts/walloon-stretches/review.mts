@@ -52,11 +52,11 @@ async function body(req: IncomingMessage): Promise<unknown> {
 
 type Decision = { id: string; action: "confirm" | "move" | "clear"; lat?: number; lng?: number; note?: string };
 
-const isDecision = (d: unknown): d is Decision => {
-  if (!d || typeof d !== "object") {
+const isDecision = (value: unknown): value is Decision => {
+  if (!value || typeof value !== "object") {
     return false;
   }
-  const x = d as Record<string, unknown>;
+  const x = value as Record<string, unknown>;
   if (typeof x.id !== "string" || !/^[0-9][A-C][0-9][a-c]?(-[12])?\.(from|to)$/.test(x.id)) {
     return false;
   }
@@ -76,8 +76,8 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "GET" && /^\/leaflet\/(leaflet\.(js|css)|images\/[a-z0-9-]+\.png)$/.test(url.pathname)) {
       const file = path.join(LEAFLET, url.pathname.slice("/leaflet/".length));
-      const type = file.endsWith(".js") ? "text/javascript" : file.endsWith(".css") ? "text/css" : "image/png";
-      res.writeHead(200, { "Content-Type": type });
+      const types: Record<string, string> = { ".js": "text/javascript", ".css": "text/css", ".png": "image/png" };
+      res.writeHead(200, { "Content-Type": types[path.extname(file)] });
       createReadStream(file).pipe(res);
       return;
     }

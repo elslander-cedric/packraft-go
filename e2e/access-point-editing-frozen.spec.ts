@@ -82,13 +82,13 @@ test.describe("on a phone", () => {
     ],
     legs: [{ mode: "hike" }],
   };
-  const T = "2026-05-01T08:00:00.000Z";
+  const TIMESTAMP = "2026-05-01T08:00:00.000Z";
   // A slipway exactly on the first route point.
   const onFirstPoint = updateAccessPoint(
-    addAccessPoint([], { id: "ap-1", at: trip.points[0], now: T }),
+    addAccessPoint([], { id: "ap-1", at: trip.points[0], now: TIMESTAMP }),
     "ap-1",
     { kind: "slipway", use: "put-in" },
-    T,
+    TIMESTAMP,
   );
 
   /** Opens the phone with the trip (and `accessPoints`) stored, enters access point editing and puts the sheet back to its peek. */
@@ -210,12 +210,12 @@ test.describe("on a wide screen", () => {
       ],
       legs: [{ mode: "hike" }],
     };
-    const T = "2026-05-01T08:00:00.000Z";
+    const TIMESTAMP = "2026-05-01T08:00:00.000Z";
     const onFirstPoint = updateAccessPoint(
-      addAccessPoint([], { id: "ap-1", at: trip.points[0], now: T }),
+      addAccessPoint([], { id: "ap-1", at: trip.points[0], now: TIMESTAMP }),
       "ap-1",
       { kind: "slipway", use: "put-in" },
-      T,
+      TIMESTAMP,
     );
     await serveOffline(page, hiking);
     await page.addInitScript(
@@ -286,12 +286,12 @@ test.describe("on a wide screen", () => {
     const start = { lat: 50.3427, lng: 5.4563 };
     const putIn = { lat: 50.3527, lng: 5.4563 };
     const nearby = { lat: 50.3537, lng: 5.4563 }; // about 111 m from the put-in
-    const T = "2026-10-14T08:00:00.000Z";
+    const TIMESTAMP = "2026-10-14T08:00:00.000Z";
     const slipway = updateAccessPoint(
-      addAccessPoint([], { id: "ap1", at: nearby, now: T }),
+      addAccessPoint([], { id: "ap1", at: nearby, now: TIMESTAMP }),
       "ap1",
       { kind: "slipway", use: "put-in" },
-      T,
+      TIMESTAMP,
     );
     const seeded: Trip = {
       name: "Ourthe",
@@ -301,7 +301,7 @@ test.describe("on a wide screen", () => {
           mode: "hike",
           route: {
             status: "routed",
-            geometry: [start, putIn].map((p) => ({ ...p, elevation: 5 })),
+            geometry: [start, putIn].map((point) => ({ ...point, elevation: 5 })),
           },
         },
       ],

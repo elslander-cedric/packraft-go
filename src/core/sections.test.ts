@@ -11,7 +11,13 @@ function trip(modes: LegMode[], camps?: number[]): Trip {
 }
 
 /** The sections as [first leg, last leg, mode, day] for compact expectations. */
-const sectionsOf = (t: Trip) => tripSections(t).map((s) => [s.firstLeg, s.lastLeg, s.mode, s.day]);
+const sectionsOf = (trip: Trip) =>
+  tripSections(trip).map((tripSection) => [
+    tripSection.firstLeg,
+    tripSection.lastLeg,
+    tripSection.mode,
+    tripSection.day,
+  ]);
 
 describe("trip sections", () => {
   it("has no sections without legs", () => {

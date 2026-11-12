@@ -61,6 +61,10 @@ export function valuesUrl(tsIds: readonly string[], serviceUrl = KIWIS_URL): str
 }
 
 type Series = { stationNo: string; kind: keyof GaugeReadings };
+const SERIES_KINDS: Record<string, keyof GaugeReadings | undefined> = {
+  [MEAN_72H_SERIES]: "mean72h",
+  [HOURLY_SERIES]: "hourly",
+};
 
 /** The series list: a table whose first row names the columns. */
 function parseSeriesList(body: unknown): Map<string, Series> | null {
@@ -75,7 +79,7 @@ function parseSeriesList(body: unknown): Map<string, Series> | null {
   }
   const series = new Map<string, Series>();
   for (const row of rows) {
-    const kind = row[name] === MEAN_72H_SERIES ? "mean72h" : row[name] === HOURLY_SERIES ? "hourly" : null;
+    const kind = SERIES_KINDS[String(row[name])];
     if (kind && typeof row[id] === "string" && typeof row[station] === "string") {
       series.set(row[id], { stationNo: row[station], kind });
     }
@@ -110,8 +114,8 @@ function parseValues(body: unknown, series: Map<string, Series>): Record<string,
     gauge[which.kind].push(...readings);
   }
   for (const gauge of Object.values(gauges)) {
-    gauge.mean72h.sort((a, b) => (a.at < b.at ? -1 : 1));
-    gauge.hourly.sort((a, b) => (a.at < b.at ? -1 : 1));
+    gauge.mean72h.sort((left, right) => (left.at < right.at ? -1 : 1));
+    gauge.hourly.sort((left, right) => (left.at < right.at ? -1 : 1));
   }
   return gauges;
 }

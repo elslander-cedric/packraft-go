@@ -49,18 +49,18 @@ const NO_ROUTE: BRouterReply = {
 const byProfile = (url: URL) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL);
 
 function minutesIn(text: string | null): number {
-  const m = (text ?? "").match(/(?:(\d+) h )?(\d+) min/);
-  if (!m) {
+  const match = (text ?? "").match(/(?:(\d+) h )?(\d+) min/);
+  if (!match) {
     throw new Error(`no time in "${text}"`);
   }
-  return Number(m[1] ?? 0) * 60 + Number(m[2]);
+  return Number(match[1] ?? 0) * 60 + Number(match[2]);
 }
 function kmIn(text: string | null, label: string): number {
-  const m = (text ?? "").match(new RegExp(`${label} (\\d+\\.\\d) km`));
-  if (!m) {
+  const match = (text ?? "").match(new RegExp(`${label} (\\d+\\.\\d) km`));
+  if (!match) {
     throw new Error(`no ${label} distance in "${text}"`);
   }
-  return Number(m[1]);
+  return Number(match[1]);
 }
 const legKm = async (page: Page, i: number) =>
   Number(((await legRows(page).nth(i).textContent()) ?? "").match(/(\d+\.\d) km/)![1]);
@@ -224,7 +224,7 @@ test("marking a camp while a leg is still being snapped: the day shows '…' and
   page,
 }) => {
   let release: () => void = () => {};
-  const held = new Promise<void>((r) => (release = r));
+  const held = new Promise<void>((resolve) => (release = resolve));
   let heldCount = 0;
   const network = await serveOffline(page, {
     brouter: async (url) => {
@@ -267,7 +267,7 @@ test("camps persist through autosave: marking and unmarking are both stored", as
   await toggleCampAt(page, click, 1);
   await toggleCampAt(page, click, 2);
   await expect
-    .poll(async () => JSON.parse((await page.evaluate((k) => localStorage.getItem(k), KEY))!).trip.camps)
+    .poll(async () => JSON.parse((await page.evaluate((key) => localStorage.getItem(key), KEY))!).trip.camps)
     .toEqual([1, 2]);
   const routed = network.brouter.length;
 
@@ -298,7 +298,7 @@ test("an old version 2 save file is refused as an unknown version, keeping the t
   page,
 }) => {
   await serveOffline(page, { brouter: byProfile });
-  page.on("dialog", (d) => void d.accept());
+  page.on("dialog", (dialog) => void dialog.accept());
   const click = await drawThreeLegs(page);
   await toggleCampAt(page, click, 1);
   await expect(campMarkers(page)).toHaveCount(1);
@@ -343,7 +343,7 @@ test("a save file with a camp on a point that does not exist is refused and the 
   page,
 }) => {
   await serveOffline(page, { brouter: byProfile });
-  page.on("dialog", (d) => void d.accept());
+  page.on("dialog", (dialog) => void dialog.accept());
   const click = await drawThreeLegs(page);
   await toggleCampAt(page, click, 1);
   // Updated: v1 dropped (#33). Version 2, so this stays about bad camps, not the version.

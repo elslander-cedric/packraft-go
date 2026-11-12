@@ -47,8 +47,8 @@ function backUp(storage: AccessPointStorage, text: string, now: () => string): s
     }
     const base = `${ACCESS_POINTS_BACKUP_PREFIX}${now()}`;
     let key = base;
-    for (let n = 2; storage.getItem(key) !== null; n++) {
-      key = `${base}-${n}`;
+    for (let number = 2; storage.getItem(key) !== null; number++) {
+      key = `${base}-${number}`;
     }
     storage.setItem(key, text);
     return key;

@@ -77,7 +77,7 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const [on, setOnState] = useState(false);
   const [selectedId, select] = useState<string | null>(null);
   const builtInAires = useBuiltInOfficialAires(on || wantAires);
-  const selectedAire = builtInAires?.aires.find((a) => a.id === selectedId);
+  const selectedAire = builtInAires?.aires.find((aire) => aire.id === selectedId);
   // An aire's details show its stretch's status, also with the layer off.
   const statusShown = on || selectedAire !== undefined;
   const rules = useAccessRules(statusShown);
@@ -115,7 +115,7 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
     () =>
       trip.startDate === undefined
         ? []
-        : summarise(trip).days.flatMap((d, i) => (d.date === undefined ? [] : [{ day: i + 1, date: d.date }])),
+        : summarise(trip).days.flatMap((day, i) => (day.date === undefined ? [] : [{ day: i + 1, date: day.date }])),
     [trip],
   );
   const setOn = (next: boolean) => {
@@ -148,12 +148,12 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
         : null,
     selectedId,
     select,
-    selectedWater: on ? features.find((f) => f.record.id === selectedId) : undefined,
-    selectedLock: on ? locks?.find((l) => l.id === selectedId) : undefined,
+    selectedWater: on ? features.find((feature) => feature.record.id === selectedId) : undefined,
+    selectedLock: on ? locks?.find((lock) => lock.id === selectedId) : undefined,
     selectedAire,
-    selectedAireStretch: builtInAires?.stretches.find((s) => s.id === selectedAire?.officialStretch),
+    selectedAireStretch: builtInAires?.stretches.find((stretch) => stretch.id === selectedAire?.officialStretch),
     selectedAireStatus,
-    selectedObstacle: on ? obstacles?.find((o) => o.id === selectedId) : undefined,
+    selectedObstacle: on ? obstacles?.find((obstacle) => obstacle.id === selectedId) : undefined,
     selectedIncident: on ? shownIncidents.find((i) => i.id === selectedId) : undefined,
     incidents,
     notChecked: on ? checksFailed(official, incidents) : ALL_CHECKED,

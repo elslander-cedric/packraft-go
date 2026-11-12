@@ -104,17 +104,17 @@ test("hike + paddle legs and a camp export as GPX 1.1 with routed elevations, na
   expect(doc.documentElement!.getAttribute("version")).toBe("1.1");
   const gpx = parseGpx11(file.text);
   expect(gpx.metadataName).toBe(name);
-  expect(gpx.tracks.map((t) => t.name)).toEqual([name]);
+  expect(gpx.tracks.map((track) => track.name)).toEqual([name]);
   // Updated: ADR 0037. One track through both legs, the point where they meet written once.
   const expected = [...recorded(TRAIL_TEXT), ...recorded(RIVER_TEXT).slice(1)];
   expect(gpx.tracks[0].points).toHaveLength(expected.length);
-  gpx.tracks[0].points.forEach((p, j) => {
-    expect(p.lat).toBeCloseTo(expected[j].lat, 6);
-    expect(p.lon).toBeCloseTo(expected[j].lng, 6);
-    expect(p.ele).toBeCloseTo(expected[j].ele, 1);
+  gpx.tracks[0].points.forEach((point, index) => {
+    expect(point.lat).toBeCloseTo(expected[index].lat, 6);
+    expect(point.lon).toBeCloseTo(expected[index].lng, 6);
+    expect(point.ele).toBeCloseTo(expected[index].ele, 1);
   });
   // Updated: ADR 0037. The camp starts the paddle section, so its waypoint names the day.
-  expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – Day 1 – hike", "2 – Day 2 – paddle", "End"]);
+  expect(gpx.waypoints.map((waypoint) => waypoint.name)).toEqual(["1 – Day 1 – hike", "2 – Day 2 – paddle", "End"]);
 
   // Exporting calls no routing and no other service.
   await page.waitForTimeout(300);
@@ -139,13 +139,13 @@ test("an unnamed trip with unrouted legs exports straight lines at the drawn poi
   expect(file.name).toBe("Untitled trip.gpx");
   const gpx = parseGpx11(file.text);
   expect(gpx.metadataName).toBe("Untitled trip");
-  expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – hike", "End"]);
-  expect(gpx.tracks.map((t) => t.name)).toEqual(["Untitled trip"]);
+  expect(gpx.waypoints.map((waypoint) => waypoint.name)).toEqual(["1 – hike", "End"]);
+  expect(gpx.tracks.map((track) => track.name)).toEqual(["Untitled trip"]);
   expect(gpx.tracks[0].points).toHaveLength(3);
-  for (const [i, p] of gpx.tracks[0].points.entries()) {
-    expect(p.ele).toBeUndefined();
-    expect(p.lat).toBeCloseTo(stored.points[i].lat, 6);
-    expect(p.lon).toBeCloseTo(stored.points[i].lng, 6);
+  for (const [i, gpxPoint] of gpx.tracks[0].points.entries()) {
+    expect(gpxPoint.ele).toBeUndefined();
+    expect(gpxPoint.lat).toBeCloseTo(stored.points[i].lat, 6);
+    expect(gpxPoint.lon).toBeCloseTo(stored.points[i].lng, 6);
   }
   expect(net.blocked).toEqual([]);
 });
@@ -196,7 +196,7 @@ test("the export reflects a reloaded trip and renaming, without re-routing", asy
   const gpx = parseGpx11(file.text);
   expect(gpx.metadataName).toBe("Semois day");
   expect(gpx.tracks[0].points.length).toBe(recorded(TRAIL_TEXT).length);
-  expect(gpx.tracks[0].points.every((p) => typeof p.ele === "number")).toBe(true);
+  expect(gpx.tracks[0].points.every((point) => typeof point.ele === "number")).toBe(true);
   expect(net.brouter).toHaveLength(calls);
 });
 
@@ -234,7 +234,7 @@ test("a point at the antimeridian (from an opened file) exports a longitude GPX 
   await expect(pointMarkers(page)).toHaveCount(2);
   // Updated: ADR 0037. One GPX file: two track points and two waypoints (the start and the end).
   const file = await exportGpx(page);
-  const lons = [...file.text.matchAll(/lon="([^"]+)"/g)].map((m) => Number(m[1]));
+  const lons = [...file.text.matchAll(/lon="([^"]+)"/g)].map((match) => Number(match[1]));
   expect(lons).toHaveLength(4);
   // GPX 1.1 longitudeType: -180 <= lon < 180.
   for (const lon of lons) {

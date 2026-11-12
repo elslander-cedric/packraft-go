@@ -13,12 +13,12 @@ import {
 } from "./builtInRules";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const stretchIds = new Set(builtInOfficialStretches.stretches.map((s) => s.id));
+const stretchIds = new Set(builtInOfficialStretches.stretches.map((stretch) => stretch.id));
 
 describe("built-in official aires", () => {
   it("are the SPW's 92, once each, with ids of their own", () => {
     expect(builtInOfficialAires).toHaveLength(92);
-    const ids = new Set(builtInOfficialAires.map((a) => a.id));
+    const ids = new Set(builtInOfficialAires.map((builtInOfficialAire) => builtInOfficialAire.id));
     expect(ids.size).toBe(92);
     for (const lock of builtInLocks.locks) {
       expect(ids.has(lock.id)).toBe(false);
@@ -37,12 +37,15 @@ describe("built-in official aires", () => {
   });
 
   it("the three uses all occur, with NA read as both", () => {
-    const count = (use: string) => builtInOfficialAires.filter((a) => a.use === use).length;
+    const count = (use: string) =>
+      builtInOfficialAires.filter((builtInOfficialAire) => builtInOfficialAire.use === use).length;
     expect([count("put-in"), count("take-out"), count("both")]).toEqual([22, 15, 55]);
   });
 
   it("every aire is on a known official stretch", () => {
-    expect(builtInOfficialAires.filter((a) => !stretchIds.has(a.officialStretch))).toEqual([]);
+    expect(
+      builtInOfficialAires.filter((builtInOfficialAire) => !stretchIds.has(builtInOfficialAire.officialStretch)),
+    ).toEqual([]);
   });
 
   it("every aire's stretch has access rules, so its dialog can give a status", () => {
@@ -51,7 +54,9 @@ describe("built-in official aires", () => {
         rule.type === "agw" && rule.officialStretch ? [rule.officialStretch] : [],
       ),
     );
-    expect(builtInOfficialAires.filter((a) => !ruled.has(a.officialStretch))).toEqual([]);
+    expect(
+      builtInOfficialAires.filter((builtInOfficialAire) => !ruled.has(builtInOfficialAire.officialStretch)),
+    ).toEqual([]);
   });
 
   it("every aire has a position in Wallonia", () => {
@@ -73,7 +78,7 @@ describe("built-in official aires", () => {
 describe("built-in obstacles", () => {
   it("are the SPW's 96, once each, with ids of their own", () => {
     expect(builtInObstacles).toHaveLength(96);
-    const ids = new Set(builtInObstacles.map((o) => o.id));
+    const ids = new Set(builtInObstacles.map((builtInObstacle) => builtInObstacle.id));
     expect(ids.size).toBe(96);
     for (const aire of builtInOfficialAires) {
       expect(ids.has(aire.id)).toBe(false);
@@ -94,7 +99,7 @@ describe("built-in obstacles", () => {
   });
 
   it("the five kinds occur as the SPW counted them on 2026-11-02", () => {
-    const count = (kind: string) => builtInObstacles.filter((o) => o.kind === kind).length;
+    const count = (kind: string) => builtInObstacles.filter((builtInObstacle) => builtInObstacle.kind === kind).length;
     expect(obstacleKinds.map(count)).toEqual([45, 12, 12, 20, 7]);
   });
 
@@ -104,7 +109,7 @@ describe("built-in obstacles", () => {
     );
     // The SPW's one exception: a drossage on the Sûre, where the river is the border,
     // 18 m outside the region's simplified outline.
-    expect(outside.map((o) => o.spwId)).toEqual([133]);
+    expect(outside.map((obstacle) => obstacle.spwId)).toEqual([133]);
   });
 
   it("every obstacle carries the snapshot's source and date", () => {

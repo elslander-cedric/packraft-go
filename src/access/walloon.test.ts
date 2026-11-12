@@ -11,26 +11,26 @@ const walloon = dataset.records;
 describe("Walloon stretch records", () => {
   it("has the 28 reviewed stretches, 4 of them split in two (#209), each with a source and research date", () => {
     expect(walloon).toHaveLength(32);
-    for (const r of walloon) {
-      expect(r.scope).toBe("water");
-      expect(r.source.url).toMatch(/^https:\/\//);
-      expect(r.researched).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(r.geometry.type).toBe("LineString");
+    for (const record of walloon) {
+      expect(record.scope).toBe("water");
+      expect(record.source.url).toMatch(/^https:\/\//);
+      expect(record.researched).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(record.geometry.type).toBe("LineString");
     }
   });
 
   it("keeps the assumed flag on the gauges, and says so as not confirmed", () => {
-    const assumed = walloon.filter((r) => r.rule.type === "agw" && r.rule.gauge?.assumed);
-    const names = new Set(assumed.map((r) => (r.rule.type === "agw" ? r.rule.gauge?.name : "")));
+    const assumed = walloon.filter((record) => record.rule.type === "agw" && record.rule.gauge?.assumed);
+    const names = new Set(assumed.map((record) => (record.rule.type === "agw" ? record.rule.gauge?.name : "")));
     expect(names).toEqual(new Set(["Martinrive", "Gendron", "Martelange", "Membre"]));
-    for (const r of assumed) {
-      expect(r.unverified).toMatch(/assumed/);
+    for (const record of assumed) {
+      expect(record.unverified).toMatch(/assumed/);
     }
   });
 
   it("the Lesse from Han to Houyet keeps Hérock's SPW practice mark on its rule, as a confirmed gauge (#205)", () => {
     for (const piece of ["walloon-1C2b-1", "walloon-1C2b-2"]) {
-      const lesse = walloon.find((r) => r.id === piece)!;
+      const lesse = walloon.find((record) => record.id === piece)!;
       expect(lesse.rule).toMatchObject({
         gauge: { name: "Hérock", stationNo: "L6610", assumed: false, spwPractice: true },
       });
@@ -72,7 +72,7 @@ describe("official stretch ids", () => {
 
 describe("the Walloon stretches in the built-in rules", () => {
   const on = (id: string) => {
-    const record = walloon.find((r) => r.id === id)!;
+    const record = walloon.find((record) => record.id === id)!;
     const line = record.geometry.type === "LineString" ? record.geometry.coordinates : [];
     const [lng, lat] = line[Math.floor(line.length / 2)];
     return { lat, lng };
@@ -88,28 +88,32 @@ describe("the Walloon stretches in the built-in rules", () => {
   });
 
   it("every stretch is in the built-in rules and drawn as a feature", () => {
-    const ids = accessFeatures(builtInAccessRules, { date: "2026-12-15" }).map((f) => f.record.id);
-    for (const r of walloon) {
-      expect(ids).toContain(r.id);
+    const ids = accessFeatures(builtInAccessRules, { date: "2026-12-15" }).map(
+      (accessFeature) => accessFeature.record.id,
+    );
+    for (const record of walloon) {
+      expect(ids).toContain(record.id);
     }
   });
 
   it("a 1.C stretch is closed for the season in July and open in December", () => {
-    const c = walloon.find((r) => r.rule.type === "agw" && r.rule.category === "1.C")!;
-    expect(stateOn(c.id, "2026-07-15").state).toBe("closed-today");
-    expect(stateOn(c.id, "2026-07-15").reasons[0]).toMatchObject({ closedBy: "season", recordId: c.id });
-    expect(stateOn(c.id, "2026-12-15").state).toBe("open");
+    const record = walloon.find(
+      (otherRecord) => otherRecord.rule.type === "agw" && otherRecord.rule.category === "1.C",
+    )!;
+    expect(stateOn(record.id, "2026-07-15").state).toBe("closed-today");
+    expect(stateOn(record.id, "2026-07-15").reasons[0]).toMatchObject({ closedBy: "season", recordId: record.id });
+    expect(stateOn(record.id, "2026-12-15").state).toBe("open");
   });
 
   it("a 1.B stretch is closed on the trout opening day, 21 March 2026, and open the week after", () => {
-    const b = walloon.find((r) => r.rule.type === "agw" && r.rule.category === "1.B")!;
-    expect(stateOn(b.id, "2026-03-21").reasons[0]).toMatchObject({ closedBy: "fishing-day" });
-    expect(stateOn(b.id, "2026-03-28").state).toBe("open");
+    const recordB = walloon.find((record) => record.rule.type === "agw" && record.rule.category === "1.B")!;
+    expect(stateOn(recordB.id, "2026-03-21").reasons[0]).toMatchObject({ closedBy: "fishing-day" });
+    expect(stateOn(recordB.id, "2026-03-28").state).toBe("open");
   });
 
   it("a 1.A stretch is open on the first Saturday of June", () => {
-    const a = walloon.find((r) => r.rule.type === "agw" && r.rule.category === "1.A")!;
-    expect(stateOn(a.id, "2026-06-06").state).toBe("open");
+    const recordA = walloon.find((record) => record.rule.type === "agw" && record.rule.category === "1.A")!;
+    expect(stateOn(recordA.id, "2026-06-06").state).toBe("open");
   });
 
   // Updated: round 2 (#59): unlisted Walloon water is forbidden (ADR 0022), not unknown. Regions are never painted.
@@ -135,7 +139,9 @@ describe("the Walloon stretches in the built-in rules", () => {
   });
 
   it("regions are never painted, so unlisted water stays unpainted", () => {
-    const ids = accessFeatures(builtInAccessRules, { date: "2026-07-15" }).map((f) => f.record.id);
+    const ids = accessFeatures(builtInAccessRules, { date: "2026-07-15" }).map(
+      (accessFeature) => accessFeature.record.id,
+    );
     expect(ids).not.toContain("wallonia");
   });
 });

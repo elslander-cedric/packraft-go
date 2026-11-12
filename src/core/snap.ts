@@ -68,7 +68,12 @@ export function snapCandidate(
  */
 export function newModeChanges(before: Trip, after: Trip): ModeChange[] {
   const had = putInsAndTakeOuts(before);
-  return putInsAndTakeOuts(after).filter((c) => !had.some((h) => h.point === c.point && h.kind === c.kind));
+  return putInsAndTakeOuts(after).filter(
+    (putInsAndTakeOut) =>
+      !had.some(
+        (modeChange) => modeChange.point === putInsAndTakeOut.point && modeChange.kind === putInsAndTakeOut.kind,
+      ),
+  );
 }
 
 /**

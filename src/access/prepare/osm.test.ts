@@ -66,7 +66,7 @@ describe("OSM preparation", () => {
       ],
     ]);
     expect(merged).toHaveLength(1);
-    expect(merged[0].map((p) => p[0]).sort()).toEqual([0, 1, 2, 3]);
+    expect(merged[0].map((position) => position[0]).sort()).toEqual([0, 1, 2, 3]);
   });
 
   it("takes ways from top-level ways and relation members, filtering top-level ways by tags", () => {

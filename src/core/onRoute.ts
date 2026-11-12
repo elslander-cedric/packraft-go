@@ -63,7 +63,10 @@ function routeLine(trip: Trip): LatLng[] {
 
 /** Whether the trip's put-in or take-out is at a position. */
 function roleAt(trip: Trip, position: LatLng): OnRoute["role"] {
-  return putInsAndTakeOuts(trip).find((c) => distanceM(trip.points[c.point], position) <= AT_M)?.kind ?? null;
+  return (
+    putInsAndTakeOuts(trip).find((putInsAndTakeOut) => distanceM(trip.points[putInsAndTakeOut.point], position) <= AT_M)
+      ?.kind ?? null
+  );
 }
 
 /** The official aires on the trip's route, in route order; none without a route. */
@@ -78,7 +81,7 @@ export function officialAiresOnRoute(trip: Trip, aires: readonly OfficialAire[])
       const { offM, alongM } = projectOntoLine(position, line);
       return offM <= ON_ROUTE_M ? [{ aire, alongKm: alongM / 1000, role: roleAt(trip, position) }] : [];
     })
-    .sort((a, b) => a.alongKm - b.alongKm);
+    .sort((left, right) => left.alongKm - right.alongKm);
 }
 
 /** Your on-route points and the on-route official aires as one list in route order; your point first at the same spot. */
@@ -86,7 +89,7 @@ export function mergeInRouteOrder(
   points: readonly OnRoute[],
   aires: readonly OnRouteAire[],
 ): readonly (OnRoute | OnRouteAire)[] {
-  return [...points, ...aires].sort((a, b) => a.alongKm - b.alongKm);
+  return [...points, ...aires].sort((left, right) => left.alongKm - right.alongKm);
 }
 
 /** Your access points split by the trip's route, given your position (null when not shown). */
@@ -97,7 +100,7 @@ export function accessPointsByRoute(trip: Trip, points: AccessPoints, you: LatLn
   if (!hasRoute) {
     const notOnRoute = points.map((point) => ({ point, fromYouKm: fromYouKm(point) }));
     if (you) {
-      notOnRoute.sort((a, b) => a.fromYouKm! - b.fromYouKm!);
+      notOnRoute.sort((left, right) => left.fromYouKm! - right.fromYouKm!);
     }
     return { hasRoute, onRoute: [], notOnRoute };
   }
@@ -111,7 +114,7 @@ export function accessPointsByRoute(trip: Trip, points: AccessPoints, you: LatLn
       rest.push({ point, fromYouKm: fromYouKm(point), offM });
     }
   }
-  onRoute.sort((a, b) => a.alongKm - b.alongKm);
-  rest.sort((a, b) => (you ? a.fromYouKm! - b.fromYouKm! : a.offM - b.offM));
+  onRoute.sort((left, right) => left.alongKm - right.alongKm);
+  rest.sort((left, right) => (you ? left.fromYouKm! - right.fromYouKm! : left.offM - right.offM));
   return { hasRoute, onRoute, notOnRoute: rest.map(({ point, fromYouKm }) => ({ point, fromYouKm })) };
 }

@@ -41,6 +41,30 @@ export default function AccessDetailsDialog({
 }: AccessDetailsDialogProps) {
   const obstacleName = obstacle && strings.obstacles.names[obstacle.kind];
   const incidentTitle = incident && strings.incidents.title;
+  // Only one of them is open at a time.
+  const detail = () => {
+    if (water) {
+      return <AccessDetail feature={water} date={date} {...(incidents && { incidents })} />;
+    }
+    if (lock) {
+      return <LockDetail lock={lock} />;
+    }
+    if (aire) {
+      return (
+        <OfficialAireDetail
+          aire={aire}
+          stretch={aireStretch}
+          status={aireStatus}
+          date={date}
+          {...(incidents && { incidents })}
+        />
+      );
+    }
+    if (obstacle) {
+      return <ObstacleDetail obstacle={obstacle} />;
+    }
+    return incident && <IncidentDetail incident={incident} />;
+  };
   return (
     <InfoDialog
       open={
@@ -54,23 +78,7 @@ export default function AccessDetailsDialog({
       closeLabel={strings.accessDetailClose}
       onClose={onClose}
     >
-      {water ? (
-        <AccessDetail feature={water} date={date} {...(incidents && { incidents })} />
-      ) : lock ? (
-        <LockDetail lock={lock} />
-      ) : aire ? (
-        <OfficialAireDetail
-          aire={aire}
-          stretch={aireStretch}
-          status={aireStatus}
-          date={date}
-          {...(incidents && { incidents })}
-        />
-      ) : obstacle ? (
-        <ObstacleDetail obstacle={obstacle} />
-      ) : (
-        incident && <IncidentDetail incident={incident} />
-      )}
+      {detail()}
     </InfoDialog>
   );
 }

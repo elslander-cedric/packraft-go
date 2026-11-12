@@ -24,14 +24,14 @@ const line = [west, east];
 
 describe("locks on a leg's line", () => {
   it("finds a lock on the line", () => {
-    expect(locksOnLine(line, [lock("a", 4.05, 51.1)]).map((l) => l.id)).toEqual(["a"]);
+    expect(locksOnLine(line, [lock("a", 4.05, 51.1)]).map((lock) => lock.id)).toEqual(["a"]);
   });
 
   it("tolerates a line passing near the lock, but not far from it", () => {
     const near = lock("near", 4.05, 51.1 + 0.0005); // about 55 m
     const far = lock("far", 4.05, 51.1 + 0.002); // about 220 m
     expect(PASSING_TOLERANCE_M).toBeGreaterThan(55);
-    expect(locksOnLine(line, [near, far]).map((l) => l.id)).toEqual(["near"]);
+    expect(locksOnLine(line, [near, far]).map((lock) => lock.id)).toEqual(["near"]);
   });
 
   it("ignores a lock beyond the end of the line", () => {
@@ -40,14 +40,14 @@ describe("locks on a leg's line", () => {
 
   it("warns once for two chambers of the same lock complex", () => {
     const pair = [lock("a", 4.05, 51.1, "Canal"), lock("b", 4.0505, 51.1, "Canal"), lock("c", 4.07, 51.1, "Canal")];
-    expect(locksOnLine(line, pair).map((l) => l.id)).toEqual(["a", "c"]);
+    expect(locksOnLine(line, pair).map((lock) => lock.id)).toEqual(["a", "c"]);
   });
 });
 
 describe("lock warnings in the trip's access", () => {
-  const routed = (a: LatLng, b: LatLng): LegRoute => ({
+  const routed = (pointA: LatLng, pointB: LatLng): LegRoute => ({
     status: "routed",
-    geometry: [a, b].map((p) => ({ ...p, elevation: 0 })),
+    geometry: [pointA, pointB].map((point) => ({ ...point, elevation: 0 })),
   });
   const rules = fakeAccessRules([flandersSquare]);
   const trip: Trip = {
@@ -57,7 +57,10 @@ describe("lock warnings in the trip's access", () => {
       { mode: "paddle", route: routed(west, east) },
       {
         mode: "hike",
-        route: { status: "routed", geometry: [east, { lat: 51.2, lng: 4.1 }].map((p) => ({ ...p, elevation: 0 })) },
+        route: {
+          status: "routed",
+          geometry: [east, { lat: 51.2, lng: 4.1 }].map((point) => ({ ...point, elevation: 0 })),
+        },
       },
     ],
     startDate: "2026-10-20",

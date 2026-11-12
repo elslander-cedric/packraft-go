@@ -84,7 +84,7 @@ export default defineConfig([
     files: ["**/*.{ts,tsx,mts,mjs}"],
     rules: {
       curly: ["error", "all"],
-      "id-length": ["error", { min: 2, exceptions: ["_", "i", "x", "y"] }],
+      "id-length": ["error", { min: 2, exceptions: ["_", "i", "x", "y"], properties: "never" }],
       "no-nested-ternary": "error",
       // Warnings until the existing code is brought under them (ADR 0038).
       complexity: ["warn", 10],

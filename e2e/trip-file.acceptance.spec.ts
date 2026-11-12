@@ -168,7 +168,7 @@ test("undo after opening steps back within the opened trip only, never into the 
 test("a leg that was still routing when saved is routed after opening, as after a reload", async ({ page }) => {
   let release!: () => void;
   let hold = true;
-  const held = new Promise<BRouterReply>((r) => (release = () => r(TRAIL)));
+  const held = new Promise<BRouterReply>((resolve) => (release = () => resolve(TRAIL)));
   const net = await serveOffline(page, { brouter: () => (hold ? held : TRAIL) });
   const click = await openMap(page);
   await click(-150, 0);

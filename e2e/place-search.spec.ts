@@ -181,7 +181,9 @@ test("coordinates jump there with no request, even offline", async ({ page, cont
   await expect.poll(() => lastZoom(network.tiles)).toBe(15);
   // The pin's point is centred across the part of the map the panel leaves free, and between
   // the pill's row and the map's bottom.
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))),
+  );
   const free = await freeMapBox(page);
   const pillBox = (await pill(page).boundingBox())!;
   const marker = (await pin(page).boundingBox())!;
@@ -262,12 +264,17 @@ test.describe("the pill never covers the access chip", () => {
       await toggleAccessLayer(page);
       const chip = page.getByRole("button", { name: /^Access · / });
       await expect(chip).toBeVisible();
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+      await page.evaluate(() =>
+        Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))),
+      );
 
       const bar = (await pill(page).boundingBox())!;
       const chipBox = (await chip.boundingBox())!;
-      const separate = (a: typeof bar, b: typeof bar) =>
-        a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+      const separate = (boxA: typeof bar, boxB: typeof bar) =>
+        boxA.x + boxA.width <= boxB.x ||
+        boxB.x + boxB.width <= boxA.x ||
+        boxA.y + boxA.height <= boxB.y ||
+        boxB.y + boxB.height <= boxA.y;
       expect(separate(bar, chipBox)).toBe(true);
       // The pill is still usable: wide enough for a place name.
       expect(bar.width).toBeGreaterThan(150);

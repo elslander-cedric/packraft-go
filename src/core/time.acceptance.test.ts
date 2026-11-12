@@ -18,7 +18,7 @@ const east = (km: number): LatLng => ({ lat: 0, lng: km / KM_PER_DEGREE });
 const lineRouter = (climbM: number | undefined): Router => ({
   route: async (_mode, points): Promise<RouteResult> => ({
     ok: true,
-    geometry: points.map((p) => ({ ...p, elevation: 100 })),
+    geometry: points.map((point) => ({ ...point, elevation: 100 })),
     climbM,
   }),
 });
@@ -32,8 +32,8 @@ async function drawTrip(router: Router, points: LatLng[], modes: LegMode[] = [])
       state.trip = change(state.trip);
     }),
   );
-  const edit = async (e: Edit) => {
-    state.trip = applyEdit(state.trip, e);
+  const edit = async (edit: Edit) => {
+    state.trip = applyEdit(state.trip, edit);
     await auto.sync(state.trip);
   };
   for (const at of points) {
@@ -49,7 +49,7 @@ async function drawTrip(router: Router, points: LatLng[], modes: LegMode[] = [])
   return state.trip;
 }
 
-const settings = (s: Partial<Settings>): Settings => ({ ...defaultSettings, ...s });
+const settings = (changes: Partial<Settings>): Settings => ({ ...defaultSettings, ...changes });
 
 describe("hike time follows Naismith with pace factor (default 1.0)", () => {
   it("10 km + 600 m ascent at pace 1.0 is 3 h", async () => {
@@ -124,7 +124,7 @@ describe("(core side): each leg and the trip have a time", () => {
     // Hike 10 km + 600 m (3 h), then paddle 10 km (2 h at 5 km/h).
     const trip = await drawTrip(lineRouter(600), [east(0), east(10), east(20)], ["hike", "paddle"]);
     const summary = summarise(trip);
-    expect(summary.legs.map((l) => l.timeH)).toEqual([expect.closeTo(3, 3), expect.closeTo(2, 3)]);
+    expect(summary.legs.map((leg) => leg.timeH)).toEqual([expect.closeTo(3, 3), expect.closeTo(2, 3)]);
     expect(summary.trip.timeH).toBeCloseTo(5, 3);
   });
 
@@ -175,8 +175,8 @@ describe("(core side): changing and restoring settings", () => {
   });
 
   it("settings round-trip through their stored form", () => {
-    const s = { ...defaultSettings, paceFactor: 1.3, paddleSpeedKmh: 6.5 };
-    expect(restoreSettings(serialiseSettings(s))).toEqual(s);
+    const settings = { ...defaultSettings, paceFactor: 1.3, paddleSpeedKmh: 6.5 };
+    expect(restoreSettings(serialiseSettings(settings))).toEqual(settings);
   });
 
   it("nothing stored, or unreadable stored values, fall back to defaults", () => {
@@ -220,70 +220,70 @@ describe("hike legs without climb data", () => {
     route: async (mode, points): Promise<RouteResult> =>
       mode === "hike"
         ? { ok: false, failure: { kind: "no-route" } }
-        : { ok: true, geometry: points.map((p) => ({ ...p, elevation: 100 })) },
+        : { ok: true, geometry: points.map((point) => ({ ...point, elevation: 100 })) },
   };
 
   it("a hike leg that has not been routed yet is pending, and so is the trip", () => {
     let trip: Trip = emptyTrip();
     trip = applyEdit(trip, { type: "addPoint", at: east(0) });
     trip = applyEdit(trip, { type: "addPoint", at: east(10) });
-    const s = summarise(trip);
-    expect(s.legs[0].timeStatus).toBe("pending");
-    expect(s.trip.timeStatus).toBe("pending");
+    const summary = summarise(trip);
+    expect(summary.legs[0].timeStatus).toBe("pending");
+    expect(summary.trip.timeStatus).toBe("pending");
   });
 
   it("a routed hike leg and its trip are plain estimates", async () => {
     const trip = await drawTrip(lineRouter(600), [east(0), east(10)]);
-    const s = summarise(trip);
-    expect(s.legs[0].timeStatus).toBe("estimated");
-    expect(s.trip.timeStatus).toBe("estimated");
-    expect(s.trip.timeH).toBeCloseTo(3, 6);
+    const summary = summarise(trip);
+    expect(summary.legs[0].timeStatus).toBe("estimated");
+    expect(summary.trip.timeStatus).toBe("estimated");
+    expect(summary.trip.timeH).toBeCloseTo(3, 6);
   });
 
   it("a failed hike leg gets a distance-only time (with pace factor), marked no-climb-data; the trip includes it", async () => {
     const trip = await drawTrip(failingRouter, [east(0), east(10)]);
     expect(trip.legs[0].route?.status).toBe("failed");
-    const s = summarise(trip, settings({ paceFactor: 1.2 }));
-    expect(s.legs[0].timeH).toBeCloseTo(2.4, 6);
-    expect(s.legs[0].timeStatus).toBe("no-climb-data");
-    expect(s.trip.timeH).toBeCloseTo(2.4, 6);
-    expect(s.trip.timeStatus).toBe("no-climb-data");
+    const summary = summarise(trip, settings({ paceFactor: 1.2 }));
+    expect(summary.legs[0].timeH).toBeCloseTo(2.4, 6);
+    expect(summary.legs[0].timeStatus).toBe("no-climb-data");
+    expect(summary.trip.timeH).toBeCloseTo(2.4, 6);
+    expect(summary.trip.timeStatus).toBe("no-climb-data");
   });
 
   it("failed hike + routed paddle: trip sums both and carries the marker; the paddle leg is a plain estimate", async () => {
     const trip = await drawTrip(hikeFailsRouter, [east(0), east(10), east(20)], ["hike", "paddle"]);
-    expect(trip.legs.map((l) => l.route?.status)).toEqual(["failed", "routed"]);
-    const s = summarise(trip);
-    expect(s.legs[1].timeStatus).toBe("estimated");
-    expect(s.legs[1].timeH).toBeCloseTo(2, 6);
-    expect(s.trip.timeH).toBeCloseTo(4, 6);
-    expect(s.trip.timeStatus).toBe("no-climb-data");
+    expect(trip.legs.map((leg) => leg.route?.status)).toEqual(["failed", "routed"]);
+    const summary = summarise(trip);
+    expect(summary.legs[1].timeStatus).toBe("estimated");
+    expect(summary.legs[1].timeH).toBeCloseTo(2, 6);
+    expect(summary.trip.timeH).toBeCloseTo(4, 6);
+    expect(summary.trip.timeStatus).toBe("no-climb-data");
   });
 
   it("a failed paddle leg is unchanged: plain estimate, no marker on the trip", async () => {
     const trip = await drawTrip(failingRouter, [east(0), east(10)], ["paddle"]);
     expect(trip.legs[0].route?.status).toBe("failed");
-    const s = summarise(trip);
-    expect(s.legs[0].timeStatus).toBe("estimated");
-    expect(s.legs[0].timeH).toBeCloseTo(2, 6);
-    expect(s.trip.timeStatus).toBe("estimated");
+    const summary = summarise(trip);
+    expect(summary.legs[0].timeStatus).toBe("estimated");
+    expect(summary.legs[0].timeH).toBeCloseTo(2, 6);
+    expect(summary.trip.timeStatus).toBe("estimated");
   });
 
   it("a paddle leg still pending keeps its own time, but the trip is pending", async () => {
     const routed = await drawTrip(lineRouter(0), [east(0), east(10), east(20)], ["hike", "paddle"]);
     const trip: Trip = { ...routed, legs: [routed.legs[0], { mode: "paddle", route: { status: "pending" } }] };
-    const s = summarise(trip);
-    expect(s.legs[1].timeStatus).toBe("estimated");
-    expect(s.legs[1].timeH).toBeCloseTo(2, 6);
-    expect(s.trip.timeStatus).toBe("pending");
+    const summary = summarise(trip);
+    expect(summary.legs[1].timeStatus).toBe("estimated");
+    expect(summary.legs[1].timeH).toBeCloseTo(2, 6);
+    expect(summary.trip.timeStatus).toBe("pending");
   });
 
   it("pending wins over no-climb-data for the trip", async () => {
     const failed = await drawTrip(failingRouter, [east(0), east(10)]);
     const trip = applyEdit(failed, { type: "addPoint", at: east(20) });
-    const s = summarise(trip);
-    expect(s.legs[0].timeStatus).toBe("no-climb-data");
-    expect(s.legs[1].timeStatus).toBe("pending");
-    expect(s.trip.timeStatus).toBe("pending");
+    const summary = summarise(trip);
+    expect(summary.legs[0].timeStatus).toBe("no-climb-data");
+    expect(summary.legs[1].timeStatus).toBe("pending");
+    expect(summary.trip.timeStatus).toBe("pending");
   });
 });

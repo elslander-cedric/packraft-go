@@ -25,27 +25,27 @@ const list = (page: Page, name: string) => section(page).getByRole("list", { nam
 const rowsOf = (page: Page, name: string) => list(page, name).locator(".planner-access-point-row");
 
 // Hotton to the north-east: a hike leg, then a paddle leg, about 2.3 and 2.6 km.
-const P: LatLng[] = [
+const pointsP: LatLng[] = [
   { lat: 50.27, lng: 5.44 },
   { lat: 50.29, lng: 5.45 },
   { lat: 50.31, lng: 5.47 },
 ];
-const straight = (a: LatLng, b: LatLng) =>
+const straight = (pointA: LatLng, pointB: LatLng) =>
   Array.from({ length: 11 }, (_, i) => ({
-    lat: a.lat + ((b.lat - a.lat) * i) / 10,
-    lng: a.lng + ((b.lng - a.lng) * i) / 10,
+    lat: pointA.lat + ((pointB.lat - pointA.lat) * i) / 10,
+    lng: pointA.lng + ((pointB.lng - pointA.lng) * i) / 10,
     elevation: 200,
   }));
 const TRIP: Trip = {
   name: "Ourthe",
-  points: P,
+  points: pointsP,
   legs: [
-    { mode: "hike", route: { status: "routed", geometry: straight(P[0], P[1]) } },
-    { mode: "paddle", route: { status: "routed", geometry: straight(P[1], P[2]) } },
+    { mode: "hike", route: { status: "routed", geometry: straight(pointsP[0], pointsP[1]) } },
+    { mode: "paddle", route: { status: "routed", geometry: straight(pointsP[1], pointsP[2]) } },
   ],
 };
 
-const T = "2026-10-12T08:00:00.000Z";
+const TIMESTAMP = "2026-10-12T08:00:00.000Z";
 const point = (id: string, name: string, lat: number, lng: number): AccessPoint => ({
   id,
   position: { lat, lng },
@@ -55,8 +55,8 @@ const point = (id: string, name: string, lat: number, lng: number): AccessPoint 
   kind: "slipway",
   note: "",
   checkedOnSite: null,
-  createdAt: T,
-  updatedAt: T,
+  createdAt: TIMESTAMP,
+  updatedAt: TIMESTAMP,
 });
 // Stored out of order on purpose.
 const POINTS = [
@@ -124,7 +124,7 @@ test("rows run edge to edge like the legs, and a selected row keeps its backgrou
   const rowBox = (await rows.first().boundingBox())!;
   expect(rowBox.x).toBeCloseTo(sheetBox.x, 0);
 
-  const background = (n: number) => rows.nth(n).evaluate((el) => getComputedStyle(el).backgroundColor);
+  const background = (number: number) => rows.nth(number).evaluate((el) => getComputedStyle(el).backgroundColor);
   const before = await background(1);
   await rows.nth(1).click();
   await expect(rows.nth(1)).toHaveAttribute("aria-current", "true");

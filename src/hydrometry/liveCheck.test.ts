@@ -30,9 +30,11 @@ const editedList = (edit: (rows: string[][]) => string[][]): KiwisAnswers => ({
   ...recorded,
   list: { status: 200, body: JSON.stringify(edit(JSON.parse(recorded.list.body))) },
 });
-const levels = async (live: KiwisAnswers) => (await compareWithFixture(live, recorded)).map((f) => f.level);
+const levels = async (live: KiwisAnswers) => (await compareWithFixture(live, recorded)).map((finding) => finding.level);
 const mismatches = async (live: KiwisAnswers) =>
-  (await compareWithFixture(live, recorded)).filter((f) => f.level === "mismatch").map((f) => f.message);
+  (await compareWithFixture(live, recorded))
+    .filter((finding) => finding.level === "mismatch")
+    .map((finding) => finding.message);
 
 describe("KiWIS contract check: the recorded answers", () => {
   it("match themselves with no drift and no mismatch", async () => {
@@ -41,8 +43,8 @@ describe("KiWIS contract check: the recorded answers", () => {
 
   it("stay a match when only values and ts_ids change (drift at most)", async () => {
     const live = editedValues((entries) => {
-      for (const e of entries) {
-        e.data = e.data.map(([at, v]) => [at, v === null ? v : v * 1.5]);
+      for (const entry of entries) {
+        entry.data = entry.data.map(([at, value]) => [at, value === null ? value : value * 1.5]);
       }
     });
     expect(await mismatches(live)).toEqual([]);
@@ -70,22 +72,22 @@ describe("KiWIS contract check: time offset", () => {
 
   it("reports MISMATCH when KiWIS starts answering in UTC", async () => {
     const live = editedValues((entries) => {
-      for (const e of entries) {
+      for (const entry of entries) {
         // Same instants, written in UTC: 08:00 CEST becomes 06:00Z.
-        e.data = e.data.map(([at, v]) => [new Date(at).toISOString(), v]);
+        entry.data = entry.data.map(([at, value]) => [new Date(at).toISOString(), value]);
       }
     });
     const found = await mismatches(live);
-    expect(found.some((m) => m.includes("not Brussels local time"))).toBe(true);
+    expect(found.some((message) => message.includes("not Brussels local time"))).toBe(true);
   });
 
   it("reports MISMATCH when the offset is +00:00", async () => {
     const live = editedValues((entries) => {
-      for (const e of entries) {
-        e.data = e.data.map(([at, v]) => [at.replace(/[+-]\d\d:\d\d$/, "+00:00"), v]);
+      for (const entry of entries) {
+        entry.data = entry.data.map(([at, value]) => [at.replace(/[+-]\d\d:\d\d$/, "+00:00"), value]);
       }
     });
-    expect((await mismatches(live)).some((m) => m.includes("not Brussels local time"))).toBe(true);
+    expect((await mismatches(live)).some((message) => message.includes("not Brussels local time"))).toBe(true);
   });
 });
 
@@ -101,24 +103,24 @@ describe("KiWIS contract check: shape changes", () => {
   });
 
   it("reports MISMATCH when the hourly series is gone", async () => {
-    const live = editedList((rows) => rows.filter((r, i) => i === 0 || r[2] !== "10-Debit.1h.Moyen"));
-    expect((await mismatches(live)).some((m) => m.includes('no "10-Debit.1h.Moyen" series'))).toBe(true);
+    const live = editedList((rows) => rows.filter((row, i) => i === 0 || row[2] !== "10-Debit.1h.Moyen"));
+    expect((await mismatches(live)).some((message) => message.includes('no "10-Debit.1h.Moyen" series'))).toBe(true);
   });
 
   it("reports MISMATCH when the value columns change", async () => {
     const live = editedValues((entries) => {
       entries[0].columns = "Value,Timestamp";
     });
-    expect((await mismatches(live)).some((m) => m.includes("values columns"))).toBe(true);
+    expect((await mismatches(live)).some((message) => message.includes("values columns"))).toBe(true);
   });
 
   it("reports MISMATCH when hourly readings are no longer on the hour", async () => {
     const live = editedValues((entries) => {
-      for (const e of entries) {
-        e.data = e.data.map(([at, v]) => [at.replace(":00:00.000", ":30:00.000"), v]);
+      for (const entry of entries) {
+        entry.data = entry.data.map(([at, value]) => [at.replace(":00:00.000", ":30:00.000"), value]);
       }
     });
-    expect((await mismatches(live)).some((m) => m.includes("not on the hour"))).toBe(true);
+    expect((await mismatches(live)).some((message) => message.includes("not on the hour"))).toBe(true);
   });
 
   it("reports MISMATCH on an HTTP error or a body that isn't JSON", async () => {
@@ -132,18 +134,18 @@ describe("KiWIS contract check: shape changes", () => {
 
   it("reports drift (not mismatch) when 72-hour means are stamped at another hour", async () => {
     const live = editedValues((entries) => {
-      for (const e of entries) {
-        e.data = e.data.map(([at, v]) => [at.replace("T01:00:00", "T02:00:00"), v]);
+      for (const entry of entries) {
+        entry.data = entry.data.map(([at, value]) => [at.replace("T01:00:00", "T02:00:00"), value]);
       }
     });
     const found = await compareWithFixture(live, recorded);
-    expect(found.some((f) => f.level === "drift" && f.message.includes("01:00"))).toBe(true);
-    expect(found.some((f) => f.level === "mismatch")).toBe(false);
+    expect(found.some((finding) => finding.level === "drift" && finding.message.includes("01:00"))).toBe(true);
+    expect(found.some((finding) => finding.level === "mismatch")).toBe(false);
   });
 });
 
 describe("runKiwisCheck", () => {
-  const stations = [...new Set((JSON.parse(recorded.list.body) as string[][]).slice(1).map((r) => r[0]))];
+  const stations = [...new Set((JSON.parse(recorded.list.body) as string[][]).slice(1).map((row) => row[0]))];
 
   function run(replies: { list?: Response; values?: Response } = {}) {
     const requests: { url: string; headers: Record<string, string> }[] = [];
@@ -171,11 +173,11 @@ describe("runKiwisCheck", () => {
     expect(outcome.report).toContain("PASSED: the live service still matches");
     expect(requests).toHaveLength(2);
     expect(requests[0].url).toBe(seriesListUrl(stations));
-    const ids = (JSON.parse(recorded.list.body) as string[][]).slice(1).map((r) => r[1]);
+    const ids = (JSON.parse(recorded.list.body) as string[][]).slice(1).map((row) => row[1]);
     expect(requests[1].url).toBe(valuesUrl(ids));
     expect(waits).toEqual([KIWIS_CHECK_DELAY_MS]);
-    for (const r of requests) {
-      expect(r.headers).toEqual({ "User-Agent": KIWIS_CHECK_USER_AGENT });
+    for (const request of requests) {
+      expect(request.headers).toEqual({ "User-Agent": KIWIS_CHECK_USER_AGENT });
     }
     expect(KIWIS_CHECK_USER_AGENT).toContain("https://github.com/elslander-cedric/packraft-go");
     expect(KIWIS_CHECK_USER_AGENT).not.toContain("@");
@@ -191,8 +193,8 @@ describe("runKiwisCheck", () => {
 
   it("fails when the values come back in UTC", async () => {
     const entries = JSON.parse(recorded.values.body) as Entry[];
-    for (const e of entries) {
-      e.data = e.data.map(([at, v]) => [new Date(at).toISOString(), v]);
+    for (const entry of entries) {
+      entry.data = entry.data.map(([at, value]) => [new Date(at).toISOString(), value]);
     }
     const outcome = await run({ values: new Response(JSON.stringify(entries)) }).result;
     expect(outcome.passed).toBe(false);

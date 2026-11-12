@@ -93,9 +93,9 @@ function readLayer(body: string): Layer | string {
     return "answer has no features";
   }
   const features = json.features as { attributes?: Record<string, unknown>; properties?: Record<string, unknown> }[];
-  const rows = features.map((f) => f.attributes ?? f.properties ?? {});
+  const rows = features.map((feature) => feature.attributes ?? feature.properties ?? {});
   const listed = json.fields as { name: string; type: string }[] | undefined;
-  const fields = listed ? new Map(listed.map((f) => [f.name, f.type])) : fieldsOfRows(rows);
+  const fields = listed ? new Map(listed.map((field) => [field.name, field.type])) : fieldsOfRows(rows);
   return { rows, fields, answer: json as unknown as PkayakAnswer };
 }
 
@@ -180,7 +180,9 @@ function compareObstacles(live: Layer, report: Report) {
       `${title}: obstacle codes ${unknown.join(", ")} aren't shown by the app; prepare:spw-data refuses until that's decided`,
     );
   } else {
-    const codes = [...new Set(live.rows.map((row) => String(row.codico)))].toSorted((a, b) => Number(a) - Number(b));
+    const codes = [...new Set(live.rows.map((row) => String(row.codico)))].toSorted(
+      (left, right) => Number(left) - Number(right),
+    );
     report.match(`${title}: obstacle codes ${codes.join(", ")} are all known`);
   }
   const features = live.answer.features.filter((feature) => isKnown(feature.properties.codico));
@@ -307,8 +309,8 @@ export async function runKayakCheck(deps: KayakCheckDeps): Promise<KayakCheckRes
   for (const finding of findings) {
     lines.push(`  ${finding.level.toUpperCase().padEnd(8)} ${finding.message}`);
   }
-  const mismatches = findings.filter((f) => f.level === "mismatch").length;
-  const drifts = findings.filter((f) => f.level === "drift").length;
+  const mismatches = findings.filter((finding) => finding.level === "mismatch").length;
+  const drifts = findings.filter((finding) => finding.level === "drift").length;
 
   lines.push("");
   if (mismatches > 0) {

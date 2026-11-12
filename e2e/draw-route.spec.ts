@@ -45,37 +45,37 @@ test("clicking three points draws two straight hike legs and shows their distanc
   const box = (await map.boundingBox())!;
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
-  const a = { x: cx - 150, y: cy - 100 };
-  const b = { x: cx + 150, y: cy - 100 };
-  const c = { x: cx + 150, y: cy + 150 };
+  const pointA = { x: cx - 150, y: cy - 100 };
+  const pointB = { x: cx + 150, y: cy - 100 };
+  const point = { x: cx + 150, y: cy + 150 };
 
-  await page.mouse.click(a.x, a.y);
+  await page.mouse.click(pointA.x, pointA.y);
   // The start point alone makes no leg.
   await expect(legsPanel(page).locator(leafRows)).toHaveCount(0);
-  await page.mouse.click(b.x, b.y);
-  await page.mouse.click(c.x, c.y);
+  await page.mouse.click(pointB.x, pointB.y);
+  await page.mouse.click(point.x, point.y);
 
   // Two legs drawn, each a straight line (one segment) between the clicked points.
   const legLines = map.locator(".leaflet-overlay-pane path.leg");
   await expect(legLines).toHaveCount(2);
   for (const line of await legLines.all()) {
-    const d = (await line.getAttribute("d")) ?? "";
-    expect(d.match(/[ML]/g)).toEqual(["M", "L"]);
+    const pathData = (await line.getAttribute("d")) ?? "";
+    expect(pathData.match(/[ML]/g)).toEqual(["M", "L"]);
   }
   const tolerance = 6; // half the stroke width plus rounding
   const first = (await legLines.nth(0).boundingBox())!;
-  expect(Math.abs(first.x - a.x)).toBeLessThan(tolerance);
-  expect(Math.abs(first.x + first.width - b.x)).toBeLessThan(tolerance);
-  expect(Math.abs(first.y + first.height / 2 - a.y)).toBeLessThan(tolerance);
+  expect(Math.abs(first.x - pointA.x)).toBeLessThan(tolerance);
+  expect(Math.abs(first.x + first.width - pointB.x)).toBeLessThan(tolerance);
+  expect(Math.abs(first.y + first.height / 2 - pointA.y)).toBeLessThan(tolerance);
   const second = (await legLines.nth(1).boundingBox())!;
-  expect(Math.abs(second.y - b.y)).toBeLessThan(tolerance);
-  expect(Math.abs(second.y + second.height - c.y)).toBeLessThan(tolerance);
-  expect(Math.abs(second.x + second.width / 2 - b.x)).toBeLessThan(tolerance);
+  expect(Math.abs(second.y - pointB.y)).toBeLessThan(tolerance);
+  expect(Math.abs(second.y + second.height - point.y)).toBeLessThan(tolerance);
+  expect(Math.abs(second.x + second.width / 2 - pointB.x)).toBeLessThan(tolerance);
 
   // Expected ground distances from the map scale at the opening view.
   const { center, zoom } = initialMapView;
-  const latAB = latitudeBelow(center[0], a.y - cy, zoom);
-  const latC = latitudeBelow(center[0], c.y - cy, zoom);
+  const latAB = latitudeBelow(center[0], pointA.y - cy, zoom);
+  const latC = latitudeBelow(center[0], point.y - cy, zoom);
   const expectedFirst = 300 * kmPerPixel(latAB, zoom);
   const expectedSecond = 250 * kmPerPixel((latAB + latC) / 2, zoom);
 

@@ -56,7 +56,7 @@ describe("Overpass client", () => {
     const { client, waits } = fakes([EMPTY, EMPTY]);
     await client.query("A");
     await client.query("B");
-    expect(waits.reduce((a, b) => a + b, 0)).toBeGreaterThanOrEqual(1000);
+    expect(waits.reduce((total, wait) => total + wait, 0)).toBeGreaterThanOrEqual(1000);
   });
 
   it("retries a busy server after a longer pause, then gives up with an error", async () => {

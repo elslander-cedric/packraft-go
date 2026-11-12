@@ -56,7 +56,7 @@ export function tagsMatch(tags: Readonly<Record<string, string>> | undefined, na
   if (!tags) {
     return false;
   }
-  return ["name", "alt_name", "name:fr", "name:de", "official_name"].some((k) => nameMatches(tags[k], names));
+  return ["name", "alt_name", "name:fr", "name:de", "official_name"].some((key) => nameMatches(tags[key], names));
 }
 
 /** True when an OSM name ("La Sûre", "Sauer - Sûre", "Amblève/Amel") names one of these rivers. */
@@ -81,7 +81,7 @@ export function riverQuery(config: RiverConfig): string {
   const box = `${south},${west},${north},${east}`;
   // Plain box queries on indexed tags: "around" filters along a long river time out
   // on the public servers. Everything is filtered by distance to the river afterwards.
-  const streams = (config.streams ?? []).map((n) => n.replace(/[.*+?^${}()|[\]\\"]/g, "\\$&")).join("|");
+  const streams = (config.streams ?? []).map((name) => name.replace(/[.*+?^${}()|[\]\\"]/g, "\\$&")).join("|");
   return [
     `[out:json][timeout:180][bbox:${box}];`,
     `(`,
@@ -102,10 +102,10 @@ export function riverQuery(config: RiverConfig): string {
 /** Box around every river, for the one national boundary query. */
 export function allRiversBbox(rivers: readonly RiverConfig[] = RIVERS): Bbox {
   return {
-    south: Math.min(...rivers.map((r) => r.bbox.south)),
-    west: Math.min(...rivers.map((r) => r.bbox.west)),
-    north: Math.max(...rivers.map((r) => r.bbox.north)),
-    east: Math.max(...rivers.map((r) => r.bbox.east)),
+    south: Math.min(...rivers.map((river) => river.bbox.south)),
+    west: Math.min(...rivers.map((river) => river.bbox.west)),
+    north: Math.max(...rivers.map((river) => river.bbox.north)),
+    east: Math.max(...rivers.map((river) => river.bbox.east)),
   };
 }
 

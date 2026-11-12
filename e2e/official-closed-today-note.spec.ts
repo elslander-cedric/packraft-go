@@ -37,11 +37,13 @@ async function seedSalmOn(page: Page, startDate: string) {
     trip: {
       name: "Salm",
       points: salm,
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: salm.map((p) => ({ ...p, elevation: 300 })) } }],
+      legs: [
+        { mode: "paddle", route: { status: "routed", geometry: salm.map((point) => ({ ...point, elevation: 300 })) } },
+      ],
       startDate,
     },
   };
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
 }
 
 /** Sets the access layer's date in the access chip's dialog (ADR 0034). */

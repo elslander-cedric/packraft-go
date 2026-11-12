@@ -31,9 +31,9 @@ async function drag(page: Page, from: Px, to: Px) {
   await page.waitForTimeout(100);
 }
 
-async function expectAllRouted(page: Page, n: number) {
-  await expect(legLines(page)).toHaveCount(n);
-  for (let i = 0; i < n; i++) {
+async function expectAllRouted(page: Page, number: number) {
+  await expect(legLines(page)).toHaveCount(number);
+  for (let i = 0; i < number; i++) {
     await expect(legLines(page).nth(i)).toHaveClass(/leg-routed/);
     await expect(rows(page).nth(i)).toContainText(`${strings.climbLabel} 100 m`);
     await expect(rows(page).nth(i).getByRole("status")).toHaveCount(0);
@@ -44,28 +44,28 @@ test.beforeEach(({ page }) => showAllLegs(page));
 
 test("drag re-requests only the two changed legs; undo restores the routes without a request", async ({ page }) => {
   const net = await serveOffline(page, { brouter: () => SNAPPED });
-  const c = await openMap(page);
+  const point = await openMap(page);
   const pts = [
-    { x: c.x - 240, y: c.y + 60 },
-    { x: c.x - 80, y: c.y - 60 },
-    { x: c.x + 80, y: c.y + 60 },
-    { x: c.x + 240, y: c.y - 60 },
+    { x: point.x - 240, y: point.y + 60 },
+    { x: point.x - 80, y: point.y - 60 },
+    { x: point.x + 80, y: point.y + 60 },
+    { x: point.x + 240, y: point.y - 60 },
   ];
-  for (const p of pts) {
-    await page.mouse.click(p.x, p.y);
+  for (const pt of pts) {
+    await page.mouse.click(pt.x, pt.y);
   }
   await expectAllRouted(page, 3);
   await page.waitForTimeout(300);
   expect(net.brouter).toHaveLength(3);
-  const firstThree = net.brouter.map((u) => u.searchParams.get("lonlats"));
+  const firstThree = net.brouter.map((url) => url.searchParams.get("lonlats"));
 
-  await drag(page, pts[1], { x: c.x - 60, y: c.y + 150 });
+  await drag(page, pts[1], { x: point.x - 60, y: point.y + 150 });
   await expectAllRouted(page, 3);
   await page.waitForTimeout(300);
   expect(net.brouter).toHaveLength(5);
-  const dragged = net.brouter.slice(3).map((u) => u.searchParams.get("lonlats"));
+  const dragged = net.brouter.slice(3).map((url) => url.searchParams.get("lonlats"));
   // Neither new request is for an unchanged leg (the third leg keeps its route).
-  expect(dragged.filter((l) => firstThree.includes(l))).toEqual([]);
+  expect(dragged.filter((line) => firstThree.includes(line))).toEqual([]);
   // They are the two legs that meet at the moved point.
   expect(dragged[0]!.split("|")[1]).toBe(dragged[1]!.split("|")[0]);
 
@@ -89,25 +89,25 @@ test("drag re-requests only the two changed legs; undo restores the routes witho
 
 test("undoing a drag while its request is still out leaves no leg stuck pending", async ({ page }) => {
   let release!: () => void;
-  const held = new Promise<void>((r) => (release = r));
-  let n = 0;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  let number = 0;
   const net = await serveOffline(page, {
     brouter: async () => {
       // The first answer comes at once; later ones wait until the test releases them.
-      if (++n > 1) {
+      if (++number > 1) {
         await held;
       }
       return SNAPPED;
     },
   });
-  const c = await openMap(page);
-  const a = { x: c.x - 150, y: c.y },
-    b = { x: c.x + 150, y: c.y };
-  await page.mouse.click(a.x, a.y);
-  await page.mouse.click(b.x, b.y);
+  const point = await openMap(page);
+  const pointA = { x: point.x - 150, y: point.y },
+    pointB = { x: point.x + 150, y: point.y };
+  await page.mouse.click(pointA.x, pointA.y);
+  await page.mouse.click(pointB.x, pointB.y);
   await expectAllRouted(page, 1);
 
-  await drag(page, b, { x: c.x + 150, y: c.y + 120 });
+  await drag(page, pointB, { x: point.x + 150, y: point.y + 120 });
   await expect(rows(page).first().getByRole("status")).toBeVisible();
   await undoBtn(page).click();
   // The original route comes straight back, even though the drag's request is still out.
@@ -120,16 +120,16 @@ test("undoing a drag while its request is still out leaves no leg stuck pending"
 
 test("repeated drag and undo keeps every leg routed and asks only for the dragged legs", async ({ page }) => {
   const net = await serveOffline(page, { brouter: () => SNAPPED });
-  const c = await openMap(page);
-  const a = { x: c.x - 150, y: c.y },
-    b = { x: c.x, y: c.y - 80 },
-    d = { x: c.x + 150, y: c.y };
-  for (const p of [a, b, d]) {
-    await page.mouse.click(p.x, p.y);
+  const point = await openMap(page);
+  const pointA = { x: point.x - 150, y: point.y },
+    pointB = { x: point.x, y: point.y - 80 },
+    aPoint = { x: point.x + 150, y: point.y };
+  for (const otherPoint of [pointA, pointB, aPoint]) {
+    await page.mouse.click(otherPoint.x, otherPoint.y);
   }
   await expectAllRouted(page, 2);
   for (let i = 0; i < 3; i++) {
-    await drag(page, b, { x: c.x + 20 * i, y: c.y + 100 });
+    await drag(page, pointB, { x: point.x + 20 * i, y: point.y + 100 });
     await page.keyboard.press("Control+z");
   }
   await expectAllRouted(page, 2);

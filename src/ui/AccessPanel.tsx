@@ -86,8 +86,8 @@ export function AccessDateSelector({ date, isToday, onDate, onToday, tripDays }:
         <label>
           <span>{strings.accessTripDayLabel}</span>
           <select
-            value={tripDays.some((d) => d.date === date) ? date : ""}
-            onChange={(e) => e.target.value && onDate(e.target.value)}
+            value={tripDays.some((tripDay) => tripDay.date === date) ? date : ""}
+            onChange={(event) => event.target.value && onDate(event.target.value)}
           >
             <option value="">{strings.accessTripDayChoose}</option>
             {tripDays.map(({ day, date: dayDate }) => (

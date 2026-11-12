@@ -51,9 +51,9 @@ test.describe("confirmations are in-page Alert Dialogs", () => {
     page,
   }) => {
     const native: string[] = [];
-    page.on("dialog", (d) => {
-      native.push(d.message());
-      void d.dismiss();
+    page.on("dialog", (dialog) => {
+      native.push(dialog.message());
+      void dialog.dismiss();
     });
     await serveOffline(page);
     const click = await openMap(page);
@@ -114,9 +114,9 @@ test.describe("confirmations are in-page Alert Dialogs", () => {
     page,
   }) => {
     const native: string[] = [];
-    page.on("dialog", (d) => {
-      native.push(d.message());
-      void d.dismiss();
+    page.on("dialog", (dialog) => {
+      native.push(dialog.message());
+      void dialog.dismiss();
     });
     await serveOffline(page);
     const click = await openMap(page);

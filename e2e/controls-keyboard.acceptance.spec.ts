@@ -21,8 +21,8 @@ const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".plann
 const storedSettings = (page: Page) => page.evaluate((key) => window.localStorage.getItem(key), SETTINGS_KEY);
 const storedName = (page: Page) =>
   page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? "null")?.trip.name ?? null, TRIP_KEY);
-const isFocused = (l: Locator) =>
-  l.evaluate((el) => el === document.activeElement || el.contains(document.activeElement));
+const isFocused = (locator: Locator) =>
+  locator.evaluate((el) => el === document.activeElement || el.contains(document.activeElement));
 
 async function openMap(page: Page) {
   await openPlanner(page);
@@ -72,9 +72,9 @@ test.describe("confirmations by keyboard alone", () => {
     page,
   }) => {
     const native: string[] = [];
-    page.on("dialog", (d) => {
-      native.push(d.message());
-      void d.dismiss();
+    page.on("dialog", (dialog) => {
+      native.push(dialog.message());
+      void dialog.dismiss();
     });
     await serveOffline(page);
     await drawLeg(page);
@@ -140,9 +140,9 @@ test.describe("confirmations by keyboard alone", () => {
     page,
   }) => {
     const native: string[] = [];
-    page.on("dialog", (d) => {
-      native.push(d.message());
-      void d.dismiss();
+    page.on("dialog", (dialog) => {
+      native.push(dialog.message());
+      void dialog.dismiss();
     });
     await serveOffline(page);
     await drawLeg(page);

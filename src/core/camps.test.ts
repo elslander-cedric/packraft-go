@@ -4,10 +4,10 @@ import type { LegRoute } from "./router";
 import { summarise } from "./summarise";
 import { applyEdit, canUndo, emptyTrip, isCamp, type Edit, type LatLng, type Trip } from "./trip";
 
-const A = { lat: 50.35, lng: 5.45 };
-const B = { lat: 50.27, lng: 5.44 };
-const C = { lat: 50.18, lng: 5.57 };
-const D = { lat: 50.1, lng: 5.6 };
+const pointA = { lat: 50.35, lng: 5.45 };
+const pointB = { lat: 50.27, lng: 5.44 };
+const pointC = { lat: 50.18, lng: 5.57 };
+const pointD = { lat: 50.1, lng: 5.6 };
 const ELSEWHERE = { lat: 50.3, lng: 5.5 };
 
 const addPoint = (at: LatLng): Edit => ({ type: "addPoint", at });
@@ -18,35 +18,35 @@ const campsOf = (trip: Trip) => trip.points.map((_, i) => i).filter((i) => isCam
 const ROUTED: LegRoute = {
   status: "routed",
   geometry: [
-    { ...A, elevation: 200 },
-    { ...B, elevation: 180 },
+    { ...pointA, elevation: 200 },
+    { ...pointB, elevation: 180 },
   ],
 };
 
 describe("toggling a camp", () => {
   it("a new trip has no camps", () => {
-    expect(campsOf(through(A, B, C))).toEqual([]);
+    expect(campsOf(through(pointA, pointB, pointC))).toEqual([]);
   });
 
   it("marks a point as a camp, and toggling again unmarks it", () => {
-    const marked = applyEdit(through(A, B, C), toggleCamp(1));
+    const marked = applyEdit(through(pointA, pointB, pointC), toggleCamp(1));
     expect(campsOf(marked)).toEqual([1]);
     expect(campsOf(applyEdit(marked, toggleCamp(1)))).toEqual([]);
   });
 
   it("any point can be a camp, including the start and end", () => {
-    const trip = [0, 2, 1].map(toggleCamp).reduce(applyEdit, through(A, B, C));
+    const trip = [0, 2, 1].map(toggleCamp).reduce(applyEdit, through(pointA, pointB, pointC));
     expect(campsOf(trip)).toEqual([0, 1, 2]);
   });
 
   it("ignores a point that does not exist", () => {
-    const before = through(A, B);
+    const before = through(pointA, pointB);
     expect(applyEdit(before, toggleCamp(5))).toBe(before);
   });
 
   it("keeps every leg's route: a camp changes no leg, so nothing is routed again", () => {
     const routed: Trip = {
-      ...through(A, B, C),
+      ...through(pointA, pointB, pointC),
       legs: [
         { mode: "hike", route: ROUTED },
         { mode: "paddle", route: ROUTED },
@@ -58,7 +58,7 @@ describe("toggling a camp", () => {
   });
 
   it("is undoable", () => {
-    const before = through(A, B, C);
+    const before = through(pointA, pointB, pointC);
     const marked = applyEdit(before, toggleCamp(1));
     expect(canUndo(marked)).toBe(true);
     const undone = applyEdit(marked, { type: "undo" });
@@ -71,28 +71,28 @@ describe("camps follow their points through other edits", () => {
   const campAt = (trip: Trip, ...indices: number[]) => indices.map(toggleCamp).reduce(applyEdit, trip);
 
   it("a moved camp stays a camp", () => {
-    const trip = applyEdit(campAt(through(A, B, C), 1), { type: "movePoint", index: 1, to: ELSEWHERE });
+    const trip = applyEdit(campAt(through(pointA, pointB, pointC), 1), { type: "movePoint", index: 1, to: ELSEWHERE });
     expect(campsOf(trip)).toEqual([1]);
   });
 
   it("adding a point keeps the camps where they are", () => {
-    expect(campsOf(applyEdit(campAt(through(A, B, C), 1), addPoint(D)))).toEqual([1]);
+    expect(campsOf(applyEdit(campAt(through(pointA, pointB, pointC), 1), addPoint(pointD)))).toEqual([1]);
   });
 
   it("deleting a point before a camp keeps the camp on the same place", () => {
-    const trip = applyEdit(campAt(through(A, B, C, D), 2), { type: "deletePoint", index: 1 });
-    expect(trip.points).toEqual([A, C, D]);
+    const trip = applyEdit(campAt(through(pointA, pointB, pointC, pointD), 2), { type: "deletePoint", index: 1 });
+    expect(trip.points).toEqual([pointA, pointC, pointD]);
     expect(campsOf(trip)).toEqual([1]);
   });
 
   it("deleting a camp's point removes the camp", () => {
-    const trip = applyEdit(campAt(through(A, B, C, D), 1, 2), { type: "deletePoint", index: 1 });
-    expect(trip.points).toEqual([A, C, D]);
+    const trip = applyEdit(campAt(through(pointA, pointB, pointC, pointD), 1, 2), { type: "deletePoint", index: 1 });
+    expect(trip.points).toEqual([pointA, pointC, pointD]);
     expect(campsOf(trip)).toEqual([1]);
   });
 
   it("undoing a delete brings the camp back", () => {
-    const deleted = applyEdit(campAt(through(A, B, C), 1), { type: "deletePoint", index: 1 });
+    const deleted = applyEdit(campAt(through(pointA, pointB, pointC), 1), { type: "deletePoint", index: 1 });
     expect(campsOf(applyEdit(deleted, { type: "undo" }))).toEqual([1]);
   });
 });
@@ -138,7 +138,7 @@ const withCamps = (trip: Trip, ...indices: number[]) => indices.map(toggleCamp).
 describe("days", () => {
   it("an empty trip, or one with only a start point, has no days", () => {
     expect(summarise(emptyTrip()).days).toEqual([]);
-    expect(summarise(through(A)).days).toEqual([]);
+    expect(summarise(through(pointA)).days).toEqual([]);
   });
 
   it("a trip without camps is one day with every leg's totals", () => {

@@ -19,8 +19,8 @@ const trip: Trip = {
 };
 const withCamp: Trip = { ...trip, camps: [1] };
 
-const file = (version: unknown, t: Record<string, unknown> = { ...trip }) =>
-  JSON.stringify({ format: "packraft-go-trip", version, trip: t });
+const file = (version: unknown, fields: Record<string, unknown> = { ...trip }) =>
+  JSON.stringify({ format: "packraft-go-trip", version, trip: fields });
 
 // Updated: format reset (#52). Written as version 1.
 describe("always written as the current version (1)", () => {
@@ -28,8 +28,8 @@ describe("always written as the current version (1)", () => {
     ["an empty trip", emptyTrip()],
     ["a trip without camps", trip],
     ["a trip with camps", withCamp],
-  ])("%s is saved as version 1", (_label, t) => {
-    expect(JSON.parse(serialiseTrip(t))).toMatchObject({ format: "packraft-go-trip", version: 1 });
+  ])("%s is saved as version 1", (_label, trip) => {
+    expect(JSON.parse(serialiseTrip(trip))).toMatchObject({ format: "packraft-go-trip", version: 1 });
   });
 
   it("camps are in the version 1 save and come back", () => {

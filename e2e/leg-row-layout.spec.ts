@@ -38,20 +38,20 @@ async function drawHikeThenPaddle(page: Page) {
 
 /** True when `inner` lies wholly inside `outer` (allowing half a pixel for rounding). */
 async function isInside(inner: Locator, outer: Locator) {
-  const a = (await inner.boundingBox())!;
-  const b = (await outer.boundingBox())!;
+  const boxA = (await inner.boundingBox())!;
+  const boxB = (await outer.boundingBox())!;
   return (
-    a.x >= b.x - 0.5 &&
-    a.y >= b.y - 0.5 &&
-    a.x + a.width <= b.x + b.width + 0.5 &&
-    a.y + a.height <= b.y + b.height + 0.5
+    boxA.x >= boxB.x - 0.5 &&
+    boxA.y >= boxB.y - 0.5 &&
+    boxA.x + boxA.width <= boxB.x + boxB.width + 0.5 &&
+    boxA.y + boxA.height <= boxB.y + boxB.height + 0.5
   );
 }
 
 /** Number of lines an inline element's text is laid out on. */
 const lineCount = (el: Locator) =>
   el.evaluate((node) => {
-    const tops = new Set([...node.getClientRects()].map((r) => Math.round(r.top)));
+    const tops = new Set([...node.getClientRects()].map((rect) => Math.round(rect.top)));
     return tops.size;
   });
 

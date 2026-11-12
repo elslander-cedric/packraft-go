@@ -50,11 +50,11 @@ async function draw(page: Page, count: number, paddle: number[] = []) {
     x: box.x + box.width / 2 + dx,
     y: box.y + box.height / 2,
   }));
-  for (const [i, p] of at.entries()) {
+  for (const [i, point] of at.entries()) {
     if (i > 0) {
       await pickNextMode(page, paddle.includes(i - 1) ? "paddle" : "hike");
     }
-    await page.mouse.click(p.x, p.y);
+    await page.mouse.click(point.x, point.y);
   }
   await expect(legLines(page)).toHaveCount(count - 1);
   return at;
@@ -68,7 +68,7 @@ async function camp(page: Page, point: { x: number; y: number }) {
   await campButton(page).click();
 }
 
-const waypointNames = (text: string) => parseGpx11(text).waypoints.map((w) => w.name);
+const waypointNames = (text: string) => parseGpx11(text).waypoints.map((waypoint) => waypoint.name);
 
 test("Portage trip (paddle, hike, paddle) exports one single-track GPX with three section waypoints", async ({
   page,

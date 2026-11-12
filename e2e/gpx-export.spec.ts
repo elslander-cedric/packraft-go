@@ -93,7 +93,7 @@ test("joins consecutive paddle legs into one section without repeating the point
   const file = await downloadGpx(page, exportButton(page));
 
   const gpx = parseGpx11(file.text);
-  expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – hike", "2 – paddle", "End"]);
+  expect(gpx.waypoints.map((waypoint) => waypoint.name)).toEqual(["1 – hike", "2 – paddle", "End"]);
   const trail = recordedTrack(TRAIL_FILE);
   const river = recordedTrack(RIVER_FILE);
   expect(gpx.tracks[0].points).toEqual([...trail, ...river.slice(1), ...river.slice(1)]);
@@ -113,7 +113,7 @@ test("an unnamed trip whose legs could not be routed exports straight lines with
   expect(gpx.tracks).toHaveLength(1);
   expect(gpx.tracks[0].points).toHaveLength(3);
   expect(gpx.tracks[0].points.every((point) => point.ele === undefined)).toBe(true);
-  expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – hike", "End"]);
+  expect(gpx.waypoints.map((waypoint) => waypoint.name)).toEqual(["1 – hike", "End"]);
 });
 
 test("export is unavailable until the trip has a leg", async ({ page }) => {

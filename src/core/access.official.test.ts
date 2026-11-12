@@ -277,7 +277,7 @@ describe("on a future date", () => {
     const points = [onWalloonAllYear, { ...onWalloonAllYear, lng: onWalloonAllYear.lng + 0.001 }];
     const leg: Leg = {
       mode: "paddle",
-      route: { status: "routed", geometry: points.map((p) => ({ ...p, elevation: 0 })) },
+      route: { status: "routed", geometry: points.map((point) => ({ ...point, elevation: 0 })) },
     };
     const trip: Trip = { name: "Test", points, legs: [leg], startDate: tomorrow };
     const access = tripAccess(trip, rules, { today, official: official({ code: "0", reasonFr: "Travaux" }) });
@@ -295,7 +295,7 @@ describe("a paddle leg dated today", () => {
   const points = [onWalloonAllYear, { ...onWalloonAllYear, lng: onWalloonAllYear.lng + 0.001 }];
   const leg: Leg = {
     mode: "paddle",
-    route: { status: "routed", geometry: points.map((p) => ({ ...p, elevation: 0 })) },
+    route: { status: "routed", geometry: points.map((point) => ({ ...point, elevation: 0 })) },
   };
   const paddle: Trip = { name: "Test", points, legs: [leg], startDate: today };
 

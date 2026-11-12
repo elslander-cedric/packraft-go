@@ -47,8 +47,8 @@ const mapOffset = (page: Page) =>
   mapRegion(page)
     .locator(".leaflet-map-pane")
     .evaluate((element) => {
-      const m = new DOMMatrix(getComputedStyle(element).transform);
-      return { x: m.m41, y: m.m42 };
+      const matrix = new DOMMatrix(getComputedStyle(element).transform);
+      return { x: matrix.m41, y: matrix.m42 };
     });
 
 async function openPhone(page: Page) {
@@ -84,14 +84,14 @@ async function tapAt(page: Page, at: { x: number; y: number }) {
 
 /** Adds two points by tapping the map, and waits for their leg to be routed. */
 async function twoPoints(page: Page) {
-  const a = await spot(page, -100, 0);
-  const b = await spot(page, 80, 0);
-  await tapAt(page, a);
+  const pointA = await spot(page, -100, 0);
+  const pointB = await spot(page, 80, 0);
+  await tapAt(page, pointA);
   await expect(points(page)).toHaveCount(1);
-  await tapAt(page, b);
+  await tapAt(page, pointB);
   await expect(points(page)).toHaveCount(2);
   await expect(legLines(page).first()).toHaveClass(/leg-routed/);
-  return { a, b };
+  return { a: pointA, b: pointB };
 }
 
 test("a tap selects a point; delete and camp appear; delete removes it", async ({ page }) => {
@@ -196,15 +196,15 @@ test("a finger drags a point: it moves, the map does not pan, the legs are route
 }) => {
   const network = await serveOffline(page, routed);
   await openPhone(page);
-  const { b } = await twoPoints(page);
+  const { b: pointB } = await twoPoints(page);
   expect(network.brouter).toHaveLength(1);
 
   const offsetBefore = await mapOffset(page);
-  const moved = { x: b.x + 20, y: b.y + 100 };
+  const moved = { x: pointB.x + 20, y: pointB.y + 100 };
   const fingers = await touch(page);
   await fingers.drag(await centreOf(points(page).nth(1)), moved);
 
-  await expect.poll(async () => (await centreOf(points(page).nth(1))).y).toBeGreaterThan(b.y + 80);
+  await expect.poll(async () => (await centreOf(points(page).nth(1))).y).toBeGreaterThan(pointB.y + 80);
   const after = await centreOf(points(page).nth(1));
   expect(Math.abs(after.x - moved.x)).toBeLessThan(4);
   expect(Math.abs(after.y - moved.y)).toBeLessThan(4);
@@ -214,7 +214,7 @@ test("a finger drags a point: it moves, the map does not pan, the legs are route
   await expect(legLines(page).first()).toHaveClass(/leg-routed/);
 
   await undoButton(page).click();
-  await expect.poll(async () => (await centreOf(points(page).nth(1))).y).toBeLessThan(b.y + 4);
+  await expect.poll(async () => (await centreOf(points(page).nth(1))).y).toBeLessThan(pointB.y + 4);
   expect(network.blocked).toEqual([]);
 });
 
@@ -241,10 +241,10 @@ test.describe("in a narrowed desktop window", () => {
     await serveOffline(page, routed);
     await openPhone(page);
     await expect(sheet(page)).toBeVisible(); // the phone layout
-    const a = await spot(page, -100, 0);
-    const b = await spot(page, 80, 0);
-    await page.mouse.click(a.x, a.y);
-    await page.mouse.click(b.x, b.y);
+    const pointA = await spot(page, -100, 0);
+    const pointB = await spot(page, 80, 0);
+    await page.mouse.click(pointA.x, pointA.y);
+    await page.mouse.click(pointB.x, pointB.y);
     await expect(points(page)).toHaveCount(2);
 
     const offsetBefore = await mapOffset(page);

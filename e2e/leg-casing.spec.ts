@@ -19,7 +19,7 @@ const start = { lat: 51.085, lng: 3.715 };
 
 const routed = (points: { lat: number; lng: number }[]) => ({
   status: "routed",
-  geometry: points.map((p) => ({ ...p, elevation: 5 })),
+  geometry: points.map((point) => ({ ...point, elevation: 5 })),
 });
 const save = {
   format: "packraft-go-trip",

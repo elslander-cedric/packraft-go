@@ -40,7 +40,9 @@ async function seed(page: Page, line: Place[]) {
     trip: {
       name: "River",
       points: [line[0], line[line.length - 1]],
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: line.map((p) => ({ ...p, elevation: 200 })) } }],
+      legs: [
+        { mode: "paddle", route: { status: "routed", geometry: line.map((place) => ({ ...place, elevation: 200 })) } },
+      ],
     },
   };
   await page.addInitScript((trip) => {

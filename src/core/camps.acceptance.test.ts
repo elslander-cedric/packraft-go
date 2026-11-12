@@ -15,7 +15,8 @@ const camp = (index: number): Edit => ({ type: "toggleCamp", index });
 const undo: Edit = { type: "undo" };
 const campsOf = (trip: Trip) => trip.points.map((_, i) => i).filter((i) => isCamp(trip, i));
 const edits = (trip: Trip, ...list: Edit[]) => list.reduce(applyEdit, trip);
-const through = (...points: LatLng[]) => points.reduce((t, at) => applyEdit(t, { type: "addPoint", at }), emptyTrip());
+const through = (...points: LatLng[]) =>
+  points.reduce((result, at) => applyEdit(result, { type: "addPoint", at }), emptyTrip());
 
 const routed = (from: LatLng, to: LatLng, elevations: [number, number], climbM?: number): LegRoute => ({
   status: "routed",
@@ -44,7 +45,7 @@ function fiveLegTrip(): Trip {
   return { name: "Five legs", points, legs };
 }
 
-const ranges = (trip: Trip) => summarise(trip).days.map((d) => [d.firstLeg, d.lastLeg]);
+const ranges = (trip: Trip) => summarise(trip).days.map((day) => [day.firstLeg, day.lastLeg]);
 
 describe("toggling a camp", () => {
   it("any point can be marked and unmarked, including the start and the end", () => {
@@ -196,11 +197,12 @@ describe("per-day totals", () => {
 
   it("day totals add up to the leg figures and the trip totals", () => {
     const summary = summarise(edits(fiveLegTrip(), camp(1), camp(3)));
-    const sum = (f: (d: (typeof summary.days)[number]) => number) => summary.days.reduce((t, d) => t + f(d), 0);
-    expect(sum((d) => d.hikeDistanceKm + d.paddleDistanceKm)).toBeCloseTo(summary.trip.distanceKm, 9);
-    expect(sum((d) => d.timeH)).toBeCloseTo(summary.trip.timeH, 9);
-    expect(sum((d) => d.climbM)).toBeCloseTo(
-      summary.legs.reduce((t, l) => t + (l.climbM ?? 0), 0),
+    const sum = (figure: (d: (typeof summary.days)[number]) => number) =>
+      summary.days.reduce((total, day) => total + figure(day), 0);
+    expect(sum((summary) => summary.hikeDistanceKm + summary.paddleDistanceKm)).toBeCloseTo(summary.trip.distanceKm, 9);
+    expect(sum((summary) => summary.timeH)).toBeCloseTo(summary.trip.timeH, 9);
+    expect(sum((summary) => summary.climbM)).toBeCloseTo(
+      summary.legs.reduce((total, leg) => total + (leg.climbM ?? 0), 0),
       9,
     );
   });
@@ -226,20 +228,20 @@ describe("day time status follows the trip total rule (ADR 0009)", () => {
   };
 
   it("a fully routed day is an estimate", () => {
-    expect(summarise(twoDays()).days.map((d) => d.timeStatus)).toEqual(["estimated", "estimated"]);
+    expect(summarise(twoDays()).days.map((day) => day.timeStatus)).toEqual(["estimated", "estimated"]);
   });
 
   it("a day waits ('…') while any of its legs, hike or paddle, is unrouted or pending; other days don't", () => {
     for (const leg of [{ mode: "paddle" } as Leg, { mode: "paddle", route: { status: "pending" } } as Leg]) {
       const { days, trip } = summarise(withLeg(twoDays(), 1, leg));
-      expect(days.map((d) => d.timeStatus)).toEqual(["pending", "estimated"]);
+      expect(days.map((day) => day.timeStatus)).toEqual(["pending", "estimated"]);
       expect(trip.timeStatus).toBe("pending");
     }
   });
 
   it("a day with a failed hike leg is marked no-climb-data and counts the straight line at flat pace", () => {
     const { days } = summarise(withLeg(twoDays(), 2, { mode: "hike", route: FAILED }));
-    expect(days.map((d) => d.timeStatus)).toEqual(["estimated", "no-climb-data"]);
+    expect(days.map((day) => day.timeStatus)).toEqual(["estimated", "no-climb-data"]);
     // Legs 3-5: failed hike 6 km at 5 km/h (no climb) + paddle 3 km at 5 km/h + hike 12 km flat.
     expect(days[1].timeH).toBeCloseTo(1.2 + 0.6 + 2.4, 6);
   });

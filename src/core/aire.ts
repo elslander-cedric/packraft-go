@@ -31,7 +31,7 @@ export function aireWarnings(
   points: AccessPoints,
   officialAires: readonly OfficialAire[],
 ): AireWarning[] {
-  const marks = points.filter((p) => p.kind === "official-aire");
+  const marks = points.filter((point) => point.kind === "official-aire");
   const ranges = dayRanges(trip);
   return putInsAndTakeOuts(trip).flatMap(({ kind, point }): AireWarning[] => {
     const at = trip.points[point];

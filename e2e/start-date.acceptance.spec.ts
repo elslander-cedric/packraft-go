@@ -31,7 +31,9 @@ const dayRows = async (page: Page) => {
 };
 const dayDates = dayCardDates;
 const dayDateTimes = async (page: Page) =>
-  (await dayRows(page)).locator(".day-tile time").evaluateAll((times) => times.map((t) => t.getAttribute("datetime")));
+  (await dayRows(page))
+    .locator(".day-tile time")
+    .evaluateAll((times) => times.map((time) => time.getAttribute("datetime")));
 const startDate = (page: Page) => tripDetailsDialog(page).getByLabel(strings.startDateLabel);
 const clearDate = (page: Page) => tripDetailsDialog(page).getByRole("button", { name: strings.clearStartDateButton });
 const saveDetails = (page: Page) =>

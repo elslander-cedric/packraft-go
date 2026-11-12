@@ -5,7 +5,8 @@ import { parseTrip, restoreStoredTrip, restoreTrip, serialiseTrip, SAVE_VERSION 
 import { summarise } from "./summarise";
 import { applyEdit, canUndo, emptyTrip, setStartDate, type Trip } from "./trip";
 
-const points = (n: number) => Array.from({ length: n }, (_, i) => ({ lat: 50.3 + i / 100, lng: 5.6 + i / 100 }));
+const points = (number: number) =>
+  Array.from({ length: number }, (_, i) => ({ lat: 50.3 + i / 100, lng: 5.6 + i / 100 }));
 
 /** A trip of `legs` hike legs, with camps at the given point indices. */
 const tripWith = (legs: number, camps: number[] = [], startDate?: string): Trip => ({
@@ -79,7 +80,7 @@ describe("camps and days still line up with dates", () => {
 
   it("each day keeps its legs and gets the next date", () => {
     const days = summarise(dated).days;
-    expect(days.map((d) => [d.firstLeg, d.lastLeg, d.date])).toEqual([
+    expect(days.map((day) => [day.firstLeg, day.lastLeg, day.date])).toEqual([
       [0, 1, "2026-10-31"],
       [2, 3, "2026-11-01"],
       [4, 5, "2026-11-02"],
