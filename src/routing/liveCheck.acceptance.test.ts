@@ -1,6 +1,5 @@
-// Acceptance tests for #29 (manual live BRouter check) written from the
-// ticket's acceptance criteria. Everything runs offline: the global fetch is replaced
-// by one that fails the test if anything tries to reach the network (ADR 0019).
+// The manual live BRouter check. Everything runs offline: the global fetch is replaced by one
+// that fails the test if anything tries to reach the network.
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -66,7 +65,7 @@ const onlyFor =
   (name: string, a: Answer): Answer =>
     name === fixture ? change(a) : a;
 
-describe("AC1: at most ~4 live requests, sequential and polite", () => {
+describe("at most ~4 live requests, sequential and polite", () => {
   it("makes at most four requests, never two at once, with a pause of at least 1 s between them", async () => {
     const server = fakeServer();
     await runLiveCheck(server.deps);
@@ -109,7 +108,7 @@ describe("User-Agent", () => {
   });
 });
 
-describe("AC2: never part of npm test, npm run e2e or CI", () => {
+describe("never part of npm test, npm run e2e or CI", () => {
   const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as { scripts: Record<string, string> };
 
   it("no other npm script (including pre/post hooks) runs the live check", () => {
@@ -138,7 +137,7 @@ describe("AC2: never part of npm test, npm run e2e or CI", () => {
   });
 });
 
-describe("AC4: fixtures are only read, never written", () => {
+describe("fixtures are only read, never written", () => {
   const hashFixtures = () =>
     Object.fromEntries(
       readdirSync(fixturesDir).map((f) => [f, createHash("sha256").update(readFileSync(path.join(fixturesDir, f))).digest("hex")]),

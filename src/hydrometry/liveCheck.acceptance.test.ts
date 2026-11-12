@@ -1,4 +1,4 @@
-// Acceptance tests for #64: DST boundaries, wrong-season offsets, no live network.
+// The live KiWIS check: DST boundaries, wrong-season offsets, and no live network in tests.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,7 +12,7 @@ const recorded: KiwisAnswers = {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("#64 time offset", () => {
+describe("time offset", () => {
   it("handles the DST switches of 2026 (29 March, 25 October)", () => {
     expect(isBrusselsLocalTimestamp("2026-03-29T01:59:59+01:00")).toBe(true);
     expect(isBrusselsLocalTimestamp("2026-03-29T03:00:00+02:00")).toBe(true);
@@ -44,7 +44,7 @@ describe("#64 time offset", () => {
   });
 });
 
-describe("#64 no live services", () => {
+describe("no live services", () => {
   it("the comparison never touches global fetch", async () => {
     const spy = vi.fn(() => {
       throw new Error("network!");

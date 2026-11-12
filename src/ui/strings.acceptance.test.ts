@@ -1,5 +1,4 @@
-// Acceptance tests for #12: user-facing strings live in a single module
-// (ADR 0013) and Belgium is only targeted by the initial map view (ADR 0004).
+// User-facing strings live in a single module, and Belgium is only targeted by the initial map view.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
