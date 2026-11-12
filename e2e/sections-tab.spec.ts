@@ -183,10 +183,13 @@ test("the map goes back to the selected section as it opens", async ({ page }) =
   await sectionRowButton(page, 2).click();
   await expect(sectionRowButton(page, 2)).toHaveAttribute("aria-current", "true");
 
+  // The line is only redrawn when a zoom ends, so wait for the zoom out to finish before
+  // taking its drawing as the one to move away from.
+  const fittedToSection = await drawn(page);
   const centre = await freeMapCentre(page);
   await page.mouse.move(centre.x, centre.y);
   await page.mouse.wheel(0, 600);
-  await expect.poll(() => drawn(page)).toBeTruthy();
+  await expect.poll(() => drawn(page)).not.toBe(fittedToSection);
   const zoomedOut = await drawn(page);
 
   // By keyboard, which works as a tap does.
