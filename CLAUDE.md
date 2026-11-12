@@ -35,13 +35,13 @@ CI (`.github/workflows/ci.yml`) runs lint, type-check, unit and e2e tests on eve
 Areas with more detail have a `README.md` (each with a `CLAUDE.md` that imports it, so it loads when you work in that folder). Read the README before changing code that belongs to an area, also from outside its folder.
 - `src/app/`: Next.js routes (thin; no domain logic).
 - `src/map/`: Leaflet map: base maps, overlays, legs, point numbers, the Map menu. `TripMap.tsx` must only be loaded through `ClientTripMap.tsx`. See `src/map/README.md`.
-- `src/core/`: trip planner core (pure TypeScript: trip model, edits, figures, router interface). No React, browser or network imports; a test enforces this. Test fakes live in `src/core/testing/`.
+- `src/core/`: trip planner core (pure TypeScript: trip model, edits, figures, router interface). No React, browser or network imports; lint enforces this. Test fakes live in `src/core/testing/`.
 - `src/routing/`: BRouter adapter (implements the core's `Router`). Recorded BRouter responses live in `src/routing/fixtures/` and are shared by unit and e2e tests; `serveOffline(page, { brouter })` replays them.
 - `src/persistence/`: browser storage wrapper for autosave of the trip and settings (ADR 0011). Uses the core's versioned save format; never stores undo history. `tripStorage.ts` keeps the trip under `packraft-go.trip`; `settingsStorage.ts` keeps the planner's settings (pace factor, paddling speed, base map, overlays, the side panel's width and whether it is open) under their own key, `packraft-go.settings`, validated by `src/core/settings.ts`. Access points (ADR 0023) are stored separately under `packraft-go.access-points` in their own versioned format, independent of trips.
 - `src/dataprep/`: offline data preparation logic (e.g. Walloon stretch geometry from OSM). Pure, used only by scripts in `scripts/` and the offline preparation in `src/access/prepare/`; never imported by app code.
-- `src/testing/`: shared test helpers. Test-only; never imported by app code. Includes the offline GPX 1.1 checker (`gpx11.ts`), the hard-coded UI text checker (`hardCodedText.ts`, ADR 0013), and the dependency boundary checker (`dependencyBoundary.ts`, allowlist of runtime dependencies, ADR 0020). To add a runtime dependency, update that allowlist deliberately.
-- `src/ui/components/`: thin wrappers around Base UI (ADR 0020), dialogs included. Screens import these, never `@base-ui/react`; `boundary.test.ts` enforces this. Design tokens are CSS variables at the top of `src/app/globals.css`. See `src/ui/components/README.md`.
-- `src/ui/icons/` (ADR 0028, #143): the UI icons, Font Awesome Free Solid, the only place that imports `@fortawesome/free-solid-svg-icons` (`boundary.test.ts` enforces this). `icons.ts` names each icon by its use, `Icon` draws one in a screen and `iconSvg()` as a string for Leaflet markers; both use `currentColor`. Icon-only buttons keep their accessible names in `strings.ts`.
+- `src/testing/`: shared test helpers. Test-only; never imported by app code. Includes the offline GPX 1.1 checker (`gpx11.ts`).
+- `src/ui/components/`: thin wrappers around Base UI (ADR 0020), dialogs included. Screens import these, never `@base-ui/react`; lint enforces this. Design tokens are CSS variables at the top of `src/app/globals.css`. See `src/ui/components/README.md`.
+- `src/ui/icons/` (ADR 0028, #143): the UI icons, Font Awesome Free Solid, the only place that imports `@fortawesome/free-solid-svg-icons` (lint enforces this). `icons.ts` names each icon by its use, `Icon` draws one in a screen and `iconSvg()` as a string for Leaflet markers; both use `currentColor`. Icon-only buttons keep their accessible names in `strings.ts`.
 - `src/access/` (+ `src/core/access.ts`, `agw.ts`, `officialAire.ts`, `obstacle.ts`): the access layer (ADRs 0022, 0024), official aires and obstacles (ADR 0035). Built-in data only, prepared offline, never queried at runtime. See `src/access/README.md`.
 - `src/hydrometry/` (ADR 0024): the KiWIS client, the only module that talks to the SPW hydrometry service. See `src/hydrometry/README.md`.
 - `src/kayak/` (ADR 0035): the `PKAYAK` client (official status and incidents), the only module of the app that talks to the SPW's kayak map service, and the live feeds (`src/ui/liveFeed.ts`). See `src/kayak/README.md`.
@@ -51,6 +51,7 @@ Areas with more detail have a `README.md` (each with a `CLAUDE.md` that imports 
 - `src/ui/strings.ts`: all user-facing text (ADR 0013).
 
 ## Conventions
+- Follow `CODING_STANDARDS.md`: less is better, less complexity is better. Prefer a well-known package to hand-written logic (ADR 0038).
 - Domain terms are defined in `GLOSSARY.md`; use them consistently in code and docs.
 - Significant decisions get an ADR in `docs/adr/NNNN-title.md`.
 - Work is tracked as GitHub issues with triage labels (see Agent skills below).
@@ -61,7 +62,6 @@ Project-specific rules for agents working in this repo (learned in past PRs).
 - **Ports:** each agent gets its own port. Set `E2E_PORT` for `npm run e2e` (e.g. 3101, 3102, …) and pass `-- --port <n>` to `npm run dev`, so parallel worktrees don't test each other's builds.
 - **Dates:** no time-zone drift: a date picked in Europe/Brussels must not move a day.
 - **No live services in tests (ADR 0019):** use `serveOffline(page)` and recorded fixtures, and prove it, e.g. by blocking `fetch` or the network and re-running.
-- **New runtime dependency:** update the allowlist in `src/testing/dependencyBoundary.ts` deliberately.
 - **Edge cases that bit us:** trip names with `/ : & <` or control characters (GPX/XML must stay well-formed, inner names must match file names; #24, #45); longitudes rounding to 180 (GPX needs < 180; #24); unlisted Walloon water must read "not allowed", not "unknown" (#75).
 
 ## Agent skills
