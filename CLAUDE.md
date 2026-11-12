@@ -19,7 +19,6 @@ Node 22 (see `.nvmrc`), npm.
 - End-to-end tests: `npm run e2e` (Playwright, `e2e/`; builds and starts the app on port 3100, or `E2E_PORT` when set so parallel worktrees don't clash). Use `serveOffline(page)` from `e2e/support/offline.ts` so tiles come from fixtures and no live service is called.
 - Lint: `npm run lint`
 - Format: `npm run format` (Prettier; CI runs `npm run format:check`)
-- Format: `npm run format` (Prettier; CI runs `npm run format:check`)
 - Type-check: `npm run typecheck`
 - Production build: `npm run build`
 - Manual-only scripts (call live services; never in `npm test`, `npm run e2e` or CI). Details in `docs/manual-scripts.md`:

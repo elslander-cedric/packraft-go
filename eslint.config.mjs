@@ -18,7 +18,7 @@ const testOnly = {
 };
 // Pure packages (no React, browser or network) are fine in the core.
 const anythingOutsideTheCore = {
-  regex: "^(?!\\.|zod$|@turf/)",
+  regex: "^(?!\\.|zod$|geojson$|@turf/)",
   message: "The trip planner core imports only other core modules and pure packages.",
 };
 const restrictImports = (...patterns) => ({ "no-restricted-imports": ["error", { patterns }] });
