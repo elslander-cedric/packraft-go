@@ -92,8 +92,8 @@ function toRouteResult(geojson: unknown): RouteResult {
  * or failing that the nearest later one, or 0 if no point has any.
  */
 function withElevations(positions: readonly Position[]): RoutedPoint[] {
-  const known = (position: Position) => typeof position[2] === "number";
-  const firstKnown = positions.find(known)?.[2] ?? 0;
+  const hasElevation = (position: Position) => typeof position[2] === "number";
+  const firstKnown = positions.find(hasElevation)?.[2] ?? 0;
   let last = firstKnown;
   return positions.map(([lng, lat, elevation]) => {
     if (typeof elevation === "number") {

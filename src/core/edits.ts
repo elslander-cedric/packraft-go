@@ -9,7 +9,7 @@ import type { LatLng, Leg, LegMode, Trip } from "./trip";
  * A leg with the same mode but no `route` (routed, pending or failed): the
  * auto router routes it again. Every edit that changes a leg goes through here.
  */
-function unrouted(leg: Leg): Leg {
+function withoutRoute(leg: Leg): Leg {
   return { mode: leg.mode };
 }
 
@@ -19,7 +19,7 @@ export function movePoint(trip: Trip, index: number, to: LatLng): Trip {
   }
   const points = trip.points.map((point, i) => (i === index ? to : point));
   // legs[index - 1] ends at the point and legs[index] starts at it.
-  const legs = trip.legs.map((leg, i) => (i === index - 1 || i === index ? unrouted(leg) : leg));
+  const legs = trip.legs.map((leg, i) => (i === index - 1 || i === index ? withoutRoute(leg) : leg));
   return { ...trip, points, legs };
 }
 
@@ -32,7 +32,7 @@ export function setLegMode(trip: Trip, index: number, mode: LegMode): Trip {
   if (!leg || leg.mode === mode) {
     return trip;
   }
-  const legs = trip.legs.map((other, i) => (i === index ? unrouted({ ...other, mode }) : other));
+  const legs = trip.legs.map((other, i) => (i === index ? withoutRoute({ ...other, mode }) : other));
   return { ...trip, legs };
 }
 
@@ -66,7 +66,7 @@ export function withUndoStep(before: Trip, after: Trip): Trip {
   }
   const { undoSteps = [], ...state } = before;
   const recorded = state.legs.some((leg) => leg.route?.status === "pending")
-    ? { ...state, legs: state.legs.map((leg) => (leg.route?.status === "pending" ? unrouted(leg) : leg)) }
+    ? { ...state, legs: state.legs.map((leg) => (leg.route?.status === "pending" ? withoutRoute(leg) : leg)) }
     : state;
   return { ...after, undoSteps: [...undoSteps, recorded] };
 }
@@ -115,7 +115,7 @@ export function deletePoint(trip: Trip, index: number): Trip {
   } else if (index === last) {
     legs = trip.legs.slice(0, -1);
   } else {
-    const merged = unrouted(trip.legs[index - 1]);
+    const merged = withoutRoute(trip.legs[index - 1]);
     legs = [...trip.legs.slice(0, index - 1), merged, ...trip.legs.slice(index + 1)];
   }
   if (!trip.camps) {
@@ -142,7 +142,7 @@ export function insertPoint(trip: Trip, index: number, near: LatLng): Trip {
       : [trip.points[index], trip.points[index + 1]];
   const at = nearestOnLine(near, line);
   const points = [...trip.points.slice(0, index + 1), at, ...trip.points.slice(index + 1)];
-  const legs = [...trip.legs.slice(0, index), unrouted(leg), unrouted(leg), ...trip.legs.slice(index + 1)];
+  const legs = [...trip.legs.slice(0, index), withoutRoute(leg), withoutRoute(leg), ...trip.legs.slice(index + 1)];
   if (!trip.camps) {
     return { ...trip, points, legs };
   }

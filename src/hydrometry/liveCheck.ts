@@ -257,7 +257,7 @@ export async function runKiwisCheck(deps: KiwisCheckDeps): Promise<KiwisCheckRes
   }
   const stations = [...new Set(recordedList.map((series) => series.stationNo))];
 
-  const ask = async (url: string): Promise<RecordedResponse> => {
+  const fetchResponse = async (url: string): Promise<RecordedResponse> => {
     const response = await deps.fetch(url, { headers: { "User-Agent": KIWIS_CHECK_USER_AGENT } });
     return { status: response.status, body: await response.text() };
   };
@@ -266,14 +266,14 @@ export async function runKiwisCheck(deps: KiwisCheckDeps): Promise<KiwisCheckRes
   let valuesRequest = "(not requested)";
   let findings: Finding[];
   try {
-    const list = await ask(listUrl);
+    const list = await fetchResponse(listUrl);
     const liveList = list.status === 200 ? readSeriesList(list.body) : [];
     const ids = typeof liveList === "string" ? [] : liveList.map((series) => series.id);
     let values: RecordedResponse = { status: 0, body: "[]" };
     if (ids.length > 0) {
       await deps.wait(KIWIS_CHECK_DELAY_MS);
       valuesRequest = valuesUrl(ids);
-      values = await ask(valuesRequest);
+      values = await fetchResponse(valuesRequest);
     }
     findings = await compareWithFixture({ list, values }, recorded);
   } catch (error) {

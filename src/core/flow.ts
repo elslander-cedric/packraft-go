@@ -74,9 +74,9 @@ export type FlowVerdict =
   | { readonly kind: "unknown"; readonly why: FlowUnknown; readonly figures?: FlowFigures }
   | { readonly kind: "not-checked" };
 
-const dateOf = (reading: FlowReading) => reading.at.slice(0, 10);
-const hourOf = (reading: FlowReading) => reading.at.slice(11, 16);
-const latestOf = (readings: readonly FlowReading[]) =>
+const readingDate = (reading: FlowReading) => reading.at.slice(0, 10);
+const readingTime = (reading: FlowReading) => reading.at.slice(11, 16);
+const latestReading = (readings: readonly FlowReading[]) =>
   readings.reduce<FlowReading | undefined>(
     (latest, reading) => (!latest || reading.at > latest.at ? reading : latest),
     undefined,
@@ -95,9 +95,11 @@ export function flowCheck(rule: AgwRule, readings: FlowReadings | undefined, tod
     return { kind: "unknown", why: "failed" };
   }
   const series = readings.gauges[gauge.stationNo];
-  const mean72h = series && latestOf(series.mean72h);
-  const latest = series && latestOf(series.hourly);
-  const at8 = series?.hourly.find((flowReading) => dateOf(flowReading) === today && hourOf(flowReading) === "08:00");
+  const mean72h = series && latestReading(series.mean72h);
+  const latest = series && latestReading(series.hourly);
+  const at8 = series?.hourly.find(
+    (flowReading) => readingDate(flowReading) === today && readingTime(flowReading) === "08:00",
+  );
   const figures: FlowFigures = {
     gauge,
     minM3s,
@@ -109,7 +111,7 @@ export function flowCheck(rule: AgwRule, readings: FlowReadings | undefined, tod
   if (!mean72h) {
     return { kind: "unknown", why: "missing", figures };
   }
-  if (dateOf(mean72h) !== today) {
+  if (readingDate(mean72h) !== today) {
     return { kind: "unknown", why: "stale", figures };
   }
   if (minM3s !== null && mean72h.m3s < minM3s) {

@@ -15,7 +15,7 @@ import { LegAccessIcons } from "../TripAccessView";
 type Figure = { key: string; icon: IconDefinition; label: string; value: string };
 
 /** A row's time, climb and descent (drop, or rise, on a paddle leg or section) that are known. */
-function figures(row: LegSummary): Figure[] {
+function knownFigures(row: LegSummary): Figure[] {
   const labels = strings.planner.legFigures;
   const all: (Figure | false)[] = [
     { key: "time", icon: icons.time, label: labels.time, value: formatTimeEstimate(row.timeH, row.timeStatus) },
@@ -117,7 +117,7 @@ export function TripRow({
   status,
   children,
 }: TripRowProps) {
-  const [time, ...elevation] = figures(row);
+  const [time, ...elevation] = knownFigures(row);
   return (
     <li className={`planner-row planner-row-${row.mode}`}>
       <div className="planner-row-head">

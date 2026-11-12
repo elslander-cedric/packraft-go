@@ -3,12 +3,12 @@
 import dynamic from "next/dynamic";
 import { strings } from "./strings";
 
-const loading = () => <div className="planner-loading">{strings.plannerLoading}</div>;
+const renderLoading = () => <div className="planner-loading">{strings.plannerLoading}</div>;
 
 // The planner starts from the trip in browser storage, which only exists in
 // the browser, so it is never rendered on the server. Every screen gets the
 // one planner, with a bottom sheet or a side panel (ADR 0034).
-const Planner = dynamic(() => import("./planner/Planner"), { ssr: false, loading });
+const Planner = dynamic(() => import("./planner/Planner"), { ssr: false, loading: renderLoading });
 
 export default function ClientTripPlanner() {
   return <Planner />;

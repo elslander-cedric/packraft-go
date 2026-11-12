@@ -47,7 +47,7 @@ export function createLiveFeed<T>(ask: () => Promise<T>, options: LiveFeedOption
   // Only the newest ask counts; stopping counts as one, so nothing comes of an ask still under way.
   let newestAsk = 0;
 
-  function askNow() {
+  function askAndPublish() {
     const thisAsk = ++newestAsk;
     void ask().then((answer) => {
       if (thisAsk !== newestAsk) {
@@ -58,7 +58,7 @@ export function createLiveFeed<T>(ask: () => Promise<T>, options: LiveFeedOption
         listener();
       }
       if (!settled?.(answer)) {
-        cancelTimer = setTimer(askNow, everyMs);
+        cancelTimer = setTimer(askAndPublish, everyMs);
       }
     });
   }
@@ -69,7 +69,7 @@ export function createLiveFeed<T>(ask: () => Promise<T>, options: LiveFeedOption
       listeners.add(listener);
       const alreadySettled = latest !== undefined && settled?.(latest);
       if (listeners.size === 1 && !alreadySettled) {
-        askNow();
+        askAndPublish();
       }
       return () => {
         listeners.delete(listener);
@@ -83,12 +83,12 @@ export function createLiveFeed<T>(ask: () => Promise<T>, options: LiveFeedOption
   };
 }
 
-const noSubscription = () => () => {};
-const noAnswer = () => undefined;
+const subscribeToNothing = () => () => {};
+const answerNothing = () => undefined;
 
 /** A feed's latest answer, kept fresh while `wanted`, which is what makes it ask. */
 export function useLiveFeed<T>(feed: LiveFeed<T>, wanted: boolean): T | undefined {
-  return useSyncExternalStore(wanted ? feed.subscribe : noSubscription, feed.answer, noAnswer);
+  return useSyncExternalStore(wanted ? feed.subscribe : subscribeToNothing, feed.answer, answerNothing);
 }
 
 /** Like `load`, but its result is kept. A failure isn't, so a later attempt loads again. */

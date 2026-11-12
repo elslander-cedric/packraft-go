@@ -77,7 +77,7 @@ export function usePlanner(router?: Router) {
 
   // With a `name` (the planner asks for it first), the trip is renamed, then saved or exported
   // under that name.
-  const toDownload = (name?: string) => {
+  const tripToDownload = (name?: string) => {
     if (name === undefined) {
       return trip;
     }
@@ -85,12 +85,12 @@ export function usePlanner(router?: Router) {
     return renameTrip(trip, name);
   };
   const saveFile = (name?: string) => {
-    const saved = toDownload(name);
+    const saved = tripToDownload(name);
     dispatch({ type: "fileDownloaded" });
     downloadTripFile(saved, strings.tripNamePlaceholder);
   };
   const exportGpx = (name?: string) => {
-    const exported = toDownload(name);
+    const exported = tripToDownload(name);
     dispatch({ type: "fileDownloaded" });
     downloadGpx(exported, {
       untitledTrip: strings.tripNamePlaceholder,

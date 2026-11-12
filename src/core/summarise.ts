@@ -204,7 +204,7 @@ export function summarise(trip: Trip, settings: Pace = defaultSettings): TripSum
     const timeStatus: TimeStatus = leg.route?.status === "failed" ? "no-climb-data" : "pending";
     return { mode: leg.mode, distanceKm: km, timeH: hikeTimeH(km, 0, settings), timeStatus };
   });
-  const sum = (figure: (leg: LegSummary) => number) => legs.reduce((total, leg) => total + figure(leg), 0);
+  const sumOverLegs = (figure: (leg: LegSummary) => number) => legs.reduce((total, leg) => total + figure(leg), 0);
   return {
     legs,
     days: dayRanges(trip).map(([first, last], day) => {
@@ -214,12 +214,12 @@ export function summarise(trip: Trip, settings: Pace = defaultSettings): TripSum
     }),
     sections: tripSections(trip).map((section) => summariseSection(trip, legs, section)),
     trip: {
-      distanceKm: sum((leg) => leg.distanceKm),
-      hikeDistanceKm: sum((leg) => (leg.mode === "hike" ? leg.distanceKm : 0)),
-      paddleDistanceKm: sum((leg) => (leg.mode === "paddle" ? leg.distanceKm : 0)),
-      climbM: sum((leg) => leg.climbM ?? 0),
-      descentM: sum((leg) => leg.descentM ?? 0),
-      timeH: sum((leg) => leg.timeH),
+      distanceKm: sumOverLegs((leg) => leg.distanceKm),
+      hikeDistanceKm: sumOverLegs((leg) => (leg.mode === "hike" ? leg.distanceKm : 0)),
+      paddleDistanceKm: sumOverLegs((leg) => (leg.mode === "paddle" ? leg.distanceKm : 0)),
+      climbM: sumOverLegs((leg) => leg.climbM ?? 0),
+      descentM: sumOverLegs((leg) => leg.descentM ?? 0),
+      timeH: sumOverLegs((leg) => leg.timeH),
       timeStatus: timeStatusOf(trip.legs, legs),
     },
   };
@@ -248,15 +248,15 @@ export function dayRanges(trip: Trip): [number, number][] {
 
 function summariseDay(trip: Trip, legs: readonly LegSummary[], first: number, last: number): DaySummary {
   const dayLegs = legs.slice(first, last + 1);
-  const sum = (figure: (leg: LegSummary) => number) => dayLegs.reduce((total, leg) => total + figure(leg), 0);
+  const sumOverLegs = (figure: (leg: LegSummary) => number) => dayLegs.reduce((total, leg) => total + figure(leg), 0);
   return {
     firstLeg: first,
     lastLeg: last,
-    hikeDistanceKm: sum((leg) => (leg.mode === "hike" ? leg.distanceKm : 0)),
-    paddleDistanceKm: sum((leg) => (leg.mode === "paddle" ? leg.distanceKm : 0)),
-    climbM: sum((leg) => leg.climbM ?? 0),
-    descentM: sum((leg) => leg.descentM ?? 0),
-    timeH: sum((leg) => leg.timeH),
+    hikeDistanceKm: sumOverLegs((leg) => (leg.mode === "hike" ? leg.distanceKm : 0)),
+    paddleDistanceKm: sumOverLegs((leg) => (leg.mode === "paddle" ? leg.distanceKm : 0)),
+    climbM: sumOverLegs((leg) => leg.climbM ?? 0),
+    descentM: sumOverLegs((leg) => leg.descentM ?? 0),
+    timeH: sumOverLegs((leg) => leg.timeH),
     timeStatus: timeStatusOf(trip.legs.slice(first, last + 1), dayLegs),
   };
 }
@@ -264,18 +264,23 @@ function summariseDay(trip: Trip, legs: readonly LegSummary[], first: number, la
 function summariseSection(trip: Trip, legs: readonly LegSummary[], section: Section): SectionSummary {
   const sectionLegs = legs.slice(section.firstLeg, section.lastLeg + 1);
   const routes = trip.legs.slice(section.firstLeg, section.lastLeg + 1).map((leg) => leg.route);
-  const sum = (figure: (leg: LegSummary) => number) => sectionLegs.reduce((total, leg) => total + figure(leg), 0);
+  const sumOverLegs = (figure: (leg: LegSummary) => number) =>
+    sectionLegs.reduce((total, leg) => total + figure(leg), 0);
   const totals = {
     ...section,
-    distanceKm: sum((leg) => leg.distanceKm),
-    timeH: sum((leg) => leg.timeH),
+    distanceKm: sumOverLegs((leg) => leg.distanceKm),
+    timeH: sumOverLegs((leg) => leg.timeH),
     timeStatus: timeStatusOf(trip.legs.slice(section.firstLeg, section.lastLeg + 1), sectionLegs),
   };
   if (section.mode === "hike") {
     if (sectionLegs.every((leg) => leg.climbM === undefined)) {
       return totals;
     }
-    return { ...totals, climbM: sum((leg) => leg.climbM ?? 0), descentM: sum((leg) => leg.descentM ?? 0) };
+    return {
+      ...totals,
+      climbM: sumOverLegs((leg) => leg.climbM ?? 0),
+      descentM: sumOverLegs((leg) => leg.descentM ?? 0),
+    };
   }
   const geometries = routes.flatMap((route) => (route?.status === "routed" ? [route.geometry] : []));
   if (geometries.length < routes.length) {

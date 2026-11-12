@@ -19,13 +19,13 @@ export type MapFocus = ({ at: LatLng } | { area: readonly LatLng[] }) & { covere
 /** Tells `onChange` the visible map when it loads and after every move. */
 export function MapAreaReporter({ onChange }: { onChange: (area: SearchArea) => void }) {
   const map = useMap();
-  const report = () => {
+  const reportVisibleArea = () => {
     const bounds = map.getBounds();
     onChange({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() });
   };
-  useMapEvents({ moveend: report });
+  useMapEvents({ moveend: reportVisibleArea });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(report, [map]);
+  useEffect(reportVisibleArea, [map]);
   return null;
 }
 
@@ -89,21 +89,21 @@ export function Focus({ focus }: { focus: MapFocus }) {
   const map = useMap();
   const zooming = useRef(false);
   useEffect(() => {
-    const start = () => {
+    const markZoomStarted = () => {
       zooming.current = true;
     };
-    const end = () => {
+    const markZoomEnded = () => {
       zooming.current = false;
     };
-    map.on("zoomanim", start);
-    map.on("zoomend", end);
+    map.on("zoomanim", markZoomStarted);
+    map.on("zoomend", markZoomEnded);
     return () => {
-      map.off("zoomanim", start);
-      map.off("zoomend", end);
+      map.off("zoomanim", markZoomStarted);
+      map.off("zoomend", markZoomEnded);
     };
   }, [map]);
   useEffect(() => {
-    const show = () => {
+    const showFocus = () => {
       if ("area" in focus) {
         if (focus.area.length === 0) {
           return;
@@ -122,12 +122,12 @@ export function Focus({ focus }: { focus: MapFocus }) {
       map.setView(map.unproject(map.project(focus.at, zoom).add([shiftX, shiftY]), zoom), zoom);
     };
     if (!zooming.current) {
-      show();
+      showFocus();
       return;
     }
-    map.once("zoomend", show);
+    map.once("zoomend", showFocus);
     return () => {
-      map.off("zoomend", show);
+      map.off("zoomend", showFocus);
     };
   }, [map, focus]);
   return null;

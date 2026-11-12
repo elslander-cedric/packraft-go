@@ -30,7 +30,7 @@ const PAUSE_MS = 2000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function layer(url: string): Promise<PkayakAnswer> {
+async function fetchLayer(url: string): Promise<PkayakAnswer> {
   console.log(`PKAYAK: ${url}`);
   const response = await fetch(url, { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(60_000) });
   if (!response.ok) {
@@ -46,13 +46,13 @@ async function layer(url: string): Promise<PkayakAnswer> {
 
 const today = dateInBrussels(Date.now());
 
-const stretchAnswer = await layer(pkayakQuery(PKAYAK_LAYERS.stretches, STRETCH_FIELDS));
+const stretchAnswer = await fetchLayer(pkayakQuery(PKAYAK_LAYERS.stretches, STRETCH_FIELDS));
 const stretches = buildOfficialStretches(stretchAnswer, today);
 const lines = buildOfficialLines(stretchAnswer, today);
 await sleep(PAUSE_MS);
-const aires = buildOfficialAires(await layer(pkayakQuery(PKAYAK_LAYERS.aires, AIRE_FIELDS)), stretches, today);
+const aires = buildOfficialAires(await fetchLayer(pkayakQuery(PKAYAK_LAYERS.aires, AIRE_FIELDS)), stretches, today);
 await sleep(PAUSE_MS);
-const obstacles = buildObstacles(await layer(pkayakQuery(PKAYAK_LAYERS.obstacles, OBSTACLE_FIELDS)), today);
+const obstacles = buildObstacles(await fetchLayer(pkayakQuery(PKAYAK_LAYERS.obstacles, OBSTACLE_FIELDS)), today);
 
 const outputs = [
   {

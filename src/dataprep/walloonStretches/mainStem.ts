@@ -7,7 +7,7 @@ import { distanceM, type Pt } from "./geo";
 /** Ends this close together are joined across a gap in the mapping. */
 export const MAX_GAP_M = 1500;
 
-const key = (point: Pt) => `${point.lat.toFixed(7)},${point.lng.toFixed(7)}`;
+const pointKey = (point: Pt) => `${point.lat.toFixed(7)},${point.lng.toFixed(7)}`;
 
 export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
   const points = new Map<string, Pt>();
@@ -24,8 +24,8 @@ export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
     edges.set(to, weight);
     indeg.set(to, (indeg.get(to) ?? 0) + 1);
   };
-  const touch = (point: Pt) => {
-    const aKey = key(point);
+  const addNode = (point: Pt) => {
+    const aKey = pointKey(point);
     if (!points.has(aKey)) {
       points.set(aKey, point);
       out.set(aKey, new Map());
@@ -35,7 +35,7 @@ export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
   };
   for (const way of ways) {
     for (let i = 1; i < way.length; i++) {
-      addEdge(touch(way[i - 1]), touch(way[i]), distanceM(way[i - 1], way[i]));
+      addEdge(addNode(way[i - 1]), addNode(way[i]), distanceM(way[i - 1], way[i]));
     }
   }
   if (points.size === 0) {
@@ -44,7 +44,7 @@ export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
 
   // Weakly connected components, to bridge gaps only between separate pieces.
   const parent = new Map<string, string>([...points.keys()].map((key) => [key, key]));
-  const find = (key: string): string => {
+  const findRoot = (key: string): string => {
     let root = key;
     while (parent.get(root) !== root) {
       root = parent.get(root)!;
@@ -54,7 +54,7 @@ export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
   };
   for (const [from, edges] of out) {
     for (const key of edges.keys()) {
-      parent.set(find(from), find(key));
+      parent.set(findRoot(from), findRoot(key));
     }
   }
   const sinks = [...points.keys()].filter((key) => out.get(key)!.size === 0);
@@ -63,7 +63,7 @@ export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
     let best: string | undefined;
     let bestD = MAX_GAP_M;
     for (const source of sources) {
-      if (find(source) === find(sink)) {
+      if (findRoot(source) === findRoot(sink)) {
         continue;
       }
       const distance = distanceM(points.get(sink)!, points.get(source)!);
@@ -74,7 +74,7 @@ export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
     }
     if (best) {
       addEdge(sink, best, bestD);
-      parent.set(find(sink), find(best));
+      parent.set(findRoot(sink), findRoot(best));
     }
   }
 

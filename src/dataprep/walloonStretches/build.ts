@@ -1,6 +1,16 @@
 // Builds the Walloon stretch geometry from OSM extracts and the Annex 1/2 data (ADR 0024).
 // Pure: the OSM answers, recipes and Cedric's review decisions are all passed in.
-import { crossings, distanceM, lengthM, pointAt, project, simplify, slice, type Projection, type Pt } from "./geo";
+import {
+  lineCrossings,
+  distanceM,
+  lengthM,
+  pointAt,
+  projectOntoLine,
+  simplify,
+  sliceLine,
+  type Projection,
+  type Pt,
+} from "./geo";
 import { mainStem } from "./mainStem";
 import type { OverpassElement, OverpassResult } from "./overpass";
 import type { EndRecipe, EndSpec, StretchRecipe } from "./recipes";
@@ -95,10 +105,11 @@ const featureOf = (overpassElement: OverpassElement): Feature => {
   return { names, tags, geometry: geometryOf(overpassElement) };
 };
 
-const contains = (names: readonly string[], wanted: string) =>
+const namesInclude = (names: readonly string[], wanted: string) =>
   names.some((name) => normaliseName(name).includes(normaliseName(wanted)));
 
-const fmt = (metres: number) => (metres >= 1000 ? `${(metres / 1000).toFixed(1)} km` : `${Math.round(metres)} m`);
+const formatMetres = (metres: number) =>
+  metres >= 1000 ? `${(metres / 1000).toFixed(1)} km` : `${Math.round(metres)} m`;
 
 type Located = { at: Projection; status: Exclude<EndStatus, "reviewed">; reason: string };
 
@@ -120,7 +131,7 @@ class RiverContext {
   nearest(feature: Feature): Projection {
     let best: Projection | undefined;
     for (const point of feature.geometry) {
-      const pr = project(this.stem, point);
+      const pr = projectOntoLine(this.stem, point);
       if (!best || pr.distance < best.distance) {
         best = pr;
       }
@@ -162,7 +173,7 @@ class RiverContext {
       .join(" ");
     const named = candidates.filter(
       ({ f: feature }) =>
-        (opts.name !== undefined && contains(feature.names, opts.name)) ||
+        (opts.name !== undefined && namesInclude(feature.names, opts.name)) ||
         (opts.road !== undefined &&
           feature.tags.name !== undefined &&
           normaliseName(feature.tags.name) === normaliseName(opts.road)),
@@ -186,13 +197,13 @@ class RiverContext {
     }
     const near = candidates.filter((candidate) => distanceM(candidate.at.point, anchor) <= PLACE_MAX_M).sort(byAnchor);
     if (near.length === 0) {
-      return `no OSM ${label} within ${fmt(PLACE_MAX_M)} of ${opts.near ?? "the hint"}`;
+      return `no OSM ${label} within ${formatMetres(PLACE_MAX_M)} of ${opts.near ?? "the hint"}`;
     }
     const what = near[0].f.names[0] ? `"${near[0].f.names[0]}"` : "an unnamed one";
     return {
       at: near[0].at,
       status: "needsReview",
-      reason: `No ${label} named for it in OSM; picked ${what}, the nearest of ${near.length} to ${opts.near ?? "the hint"} (${fmt(distanceM(near[0].at.point, anchor))} away).`,
+      reason: `No ${label} named for it in OSM; picked ${what}, the nearest of ${near.length} to ${opts.near ?? "the hint"} (${formatMetres(distanceM(near[0].at.point, anchor))} away).`,
     };
   }
 
@@ -214,7 +225,7 @@ class RiverContext {
         };
       }
       case "border": {
-        const found = this.border.flatMap((way) => crossings(stem, way));
+        const found = this.border.flatMap((way) => lineCrossings(stem, way));
         if (found.length === 0) {
           return "the river doesn't cross the national border in the OSM extract";
         }
@@ -226,7 +237,7 @@ class RiverContext {
         return {
           at: last,
           status: "needsReview",
-          reason: `The river crosses the national border ${found.length} times (over ${fmt(spread)}); picked the last crossing.`,
+          reason: `The river crosses the national border ${found.length} times (over ${formatMetres(spread)}); picked the last crossing.`,
         };
       }
       case "confluence": {
@@ -238,7 +249,7 @@ class RiverContext {
         let best: Projection | undefined;
         for (const partner of partners) {
           for (const point of [partner.geometry[0], partner.geometry[partner.geometry.length - 1]]) {
-            const pr = project(stem, point);
+            const pr = projectOntoLine(stem, point);
             if (!best || pr.distance < best.distance) {
               best = pr;
             }
@@ -246,7 +257,7 @@ class RiverContext {
         }
         const mouth = stem[stem.length - 1];
         for (const partner of partners) {
-          const pr = project(partner.geometry, mouth);
+          const pr = projectOntoLine(partner.geometry, mouth);
           if (pr.distance < (best?.distance ?? Infinity)) {
             best = { along: lengthM(stem), point: mouth, distance: pr.distance };
           }
@@ -260,7 +271,7 @@ class RiverContext {
         return {
           at: best,
           status: "needsReview",
-          reason: `The ${recipe.with[0]} comes no closer than ${fmt(best.distance)} to the river in OSM.`,
+          reason: `The ${recipe.with[0]} comes no closer than ${formatMetres(best.distance)} to the river in OSM.`,
         };
       }
       case "dam": {
@@ -282,7 +293,7 @@ class RiverContext {
           return {
             at: all[0],
             status: "needsReview",
-            reason: `The weir nearest the river's mouth (${fmt(lengthM(stem) - all[0].along)} upstream of it), of ${all.length} weirs on the river in OSM.`,
+            reason: `The weir nearest the river's mouth (${formatMetres(lengthM(stem) - all[0].along)} upstream of it), of ${all.length} weirs on the river in OSM.`,
           };
         }
         return this.locateFeature("dam or weir", isDam, onRiver, recipe);
@@ -293,7 +304,7 @@ class RiverContext {
           (feature) =>
             feature.geometry.length > 1 && (feature.tags.bridge !== undefined || feature.tags.man_made === "bridge"),
           (feature) =>
-            crossings(stem, feature.geometry)[0] ??
+            lineCrossings(stem, feature.geometry)[0] ??
             (feature.tags.man_made === "bridge" ? this.nearest(feature) : undefined),
           recipe,
         );
@@ -322,12 +333,12 @@ class RiverContext {
       case "place": {
         const found = this.place(recipe.name);
         if (!found) {
-          return `no OSM place "${recipe.name}" within ${fmt(PLACE_MAX_M)} of the river`;
+          return `no OSM place "${recipe.name}" within ${formatMetres(PLACE_MAX_M)} of the river`;
         }
         return {
           at: found.at,
           status: "needsReview",
-          reason: `"${recipe.name}" is a place, not a point: snapped the OSM place node to the river (${fmt(found.at.distance)} away).`,
+          reason: `"${recipe.name}" is a place, not a point: snapped the OSM place node to the river (${formatMetres(found.at.distance)} away).`,
         };
       }
       case "offset": {
@@ -349,15 +360,15 @@ class RiverContext {
   }
 }
 
-const round = (x: number) => Math.round(x * 1e5) / 1e5;
-const roundPt = (point: Pt): Pt => ({ lat: round(point.lat), lng: round(point.lng) });
+const roundTo5Decimals = (x: number) => Math.round(x * 1e5) / 1e5;
+const roundPt = (point: Pt): Pt => ({ lat: roundTo5Decimals(point.lat), lng: roundTo5Decimals(point.lng) });
 
 export type BuildResult = { stretches: DraftStretch[]; problems: string[] };
 
 export function buildStretches(input: BuildInput): BuildResult {
   const border = input.osm.border.elements.map(geometryOf).filter((points) => points.length > 1);
   const contexts = new Map<string, RiverContext>();
-  const contextFor = (river: string) => {
+  const riverContext = (river: string) => {
     if (!contexts.has(river)) {
       const config = input.rivers.find((otherRiver) => otherRiver.river === river);
       const result = input.osm.rivers[river];
@@ -379,7 +390,7 @@ export function buildStretches(input: BuildInput): BuildResult {
       if (!other) {
         throw new Error(`${id}: ${target} must be listed before it`);
       }
-      const at = project(ctx.stem, other.at.point);
+      const at = projectOntoLine(ctx.stem, other.at.point);
       resolved.set(id, { ...other, at, sameAs: other.sameAs ?? target });
       return;
     }
@@ -404,7 +415,7 @@ export function buildStretches(input: BuildInput): BuildResult {
     if (decision) {
       const reviewed = { lat: decision.lat, lng: decision.lng };
       if (decision.action === "move") {
-        const at = project(ctx.stem, reviewed);
+        const at = projectOntoLine(ctx.stem, reviewed);
         resolved.set(id, {
           at,
           status: "reviewed",
@@ -417,7 +428,7 @@ export function buildStretches(input: BuildInput): BuildResult {
         return;
       }
       status = "needsReview";
-      reason = `Confirmed in review, but OSM now puts it ${fmt(distanceM(located.at.point, reviewed))} away. ${reason}`;
+      reason = `Confirmed in review, but OSM now puts it ${formatMetres(distanceM(located.at.point, reviewed))} away. ${reason}`;
     }
     resolved.set(id, { at: located.at, status, reason });
   };
@@ -428,7 +439,7 @@ export function buildStretches(input: BuildInput): BuildResult {
     if (!row) {
       throw new Error(`no Annex row ${recipe.id}`);
     }
-    const ctx = contextFor(row.river);
+    const ctx = riverContext(row.river);
     if (ctx.stem.length < 2) {
       problems.push(`${row.id}: no OSM course for the ${row.river}`);
       continue;
@@ -446,7 +457,7 @@ export function buildStretches(input: BuildInput): BuildResult {
     }
     const lo = Math.min(from.at.along, to.at.along);
     const hi = Math.max(from.at.along, to.at.along, lo + 1);
-    const line = simplify(slice(ctx.stem, lo, hi), SIMPLIFY_M).map(roundPt);
+    const line = simplify(sliceLine(ctx.stem, lo, hi), SIMPLIFY_M).map(roundPt);
     const endOf = (text: { fr: string; en: string }, end: typeof from): StretchEnd => ({
       ...text,
       point: roundPt(end.at.point),

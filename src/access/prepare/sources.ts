@@ -122,7 +122,7 @@ export type WaterSpec = Omit<AccessRecord, "geometry" | "scope" | "researched"> 
   toleranceM: number;
 };
 
-const box = (west: number, south: number, east: number, north: number): Position[] => [
+const boxRing = (west: number, south: number, east: number, north: number): Position[] => [
   [west, south],
   [east, south],
   [east, north],
@@ -136,14 +136,14 @@ const isDock = (tags: Record<string, string>) =>
   ["harbour", "dock", "lock"].includes(tags.water ?? "") ||
   (tags.water === "canal" && !/albert/i.test(tags.name ?? ""));
 
-const forbidden = (text: string): AccessRule => ({ type: "fixed", state: "forbidden", text });
+const forbiddenRule = (text: string): AccessRule => ({ type: "fixed", state: "forbidden", text });
 
 export const flandersWaterSpecs: readonly WaterSpec[] = [
   {
     id: "flanders-ghent-terneuzen-canal",
     name: "Ghent–Terneuzen canal",
     region: "flanders",
-    rule: forbidden("De Vlaamse Waterweg excludes the Ghent–Terneuzen canal from canoeing and kayaking."),
+    rule: forbiddenRule("De Vlaamse Waterweg excludes the Ghent–Terneuzen canal from canoeing and kayaking."),
     source: sources.visurisKano,
     query: "relation(12230517);",
     shape: "lines",
@@ -154,12 +154,12 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     id: "flanders-lower-sea-scheldt",
     name: "Lower Sea Scheldt, downstream of Burcht",
     region: "flanders",
-    rule: forbidden("De Vlaamse Waterweg excludes the fairway of the Lower Sea Scheldt downstream of Burcht."),
+    rule: forbiddenRule("De Vlaamse Waterweg excludes the fairway of the Lower Sea Scheldt downstream of Burcht."),
     source: sources.visurisKano,
     query: 'way["waterway"="river"]["name"="Schelde"](51.19,4.18,51.40,4.40);',
     shape: "lines",
     // From Burcht's latitude down to the Dutch border (the Flanders clip ends it there).
-    envelope: box(4.18, 51.205, 4.4, 51.4),
+    envelope: boxRing(4.18, 51.205, 4.4, 51.4),
     matchWithinM: 250,
     toleranceM: 15,
   },
@@ -167,7 +167,7 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     id: "flanders-bruges-reien",
     name: "Reien (inner canals), Bruges",
     region: "flanders",
-    rule: forbidden(
+    rule: forbiddenRule(
       "Bruges doesn't allow going on the Reien on your own initiative; De Vlaamse Waterweg excludes them too.",
     ),
     source: sources.bruges,
@@ -181,7 +181,7 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     id: "flanders-lier-nete-diversion",
     name: "Afleiding van de Nete, Lier",
     region: "flanders",
-    rule: forbidden("De Vlaamse Waterweg excludes the Afleiding van de Nete in Lier."),
+    rule: forbiddenRule("De Vlaamse Waterweg excludes the Afleiding van de Nete in Lier."),
     source: sources.visurisKano,
     query: 'way["waterway"]["name"="Afleidingsvaart van de Nete"](51.11,4.54,51.15,4.60);',
     shape: "lines",
@@ -193,13 +193,15 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     id: "flanders-port-antwerp",
     name: "Port of Antwerp",
     region: "flanders",
-    rule: forbidden("Water sports, including canoeing and kayaking, need the harbour master's permission in the port."),
+    rule: forbiddenRule(
+      "Water sports, including canoeing and kayaking, need the harbour master's permission in the port.",
+    ),
     source: sources.antwerpHpv,
     query: 'nwr["waterway"="dock"](51.22,4.18,51.40,4.43); nwr["natural"="water"](51.22,4.18,51.40,4.43);',
     shape: "areas",
     include: isDock,
     // The docks on both banks, north of the city centre's marinas up to the Dutch border.
-    envelope: box(4.18, 51.225, 4.43, 51.4),
+    envelope: boxRing(4.18, 51.225, 4.43, 51.4),
     unverified:
       "Whether a newer Port of Antwerp-Bruges regulation replaces the 2021 one; the port's edge is approximated by its docks.",
     toleranceM: 10,
@@ -208,14 +210,14 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     id: "flanders-port-ghent",
     name: "Port of Ghent (North Sea Port)",
     region: "flanders",
-    rule: forbidden("All pleasure boating and water recreation is banned in the docks without written permission."),
+    rule: forbiddenRule("All pleasure boating and water recreation is banned in the docks without written permission."),
     source: sources.ghentHpv,
     query: 'nwr["waterway"="dock"](51.03,3.70,51.25,3.90); nwr["natural"="water"](51.03,3.70,51.25,3.90);',
     shape: "areas",
     include: isDock,
     // The docks along the canal from the city's ring road to Zelzate, east of the Ringvaart (which stays open).
     // OSM's own port area (relation 17383856) only covers the southern docks, so it isn't used.
-    envelope: box(3.74, 51.075, 3.86, 51.21),
+    envelope: boxRing(3.74, 51.075, 3.86, 51.21),
     unverified: "The port's edge is approximated by the docks mapped in OpenStreetMap.",
     toleranceM: 10,
   },
@@ -223,13 +225,15 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     id: "flanders-port-zeebrugge",
     name: "Port of Zeebrugge",
     region: "flanders",
-    rule: forbidden("Bruges says going on the water on your own initiative isn't allowed in the port of Zeebrugge."),
+    rule: forbiddenRule(
+      "Bruges says going on the water on your own initiative isn't allowed in the port of Zeebrugge.",
+    ),
     source: sources.bruges,
     query: 'nwr["waterway"="dock"](51.30,3.12,51.37,3.25); nwr["natural"="water"](51.30,3.12,51.37,3.25);',
     shape: "areas",
     include: isDock,
     // East of Blankenberge's marina.
-    envelope: box(3.155, 51.3, 3.25, 51.37),
+    envelope: boxRing(3.155, 51.3, 3.25, 51.37),
     unverified: "The Zeebrugge port regulation itself wasn't read; the status of the Boudewijnkanaal is open.",
     toleranceM: 10,
   },

@@ -36,7 +36,7 @@ const escapeXml = (value: string) =>
     );
 
 /** A plain decimal (GPX does not allow exponents like 1e-7), without trailing zeros. */
-function decimal(value: number, digits: number): string {
+function formatDecimal(value: number, digits: number): string {
   const text = value
     .toFixed(digits)
     .replace(/(\.\d*?)0+$/, "$1")
@@ -49,18 +49,18 @@ function decimal(value: number, digits: number): string {
  * values are in GPX bounds: -90 <= lat <= 90, and -180 <= lon < 180, so a
  * longitude that is (or rounds to) 180 is written as -180, the same meridian.
  */
-function position({ lat, lng }: LatLng): string {
-  const rounded = (value: number) => Number(decimal(value, 7));
-  const latitude = Math.min(90, Math.max(-90, rounded(lat)));
-  let longitude = Math.min(180, Math.max(-180, rounded(lng)));
+function positionAttributes({ lat, lng }: LatLng): string {
+  const roundTo7Decimals = (value: number) => Number(formatDecimal(value, 7));
+  const latitude = Math.min(90, Math.max(-90, roundTo7Decimals(lat)));
+  let longitude = Math.min(180, Math.max(-180, roundTo7Decimals(lng)));
   if (longitude === 180) {
     longitude = -180;
   }
-  return `lat="${decimal(latitude, 7)}" lon="${decimal(longitude, 7)}"`;
+  return `lat="${formatDecimal(latitude, 7)}" lon="${formatDecimal(longitude, 7)}"`;
 }
 
 const elevationOf = (point: GpxPoint) =>
-  point.elevation === undefined ? "" : `<ele>${decimal(point.elevation, 2)}</ele>`;
+  point.elevation === undefined ? "" : `<ele>${formatDecimal(point.elevation, 2)}</ele>`;
 
 /**
  * Where leg `index` runs: its routed geometry with elevations, or a straight
@@ -94,7 +94,7 @@ function tripGeometry(trip: Trip, sections: readonly Section[]): { points: GpxPo
 
 /** A named waypoint as GPX: position, then elevation, then name (the schema's order). */
 const waypoint = (point: GpxPoint, name: string) =>
-  `  <wpt ${position(point)}>${elevationOf(point)}<name>${escapeXml(name)}</name></wpt>`;
+  `  <wpt ${positionAttributes(point)}>${elevationOf(point)}<name>${escapeXml(name)}</name></wpt>`;
 
 /** GPX 1.1 text: `name` in its metadata, the waypoints, then one track of one segment through `points`. */
 function gpxText(name: string, waypoints: readonly string[], points: readonly GpxPoint[]): string {
@@ -108,7 +108,7 @@ function gpxText(name: string, waypoints: readonly string[], points: readonly Gp
     `  <trk>`,
     `    <name>${escapeXml(name)}</name>`,
     `    <trkseg>`,
-    ...points.map((point) => `      <trkpt ${position(point)}>${elevationOf(point)}</trkpt>`),
+    ...points.map((point) => `      <trkpt ${positionAttributes(point)}>${elevationOf(point)}</trkpt>`),
     `    </trkseg>`,
     `  </trk>`,
     "</gpx>",

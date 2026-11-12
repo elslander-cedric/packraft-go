@@ -62,9 +62,9 @@ function defaultNameIn(body: unknown): string | null {
     return answer.error === NOTHING_FOUND ? "" : null;
   }
   const address = answer.address as Record<string, unknown>;
-  const field = (key: string) => (typeof address[key] === "string" ? address[key].trim() : "");
-  const place = PLACES.map(field).find(Boolean) ?? "";
-  return [field("road"), place].filter(Boolean).join(", ");
+  const addressField = (key: string) => (typeof address[key] === "string" ? address[key].trim() : "");
+  const place = PLACES.map(addressField).find(Boolean) ?? "";
+  return [addressField("road"), place].filter(Boolean).join(", ");
 }
 
 /** The request for `text`, ranking places in the visible `area` first without leaving others out. */
@@ -206,7 +206,7 @@ export function createNominatim(options: NominatimOptions = {}): Nominatim {
   /** Search answers for the session, asked or being asked; never stored (ADR 0030). */
   const answers = new Map<string, Promise<PlaceSearchAnswer>>();
 
-  async function work() {
+  async function runQueue() {
     if (running) {
       return;
     }
@@ -225,7 +225,12 @@ export function createNominatim(options: NominatimOptions = {}): Nominatim {
   }
 
   /** Puts a request in `queue`; `read` turns the JSON body into an answer, or null when it isn't one. */
-  function request<T>(queue: (() => Promise<void>)[], url: string, read: (body: unknown) => T | null, failed: T) {
+  function enqueueRequest<T>(
+    queue: (() => Promise<void>)[],
+    url: string,
+    read: (body: unknown) => T | null,
+    failed: T,
+  ) {
     return new Promise<T>((resolve) => {
       queue.push(async () => {
         try {
@@ -235,14 +240,14 @@ export function createNominatim(options: NominatimOptions = {}): Nominatim {
           resolve(failed);
         }
       });
-      void work();
+      void runQueue();
     });
   }
 
   return {
     names: {
       defaultNameAt(at) {
-        return request(
+        return enqueueRequest(
           lookups,
           reverseUrl(at),
           (body) => {
@@ -260,7 +265,7 @@ export function createNominatim(options: NominatimOptions = {}): Nominatim {
         if (kept) {
           return kept;
         }
-        const answer = request(searches, searchUrl(text.trim(), area), resultsIn, SEARCH_FAILED);
+        const answer = enqueueRequest(searches, searchUrl(text.trim(), area), resultsIn, SEARCH_FAILED);
         answers.set(key, answer);
         // Failures are not kept, so Retry really asks again.
         void answer.then(({ status }) => status === "failed" && answers.delete(key));

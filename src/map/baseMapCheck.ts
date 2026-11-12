@@ -61,7 +61,7 @@ export function wmsTileUrl(
   return `${url}?${query}`;
 }
 
-const centre = ([[south, west], [north, east]]: Bounds): LatLng => [(south + north) / 2, (west + east) / 2];
+const centreOfBounds = ([[south, west], [north, east]]: Bounds): LatLng => [(south + north) / 2, (west + east) / 2];
 
 /**
  * The one request per source, the base maps' then the overlays': a tile in the middle of
@@ -79,7 +79,7 @@ export function baseMapCheckRequests(): { label: string; url: string }[] {
       continue;
     }
     seen.add(source);
-    const [lat, lng] = source.bounds ? centre(source.bounds) : initialMapView.center;
+    const [lat, lng] = source.bounds ? centreOfBounds(source.bounds) : initialMapView.center;
     const tile = tileAt(lat, lng, source.bounds ? 15 : 12);
     const url =
       source.kind === "wms"

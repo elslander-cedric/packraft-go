@@ -9,12 +9,12 @@ import { loadOsmData, ROOT } from "./osmCache";
 
 const [river, name, ...box] = process.argv.slice(2);
 const [south, west, north, east] = box.map(Number);
-const inside = (lat: number, lon: number) => lat >= south && lat <= north && lon >= west && lon <= east;
-const keep = (overpassElement: OverpassElement) =>
+const isInsideBox = (lat: number, lon: number) => lat >= south && lat <= north && lon >= west && lon <= east;
+const shouldKeepElement = (overpassElement: OverpassElement) =>
   overpassElement.type === "node"
-    ? inside(overpassElement.lat!, overpassElement.lon!)
-    : (overpassElement.geometry ?? []).some((point) => point !== null && inside(point.lat, point.lon));
-const slim = (overpassElement: OverpassElement): OverpassElement => ({
+    ? isInsideBox(overpassElement.lat!, overpassElement.lon!)
+    : (overpassElement.geometry ?? []).some((point) => point !== null && isInsideBox(point.lat, point.lon));
+const withoutUnusedFields = (overpassElement: OverpassElement): OverpassElement => ({
   type: overpassElement.type,
   id: overpassElement.id,
   ...(overpassElement.lat !== undefined ? { lat: overpassElement.lat, lon: overpassElement.lon } : {}),
@@ -25,8 +25,8 @@ const slim = (overpassElement: OverpassElement): OverpassElement => ({
 const osm = await loadOsmData({ offline: true });
 const fixture = {
   note: `OSM extract (© OpenStreetMap contributors, ODbL) for the ${river}, box ${box.join(",")}. Saved from the Overpass cache by save-fixture.mts.`,
-  river: { elements: osm.rivers[river].elements.filter(keep).map(slim) },
-  border: { elements: osm.border.elements.filter(keep).map(slim) },
+  river: { elements: osm.rivers[river].elements.filter(shouldKeepElement).map(withoutUnusedFields) },
+  border: { elements: osm.border.elements.filter(shouldKeepElement).map(withoutUnusedFields) },
 };
 const file = path.join(ROOT, "src", "dataprep", "walloonStretches", "fixtures", `${name}.json`);
 await writeFile(file, JSON.stringify(fixture) + "\n");

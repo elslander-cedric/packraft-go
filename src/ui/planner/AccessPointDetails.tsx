@@ -11,10 +11,10 @@ const useOptions = accessPointUses.map((use) => ({ value: use, label: text.uses[
 const kindOptions = accessPointKinds.map((kind) => ({ value: kind, label: text.kinds[kind] }));
 
 /** Today's date in the browser's time zone, as "YYYY-MM-DD". */
-function today(): string {
+function todayInBrowserTimeZone(): string {
   const now = new Date();
-  const pad = (number: number) => String(number).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const padTo2Digits = (number: number) => String(number).padStart(2, "0");
+  return `${now.getFullYear()}-${padTo2Digits(now.getMonth() + 1)}-${padTo2Digits(now.getDate())}`;
 }
 
 type AccessPointDetailsProps = {
@@ -76,7 +76,7 @@ export function AccessPointDetails({ point, onChange: update }: AccessPointDetai
           />
         </label>
         {point.checkedOnSite === null ? (
-          <Button onClick={() => update({ checkedOnSite: today() })}>{text.checkedTodayButton}</Button>
+          <Button onClick={() => update({ checkedOnSite: todayInBrowserTimeZone() })}>{text.checkedTodayButton}</Button>
         ) : (
           <Button onClick={() => update({ checkedOnSite: null })}>{text.notCheckedButton}</Button>
         )}

@@ -37,7 +37,7 @@ export type OverpassDeps = {
 export function createOverpassClient(deps: OverpassDeps) {
   let lastRequestAt: number | undefined;
 
-  async function politely() {
+  async function waitForMinimumInterval() {
     if (lastRequestAt !== undefined) {
       const elapsed = deps.now() - lastRequestAt;
       if (elapsed < OVERPASS_MIN_INTERVAL_MS) {
@@ -47,10 +47,10 @@ export function createOverpassClient(deps: OverpassDeps) {
     lastRequestAt = deps.now();
   }
 
-  async function attempt(
+  async function requestOnce(
     query: string,
   ): Promise<{ ok: true; body: string; result: OverpassResult } | { ok: false; error: string }> {
-    await politely();
+    await waitForMinimumInterval();
     const response = await deps.fetch(deps.endpoint, {
       method: "POST",
       headers: { "User-Agent": OVERPASS_USER_AGENT, "Content-Type": "application/x-www-form-urlencoded" },
@@ -87,7 +87,7 @@ export function createOverpassClient(deps: OverpassDeps) {
           deps.log?.(`Overpass failed (${lastError.slice(0, 80)}); retrying in ${OVERPASS_RETRY_PAUSE_MS / 1000} s`);
           await deps.wait(OVERPASS_RETRY_PAUSE_MS);
         }
-        const outcome = await attempt(query);
+        const outcome = await requestOnce(query);
         if (outcome.ok) {
           await deps.cache.write(query, outcome.body);
           return outcome.result;

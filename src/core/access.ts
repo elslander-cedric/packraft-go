@@ -213,7 +213,7 @@ function cachedBounds(record: AccessRecord): Bounds {
 }
 
 /** True when the point is on (or in) the record's water or region. */
-function applies(record: AccessRecord, point: LatLng): boolean {
+function recordAppliesAt(record: AccessRecord, point: LatLng): boolean {
   const withinM = record.scope === "region" ? 0 : (record.matchWithinM ?? DEFAULT_MATCH_WITHIN_M);
   if (!nearBounds(point, cachedBounds(record), withinM)) {
     return false;
@@ -252,7 +252,7 @@ const FISHING_DAYS = "the fishing opening days (3rd Saturday of March, 1st Satur
 
 const KAYAK_PAGE = "check today's official status on kayak.spw.wallonie.be";
 
-const m3s = (value: number) => `${value} m³/s`;
+const formatM3s = (value: number) => `${value} m³/s`;
 
 /** Why today's flow can't decide, in one sentence. */
 const flowUnknownText: Record<FlowUnknown, string> = {
@@ -279,8 +279,8 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
         (agwHoursPeriod) => `Permitted hours ${agwHoursPeriod.period}: ${agwHoursPeriod.from}-${agwHoursPeriod.to}`,
       );
   const limits = [
-    rule.minM3s !== null && `minimum ${m3s(rule.minM3s)} (72-hour mean)`,
-    `maximum ${m3s(rule.maxM3s)}`,
+    rule.minM3s !== null && `minimum ${formatM3s(rule.minM3s)} (72-hour mean)`,
+    `maximum ${formatM3s(rule.maxM3s)}`,
   ].filter(Boolean);
   // Flow and official status are only known for today.
   const isToday = date !== undefined && date === today;
@@ -325,11 +325,11 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
   } else if (flowDecides && verdict.kind === "low") {
     state = "closed-today";
     closedBy = "low-flow";
-    ruleText = `Closed today: low flow. The 72-hour mean flow (${m3s(verdict.figures.mean72h!.m3s)}) is below the minimum of ${m3s(rule.minM3s!)}.`;
+    ruleText = `Closed today: low flow. The 72-hour mean flow (${formatM3s(verdict.figures.mean72h!.m3s)}) is below the minimum of ${formatM3s(rule.minM3s!)}.`;
   } else if (flowDecides && verdict.kind === "high") {
     state = "closed-today";
     closedBy = "high-flow";
-    ruleText = `Closed today: high flow. The flow at 08:00 (${m3s(verdict.figures.at8!.m3s)}) is above the maximum of ${m3s(rule.maxM3s)}: based on measured flow; the official status may differ.`;
+    ruleText = `Closed today: high flow. The flow at 08:00 (${formatM3s(verdict.figures.at8!.m3s)}) is above the maximum of ${formatM3s(rule.maxM3s)}: based on measured flow; the official status may differ.`;
   } else if (flowDecides && verdict.kind === "not-checked" && context.flowsPending && isToday) {
     state = "checking";
   } else if (flowDecides && verdict.kind === "unknown") {
@@ -415,7 +415,7 @@ const noRule: AccessStatus = { state: "unknown", reasons: [{ kind: "no-rule", st
  * region's default; where several apply, the most restrictive wins.
  */
 export function accessAt(point: LatLng, rules: AccessRules, context: AccessContext): AccessStatus {
-  const matching = rules.records.filter((record) => applies(record, point));
+  const matching = rules.records.filter((record) => recordAppliesAt(record, point));
   const waters = matching.filter((record) => record.scope === "water");
   const chosen = waters.length > 0 ? waters : matching;
   if (chosen.length === 0) {
@@ -463,6 +463,6 @@ export function accessFeatures(rules: AccessRules, context: AccessContext): Acce
 /** The regions (e.g. "wallonia") whose area contains the point; empty outside every region with rules. */
 export function regionsAt(point: LatLng, rules: AccessRules): string[] {
   return rules.records
-    .filter((record) => record.scope === "region" && applies(record, point))
+    .filter((record) => record.scope === "region" && recordAppliesAt(record, point))
     .map((record) => record.region);
 }

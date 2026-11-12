@@ -42,7 +42,7 @@ export default function AccessDetailsDialog({
   const obstacleName = obstacle && strings.obstacles.names[obstacle.kind];
   const incidentTitle = incident && strings.incidents.title;
   // Only one of them is open at a time.
-  const detail = () => {
+  const renderOpenDetail = () => {
     if (water) {
       return <AccessDetail feature={water} date={date} {...(incidents && { incidents })} />;
     }
@@ -78,7 +78,7 @@ export default function AccessDetailsDialog({
       closeLabel={strings.accessDetailClose}
       onClose={onClose}
     >
-      {detail()}
+      {renderOpenDetail()}
     </InfoDialog>
   );
 }

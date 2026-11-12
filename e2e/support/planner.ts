@@ -133,7 +133,7 @@ export async function freeMapCentre(page: Page) {
 }
 
 /** Kilometres in a shown figure such as "12.3 km". */
-export async function km(locator: Locator) {
+export async function readShownKm(locator: Locator) {
   const shown = (await locator.textContent()) ?? "";
   const match = shown.match(/([\d.,]+)\s*km/);
   if (!match) {
@@ -143,7 +143,7 @@ export async function km(locator: Locator) {
 }
 
 /** The figure named `label` in `within` (e.g. a row's or the totals' "Hike distance"), as shown. */
-export async function figure(within: Locator, label: string) {
+export async function readShownFigure(within: Locator, label: string) {
   const all = await within.locator(".planner-row-figure, .planner-total, .day-figure").allTextContents();
   const found = all.find((shown) => shown.startsWith(`${label} `));
   if (found === undefined) {

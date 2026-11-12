@@ -67,7 +67,7 @@ export function distanceToLineM(point: LatLng, line: readonly Position[]): numbe
 }
 
 /** turf wants each ring to end where it starts; ours may leave the closing position out. */
-function closed(ring: Ring): number[][] {
+function closeRing(ring: Ring): number[][] {
   const [first, last] = [ring[0], ring[ring.length - 1]];
   const isClosed = first[0] === last[0] && first[1] === last[1];
   return (isClosed ? ring : [...ring, first]) as unknown as number[][];
@@ -75,7 +75,7 @@ function closed(ring: Ring): number[][] {
 
 /** True when `point` is inside the polygon: in its outer ring and not in a hole. */
 export function insidePolygon(point: LatLng, polygon: readonly Ring[]): boolean {
-  return polygon.length > 0 && booleanPointInPolygon(positionOf(point), turfPolygon(polygon.map(closed)));
+  return polygon.length > 0 && booleanPointInPolygon(positionOf(point), turfPolygon(polygon.map(closeRing)));
 }
 
 /** True when `point` is inside an area geometry; always false for lines. */

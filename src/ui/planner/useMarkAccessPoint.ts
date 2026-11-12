@@ -22,7 +22,7 @@ export function useMarkAccessPoint(
   // No fix: the next map tap places the point. Cleared once a draft is placed.
   const [needsTap, setNeedsTap] = useState(false);
 
-  const mark = () => {
+  const markAccessPoint = () => {
     setNeedsTap(false);
     if (access.draft) {
       onMarked();
@@ -45,5 +45,10 @@ export function useMarkAccessPoint(
     });
   };
 
-  return { mark, locating, needsTap: needsTap && access.draft === null, clearNeedsTap: () => setNeedsTap(false) };
+  return {
+    mark: markAccessPoint,
+    locating,
+    needsTap: needsTap && access.draft === null,
+    clearNeedsTap: () => setNeedsTap(false),
+  };
 }
