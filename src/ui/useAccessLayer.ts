@@ -83,9 +83,69 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const rules = useAccessRules(statusShown);
   const locks = useBuiltInLocks(on);
   const obstacles = useBuiltInObstacles(on);
+  const { date, dateSelector } = useAccessDate(trip);
+  const { context, official, incidents, shownIncidents } = useLiveAccess(rules, statusShown, date);
+  const features = useMemo(() => (rules ? accessFeatures(rules, context) : []), [rules, context]);
+  const selectedAireStatus = useMemo(
+    () => (rules && selectedAire ? officialStretchAccess(selectedAire.officialStretch, rules, context) : undefined),
+    [rules, selectedAire, context],
+  );
+  const setOn = (next: boolean) => {
+    setOnState(next);
+    if (!next) {
+      select(null);
+    }
+  };
+  const shown = { features, locks: locks ?? [], aires: builtInAires?.aires ?? [], obstacles: obstacles ?? [] };
+  // With the layer off nothing on the map is selected; an aire can still be, from the Access points tab.
+  const selectedOnMap = <T>(items: readonly T[] | null | undefined, idOf: (item: T) => string) =>
+    on ? items?.find((item) => idOf(item) === selectedId) : undefined;
+  return {
+    on,
+    setOn,
+    date,
+    isToday: dateSelector.isToday,
+    dateSelector,
+    shown: on && rules ? { ...shown, incidents: shownIncidents } : null,
+    selectedId,
+    select,
+    selectedWater: selectedOnMap(features, (feature) => feature.record.id),
+    selectedLock: selectedOnMap(locks, (lock) => lock.id),
+    selectedAire,
+    selectedAireStretch: builtInAires?.stretches.find((stretch) => stretch.id === selectedAire?.officialStretch),
+    selectedAireStatus,
+    selectedObstacle: selectedOnMap(obstacles, (obstacle) => obstacle.id),
+    selectedIncident: selectedOnMap(shownIncidents, (incident) => incident.id),
+    incidents,
+    notChecked: on ? checksFailed(official, incidents) : ALL_CHECKED,
+    officialAires: builtInAires?.aires ?? NO_AIRES,
+  };
+}
+
+/** The date the layer is for: today unless another is picked, with the trip's days to pick from. */
+function useAccessDate(trip: Trip) {
   const [pickedDate, setPickedDate] = useState<string | null>(null);
+  const date = pickedDate ?? localToday();
+  const tripDays = useMemo<AccessTripDay[]>(
+    () =>
+      trip.startDate === undefined
+        ? []
+        : summarise(trip).days.flatMap((day, i) => (day.date === undefined ? [] : [{ day: i + 1, date: day.date }])),
+    [trip],
+  );
+  const dateSelector = {
+    date,
+    isToday: pickedDate === null,
+    onDate: setPickedDate,
+    onToday: () => setPickedDate(null),
+    tripDays,
+  };
+  return { date, dateSelector };
+}
+
+/** What only the live services know: today's flows, the official status and the incidents. */
+function useLiveAccess(rules: ReturnType<typeof useAccessRules>, statusShown: boolean, date: string) {
   const today = localToday();
-  const date = pickedDate ?? today;
   const shownToday = statusShown && date === today;
   const flows = useWalloonFlows(rules, shownToday);
   // A future date notes today's closures; a past date has no use for them.
@@ -106,57 +166,5 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
     }),
     [date, today, flows, official, shownToday],
   );
-  const features = useMemo(() => (rules ? accessFeatures(rules, context) : []), [rules, context]);
-  const selectedAireStatus = useMemo(
-    () => (rules && selectedAire ? officialStretchAccess(selectedAire.officialStretch, rules, context) : undefined),
-    [rules, selectedAire, context],
-  );
-  const tripDays = useMemo<AccessTripDay[]>(
-    () =>
-      trip.startDate === undefined
-        ? []
-        : summarise(trip).days.flatMap((day, i) => (day.date === undefined ? [] : [{ day: i + 1, date: day.date }])),
-    [trip],
-  );
-  const setOn = (next: boolean) => {
-    setOnState(next);
-    if (!next) {
-      select(null);
-    }
-  };
-  return {
-    on,
-    setOn,
-    date,
-    isToday: pickedDate === null,
-    dateSelector: {
-      date,
-      isToday: pickedDate === null,
-      onDate: setPickedDate,
-      onToday: () => setPickedDate(null),
-      tripDays,
-    },
-    shown:
-      on && rules
-        ? {
-            features,
-            locks: locks ?? [],
-            aires: builtInAires?.aires ?? [],
-            obstacles: obstacles ?? [],
-            incidents: shownIncidents,
-          }
-        : null,
-    selectedId,
-    select,
-    selectedWater: on ? features.find((feature) => feature.record.id === selectedId) : undefined,
-    selectedLock: on ? locks?.find((lock) => lock.id === selectedId) : undefined,
-    selectedAire,
-    selectedAireStretch: builtInAires?.stretches.find((stretch) => stretch.id === selectedAire?.officialStretch),
-    selectedAireStatus,
-    selectedObstacle: on ? obstacles?.find((obstacle) => obstacle.id === selectedId) : undefined,
-    selectedIncident: on ? shownIncidents.find((i) => i.id === selectedId) : undefined,
-    incidents,
-    notChecked: on ? checksFailed(official, incidents) : ALL_CHECKED,
-    officialAires: builtInAires?.aires ?? NO_AIRES,
-  };
+  return { context, official, incidents, shownIncidents };
 }
