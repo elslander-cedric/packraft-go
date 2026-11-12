@@ -15,6 +15,13 @@ The goal: **less is better, and less complexity is better.** Code is read far mo
 
 - **Braces on every block.** `if`, `else`, `for` and `while` always get `{ }`, also for one statement. *(lint: `curly`)*
 - **Names say what the thing is.** No one-letter names. The exceptions are `i` for a loop index, `x` and `y` for coordinates, and `_` for an unused value. Write `point`, not `p`; `leg`, not `l`. *(lint: `id-length`)*
+- **A function's name says what it does.** A reader must know what a call does without opening the function.
+  - Start with a verb for something that acts or computes: `waitForMinimumInterval()`, not `politely()`; `formatMetres()`, not `fmt()`.
+  - Name what comes back when it returns a changed copy: `withoutRoute(leg)`, `withTripReplaced(session, trip)`, not `unrouted(leg)` or `replaced(...)`.
+  - A yes/no function reads as a question: `isOnline()`, `hasElevation(position)`, not `online()` or `known(position)`.
+  - An event handler says the event: `onPointerDown`, not `down`.
+  - Say which thing when the word alone is vague: `roundTo5Decimals()`, `pointKey()`, `fetchLayer()`, not `round()`, `key()`, `layer()`.
+  - This holds for small local functions too. No abbreviations, and no adverbs or adjectives as names.
 - **No nested ternaries.** One `? :` is fine. For more, use `if` or a lookup object. *(lint: `no-nested-ternary`)*
 - **Small functions.** A function does one thing. Cyclomatic complexity stays at 10 or under and a function at 60 lines or under; split it before it grows past that. *(lint: `complexity`, `max-lines-per-function`, warnings until the existing code is brought under them)*
 - **One concern per file.** When a file mixes concerns, split it by concern, not by size.

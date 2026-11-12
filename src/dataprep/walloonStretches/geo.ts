@@ -13,7 +13,7 @@ export function distanceM(pointA: Pt, pointB: Pt): number {
 }
 
 /** Cumulative distance along the line at each vertex. */
-export function cumulative(line: readonly Pt[]): number[] {
+export function cumulativeDistances(line: readonly Pt[]): number[] {
   const out = [0];
   for (let i = 1; i < line.length; i++) {
     out.push(out[i - 1] + distanceM(line[i - 1], line[i]));
@@ -22,15 +22,15 @@ export function cumulative(line: readonly Pt[]): number[] {
 }
 
 export function lengthM(line: readonly Pt[]): number {
-  const cumulativeM = cumulative(line);
+  const cumulativeM = cumulativeDistances(line);
   return cumulativeM[cumulativeM.length - 1] ?? 0;
 }
 
 export type Projection = { along: number; point: Pt; distance: number };
 
 /** The nearest point on the line to p, with its distance along the line. */
-export function project(line: readonly Pt[], point: Pt): Projection {
-  const cum = cumulative(line);
+export function projectOntoLine(line: readonly Pt[], point: Pt): Projection {
+  const cum = cumulativeDistances(line);
   let best: Projection = { along: 0, point: line[0], distance: distanceM(line[0], point) };
   const metresPerDegreeLng = mPerDegLng(point.lat);
   for (let i = 1; i < line.length; i++) {
@@ -61,7 +61,7 @@ export function project(line: readonly Pt[], point: Pt): Projection {
 
 /** The point at a distance along the line (clamped to its ends). */
 export function pointAt(line: readonly Pt[], along: number): Pt {
-  const cum = cumulative(line);
+  const cum = cumulativeDistances(line);
   if (along <= 0) {
     return line[0];
   }
@@ -81,8 +81,8 @@ export function pointAt(line: readonly Pt[], along: number): Pt {
 }
 
 /** The part of the line between two distances along it (from < to). */
-export function slice(line: readonly Pt[], from: number, to: number): Pt[] {
-  const cum = cumulative(line);
+export function sliceLine(line: readonly Pt[], from: number, to: number): Pt[] {
+  const cum = cumulativeDistances(line);
   const out: Pt[] = [pointAt(line, from)];
   for (let i = 0; i < line.length; i++) {
     if (cum[i] > from && cum[i] < to) {
@@ -94,8 +94,8 @@ export function slice(line: readonly Pt[], from: number, to: number): Pt[] {
 }
 
 /** Where two lines cross, as distances along the first one. */
-export function crossings(line: readonly Pt[], other: readonly Pt[]): Projection[] {
-  const cum = cumulative(line);
+export function lineCrossings(line: readonly Pt[], other: readonly Pt[]): Projection[] {
+  const cum = cumulativeDistances(line);
   const out: Projection[] = [];
   for (let i = 1; i < line.length; i++) {
     const p1 = line[i - 1];
@@ -135,7 +135,7 @@ export function simplify(line: readonly Pt[], toleranceM: number): Pt[] {
     let worst = -1;
     let worstD = toleranceM;
     for (let i = start + 1; i < end; i++) {
-      const distance = project([line[start], line[end]], line[i]).distance;
+      const distance = projectOntoLine([line[start], line[end]], line[i]).distance;
       if (distance > worstD) {
         worst = i;
         worstD = distance;

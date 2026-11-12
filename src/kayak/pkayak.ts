@@ -69,7 +69,7 @@ export function incidentsUrl(serviceUrl = PKAYAK_URL): string {
 }
 
 /** The SPW's free text, or undefined where it gives none: its empty fields are null or "". */
-function text(value: unknown): string | undefined {
+function trimmedTextOrUndefined(value: unknown): string | undefined {
   return (typeof value === "string" && value.trim()) || undefined;
 }
 
@@ -83,11 +83,14 @@ function parseStretches(body: unknown): Record<string, OfficialReading> | null {
   }
   const stretches: Record<string, OfficialReading> = {};
   for (const { attributes } of features as Feature[]) {
-    const id = text(attributes?.nomtro);
+    const id = trimmedTextOrUndefined(attributes?.nomtro);
     if (!id) {
       continue;
     }
-    const [reasonEn, reasonFr] = [text(attributes?.justie), text(attributes?.justif)];
+    const [reasonEn, reasonFr] = [
+      trimmedTextOrUndefined(attributes?.justie),
+      trimmedTextOrUndefined(attributes?.justif),
+    ];
     stretches[id] = {
       code: String(attributes?.stapub ?? ""),
       ...(reasonEn && { reasonEn }),
@@ -108,9 +111,9 @@ function parseIncident({ attributes, geometry }: Feature): Incident | null {
     return null;
   }
   const [officialStretch, textEn, textFr] = [
-    text(attributes?.nomtro),
-    text(attributes?.commene),
-    text(attributes?.commen),
+    trimmedTextOrUndefined(attributes?.nomtro),
+    trimmedTextOrUndefined(attributes?.commene),
+    trimmedTextOrUndefined(attributes?.commen),
   ];
   const [created, changed, expires] = [
     spwDay(attributes?.datcre),
@@ -148,7 +151,7 @@ async function getJson(fetchFn: Fetch, setTimer: SetTimer, url: string): Promise
       reject(new Error("PKAYAK didn't answer in time"));
     }, REQUEST_TIMEOUT_MS);
   });
-  const answer = async () => {
+  const fetchAnswer = async () => {
     const response = await fetchFn(url, { signal: request.signal });
     if (!response.ok) {
       throw new Error(`PKAYAK answered ${response.status}`);
@@ -156,7 +159,7 @@ async function getJson(fetchFn: Fetch, setTimer: SetTimer, url: string): Promise
     return JSON.parse(await response.text()) as unknown;
   };
   try {
-    return await Promise.race([answer(), timedOut]);
+    return await Promise.race([fetchAnswer(), timedOut]);
   } finally {
     cancelTimer();
   }
@@ -197,7 +200,7 @@ export function createPkayakStatusSource(options: PkayakOptions = {}): OfficialS
     }
   }
 
-  function current(): Refresh {
+  function currentRefresh(): Refresh {
     if (!cached || now() - cached.at >= CACHE_MS) {
       cached = { at: now() };
     }
@@ -205,7 +208,7 @@ export function createPkayakStatusSource(options: PkayakOptions = {}): OfficialS
   }
 
   return {
-    readings: () => (current().readings ??= loadReadings()),
-    incidents: () => (current().incidents ??= loadIncidents()),
+    readings: () => (currentRefresh().readings ??= loadReadings()),
+    incidents: () => (currentRefresh().incidents ??= loadIncidents()),
   };
 }

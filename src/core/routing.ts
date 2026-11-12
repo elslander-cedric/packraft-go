@@ -29,14 +29,14 @@ export type AutoRouter = {
 
 type Request = RouteRequest;
 
-const requestOf = (trip: Trip, i: number): Request => ({
+const legRequest = (trip: Trip, i: number): Request => ({
   mode: trip.legs[i].mode,
   points: [trip.points[i], trip.points[i + 1]],
 });
 
 const sameLatLng = (pointA: LatLng, pointB: LatLng) => pointA.lat === pointB.lat && pointA.lng === pointB.lng;
 
-const isFor = (trip: Trip, i: number, request: Request) =>
+const isRequestForLeg = (trip: Trip, i: number, request: Request) =>
   trip.legs[i].mode === request.mode &&
   sameLatLng(trip.points[i], request.points[0]) &&
   sameLatLng(trip.points[i + 1], request.points[1]);
@@ -61,7 +61,7 @@ export function retryLeg(trip: Trip, legIndex: number): Trip {
   return { ...trip, legs: trip.legs.map((leg, i) => (i === legIndex ? { ...leg, route: undefined } : leg)) };
 }
 
-const keyOf = ({ mode, points: [from, to] }: Request) => `${mode}:${from.lat},${from.lng};${to.lat},${to.lng}`;
+const requestKey = ({ mode, points: [from, to] }: Request) => `${mode}:${from.lat},${from.lng};${to.lat},${to.lng}`;
 
 /** Legs that wait for a route: never routed, or pending (possibly brought back by undo). */
 const awaitsRoute = (leg: Leg) => !leg.route || leg.route.status === "pending";
@@ -76,7 +76,7 @@ export function storeRoute(trip: Trip, request: Request, route: LegRoute): Trip 
     trip,
     route,
     // A leg already pending stays as it is, so marking legs pending twice does not change the trip.
-    (leg, i) => awaitsRoute(leg) && leg.route?.status !== route.status && isFor(trip, i, request),
+    (leg, i) => awaitsRoute(leg) && leg.route?.status !== route.status && isRequestForLeg(trip, i, request),
   );
 }
 
@@ -94,8 +94,8 @@ export function createAutoRouter(router: Router, dispatch: RoutingDispatch): Aut
   // instead of a new request. Failures are not kept: retrying must ask again.
   const received = new Map<string, LegRoute>();
 
-  const start = (request: Request) => {
-    const key = keyOf(request);
+  const startRequest = (request: Request) => {
+    const key = requestKey(request);
     const running = (async () => {
       let result: RouteResult;
       try {
@@ -119,16 +119,16 @@ export function createAutoRouter(router: Router, dispatch: RoutingDispatch): Aut
       // Only legs without a route. A pending leg belongs to a request already
       // sent: the trip passed in may be older than that request's answer, so
       // asking again would duplicate it. (Undo never brings back pending legs.)
-      const requests = trip.legs.flatMap((leg, i) => (leg.route ? [] : [requestOf(trip, i)]));
+      const requests = trip.legs.flatMap((leg, i) => (leg.route ? [] : [legRequest(trip, i)]));
       const waiting: Promise<void>[] = [];
       for (const request of requests) {
-        const key = keyOf(request);
+        const key = requestKey(request);
         const known = received.get(key);
         if (known) {
           dispatch({ type: "routeArrived", request, route: known });
         } else {
           dispatch({ type: "routeRequested", request });
-          waiting.push(inFlight.get(key) ?? start(request));
+          waiting.push(inFlight.get(key) ?? startRequest(request));
         }
       }
       await Promise.all(waiting);

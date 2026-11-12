@@ -3,7 +3,16 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { figure, freeMapCentre, legLines, legRows, openPlanner, points, totals, showAllLegs } from "./support/planner";
+import {
+  readShownFigure,
+  freeMapCentre,
+  legLines,
+  legRows,
+  openPlanner,
+  points,
+  totals,
+  showAllLegs,
+} from "./support/planner";
 
 const markers = points;
 const rows = legRows;
@@ -21,7 +30,7 @@ const totalKm = async (page: Page) => {
   if ((await totals(page).count()) === 0) {
     return 0;
   }
-  return Number((await figure(totals(page), strings.planner.totals.labels.hike)).replace(/\s*km$/, ""));
+  return Number((await readShownFigure(totals(page), strings.planner.totals.labels.hike)).replace(/\s*km$/, ""));
 };
 
 async function openMap(page: Page) {

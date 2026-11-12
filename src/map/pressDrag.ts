@@ -41,7 +41,7 @@ export function listenForPressDrag(element: Element, map: LeafletMap, handlers: 
     to: LatLng | null;
   } | null = null;
 
-  const down = (event: PointerEvent) => {
+  const onPointerDown = (event: PointerEvent) => {
     if (pressed || (event.pointerType === "mouse" && event.button !== 0)) {
       return;
     }
@@ -54,7 +54,7 @@ export function listenForPressDrag(element: Element, map: LeafletMap, handlers: 
     };
     element.setPointerCapture?.(event.pointerId);
   };
-  const move = (event: PointerEvent) => {
+  const onPointerMove = (event: PointerEvent) => {
     if (pressed?.id !== event.pointerId) {
       return;
     }
@@ -66,7 +66,7 @@ export function listenForPressDrag(element: Element, map: LeafletMap, handlers: 
     pressed.to = { lat, lng };
     handlers().onDrag(pressed.to);
   };
-  const up = (event: PointerEvent) => {
+  const onPointerUp = (event: PointerEvent) => {
     if (pressed?.id !== event.pointerId) {
       return;
     }
@@ -78,7 +78,7 @@ export function listenForPressDrag(element: Element, map: LeafletMap, handlers: 
       handlers().onTap();
     }
   };
-  const cancel = (event: PointerEvent) => {
+  const onPointerCancel = (event: PointerEvent) => {
     if (pressed?.id !== event.pointerId) {
       return;
     }
@@ -90,11 +90,11 @@ export function listenForPressDrag(element: Element, map: LeafletMap, handlers: 
   };
 
   const listeners: [string, EventListener][] = [
-    ["pointerdown", down as EventListener],
-    ["pointermove", move as EventListener],
-    ["pointerup", up as EventListener],
-    ["pointercancel", cancel as EventListener],
-    ["lostpointercapture", cancel as EventListener],
+    ["pointerdown", onPointerDown as EventListener],
+    ["pointermove", onPointerMove as EventListener],
+    ["pointerup", onPointerUp as EventListener],
+    ["pointercancel", onPointerCancel as EventListener],
+    ["lostpointercapture", onPointerCancel as EventListener],
     ["touchstart", stopPropagation],
     ["mousedown", stopPropagation],
     ["click", stopPropagation],

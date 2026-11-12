@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildStretches, endsNeedingReview, type AnnexRow, type DraftStretch, type ReviewDecisions } from "./build";
-import { distanceM, project, type Pt } from "./geo";
+import { distanceM, projectOntoLine, type Pt } from "./geo";
 import type { OverpassResult } from "./overpass";
 import { STRETCH_RECIPES } from "./recipes";
 import { RIVERS } from "./rivers";
@@ -125,7 +125,7 @@ describe("Viroin, the whole river (1B3)", () => {
 
   it("ends where the river crosses the national border", () => {
     expect(problems).toEqual([]);
-    const nearest = Math.min(...borderWays.map((way) => project(way, viroin.to.point).distance));
+    const nearest = Math.min(...borderWays.map((way) => projectOntoLine(way, viroin.to.point).distance));
     expect(nearest).toBeLessThan(5);
   });
 

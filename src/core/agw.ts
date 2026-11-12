@@ -23,13 +23,13 @@ export type AgwDay = {
 
 const SATURDAY = 6;
 
-const pad = (number: number) => String(number).padStart(2, "0");
+const padTo2Digits = (number: number) => String(number).padStart(2, "0");
 
 /** The n-th Saturday (1-based) of a month, as YYYY-MM-DD. Counted in UTC. */
 function nthSaturday(year: number, month: number, number: number): CalendarDate {
   const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
   const firstSaturday = 1 + ((SATURDAY - firstWeekday + 7) % 7);
-  return `${year}-${pad(month)}-${pad(firstSaturday + 7 * (number - 1))}`;
+  return `${year}-${padTo2Digits(month)}-${padTo2Digits(firstSaturday + 7 * (number - 1))}`;
 }
 
 /** The fishing opening days of a year: the 3rd Saturday of March (trout) and the 1st Saturday of June (general). */
@@ -38,7 +38,7 @@ export function fishingOpeningDays(year: number): { trout: CalendarDate; general
 }
 
 /** Month and day as a sortable number, e.g. 16 March is 316. */
-const monthDay = (date: CalendarDate) => Number(date.slice(5, 7)) * 100 + Number(date.slice(8, 10));
+const monthDayNumber = (date: CalendarDate) => Number(date.slice(5, 7)) * 100 + Number(date.slice(8, 10));
 
 type Period = AgwHoursPeriod & { readonly contains: (md: number) => boolean };
 
@@ -64,13 +64,13 @@ export function agwHoursTable(category: AgwCategory): AgwHoursPeriod[] {
 
 /** Whether a 1.C stretch is in season on the date: 1 October to 15 March. */
 export function inSeason1C(date: CalendarDate): boolean {
-  const md = monthDay(date);
+  const md = monthDayNumber(date);
   return md >= 1001 || md <= 315;
 }
 
 /** What the AGW says about a category on one date: closed or not, and the permitted hours. */
 export function agwDay(category: AgwCategory, date: CalendarDate): AgwDay {
-  const md = monthDay(date);
+  const md = monthDayNumber(date);
   const { from, to } = hoursTables[category].find((period) => period.contains(md))!;
   const hours = { from, to };
   if (category === "1.C" && !inSeason1C(date)) {

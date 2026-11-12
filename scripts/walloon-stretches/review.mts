@@ -17,7 +17,7 @@ const PORT = Number(process.env.REVIEW_PORT ?? 3461);
 const PAGE = path.join(ROOT, "scripts", "walloon-stretches", "review.html");
 const LEAFLET = path.join(ROOT, "node_modules", "leaflet", "dist");
 
-const json = (res: ServerResponse, status: number, body: unknown) => {
+const sendJson = (res: ServerResponse, status: number, body: unknown) => {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(body));
 };
@@ -27,7 +27,7 @@ const osmCached = await readdir(path.join(ROOT, ".cache", "osm"))
   .then((files) => files.length > RIVERS.length)
   .catch(() => false);
 
-async function state() {
+async function readReviewState() {
   const { draft, needingReview, problems, finalPath } = await buildDataset({ offline: true, shipped: !osmCached });
   const review = await readReview();
   const { raw, lines } = await readSpwLines();
@@ -42,7 +42,7 @@ async function state() {
   };
 }
 
-async function body(req: IncomingMessage): Promise<unknown> {
+async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
     chunks.push(chunk as Buffer);
@@ -82,12 +82,12 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (req.method === "GET" && url.pathname === "/api/state") {
-      return json(res, 200, await state());
+      return sendJson(res, 200, await readReviewState());
     }
     if (req.method === "POST" && url.pathname === "/api/decision") {
-      const decision = await body(req);
+      const decision = await readJsonBody(req);
       if (!isDecision(decision)) {
-        return json(res, 400, { error: "invalid decision" });
+        return sendJson(res, 400, { error: "invalid decision" });
       }
       const review = await readReview();
       if (decision.action === "clear") {
@@ -102,11 +102,11 @@ const server = createServer(async (req, res) => {
       }
       review.reviewedAt = new Date().toISOString().slice(0, 10);
       await writeReview(review);
-      return json(res, 200, await state());
+      return sendJson(res, 200, await readReviewState());
     }
     res.writeHead(404).end("not found");
   } catch (error) {
-    json(res, 500, { error: String(error) });
+    sendJson(res, 500, { error: String(error) });
   }
 });
 

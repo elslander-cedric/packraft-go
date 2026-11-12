@@ -36,14 +36,14 @@ export type KiwisOptions = {
 
 const FAILED: FlowReadings = { status: "failed" };
 
-function query(serviceUrl: string, params: Record<string, string>): string {
+function queryUrl(serviceUrl: string, params: Record<string, string>): string {
   const base = { service: "kisters", type: "queryServices", datasource: "0", format: "json" };
   return `${serviceUrl}?${new URLSearchParams({ ...base, ...params }).toString()}`;
 }
 
 /** The request that resolves the two series of each gauge to their ids. */
 export function seriesListUrl(stationNos: readonly string[], serviceUrl = KIWIS_URL): string {
-  return query(serviceUrl, {
+  return queryUrl(serviceUrl, {
     request: "getTimeseriesList",
     station_no: stationNos.join(","),
     ts_name: `${MEAN_72H_SERIES},${HOURLY_SERIES}`,
@@ -53,7 +53,7 @@ export function seriesListUrl(stationNos: readonly string[], serviceUrl = KIWIS_
 
 /** The request for the last day of values of these series. */
 export function valuesUrl(tsIds: readonly string[], serviceUrl = KIWIS_URL): string {
-  return query(serviceUrl, {
+  return queryUrl(serviceUrl, {
     request: "getTimeseriesValues",
     ts_id: tsIds.join(","),
     period: "P1D",
@@ -127,7 +127,7 @@ async function getJson(fetchFn: Fetch, setTimer: SetTimer, url: string): Promise
       reject(new Error("KiWIS didn't answer in time"));
     }, REQUEST_TIMEOUT_MS);
   });
-  const answer = async () => {
+  const fetchAnswer = async () => {
     const response = await fetchFn(url, { signal: request.signal });
     if (!response.ok) {
       throw new Error(`KiWIS answered ${response.status}`);
@@ -135,7 +135,7 @@ async function getJson(fetchFn: Fetch, setTimer: SetTimer, url: string): Promise
     return JSON.parse(await response.text()) as unknown;
   };
   try {
-    return await Promise.race([answer(), timedOut]);
+    return await Promise.race([fetchAnswer(), timedOut]);
   } finally {
     cancelTimer();
   }
@@ -158,7 +158,7 @@ export function createKiwisFlowSource(options: KiwisOptions = {}): FlowSource {
   const serviceUrl = options.serviceUrl ?? KIWIS_URL;
   const cache = new Map<string, { at: number; answer: Promise<FlowReadings> }>();
 
-  async function load(stationNos: readonly string[]): Promise<FlowReadings> {
+  async function loadReadings(stationNos: readonly string[]): Promise<FlowReadings> {
     try {
       const series = parseSeriesList(await getJson(fetchFn, setTimer, seriesListUrl(stationNos, serviceUrl)));
       if (!series) {
@@ -185,7 +185,7 @@ export function createKiwisFlowSource(options: KiwisOptions = {}): FlowSource {
       if (cached && now() - cached.at < CACHE_MS) {
         return cached.answer;
       }
-      const answer = load(key.split(","));
+      const answer = loadReadings(key.split(","));
       cache.set(key, { at: now(), answer });
       return answer;
     },

@@ -51,44 +51,44 @@ export async function touch(page: Page): Promise<Touch> {
   }
   const cdp = await page.context().newCDPSession(page);
 
-  const send = (type: "touchStart" | "touchMove" | "touchEnd", touchPoints: TouchPoint[]) =>
+  const dispatchTouchEvent = (type: "touchStart" | "touchMove" | "touchEnd", touchPoints: TouchPoint[]) =>
     cdp.send("Input.dispatchTouchEvent", { type, touchPoints });
-  const lerp = (pixelA: Pixel, pixelB: Pixel, fraction: number): Pixel => ({
+  const pointBetween = (pixelA: Pixel, pixelB: Pixel, fraction: number): Pixel => ({
     x: pixelA.x + (pixelB.x - pixelA.x) * fraction,
     y: pixelA.y + (pixelB.y - pixelA.y) * fraction,
   });
 
   return {
     async press(at) {
-      await send("touchStart", [{ ...at, id: 1 }]);
+      await dispatchTouchEvent("touchStart", [{ ...at, id: 1 }]);
       return {
-        moveTo: async (to) => void (await send("touchMove", [{ ...to, id: 1 }])),
-        release: async () => void (await send("touchEnd", [])),
+        moveTo: async (to) => void (await dispatchTouchEvent("touchMove", [{ ...to, id: 1 }])),
+        release: async () => void (await dispatchTouchEvent("touchEnd", [])),
       };
     },
     async drag(from, to, { steps = 10 } = {}) {
-      await send("touchStart", [{ ...from, id: 1 }]);
+      await dispatchTouchEvent("touchStart", [{ ...from, id: 1 }]);
       for (let i = 1; i <= steps; i++) {
-        await send("touchMove", [{ ...lerp(from, to, i / steps), id: 1 }]);
+        await dispatchTouchEvent("touchMove", [{ ...pointBetween(from, to, i / steps), id: 1 }]);
       }
-      await send("touchEnd", []);
+      await dispatchTouchEvent("touchEnd", []);
     },
     async hold(at, ms) {
-      await send("touchStart", [{ ...at, id: 1 }]);
+      await dispatchTouchEvent("touchStart", [{ ...at, id: 1 }]);
       await page.waitForTimeout(ms); // a hold is a duration by definition
-      await send("touchEnd", []);
+      await dispatchTouchEvent("touchEnd", []);
     },
     async pinch(center, scale, { spread = 60, steps = 10 } = {}) {
-      const ends = (half: number): [TouchPoint, TouchPoint] => [
+      const pinchTouchPoints = (half: number): [TouchPoint, TouchPoint] => [
         { x: center.x - half, y: center.y, id: 1 },
         { x: center.x + half, y: center.y, id: 2 },
       ];
-      await send("touchStart", ends(spread / 2));
+      await dispatchTouchEvent("touchStart", pinchTouchPoints(spread / 2));
       for (let i = 1; i <= steps; i++) {
         const half = (spread / 2) * (1 + ((scale - 1) * i) / steps);
-        await send("touchMove", ends(half));
+        await dispatchTouchEvent("touchMove", pinchTouchPoints(half));
       }
-      await send("touchEnd", []);
+      await dispatchTouchEvent("touchEnd", []);
     },
   };
 }

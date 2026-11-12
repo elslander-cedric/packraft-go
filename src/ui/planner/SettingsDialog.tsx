@@ -59,7 +59,8 @@ export default function SettingsDialog({ open, settings, onSave, onClose }: Sett
       setDraft(settings);
     }
   }
-  const change = (name: PaceSetting, value: number | null) => setDraft((current) => ({ ...current, [name]: value }));
+  const setDraftValue = (name: PaceSetting, value: number | null) =>
+    setDraft((current) => ({ ...current, [name]: value }));
   const { paceFactor, paddleSpeedKmh } = draft;
   const usable = isUsableSetting(paceFactor) && isUsableSetting(paddleSpeedKmh);
 
@@ -84,13 +85,13 @@ export default function SettingsDialog({ open, settings, onSave, onClose }: Sett
           hint={strings.paceFactorHint}
           initialValue={settings.paceFactor}
           step={0.1}
-          onChange={(value) => change("paceFactor", value)}
+          onChange={(value) => setDraftValue("paceFactor", value)}
         />
         <SettingField
           label={strings.paddleSpeedLabel}
           initialValue={settings.paddleSpeedKmh}
           step={0.5}
-          onChange={(value) => change("paddleSpeedKmh", value)}
+          onChange={(value) => setDraftValue("paddleSpeedKmh", value)}
         />
       </section>
     </FormDialog>

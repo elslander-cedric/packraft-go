@@ -34,7 +34,7 @@ export function startDefaultNames({ source, points, found, online }: DefaultName
   // Positions already answered per point, until the points show the answer: `found` may apply it later.
   const answered = new Map<string, string>();
 
-  function next() {
+  function nextPointToLookUp() {
     const waiting = toLookUp(points());
     const ids = new Set(waiting.map((point) => point.id));
     for (const id of answered.keys()) {
@@ -45,10 +45,10 @@ export function startDefaultNames({ source, points, found, online }: DefaultName
     return waiting.find((point) => answered.get(point.id) !== positionKey(point.position));
   }
 
-  async function work() {
+  async function lookUpWaitingPoints() {
     busy = true;
     try {
-      for (let point = next(); point && !stopped && online(); point = next()) {
+      for (let point = nextPointToLookUp(); point && !stopped && online(); point = nextPointToLookUp()) {
         const at = point.position;
         const lookup = await source.defaultNameAt(at);
         if (stopped) {
@@ -66,11 +66,11 @@ export function startDefaultNames({ source, points, found, online }: DefaultName
     }
   }
 
-  function wake() {
+  function startIfIdle() {
     if (busy || stopped || retry !== null) {
       return;
     }
-    void work();
+    void lookUpWaitingPoints();
   }
 
   function backOnline() {
@@ -78,11 +78,11 @@ export function startDefaultNames({ source, points, found, online }: DefaultName
       clearTimeout(retry);
     }
     retry = null;
-    wake();
+    startIfIdle();
   }
 
   return {
-    wake,
+    wake: startIfIdle,
     backOnline,
     stop: () => {
       stopped = true;

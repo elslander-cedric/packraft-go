@@ -30,7 +30,7 @@ function newId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
-const now = () => new Date().toISOString();
+const currentTimestamp = () => new Date().toISOString();
 
 /** Why autosave is paused: the stored save is kept as it is. */
 export type SavingPaused = "unknown-version" | "damaged";
@@ -117,8 +117,8 @@ export function useAccessPoints() {
     placeDraft: (at: LatLng) => {
       setDraft((current) =>
         current
-          ? updateAccessPoint([current], current.id, { position: at }, now())[0]!
-          : addAccessPoint([], { id: newId(), at, now: now() })[0]!,
+          ? updateAccessPoint([current], current.id, { position: at }, currentTimestamp())[0]!
+          : addAccessPoint([], { id: newId(), at, now: currentTimestamp() })[0]!,
       );
       setSelectedId(null);
     },
@@ -128,14 +128,14 @@ export function useAccessPoints() {
         return;
       }
       const { id } = draft;
-      setPoints((current) => updateAccessPoint([...current, draft], id, changes, now()));
+      setPoints((current) => updateAccessPoint([...current, draft], id, changes, currentTimestamp()));
       setDraft(null);
       setSelectedId(id);
     },
     discardDraft: () => setDraft(null),
     select: (id: string | null) => setSelectedId(id),
     update: (id: string, changes: AccessPointChanges) =>
-      setPoints((current) => updateAccessPoint(current, id, changes, now())),
+      setPoints((current) => updateAccessPoint(current, id, changes, currentTimestamp())),
     remove: (id: string) => {
       setPoints((current) => deleteAccessPoint(current, id));
       setSelectedId((current) => (current === id ? null : current));

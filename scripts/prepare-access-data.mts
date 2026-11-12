@@ -33,7 +33,7 @@ const skipFlanders = process.argv.includes("--skip-flanders");
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function overpass(query: string): Promise<OverpassResponse> {
+async function queryOverpass(query: string): Promise<OverpassResponse> {
   const file = path.join(CACHE, `${createHash("sha256").update(query).digest("hex").slice(0, 16)}.json`);
   if (!fresh && existsSync(file)) {
     return JSON.parse(readFileSync(file, "utf8")) as OverpassResponse;
@@ -66,13 +66,13 @@ async function overpass(query: string): Promise<OverpassResponse> {
 }
 
 const today = new Date().toISOString().slice(0, 10);
-const datasets = await buildAccessData(overpass, today, { skipFlanders });
+const datasets = await buildAccessData(queryOverpass, today, { skipFlanders });
 for (const dataset of datasets) {
   const file = path.join(OUT, `${dataset.id}.json`);
   writeFileSync(file, serialiseDataset(dataset));
   console.log(`Wrote ${path.relative(ROOT, file)}: ${dataset.records.length} records`);
 }
-const locks = await buildLockData(overpass, datasets.find((dataset) => dataset.id === "regions")!.records, today);
+const locks = await buildLockData(queryOverpass, datasets.find((dataset) => dataset.id === "regions")!.records, today);
 const locksFile = path.join(OUT, "locks.json");
 writeFileSync(locksFile, serialiseLocks(locks));
 console.log(`Wrote ${path.relative(ROOT, locksFile)}: ${locks.locks.length} locks`);

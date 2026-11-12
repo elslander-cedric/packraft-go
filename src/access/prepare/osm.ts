@@ -16,7 +16,7 @@ export type Line = Position[];
 /** An outer ring followed by its holes. */
 export type Polygon = Line[];
 
-const toLine = (geometry: OverpassPoint[] | undefined): Line =>
+const lineFromOverpassPoints = (geometry: OverpassPoint[] | undefined): Line =>
   (geometry ?? [])
     .filter((overpassPoint): overpassPoint is { lat: number; lon: number } => overpassPoint !== null)
     .map((point) => [point.lon, point.lat] as const);
@@ -35,7 +35,7 @@ export function waysOf(
   for (const element of response.elements) {
     if (element.type === "way" && include(element.tags ?? {}) && !seen.has(element.id)) {
       seen.add(element.id);
-      lines.push(toLine(element.geometry));
+      lines.push(lineFromOverpassPoints(element.geometry));
     }
     if (element.type === "relation") {
       for (const member of element.members ?? []) {
@@ -43,14 +43,14 @@ export function waysOf(
           continue;
         }
         seen.add(member.ref);
-        lines.push(toLine(member.geometry));
+        lines.push(lineFromOverpassPoints(member.geometry));
       }
     }
   }
   return lines.filter((line) => line.length >= 2);
 }
 
-const same = (positionA: Position, positionB: Position) =>
+const isSamePosition = (positionA: Position, positionB: Position) =>
   positionA[0] === positionB[0] && positionA[1] === positionB[1];
 
 /** Joins lines that share end points into as few, longer lines as possible. */
@@ -66,13 +66,13 @@ export function mergeLines(lines: readonly Line[]): Line[] {
         const other = pool[i];
         const [first, last] = [current[0], current[current.length - 1]];
         let joined: Line | null = null;
-        if (same(last, other[0])) {
+        if (isSamePosition(last, other[0])) {
           joined = [...current, ...other.slice(1)];
-        } else if (same(last, other[other.length - 1])) {
+        } else if (isSamePosition(last, other[other.length - 1])) {
           joined = [...current, ...other.slice(0, -1).reverse()];
-        } else if (same(first, other[other.length - 1])) {
+        } else if (isSamePosition(first, other[other.length - 1])) {
           joined = [...other, ...current.slice(1)];
-        } else if (same(first, other[0])) {
+        } else if (isSamePosition(first, other[0])) {
           joined = [...other.slice(1).reverse(), ...current];
         }
         if (joined) {
@@ -90,7 +90,7 @@ export function mergeLines(lines: readonly Line[]): Line[] {
 
 /** Joins ways into closed rings; pieces that don't close are dropped. */
 export function assembleRings(lines: readonly Line[]): Line[] {
-  return mergeLines(lines).filter((ring) => ring.length >= 4 && same(ring[0], ring[ring.length - 1]));
+  return mergeLines(lines).filter((ring) => ring.length >= 4 && isSamePosition(ring[0], ring[ring.length - 1]));
 }
 
 const asLatLng = ([lng, lat]: Position): LatLng => ({ lat, lng });
@@ -113,13 +113,16 @@ export function relationArea(response: OverpassResponse, relationId: number): Po
   if (!relation) {
     throw new Error(`relation ${relationId} is not in the Overpass answer`);
   }
-  const ways = (role: string) =>
+  const waysWithRole = (role: string) =>
     (relation.members ?? [])
       .filter((overpassMember) => overpassMember.type === "way" && overpassMember.role === role)
-      .map((overpassMember) => toLine(overpassMember.geometry))
+      .map((overpassMember) => lineFromOverpassPoints(overpassMember.geometry))
       .filter((line) => line.length >= 2);
   // Members without a role count as outer, as in OSM's multipolygon rules.
-  return polygonsFrom(assembleRings([...ways("outer"), ...ways("")]), assembleRings(ways("inner")));
+  return polygonsFrom(
+    assembleRings([...waysWithRole("outer"), ...waysWithRole("")]),
+    assembleRings(waysWithRole("inner")),
+  );
 }
 
 /** Areas drawn as closed ways or multipolygon relations, e.g. docks. `include` picks them by tags. */
@@ -130,8 +133,8 @@ export function areasOf(response: OverpassResponse, include: (tags: Record<strin
       continue;
     }
     if (element.type === "way") {
-      const ring = toLine(element.geometry);
-      if (ring.length >= 4 && same(ring[0], ring[ring.length - 1])) {
+      const ring = lineFromOverpassPoints(element.geometry);
+      if (ring.length >= 4 && isSamePosition(ring[0], ring[ring.length - 1])) {
         polygons.push([ring]);
       }
     } else if (element.type === "relation") {

@@ -27,23 +27,23 @@ export const isPrimaryPress = (event: PointerEvent) => event.pointerType !== "mo
 export function listenForHold(element: Element, map: LeafletMap, onHold: (at: LatLng) => void): () => void {
   let pressed: { id: number; x: number; y: number; timer: ReturnType<typeof setTimeout> } | null = null;
   let lastPointerType = "mouse";
-  const at = (event: MouseEvent): LatLng => {
+  const latLngOfEvent = (event: MouseEvent): LatLng => {
     const { lat, lng } = map.mouseEventToLatLng(event);
     return { lat, lng };
   };
-  const release = () => {
+  const cancelHold = () => {
     if (pressed) {
       clearTimeout(pressed.timer);
     }
     pressed = null;
   };
 
-  const down = (event: PointerEvent) => {
+  const onPointerDown = (event: PointerEvent) => {
     lastPointerType = event.pointerType;
     if (!isPrimaryPress(event) || pressed) {
       return;
     }
-    const where = at(event);
+    const where = latLngOfEvent(event);
     pressed = {
       id: event.pointerId,
       x: event.clientX,
@@ -54,17 +54,17 @@ export function listenForHold(element: Element, map: LeafletMap, onHold: (at: La
       }, HOLD_MS),
     };
   };
-  const move = (event: PointerEvent) => {
+  const onPointerMove = (event: PointerEvent) => {
     if (pressed?.id !== event.pointerId) {
       return;
     }
     if (Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > HOLD_SLOP_PX) {
-      release();
+      cancelHold();
     }
   };
-  const up = (event: PointerEvent) => {
+  const onPointerUp = (event: PointerEvent) => {
     if (pressed?.id === event.pointerId) {
-      release();
+      cancelHold();
     }
   };
   const contextMenu = (event: Event) => {
@@ -73,23 +73,23 @@ export function listenForHold(element: Element, map: LeafletMap, onHold: (at: La
     const mouse = event as PointerEvent;
     const pointerType = mouse.pointerType || lastPointerType;
     if (pointerType === "mouse") {
-      onHold(at(mouse));
+      onHold(latLngOfEvent(mouse));
     }
   };
 
   // Moves, lifts and cancels are watched on the document: Leaflet may capture the pointer to pan.
   const listeners: [EventTarget, string, EventListener][] = [
-    [element, "pointerdown", down as EventListener],
-    [document, "pointermove", move as EventListener],
-    [document, "pointerup", up as EventListener],
-    [document, "pointercancel", up as EventListener],
+    [element, "pointerdown", onPointerDown as EventListener],
+    [document, "pointermove", onPointerMove as EventListener],
+    [document, "pointerup", onPointerUp as EventListener],
+    [document, "pointercancel", onPointerUp as EventListener],
     [element, "contextmenu", contextMenu],
   ];
   for (const [target, type, listener] of listeners) {
     target.addEventListener(type, listener);
   }
   return () => {
-    release();
+    cancelHold();
     for (const [target, type, listener] of listeners) {
       target.removeEventListener(type, listener);
     }
@@ -116,17 +116,17 @@ export function useHold(
       return;
     }
     let stop: (() => void) | undefined;
-    const listen = () => {
+    const startListening = () => {
       const element = current.getElement();
       if (!element || stop) {
         return;
       }
       stop = listenForHold(element, map, (at) => latest.current(at));
     };
-    listen();
-    current.on("add", listen);
+    startListening();
+    current.on("add", startListening);
     return () => {
-      current.off("add", listen);
+      current.off("add", startListening);
       stop?.();
     };
   }, [map, layer]);

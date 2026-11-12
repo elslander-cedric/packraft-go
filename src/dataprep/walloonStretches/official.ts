@@ -4,7 +4,7 @@
 // it needs no OSM data of its own. The mapping is written by hand and checked against the
 // SPW's lines (docs/research/data/spw-stretch-lines.json) by the data tests.
 import type { AnnexRow, DraftStretch, ReviewDecisions, StretchEnd } from "./build";
-import { distanceM, lengthM, project, slice, type Pt } from "./geo";
+import { distanceM, lengthM, projectOntoLine, sliceLine, type Pt } from "./geo";
 
 export type OfficialSplit = {
   /** The Annex row. Its pieces are `${id}-1` (upstream) and `${id}-2`. */
@@ -80,10 +80,11 @@ export const OFFICIAL_MAPPING: OfficialMapping = {
   ],
 };
 
-const round = (x: number) => Math.round(x * 1e5) / 1e5;
+const roundTo5Decimals = (x: number) => Math.round(x * 1e5) / 1e5;
 const toPts = (line: DraftStretch["line"]): Pt[] => line.map(([lng, lat]) => ({ lat, lng }));
-const toLine = (points: readonly Pt[]): DraftStretch["line"] => points.map(({ lat, lng }) => [round(lng), round(lat)]);
-const km = (metres: number) => Math.round(metres / 100) / 10;
+const toLine = (points: readonly Pt[]): DraftStretch["line"] =>
+  points.map(({ lat, lng }) => [roundTo5Decimals(lng), roundTo5Decimals(lat)]);
+const roundedKm = (metres: number) => Math.round(metres / 100) / 10;
 const onStretch = (official: string | null | undefined) => (official ? { officialStretch: official } : {});
 
 /** The end every record's boundary is reviewed under; the second piece's start points at it. */
@@ -93,14 +94,14 @@ const boundaryEnd = (id: string) => `${id}-1.to`;
 export const splitBoundaryEnds = (mapping: OfficialMapping = OFFICIAL_MAPPING): string[] =>
   mapping.splits.map((split) => boundaryEnd(split.id));
 
-function pieces(stretch: DraftStretch, split: OfficialSplit, review: ReviewDecisions): DraftStretch[] {
+function splitIntoPieces(stretch: DraftStretch, split: OfficialSplit, review: ReviewDecisions): DraftStretch[] {
   const key = boundaryEnd(split.id);
   const decision = review[key];
   const river = toPts(stretch.line);
-  const cut = project(river, decision ?? split.at);
+  const cut = projectOntoLine(river, decision ?? split.at);
   const length = lengthM(river);
-  const [upper, lower] = [slice(river, 0, cut.along), slice(river, cut.along, length)];
-  const at = { lat: round(cut.point.lat), lng: round(cut.point.lng) };
+  const [upper, lower] = [sliceLine(river, 0, cut.along), sliceLine(river, cut.along, length)];
+  const at = { lat: roundTo5Decimals(cut.point.lat), lng: roundTo5Decimals(cut.point.lng) };
   const reason =
     decision?.action === "move"
       ? `Moved by review${decision.note ? `: ${decision.note}` : "."}`
@@ -113,7 +114,7 @@ function pieces(stretch: DraftStretch, split: OfficialSplit, review: ReviewDecis
       splitOf: split.id,
       to: boundary,
       line: toLine(upper),
-      lengthKm: km(cut.along),
+      lengthKm: roundedKm(cut.along),
       ...onStretch(split.pieces[0]),
     },
     {
@@ -122,7 +123,7 @@ function pieces(stretch: DraftStretch, split: OfficialSplit, review: ReviewDecis
       splitOf: split.id,
       from: { ...boundary, sameAs: key },
       line: toLine(lower),
-      lengthKm: km(length - cut.along),
+      lengthKm: roundedKm(length - cut.along),
       ...onStretch(split.pieces[1]),
     },
   ];
@@ -150,7 +151,7 @@ export function splitAtOfficialBoundaries(
       from: sharedEnd(stretch.from, mapping.splits),
       to: sharedEnd(stretch.to, mapping.splits),
     };
-    return split ? pieces(within, split, review) : [{ ...within, ...onStretch(mapping.whole[stretch.id]) }];
+    return split ? splitIntoPieces(within, split, review) : [{ ...within, ...onStretch(mapping.whole[stretch.id]) }];
   });
 }
 
@@ -187,7 +188,7 @@ export function rejoinSplits(
             ...before,
             to: stretch.to,
             line: [...before.line, ...stretch.line.slice(1)],
-            lengthKm: km((before.lengthKm + stretch.lengthKm) * 1000),
+            lengthKm: roundedKm((before.lengthKm + stretch.lengthKm) * 1000),
           }
         : { ...stretch, id, annex2Gauge: annex.find((row) => row.id === id)?.annex2Gauge ?? null },
     );
@@ -216,7 +217,7 @@ const toSegment = (point: Pt, pointA: Pt, pointB: Pt) => {
 
 type BoxedPart = { id: string; points: readonly Pt[]; south: number; north: number; west: number; east: number };
 
-const boxed = (lines: OfficialLines): BoxedPart[] =>
+const withBoundingBoxes = (lines: OfficialLines): BoxedPart[] =>
   Object.entries(lines).flatMap(([id, parts]) =>
     parts.map((points) => {
       const lats = points.map((point) => point.lat);
@@ -252,7 +253,7 @@ function nearestOfficial(point: Pt, parts: readonly BoxedPart[]): string | null 
 
 /** The parts of a line that follow each SPW line, downstream, including those on none (null). */
 export function officialRuns(line: readonly Pt[], lines: OfficialLines): OfficialRun[] {
-  const parts = boxed(lines);
+  const parts = withBoundingBoxes(lines);
   const runs: OfficialRun[] = [];
   let along = 0;
   for (let i = 1; i < line.length; i++) {

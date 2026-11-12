@@ -30,17 +30,17 @@ export function Taps({ onTap, onLegTap }: { onTap: (at: LatLng) => void; onLegTa
   useEffect(() => {
     const container = map.getContainer();
     // Capture phase, before Leaflet's own handlers.
-    const touch = (event: TouchEvent) => {
+    const notePinch = (event: TouchEvent) => {
       pinched.current = event.touches.length > 1;
     };
-    const down = (event: PointerEvent) => {
+    const notePressTime = (event: PointerEvent) => {
       pressedAt.current = isPrimaryPress(event) ? event.timeStamp : null;
     };
-    container.addEventListener("touchstart", touch, true);
-    container.addEventListener("pointerdown", down, true);
+    container.addEventListener("touchstart", notePinch, true);
+    container.addEventListener("pointerdown", notePressTime, true);
     return () => {
-      container.removeEventListener("touchstart", touch, true);
-      container.removeEventListener("pointerdown", down, true);
+      container.removeEventListener("touchstart", notePinch, true);
+      container.removeEventListener("pointerdown", notePressTime, true);
     };
   }, [map]);
   useMapEvents({

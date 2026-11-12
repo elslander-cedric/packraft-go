@@ -19,11 +19,11 @@ export function visibleAreaStyle(area: VisibleArea | null): CSSProperties {
 }
 
 // The snapshot is a string, so it compares by value between renders.
-const snapshot = () => {
+const visibleAreaSnapshot = () => {
   const viewport = window.visualViewport;
   return viewport ? `${viewport.offsetTop} ${viewport.height}` : "";
 };
-const noArea = () => "";
+const emptySnapshot = () => "";
 
 /**
  * Keeps an open dialog in the visible area: follows `window.visualViewport`, which
@@ -46,7 +46,7 @@ export function useVisibleArea(open: boolean, popup: RefObject<HTMLElement | nul
     },
     [open],
   );
-  const current = useSyncExternalStore(subscribe, open ? snapshot : noArea, noArea);
+  const current = useSyncExternalStore(subscribe, open ? visibleAreaSnapshot : emptySnapshot, emptySnapshot);
 
   useEffect(() => {
     const focused = document.activeElement;

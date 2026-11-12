@@ -166,12 +166,12 @@ function comparePreparation(title: string, build: () => unknown, report: Report)
 
 function compareObstacles(live: Layer, report: Report) {
   const title = "layer 1 (obstacles)";
-  const isKnown = (code: unknown) => String(code) in OBSTACLE_KINDS;
+  const isKnownObstacleCode = (code: unknown) => String(code) in OBSTACLE_KINDS;
   const unknown = [
     ...new Set(
       live.rows
         .map((row) => row.codico)
-        .filter((code) => !isKnown(code))
+        .filter((code) => !isKnownObstacleCode(code))
         .map(String),
     ),
   ];
@@ -185,7 +185,7 @@ function compareObstacles(live: Layer, report: Report) {
     );
     report.match(`${title}: obstacle codes ${codes.join(", ")} are all known`);
   }
-  const features = live.answer.features.filter((feature) => isKnown(feature.properties.codico));
+  const features = live.answer.features.filter((feature) => isKnownObstacleCode(feature.properties.codico));
   comparePreparation(title, () => buildObstacles({ ...live.answer, features }, snapshotDate), report);
 }
 
@@ -203,7 +203,7 @@ async function compareAdapter(live: KayakAnswers, report: Report) {
     },
   });
   const [readings, incidents] = [await source.readings(), await source.incidents()];
-  const compare = (what: string, read: number | null, total: unknown[]) => {
+  const reportReadCount = (what: string, read: number | null, total: unknown[]) => {
     if (read === null) {
       report.mismatch(`adapter can't read the ${what}`);
     } else if (read === total.length) {
@@ -212,12 +212,20 @@ async function compareAdapter(live: KayakAnswers, report: Report) {
       report.mismatch(`adapter reads ${read} of ${total.length} ${what}`);
     }
   };
-  const rows = (answer: RecordedResponse) => {
+  const featureRows = (answer: RecordedResponse) => {
     const layer = readLayer(answer.body);
     return typeof layer === "string" ? [] : layer.rows;
   };
-  compare("stretches", readings.status === "ok" ? Object.keys(readings.stretches).length : null, rows(live.stretches));
-  compare("incidents", incidents.status === "ok" ? incidents.incidents.length : null, rows(live.incidents));
+  reportReadCount(
+    "stretches",
+    readings.status === "ok" ? Object.keys(readings.stretches).length : null,
+    featureRows(live.stretches),
+  );
+  reportReadCount(
+    "incidents",
+    incidents.status === "ok" ? incidents.incidents.length : null,
+    featureRows(live.incidents),
+  );
 }
 
 /** Compares the live answers with the recorded ones, finding by finding. */

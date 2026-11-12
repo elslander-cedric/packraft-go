@@ -237,13 +237,13 @@ export function tripAccess(
         (legs[leg] = legAccess(when, status, today, incidents, lockWarnings, obstacleWarnings, incidentWarnings)),
       );
     }
-    return { day, ...(date !== undefined && { date }), ...summary(dayLegs) };
+    return { day, ...(date !== undefined && { date }), ...summariseAccess(dayLegs) };
   });
   return {
     dated: trip.startDate !== undefined,
     legs,
     days,
-    trip: summary(legs.filter((leg) => leg !== undefined)),
+    trip: summariseAccess(legs.filter((leg) => leg !== undefined)),
   };
 }
 
@@ -255,11 +255,11 @@ export function legsAccess(
   access: TripAccess,
   { firstLeg, lastLeg }: { firstLeg: number; lastLeg: number },
 ): AccessSummary {
-  return summary(access.legs.slice(firstLeg, lastLeg + 1).filter((leg) => leg !== undefined));
+  return summariseAccess(access.legs.slice(firstLeg, lastLeg + 1).filter((leg) => leg !== undefined));
 }
 
 /** The most restrictive state of these legs (absent without any) and all their warnings. */
-function summary(legs: readonly LegAccess[]): AccessSummary {
+function summariseAccess(legs: readonly LegAccess[]): AccessSummary {
   const warnings = legs.flatMap((leg) => leg.warnings);
   const notes = legs.flatMap((leg) => leg.notes);
   const lockWarnings = legs.flatMap((leg) => leg.lockWarnings);

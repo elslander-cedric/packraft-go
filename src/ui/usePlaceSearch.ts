@@ -17,7 +17,7 @@ const WHOLE_WORLD: SearchArea = { west: -180, south: -90, east: 180, north: 90 }
 
 const FAILED: PlaceSearchAnswer = { status: "failed" };
 
-const online = () => typeof navigator === "undefined" || navigator.onLine;
+const isOnline = () => typeof navigator === "undefined" || navigator.onLine;
 
 export function usePlaceSearch() {
   const [state, dispatch] = useReducer(placeSearch, firstPlaceSearch);
@@ -44,8 +44,8 @@ export function usePlaceSearch() {
       area.current = visible;
     },
     edit: (text: string) => dispatch({ type: "edit", text }),
-    submit: () => dispatch({ type: "submit", area: area.current, online: online() }),
-    retry: () => dispatch({ type: "retry", online: online() }),
+    submit: () => dispatch({ type: "submit", area: area.current, online: isOnline() }),
+    retry: () => dispatch({ type: "retry", online: isOnline() }),
     pick: (result: SearchResult) => dispatch({ type: "pick", result }),
     dismiss: () => dispatch({ type: "dismiss" }),
     clear: () => dispatch({ type: "clear" }),

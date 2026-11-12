@@ -164,7 +164,7 @@ export function TripLayers({
   const [preview, setPreview] = useState<{ index: number; at: LatLng } | null>(null);
   const zoom = useZoom();
   const points = preview ? trip.points.with(preview.index, preview.at) : trip.points;
-  const handlers = (index: number): PressDragHandlers => ({
+  const pressDragHandlersFor = (index: number): PressDragHandlers => ({
     onTap: () => onPointTap(index),
     onDrag: (at) => setPreview({ index, at }),
     onDrop: (to) => {
@@ -246,7 +246,8 @@ export function TripLayers({
       {/* Their hit areas sit above the access-point markers (Leaflet's marker pane is 600), so a
           route point that is also an access point can still be selected and dragged (#120). */}
       <Pane name="trip-point-hits" style={{ zIndex: paneZIndex.tripPointHits }}>
-        {!frozen && points.map((point, i) => <PointHitArea key={`hit-${i}`} at={point} handlers={handlers(i)} />)}
+        {!frozen &&
+          points.map((point, i) => <PointHitArea key={`hit-${i}`} at={point} handlers={pressDragHandlersFor(i)} />)}
       </Pane>
     </>
   );

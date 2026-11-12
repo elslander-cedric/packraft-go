@@ -6,7 +6,7 @@ import { strings } from "../src/ui/strings";
 import { iconIn } from "./support/icons";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
 import {
-  figure,
+  readShownFigure,
   freeMapCentre,
   legLines,
   openPlanner,
@@ -116,7 +116,7 @@ test("a row per section, ending at a mode change or a camp, with the totals of i
   await expect(iconIn(paddle, icons.paddle)).toBeVisible();
 
   // Net drop from the first put-in to the last take-out: 30 m to 20 m.
-  expect(await figure(paddle, text.legFigures.drop)).toBe("10 m");
+  expect(await readShownFigure(paddle, text.legFigures.drop)).toBe("10 m");
 });
 
 test("a section shows its legs' warnings on the row, and each leg's details in a dialog", async ({ page }) => {
@@ -361,8 +361,8 @@ test("a shown leg has its own figures, warning icons and details, but no Retry",
 
   const [throughLock, after] = [legsOf(page, 2).nth(0), legsOf(page, 2).nth(1)];
   // A leg's drop, not the section's net 10 m: 30 m to 24 m, then 24 m to 20 m.
-  expect(await figure(throughLock, text.legFigures.drop)).toBe("6 m");
-  expect(await figure(after, text.legFigures.drop)).toBe("4 m");
+  expect(await readShownFigure(throughLock, text.legFigures.drop)).toBe("6 m");
+  expect(await readShownFigure(after, text.legFigures.drop)).toBe("4 m");
   await expect(throughLock.locator('svg[data-icon="stairs"]')).toHaveCount(1);
   await expect(after.locator('svg[data-icon="stairs"]')).toHaveCount(0);
   await expect(throughLock.getByRole("button", { name: strings.retryRouting })).toHaveCount(0);

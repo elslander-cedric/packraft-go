@@ -20,30 +20,34 @@ export function usePosition(): [MyPosition, (onFirst?: (first: MyPosition) => vo
   };
   useEffect(() => stopWatching, []);
 
-  const show = (onFirst?: (first: MyPosition) => void) => {
+  const showPosition = (onFirst?: (first: MyPosition) => void) => {
     let waiting = onFirst;
-    const settle = (next: MyPosition) => {
+    const reportPosition = (next: MyPosition) => {
       setPosition(next);
       const callback = waiting;
       waiting = undefined;
       callback?.(next);
     };
     if (!("geolocation" in navigator)) {
-      settle({ state: "failed", reason: "unsupported" });
+      reportPosition({ state: "failed", reason: "unsupported" });
       return;
     }
     stopWatching();
     setPosition({ state: "locating" });
     watch.current = navigator.geolocation.watchPosition(
       ({ coords }) =>
-        settle({ state: "shown", at: { lat: coords.latitude, lng: coords.longitude }, accuracyM: coords.accuracy }),
+        reportPosition({
+          state: "shown",
+          at: { lat: coords.latitude, lng: coords.longitude },
+          accuracyM: coords.accuracy,
+        }),
       (error) => {
         stopWatching();
-        settle({ state: "failed", reason: positionFailure(error.code) });
+        reportPosition({ state: "failed", reason: positionFailure(error.code) });
       },
       { enableHighAccuracy: true, timeout: 30_000 },
     );
   };
 
-  return [position, show];
+  return [position, showPosition];
 }

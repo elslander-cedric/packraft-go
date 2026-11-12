@@ -55,7 +55,7 @@ const featuresOf = (answer: PkayakAnswer, what: string) => {
   return answer.features;
 };
 
-const text = (value: unknown): string | null =>
+const trimmedTextOrNull = (value: unknown): string | null =>
   typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 
 /** The SPW's type codes. `NA` is treated as both: its 2 records describe themselves as in-and-out. */
@@ -73,12 +73,12 @@ export const OBSTACLE_KINDS: Readonly<Record<string, ObstacleKind>> = {
   "22": "low-bridge",
 };
 
-const round = (value: number) => Math.round(value * 100000) / 100000;
+const roundTo5Decimals = (value: number) => Math.round(value * 100000) / 100000;
 
 function positionOf(geometry: PkayakAnswer["features"][number]["geometry"]): readonly [number, number] | null {
   const [lng, lat] = geometry?.type === "Point" ? (geometry.coordinates ?? []) : [];
   return typeof lng === "number" && typeof lat === "number" && Number.isFinite(lng) && Number.isFinite(lat)
-    ? [round(lng), round(lat)]
+    ? [roundTo5Decimals(lng), roundTo5Decimals(lat)]
     : null;
 }
 
@@ -109,7 +109,7 @@ const partsOf = (geometry: PkayakAnswer["features"][number]["geometry"]) => {
 /** Each official stretch's line, from layer 5, thinned: what the mapping is checked against. */
 export function buildOfficialLines(answer: PkayakAnswer, snapshot: CalendarDate): OfficialLineDataset {
   const stretches = featuresOf(answer, "stretch line").map(({ geometry, properties }) => {
-    const id = text(properties.nomtro);
+    const id = trimmedTextOrNull(properties.nomtro);
     if (id === null) {
       throw new Error("A stretch has no id");
     }
@@ -117,7 +117,7 @@ export function buildOfficialLines(answer: PkayakAnswer, snapshot: CalendarDate)
       simplify(
         part.map(([lng, lat]) => ({ lat, lng })),
         LINE_TOLERANCE_M,
-      ).map(({ lat, lng }): [number, number] => [round(lng), round(lat)]),
+      ).map(({ lat, lng }): [number, number] => [roundTo5Decimals(lng), roundTo5Decimals(lat)]),
     );
     if (parts.length === 0) {
       throw new Error(`Stretch ${id} has no line`);
@@ -135,11 +135,11 @@ export function buildOfficialLines(answer: PkayakAnswer, snapshot: CalendarDate)
 /** Each official stretch's id and name, from layer 5. Its line isn't shipped (ADR 0035). */
 export function buildOfficialStretches(answer: PkayakAnswer, snapshot: CalendarDate): OfficialStretchDataset {
   const stretches = featuresOf(answer, "stretch").map(({ properties }) => {
-    const id = text(properties.nomtro);
+    const id = trimmedTextOrNull(properties.nomtro);
     if (id === null) {
       throw new Error("A stretch has no id");
     }
-    const name = text(properties.adrtro);
+    const name = trimmedTextOrNull(properties.adrtro);
     if (name === null) {
       throw new Error(`Stretch ${id} has no name`);
     }
@@ -174,25 +174,25 @@ export function buildOfficialAires(
     if (typeof number !== "number") {
       throw new Error(`An aire has no number: ${JSON.stringify(properties)}`);
     }
-    const fail = (problem: string) => new Error(`Aire ${number}: ${problem}`);
+    const aireError = (problem: string) => new Error(`Aire ${number}: ${problem}`);
     const use = AIRE_USES[String(properties.typemb)];
     if (use === undefined) {
-      throw fail(`unknown type ${JSON.stringify(properties.typemb)}`);
+      throw aireError(`unknown type ${JSON.stringify(properties.typemb)}`);
     }
-    const officialStretch = text(properties.nomtro);
+    const officialStretch = trimmedTextOrNull(properties.nomtro);
     if (officialStretch === null || !known.has(officialStretch)) {
-      throw fail(`unknown official stretch ${JSON.stringify(properties.nomtro)}`);
+      throw aireError(`unknown official stretch ${JSON.stringify(properties.nomtro)}`);
     }
-    const name = text(properties.nomair);
+    const name = trimmedTextOrNull(properties.nomair);
     if (name === null) {
-      throw fail("no name");
+      throw aireError("no name");
     }
     if (typeof properties.datmod !== "number") {
-      throw fail("no last-changed date");
+      throw aireError("no last-changed date");
     }
     const position = positionOf(geometry);
     if (position === null) {
-      throw fail("no position");
+      throw aireError("no position");
     }
     return { number, name, use, officialStretch, position, lastChanged: dateInBrussels(properties.datmod) };
   });
@@ -223,17 +223,17 @@ export function buildObstacles(answer: PkayakAnswer, snapshot: CalendarDate): Ob
     if (typeof spwId !== "number") {
       throw new Error(`An obstacle has no id: ${JSON.stringify(properties)}`);
     }
-    const fail = (problem: string) => new Error(`Obstacle ${spwId}: ${problem}`);
+    const aireError = (problem: string) => new Error(`Obstacle ${spwId}: ${problem}`);
     const kind = OBSTACLE_KINDS[String(properties.codico)];
     if (kind === undefined) {
-      throw fail(`unknown code ${JSON.stringify(properties.codico)}`);
+      throw aireError(`unknown code ${JSON.stringify(properties.codico)}`);
     }
     if (typeof properties.datmod !== "number") {
-      throw fail("no last-changed date");
+      throw aireError("no last-changed date");
     }
     const position = positionOf(geometry);
     if (position === null) {
-      throw fail("no position");
+      throw aireError("no position");
     }
     return { spwId, kind, position, lastChanged: dateInBrussels(properties.datmod) };
   });

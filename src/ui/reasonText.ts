@@ -11,7 +11,7 @@ export function notCheckedText(checks: readonly OfficialCheck[], words: Words = 
 }
 
 /** Why the SPW closed a stretch, in words. */
-function closedWhy({ cause, reason }: OfficialClosedVerdict): string {
+function closureReasonText({ cause, reason }: OfficialClosedVerdict): string {
   const text = strings.official;
   // Code 0 is "too low, or the reason given": the SPW's own words replace the default.
   if (cause === "too-low-or-stated") {
@@ -21,7 +21,7 @@ function closedWhy({ cause, reason }: OfficialClosedVerdict): string {
 }
 
 /** What the rules alone say, whether the core words it or it's only the state and the category. */
-function ruleWords({ ruleText, state, category }: RuleReason): string {
+function ruleReasonText({ ruleText, state, category }: RuleReason): string {
   if (state === "checking") {
     return strings.accessChecking;
   }
@@ -30,10 +30,10 @@ function ruleWords({ ruleText, state, category }: RuleReason): string {
 
 function statusText(reason: RuleReason): string {
   const { official, state, closedBy } = reason;
-  const ruleText = ruleWords(reason);
+  const ruleText = ruleReasonText(reason);
   switch (official?.kind) {
     case "closed": {
-      const closed = strings.official.closed(closedWhy(official));
+      const closed = strings.official.closed(closureReasonText(official));
       return closedBy === "official" ? closed : `${ruleText} ${closed}`;
     }
     case "open":
@@ -57,7 +57,9 @@ function statusText(reason: RuleReason): string {
  */
 export function reasonText(reason: RuleReason): string {
   const text = statusText(reason);
-  return reason.closedToday ? `${text} ${strings.official.closedTodayNote(closedWhy(reason.closedToday))}` : text;
+  return reason.closedToday
+    ? `${text} ${strings.official.closedTodayNote(closureReasonText(reason.closedToday))}`
+    : text;
 }
 
 /**

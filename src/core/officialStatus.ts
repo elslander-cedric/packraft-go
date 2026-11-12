@@ -55,7 +55,7 @@ export type OfficialCheck = "closures" | "incidents";
 /** A stretch the SPW has closed today, with its reason if it gives one. */
 export type OfficialClosedVerdict = Extract<OfficialVerdict, { kind: "closed" }>;
 
-function closed(cause: OfficialClosure, { reasonEn, reasonFr }: OfficialReading): OfficialVerdict {
+function closedVerdict(cause: OfficialClosure, { reasonEn, reasonFr }: OfficialReading): OfficialVerdict {
   const reason = reasonEn ?? reasonFr;
   return { kind: "closed", cause, ...(reason !== undefined && { reason }) };
 }
@@ -63,16 +63,16 @@ function closed(cause: OfficialClosure, { reasonEn, reasonFr }: OfficialReading)
 function verdictOf(reading: OfficialReading): OfficialVerdict {
   switch (reading.code) {
     case "0":
-      return closed("too-low-or-stated", reading);
+      return closedVerdict("too-low-or-stated", reading);
     case "1":
     case "5":
       return { kind: "open" };
     case "2":
       return { kind: "open", soon: true };
     case "3":
-      return closed("high-water", reading);
+      return closedVerdict("high-water", reading);
     case "4":
-      return closed("out-of-season", reading);
+      return closedVerdict("out-of-season", reading);
     default:
       return { kind: "unrecognised", code: reading.code };
   }

@@ -40,7 +40,7 @@ type Props = {
 };
 
 /** How far along the route an on-route row is, and whether the trip's put-in or take-out is there. */
-function alongRoute({ alongKm, role }: OnRoute | OnRouteAire): string {
+function alongRouteText({ alongKm, role }: OnRoute | OnRouteAire): string {
   const along = text.alongRoute(alongKm.toFixed(1));
   if (role === "put-in") {
     return `${along} · ${text.yourPutIn}`;
@@ -90,7 +90,7 @@ export default function AccessPoints({ access, trip, officialAires, position, on
     </p>
   );
 
-  const row = (point: AccessPoint, figure: string | null): ReactNode => {
+  const renderPointRow = (point: AccessPoint, figure: string | null): ReactNode => {
     const { heading, note, detail } = accessPointText(point);
     return (
       <li key={point.id} className="planner-access-point-item">
@@ -122,17 +122,17 @@ export default function AccessPoints({ access, trip, officialAires, position, on
     );
   };
   // Read-only: the row only opens the details, with no edit or delete.
-  const aireRow = (entry: OnRouteAire): ReactNode => (
+  const renderAireRow = (entry: OnRouteAire): ReactNode => (
     <li key={entry.aire.id} className="planner-access-point-item">
       <Button className="planner-row planner-access-point-row" onClick={() => onOpenAire(entry.aire.id)}>
         <span className="planner-row-heading">{entry.aire.name}</span>
-        <span className="planner-access-point-figure">{alongRoute(entry)}</span>
+        <span className="planner-access-point-figure">{alongRouteText(entry)}</span>
         <span className="planner-access-point-detail">{strings.officialAires.legend[entry.aire.use]}</span>
       </Button>
     </li>
   );
   const notOnRouteRows = split.notOnRoute.map(({ point, fromYouKm }) =>
-    row(point, fromYouKm === null ? null : text.fromYou(formatDistance(fromYouKm))),
+    renderPointRow(point, fromYouKm === null ? null : text.fromYou(formatDistance(fromYouKm))),
   );
 
   return (
@@ -156,7 +156,9 @@ export default function AccessPoints({ access, trip, officialAires, position, on
                 <p className="planner-empty planner-access-point-none">{text.noneOnRoute}</p>
               ) : (
                 <ul className="planner-access-point-list" aria-labelledby={onRouteId}>
-                  {onRoute.map((entry) => ("aire" in entry ? aireRow(entry) : row(entry.point, alongRoute(entry))))}
+                  {onRoute.map((entry) =>
+                    "aire" in entry ? renderAireRow(entry) : renderPointRow(entry.point, alongRouteText(entry)),
+                  )}
                 </ul>
               )}
               {notOnRouteRows.length > 0 && (

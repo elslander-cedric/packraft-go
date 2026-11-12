@@ -100,10 +100,11 @@ export function parseCoordinates(text: string): ParsedCoordinates {
   }
   // A letter on either number can say the longitude came first.
   const swapped = isLongitude(first) || isLatitude(second);
-  const signed = (number: string, letter?: string) => (letter === "S" || letter === "W" ? -1 : 1) * Number(number);
+  const signedNumber = (number: string, letter?: string) =>
+    (letter === "S" || letter === "W" ? -1 : 1) * Number(number);
   const [lat, lng] = swapped
-    ? [signed(secondNumber, second), signed(firstNumber, first)]
-    : [signed(firstNumber, first), signed(secondNumber, second)];
+    ? [signedNumber(secondNumber, second), signedNumber(firstNumber, first)]
+    : [signedNumber(firstNumber, first), signedNumber(secondNumber, second)];
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
     return bad;
   }
@@ -155,7 +156,7 @@ export const firstPlaceSearch: PlaceSearchState = { text: "", outcome: { kind: "
 const IDLE: SearchOutcome = { kind: "idle" };
 
 /** Asks `text` in `area` again, or for the first time: online it is a new request, offline nothing is sent. */
-function ask(state: PlaceSearchState, text: string, area: SearchArea, online: boolean): PlaceSearchState {
+function withSearchAsked(state: PlaceSearchState, text: string, area: SearchArea, online: boolean): PlaceSearchState {
   const asked = { id: (state.asked?.id ?? 0) + 1, text, area };
   return { ...state, asked, outcome: { kind: online ? "searching" : "offline" } };
 }
@@ -177,7 +178,7 @@ export function placeSearch(state: PlaceSearchState, action: PlaceSearchAction):
       if (coordinates.kind === "bad-coordinates") {
         return { ...state, outcome: { kind: "bad-coordinates" } };
       }
-      return ask(state, text, action.area, action.online);
+      return withSearchAsked(state, text, action.area, action.online);
     }
     case "answer": {
       if (state.outcome.kind !== "searching" || state.asked?.id !== action.id) {
@@ -197,7 +198,7 @@ export function placeSearch(state: PlaceSearchState, action: PlaceSearchAction):
       if ((state.outcome.kind !== "failed" && state.outcome.kind !== "offline") || !state.asked) {
         return state;
       }
-      return ask(state, state.asked.text, state.asked.area, action.online);
+      return withSearchAsked(state, state.asked.text, state.asked.area, action.online);
     case "pick":
       return { ...state, text: action.result.label, outcome: IDLE, shown: { ...action.result } };
     case "dismiss":
