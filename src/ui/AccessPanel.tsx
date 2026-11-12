@@ -68,7 +68,7 @@ export type AccessDateProps = {
   tripDays: readonly AccessTripDay[];
 };
 
-/** The date the layer is for: today by default, or any date, or one of the trip's days (#59). */
+/** The date the layer is for: today by default, or any date, or one of the trip's days. */
 export function AccessDateSelector({ date, isToday, onDate, onToday, tripDays }: AccessDateProps) {
   return (
     <div className="access-date">
@@ -175,7 +175,7 @@ function Reason({ reason }: { reason: AccessReason }) {
   );
 }
 
-/** A lock: portage required, with where the rule comes from and when it was researched (#57). */
+/** A lock: portage required, with where the rule comes from and when it was researched. */
 export function LockDetail({ lock }: { lock: LockMarker }) {
   return (
     <div className="access-detail">
@@ -229,7 +229,7 @@ function SpwSnapshotSource({ item }: { item: OfficialAire | Obstacle }) {
 
 /**
  * An official aire (ADR 0035): read-only, with its stretch's access status on the
- * date (#213) and how old the SPW's data on it is. No `status` yet means checking.
+ * date and how old the SPW's data on it is. No `status` yet means checking.
  */
 export function OfficialAireDetail({
   aire,
@@ -242,7 +242,7 @@ export function OfficialAireDetail({
   stretch: OfficialStretch | undefined;
   status: AccessStatus | undefined;
   date: string;
-  /** Today's incidents, once asked for: the note says if they failed (#216). */
+  /** Today's incidents, once asked for: the note says if they failed. */
   incidents?: OfficialIncidents;
 }) {
   const text = strings.officialAires;
@@ -283,7 +283,7 @@ export function ObstacleDetail({ obstacle }: { obstacle: Obstacle }) {
   );
 }
 
-/** An incident (ADR 0035, #216): the SPW's own text, and the date, as it can be years old. */
+/** An incident (ADR 0035): the SPW's own text, and the date, as it can be years old. */
 export function IncidentDetail({ incident }: { incident: Incident }) {
   const text = strings.incidents;
   return (
@@ -304,7 +304,7 @@ export function AccessDetail({
   feature: AccessFeature;
   /** The date the status is for. */
   date: string;
-  /** Today's incidents, once asked for: the note says if they failed (#216). */
+  /** Today's incidents, once asked for: the note says if they failed. */
   incidents?: OfficialIncidents;
 }) {
   const { status } = feature;

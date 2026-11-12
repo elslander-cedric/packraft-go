@@ -39,7 +39,7 @@ export type SearchBoxProps<Item> = {
   onDismiss: () => void;
   /**
    * The results and messages show under the field in the page's flow, not in a popup: for a
-   * screen that places and sizes them itself (the planner's, above the on-screen keyboard; #174).
+   * screen that places and sizes them itself (the planner's, above the on-screen keyboard).
    */
   inline?: boolean;
   /** A control at the field's start, inside its frame (the planner's Back). */

@@ -9,7 +9,7 @@ import { DARK_THEME_COLOR, THEME_COLOR } from "./manifest";
 export const metadata: Metadata = {
   title: strings.appTitle,
   description: strings.appDescription,
-  // Installed on an iPhone's home screen, it opens like an app (#56).
+  // Installed on an iPhone's home screen, it opens like an app.
   appleWebApp: { capable: true, title: strings.appTitle },
 };
 

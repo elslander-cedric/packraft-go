@@ -7,7 +7,7 @@
 // - selected point: cleared by add, move and delete point, back to start, set leg mode, undo,
 //   accept offer and any replace of the trip; insert point makes it follow the
 //   selected point when the insert shifts its index; leg clicked clears it; kept by everything else.
-// - selected leg (#230): set by leg clicked (cleared by a click on it again), cleared by point
+// - selected leg: set by leg clicked (cleared by a click on it again), cleared by point
 //   clicked, deselect, entering access point editing and every edit of the points, undo, accept
 //   offer and any replace; kept by set leg mode, so its mode can be switched back, and by
 //   everything else. A selected point and a selected leg never go together.
@@ -19,13 +19,13 @@
 //   the offers to official aires alone.
 // - file error: set by file rejected; cleared by every other action except a
 //   route being requested or arriving.
-// - stored save kept (#28): cleared when the trip is replaced.
+// - stored save kept: cleared when the trip is replaced.
 // - replace question: new trip and file opened ask it when the current trip needs
 //   confirmation. While it is open only confirm, cancel and the routing actions
 //   apply.
-// - mode (ADR 0036, #225): normal on load (never stored); enter access point editing sets it,
+// - mode (ADR 0036): normal on load (never stored); enter access point editing sets it,
 //   keeping the panel view to return to, and Done sets it back. Both clear the selection.
-//   While editing access points the trip is frozen (#227): the actions that edit its points or
+//   While editing access points the trip is frozen: the actions that edit its points or
 //   leg modes, select a point or a leg or answer a snap offer return the same session; the offers wait
 //   for Done (still following your access points).
 // Actions that can't apply return the same session.
@@ -76,7 +76,7 @@ export type PlannerMode =
   | { readonly kind: "normal" }
   | { readonly kind: "accessPointEditing"; readonly returnTo: PanelView };
 
-/** Whether the planner is editing access points, so the trip is frozen (#227). */
+/** Whether the planner is editing access points, so the trip is frozen. */
 export const editingAccessPoints = (session: PlannerSession): boolean => session.mode.kind === "accessPointEditing";
 
 export type PlannerSession = {
@@ -84,11 +84,11 @@ export type PlannerSession = {
   readonly trip: Trip;
   /** Index of the selected point, or null. */
   readonly selectedPoint: number | null;
-  /** Index of the selected leg (#230), or null; never set together with a selected point. */
+  /** Index of the selected leg, or null; never set together with a selected point. */
   readonly selectedLeg: number | null;
   readonly offers: readonly SnapOffer[];
   readonly fileError: FileError | null;
-  /** A stored save of an unknown version is kept, not overwritten, until the trip is replaced (#28). */
+  /** A stored save of an unknown version is kept, not overwritten, until the trip is replaced. */
   readonly keepStoredSave: boolean;
   /** The last question asked; kept after it is answered. */
   readonly question: ReplaceQuestion;
@@ -105,7 +105,7 @@ export type PlannerAction =
   /** Adds a leg from the last point back to the start (GLOSSARY "Loop"), in `mode` when given. */
   | { readonly type: "backToStart"; readonly mode?: LegMode }
   | { readonly type: "deleteSelectedPoint" }
-  /** Inserts a point on leg `leg` of the route, nearest to `near` (#122). */
+  /** Inserts a point on leg `leg` of the route, nearest to `near`. */
   | { readonly type: "insertPoint"; readonly index: number; readonly near: LatLng }
   | ({ readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode } & SnapTargets)
   | { readonly type: "accessPointsChanged"; readonly accessPoints: AccessPoints }
@@ -115,12 +115,12 @@ export type PlannerAction =
   | { readonly type: "setStartDate"; readonly date: CalendarDate | undefined }
   | { readonly type: "retryLeg"; readonly index: number }
   | { readonly type: "pointClicked"; readonly index: number }
-  /** A tap on a leg on the map (#230). */
+  /** A tap on a leg on the map. */
   | { readonly type: "legClicked"; readonly index: number }
   | { readonly type: "deselect" }
   | { readonly type: "acceptOffer"; readonly offer: SnapOffer }
   | { readonly type: "declineOffer"; readonly offer: SnapOffer }
-  /** A new trip, starting on `startDate` when given (the planner passes today; #124). */
+  /** A new trip, starting on `startDate` when given (the planner passes today). */
   | { readonly type: "newTrip"; readonly startDate?: CalendarDate }
   | { readonly type: "fileOpened"; readonly trip: Trip }
   | { readonly type: "fileRejected"; readonly reason: FileError }
@@ -192,7 +192,7 @@ const routing = (session: PlannerSession, action: RoutingAction): PlannerSession
   return trip === session.trip ? session : { ...session, trip };
 };
 
-/** What can't apply while editing access points: the trip is frozen (#227). */
+/** What can't apply while editing access points: the trip is frozen. */
 const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set([
   "addPoint",
   "movePoint",

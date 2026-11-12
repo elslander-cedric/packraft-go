@@ -1,4 +1,4 @@
-// Polite Overpass client for the offline stretch preparation script (#54, ADR 0024).
+// Polite Overpass client for the offline stretch preparation script (ADR 0024).
 // Never used by the app at runtime. Network, clock and cache are injected so the
 // script (scripts/walloon-stretches.mts) supplies the real ones and tests supply fakes.
 

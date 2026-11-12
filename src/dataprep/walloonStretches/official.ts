@@ -1,4 +1,4 @@
-// Which official stretch each AGW record lies on (#209, ADR 0035). Each record maps to at
+// Which official stretch each AGW record lies on (ADR 0035). Each record maps to at
 // most one, so a record that spans two, or an official stretch and a long unlisted part,
 // is cut at the boundary. The cut runs after the stretches are built, on their lines, so
 // it needs no OSM data of its own. The mapping is written by hand and checked against the

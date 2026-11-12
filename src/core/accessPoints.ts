@@ -1,4 +1,4 @@
-// Access points (#55, ADR 0023, GLOSSARY "Access point"): places you've marked
+// Access points (ADR 0023, GLOSSARY "Access point"): places you've marked
 // where you can get onto or off the water. They are your own collection,
 // separate from trips, so every trip can use them. Pure: ids and times are
 // passed in by the caller.
@@ -17,7 +17,7 @@ export const accessPointKinds: readonly AccessPointKind[] = ["official-aire", "s
 export type Timestamp = string;
 
 /**
- * Where an access point's name came from (#136, ADR 0027, GLOSSARY "Default name"):
+ * Where an access point's name came from (ADR 0027, GLOSSARY "Default name"):
  * - `typed`: you typed it; it is never changed automatically.
  * - `default`: the default name found for the point's position, "" when
  *   nothing was found there. Cleared and looked up again when the point moves.
@@ -170,7 +170,7 @@ export function serialiseAccessPoints(points: AccessPoints): string {
 /**
  * Reads access points back from their text. A file is accepted or refused as a
  * whole; fields the format does not know are ignored. Names came later in
- * version 1 (#136): a point without one reads as unnamed, with its default
+ * version 1: a point without one reads as unnamed, with its default
  * name to look up, and a name without its source as one you typed.
  */
 export function parseAccessPoints(text: string): AccessPointsParseResult {
@@ -192,7 +192,7 @@ export function parseAccessPoints(text: string): AccessPointsParseResult {
  * - `unknownVersion`: it is from an unknown version. Keep it, don't overwrite
  *   it, since a newer deployment may be able to read it.
  * - `damaged`: it is damaged or not access points. Back it up before it is
- *   replaced (round 2 of #55): it may still hold points worth recovering.
+ *   replaced: it may still hold points worth recovering.
  * Either way the collection starts empty.
  */
 export type StoredAccessPoints = {

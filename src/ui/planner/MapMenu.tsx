@@ -18,7 +18,7 @@ export type MapMenuProps = {
 };
 
 /**
- * The layers button (#179, ADR 0031): it opens the Map menu, the base maps
+ * The layers button (ADR 0031): it opens the Map menu, the base maps
  * (pick one, the current one marked), then the switches of the access layer and the
  * overlays (ADR 0032).
  */

@@ -1,6 +1,6 @@
 // The access rule data shipped with the app (ADR 0024), generated from
 // OpenStreetMap by scripts/prepare-access-data.mts (regions, Flanders) and
-// scripts/walloon-stretches (the Walloon stretches, #54). Passed into the core
+// scripts/walloon-stretches (the Walloon stretches). Passed into the core
 // like the router: the core never loads data itself.
 import walloonStretches from "@/data/walloon-stretches.json";
 import type { AccessRules } from "@/core/access";
@@ -25,7 +25,7 @@ export const builtInDatasets: readonly AccessDataset[] = [
   walloonDataset(walloonStretches as unknown as WalloonStretchData),
 ];
 
-/** The lock markers of Flanders and Brussels (#57). */
+/** The lock markers of Flanders and Brussels. */
 export const builtInLocks: LockDataset = locks as unknown as LockDataset;
 
 const obstacleDataset = obstacles as unknown as ObstacleDataset;

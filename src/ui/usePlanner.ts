@@ -25,7 +25,7 @@ const typingInField = (event: KeyboardEvent) =>
   (event.target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName));
 
 /**
- * The planner, shared by every layout (#115, ADR 0026). Runs the planner
+ * The planner, shared by every layout (ADR 0026). Runs the planner
  * session (ADR 0025: one pure function `(session, action) -> session` in the
  * core, run here with a reducer) and keeps all its side effects: autosave
  * (skipped while the stored save is kept), route requests through `router`
@@ -56,14 +56,14 @@ export function usePlanner(router?: Router) {
     if (changed !== settings) setSettings(changed);
   };
 
-  // Your access points (#55): their own collection, apart from the trip.
+  // Your access points: their own collection, apart from the trip.
   const access = useAccessPoints();
-  // Snap offers follow your access points (#97): tell the session whenever they change.
+  // Snap offers follow your access points: tell the session whenever they change.
   useEffect(() => {
     dispatch({ type: "accessPointsChanged", accessPoints: access.points });
   }, [access.points]);
 
-  // With a `name` (the planner asks for it first, #124), the trip is renamed, then saved or exported
+  // With a `name` (the planner asks for it first), the trip is renamed, then saved or exported
   // under that name.
   const toDownload = (name?: string) => {
     if (name === undefined) return trip;
@@ -92,7 +92,7 @@ export function usePlanner(router?: Router) {
     const onKeyDown = (event: KeyboardEvent) => {
       // While a confirmation is open, keys belong to it (Escape cancels it).
       if (pendingTrip || typingInField(event)) return;
-      // While editing access points the trip is frozen (#227): undo and delete are off.
+      // While editing access points the trip is frozen: undo and delete are off.
       if (frozen) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
@@ -109,20 +109,20 @@ export function usePlanner(router?: Router) {
   });
 
   const summary = summarise(trip, settings ?? defaultSettings);
-  // Access status and warnings on paddle legs (#58): the rules load once the trip has a paddle leg.
+  // Access status and warnings on paddle legs: the rules load once the trip has a paddle leg.
   const hasPaddle = trip.legs.some((leg) => leg.mode === "paddle");
   const rules = useAccessRules(hasPaddle);
-  const locks = useBuiltInLocks(hasPaddle) ?? undefined; // Lock warnings (#60).
-  const obstacles = useBuiltInObstacles(hasPaddle) ?? undefined; // Obstacle warnings (#215).
+  const locks = useBuiltInLocks(hasPaddle) ?? undefined; // Lock warnings.
+  const obstacles = useBuiltInObstacles(hasPaddle) ?? undefined; // Obstacle warnings.
   const today = localToday();
   const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today, locks, obstacles }) : null), [trip, rules, today, locks, obstacles]);
-  // Paddle legs dated today use the live Walloon flows (#61) and the official status (#210), asked for only when there are some.
+  // Paddle legs dated today use the live Walloon flows and the official status, asked for only when there are some.
   const legToday = rulesAccess?.legs.some((leg) => leg?.date === today) ?? false;
   const flows = useWalloonFlows(rules, legToday);
-  // A leg on a later date notes today's closures (#212).
+  // A leg on a later date notes today's closures.
   const legUpcoming = rulesAccess?.legs.some((leg) => leg?.date !== undefined && leg.date >= today) ?? false;
   const official = useOfficialStatus(rules, legUpcoming);
-  // Incident warnings (#217) on every paddle leg, dated or not, and the note when they fail (#216).
+  // Incident warnings on every paddle leg, dated or not, and the note when they fail.
   const incidents = useOfficialIncidents(rules, hasPaddle);
   const flowsPending = flows === undefined && legToday;
   const officialPending = official === undefined && legToday;

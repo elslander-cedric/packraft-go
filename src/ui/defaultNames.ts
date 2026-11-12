@@ -1,4 +1,4 @@
-// Default names for your access points (#136, ADR 0027): the points still
+// Default names for your access points (ADR 0027): the points still
 // waiting for one are looked up one at a time, whenever the app is online.
 // Marking never waits for it: a point is saved at once and named when a lookup
 // succeeds. The rate limit is the source's (the Nominatim adapter's).

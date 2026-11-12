@@ -31,7 +31,7 @@
   --color-paddle: #1b6fb5;
   --color-paddle-tint: #eef5fc;
   --color-camp: #2e6b30;
-  /* The place search result's pin (#173). */
+  /* The place search result's pin. */
   --color-search-result: #d0021b;
   /* The lock marker's swatch, drawn like the marker on the map in both themes. */
   --color-lock-ring: #1a1a1a;
@@ -63,7 +63,7 @@
   color-scheme: light dark;
 }
 
-/* Dark theme (#141): follows the system setting, nothing stored. Only the panel tokens change;
+/* Dark theme: follows the system setting, nothing stored. Only the panel tokens change;
    the hike, paddle and camp colours and the map's overlays stay as they are. The map tiles are
    dimmed rather than inverted (that ruins OpenTopoMap's relief shading) or swapped for a dark
    base layer (none is free and topographic, ADR 0014). */
@@ -230,14 +230,14 @@ path.leg-pending {
 }
 
 /* Leaflet drops touch-action from the map while panning is disabled, which we do while a point is
-   dragged. The browser would then take the finger for a page scroll and cancel the pointer (#117).
+   dragged. The browser would then take the finger for a page scroll and cancel the pointer.
    The map handles every touch gesture itself, so it is always none (important: Leaflet's own
    rules, which switch with its handlers, have the same specificity). */
 .leaflet-container {
   touch-action: none !important;
 }
 
-/* The map in the dark theme (#141): only the tiles are dimmed, so the route lines, points and
+/* The map in the dark theme: only the tiles are dimmed, so the route lines, points and
    access layer keep their colours. Leaflet's controls, popups and tooltips take the panel
    tokens; in the light theme they keep Leaflet's own look. */
 @media (prefers-color-scheme: dark) {

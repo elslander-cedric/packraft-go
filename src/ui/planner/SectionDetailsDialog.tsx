@@ -18,7 +18,7 @@ export type SectionDetailsDialogProps = {
 };
 
 /**
- * A section's access details in a dialog opened from its row's button (#200): each leg's
+ * A section's access details in a dialog opened from its row's button: each leg's
  * details under that leg's number, leaving out legs with none (ADR 0029). Closed while no
  * section is given, or once that section is gone.
  */

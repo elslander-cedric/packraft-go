@@ -19,7 +19,7 @@ export type TripDetailsDialogProps = {
 };
 
 /**
- * The trip's name and start date (#154): a dialog from the menu,
+ * The trip's name and start date: a dialog from the menu,
  * in place of the Trip tab. What the planner types is a draft; Save applies
  * only what changed, Cancel drops it.
  */

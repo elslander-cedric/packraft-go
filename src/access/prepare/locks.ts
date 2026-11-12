@@ -1,4 +1,4 @@
-// Lock markers from OpenStreetMap (#57): one marker per lock in Flanders and
+// Lock markers from OpenStreetMap: one marker per lock in Flanders and
 // Brussels. Offline preparation only.
 import type { LockMarker } from "@/core/access";
 import { distanceM } from "@/core/geo";

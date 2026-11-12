@@ -26,7 +26,7 @@ export type FormDialogProps = {
  * An in-page dialog around a small form (Base UI Dialog, ADR 0020). The
  * screen keeps the fields' values; Enter in a field confirms. On a touch screen
  * it opens without the keyboard, so the whole form shows first; it stays above
- * the keyboard once a field is tapped (#163).
+ * the keyboard once a field is tapped.
  */
 export function FormDialog({
   open,

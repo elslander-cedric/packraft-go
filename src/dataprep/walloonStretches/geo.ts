@@ -1,4 +1,4 @@
-// Small plane geometry for the stretch preparation (#54). Distances use a local
+// Small plane geometry for the stretch preparation. Distances use a local
 // equirectangular projection: accurate to well under a metre per km at these latitudes.
 
 export type Pt = { lat: number; lng: number };

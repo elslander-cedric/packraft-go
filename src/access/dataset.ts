@@ -22,7 +22,7 @@ export type AccessDataset = {
 
 export const LOCK_DATA_FORMAT = "packraft-go/lock-data";
 
-/** The lock markers of Flanders and Brussels (#57), prepared offline from OpenStreetMap. */
+/** The lock markers of Flanders and Brussels, prepared offline from OpenStreetMap. */
 export type LockDataset = {
   readonly format: typeof LOCK_DATA_FORMAT;
   readonly version: 1;

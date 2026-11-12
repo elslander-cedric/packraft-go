@@ -26,7 +26,7 @@ import type { LatLng } from "./trip";
 export type { Geometry, Position } from "./geo";
 
 /** The access states, from least to most restrictive: open, unknown, closed today, forbidden.
- * `checking` is transient (#85): today's live flow is still loading, so nothing is claimed yet. */
+ * `checking` is transient: today's live flow is still loading, so nothing is claimed yet. */
 export type AccessState = "open" | "closed-today" | "forbidden" | "unknown" | "checking";
 
 /** Where a rule comes from: a legal text, a regulation or an official page. */
@@ -35,18 +35,18 @@ export type AccessSource = { readonly title: string; readonly url: string };
 /** The gauge whose flow decides a Walloon stretch (AGW Annex 2). */
 export type AgwGauge = {
   readonly name: string;
-  /** The KiWIS station number, for the live flow (#61). */
+  /** The KiWIS station number, for the live flow. */
   readonly stationNo: string;
-  /** True when the match to Annex 2 is a best guess (ADR 0024); #61 shows it as assumed. */
+  /** True when the match to Annex 2 is a best guess (ADR 0024); the live flow shows it as assumed. */
   readonly assumed: boolean;
-  /** True when this is the gauge the SPW uses, not the one Annex 2 names (#205). */
+  /** True when this is the gauge the SPW uses, not the one Annex 2 names. */
   readonly spwPractice?: boolean;
 };
 
 /**
  * A Walloon stretch under the AGW of 19 March 2009 (ADRs 0022, 0024): its
  * category decides the season, the fishing opening days and the hours. The
- * flow limits are information here; the live flow check is #61.
+ * flow limits are information here; the live flow check is in ./flow.
  */
 export type AgwRule = {
   readonly type: "agw";
@@ -56,14 +56,14 @@ export type AgwRule = {
   readonly maxM3s: number;
   /** The Annex 2 gauge, or null when no gauge matches. */
   readonly gauge: AgwGauge | null;
-  /** The SPW stretch this record lies on (ADR 0035, #209); absent where the SPW lists none. */
+  /** The SPW stretch this record lies on (ADR 0035); absent where the SPW lists none. */
   readonly officialStretch?: string;
   readonly link?: AccessSource;
 };
 
 /**
  * What a rule says. A `fixed` rule has the same state on every date; an
- * `agw` rule (Wallonia) depends on the date; flow-dependent states (#61)
+ * `agw` rule (Wallonia) depends on the date; flow-dependent states
  * build on it.
  */
 export type AccessRule = FixedRule | AgwRule;
@@ -135,13 +135,13 @@ export type AccessContext = {
   readonly date?: string;
   /** Today's date, YYYY-MM-DD, when known: flow readings only apply to today, not to later dates. */
   readonly today?: string;
-  /** Today's live flow readings (#61), once asked for; they only apply when `date` is `today`. */
+  /** Today's live flow readings, once asked for; they only apply when `date` is `today`. */
   readonly flows?: FlowReadings;
-  /** True while today's live flows are being fetched: flow-dependent stretches are "checking", not open (#85). */
+  /** True while today's live flows are being fetched: flow-dependent stretches are "checking", not open. */
   readonly flowsPending?: boolean;
   /**
-   * Today's official status (ADR 0035, #210), once asked for. It decides only when `date` is
-   * `today`; on a later date a closure today is a note beside the rules (#212).
+   * Today's official status (ADR 0035), once asked for. It decides only when `date` is
+   * `today`; on a later date a closure today is a note beside the rules.
    */
   readonly official?: OfficialReadings;
   /** True while today's official status is being fetched: stretches it decides are "checking", not open. */
@@ -174,14 +174,14 @@ export type AccessReason =
       readonly closedBy?: AccessClosure;
       /** The rule's state also depends on flow (see `AccessRule.flowDependent`). */
       readonly flowDependent?: true;
-      /** Walloon stretches on today's date: the live flow figures behind the status (#61). */
+      /** Walloon stretches on today's date: the live flow figures behind the status. */
       readonly flow?: FlowFigures;
       /**
-       * Walloon stretches on today's date: what the official status says, once known (ADR 0035, #210).
-       * On a future date, only `unavailable`: there was no reading to note a closure today from (#211).
+       * Walloon stretches on today's date: what the official status says, once known (ADR 0035).
+       * On a future date, only `unavailable`: there was no reading to note a closure today from.
        */
       readonly official?: OfficialVerdict;
-      /** Walloon stretches on a future date: the SPW has closed it today, which may still apply then (#212). */
+      /** Walloon stretches on a future date: the SPW has closed it today, which may still apply then. */
       readonly closedToday?: OfficialClosedVerdict;
       /** The official stretch this water belongs to, where the SPW lists one. */
       readonly officialStretch?: string;
@@ -251,9 +251,9 @@ const flowUnknownText: Record<FlowUnknown, string> = {
 
 /**
  * A Walloon stretch's status on a date: season, fishing opening days and hours
- * (AGW art. 4), and on today's date the official status (ADR 0035, #210) or, where
- * there's no reading, the live flow (art. 6, #61). A calendar closure always stands.
- * A future date stays rule-based, with a note when the SPW has closed the stretch today (#212).
+ * (AGW art. 4), and on today's date the official status (ADR 0035) or, where
+ * there's no reading, the live flow (art. 6). A calendar closure always stands.
+ * A future date stays rule-based, with a note when the SPW has closed the stretch today.
  */
 function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext): AccessStatus {
   const { category } = rule;
@@ -275,7 +275,7 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
   const isFuture = date !== undefined && today !== undefined && date > today;
   const verdictToday = isFuture ? officialVerdict(rule.officialStretch, context.official) : undefined;
   const closedToday = verdictToday?.kind === "closed" ? verdictToday : undefined;
-  // With no reading a closure today can't be known, so a future date is marked like today (#211).
+  // With no reading a closure today can't be known, so a future date is marked like today.
   const unavailableToday = verdictToday?.kind === "unavailable" ? verdictToday : undefined;
   // With a reading (or one on its way), the official status replaces the flow check; the figures stay on show.
   const flowDecides = !officialPending && (!official || official.kind === "none" || official.kind === "unavailable");
@@ -349,12 +349,12 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
 }
 
 /**
- * What this status couldn't check with the SPW (#211): the computed status stood in
+ * What this status couldn't check with the SPW: the computed status stood in
  * for a reading on today's date, or on a future date a closure today can't be known.
  * Empty with a reading, while one loads, on a past date, and on water with no official stretch.
  *
  * Incidents aren't part of a status (ADR 0035), so pass them in to have a failure named
- * too (#216), on water the SPW lists. Pass them only where they were asked for.
+ * too, on water the SPW lists. Pass them only where they were asked for.
  */
 export function officialNotChecked(status: AccessStatus, incidents?: OfficialIncidents): readonly OfficialCheck[] {
   const rules = status.reasons.flatMap((reason) => (reason.kind === "rule" ? [reason] : []));

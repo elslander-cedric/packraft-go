@@ -1,5 +1,5 @@
 // Snapping a put-in or take-out to one of your access points or an official aire
-// (#62, ADR 0023, ADR 0035, GLOSSARY "Snap offer"). Pure: the planner offers, and
+// (ADR 0023, ADR 0035, GLOSSARY "Snap offer"). Pure: the planner offers, and
 // only an accepted offer changes the trip, as an ordinary undoable move.
 import type { AccessPoint, AccessPoints, AccessPointUse } from "./accessPoints";
 import { distanceM } from "./geo";

@@ -2,7 +2,7 @@
 // rivers, shipped with the app. Read-only, and independent of date and flow. The SPW
 // publishes only a position and a code, so what an obstacle means is the app's own
 // cautious wording, in strings.ts. A paddle leg that passes one gets a warning, as for a
-// lock (#215). Information only: it never blocks and never changes the access status.
+// lock. Information only: it never blocks and never changes the access status.
 import type { AccessSource, Position } from "./access";
 import type { CalendarDate } from "./calendarDate";
 import { markersPassedInOrder } from "./locks";
@@ -46,7 +46,7 @@ export type ObstacleGroup = {
 };
 
 /**
- * A leg's warnings gathered by kind, so a long stretch reads as one line per kind (#215):
+ * A leg's warnings gathered by kind, so a long stretch reads as one line per kind:
  * the kinds in the order the leg first meets each.
  */
 export function obstacleGroups(warnings: readonly ObstacleWarning[]): ObstacleGroup[] {

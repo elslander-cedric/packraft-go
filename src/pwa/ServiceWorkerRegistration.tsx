@@ -17,7 +17,7 @@ function loadedBuildFiles(): string[] {
 }
 
 /**
- * Registers the service worker (public/sw.js, #56) so the app shell opens
+ * Registers the service worker (public/sw.js) so the app shell opens
  * offline. Production builds only: in development, build files change on every
  * edit and must not be kept. Renders nothing.
  */

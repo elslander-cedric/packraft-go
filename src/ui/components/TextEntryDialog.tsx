@@ -25,7 +25,7 @@ export type TextEntryDialogProps = {
 /**
  * An in-page dialog that asks for one line of text (Base UI Dialog, ADR 0020).
  * Focus starts in the field with its text selected, so on a phone the keyboard
- * opens with it and the dialog sits above the keyboard (#163); Enter confirms.
+ * opens with it and the dialog sits above the keyboard; Enter confirms.
  */
 export function TextEntryDialog({
   open,

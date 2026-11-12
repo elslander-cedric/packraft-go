@@ -19,13 +19,13 @@ export type AccessLayerProps = {
   features: readonly AccessFeature[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  /** Lock markers (#57), drawn above the legs' hit lines, so a tap on one opens its details. */
+  /** Lock markers, drawn above the legs' hit lines, so a tap on one opens its details. */
   locks?: readonly LockMarker[];
   /** The official aires (ADR 0035): a tap on one opens its details. */
   aires?: readonly OfficialAire[];
   /** The obstacles (ADR 0035): a tap on one opens its details. */
   obstacles?: readonly Obstacle[];
-  /** The SPW's incidents (#216), at any zoom: a tap on one opens its details. */
+  /** The SPW's incidents, at any zoom: a tap on one opens its details. */
   incidents?: readonly Incident[];
 };
 
@@ -48,7 +48,7 @@ function shapeOf(geometry: Geometry): { kind: "line" | "area"; positions: LatLng
 type AccessShapeProps = { feature: AccessFeature; selected: boolean; onSelect: () => void };
 
 /**
- * A water, with the planner's gestures (#125, ADR 0026): a tap on it is a tap on the map
+ * A water, with the planner's gestures (ADR 0026): a tap on it is a tap on the map
  * (it edits the route), and holding it 0.4 s (or a right-click on it) opens its details.
  */
 function AccessShape({ feature, selected, onSelect }: AccessShapeProps) {

@@ -15,14 +15,14 @@ export type PressDragHandlers = {
   onCancel: () => void;
 };
 
-/** A point's finger-sized hit area, in screen pixels across (#120, story 43). */
+/** A point's finger-sized hit area, in screen pixels across (story 43). */
 export const HIT_SIZE_PX = 44;
 
 // A press that moves less than this (in screen pixels) is a tap, not a drag; a finger wobbles more than a mouse.
 const TAP_SLOP_PX = { mouse: 3, touch: 8 } as const;
 
 /**
- * Press-and-drag on a point's own element (#120, research #105): Leaflet 1.9
+ * Press-and-drag on a point's own element: Leaflet 1.9
  * listens to touch events on phones and its path drag is mouse-only, so this
  * uses pointer events with pointer capture, for a finger, a mouse or a pen.
  * The point's `touchstart`, `mousedown` and `click` are stopped, so Leaflet

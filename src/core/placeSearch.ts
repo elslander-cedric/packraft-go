@@ -1,4 +1,4 @@
-// Place search (ADR 0030, #167, #172): find a place by what it is called and move
+// Place search (ADR 0030): find a place by what it is called and move
 // the map there. These are the core's types; the Nominatim adapter in
 // src/geocoding/ implements the source.
 import type { LatLng } from "./trip";
@@ -67,7 +67,7 @@ const COORDINATES = new RegExp(String.raw`^\s*${COORDINATE}\s*(?:[,;]|\s)\s*${CO
 const DECIMAL_COMMAS = /^\s*[+-]?\d+,\d+\s*[NSEW]?\s*(?:;|\s)\s*[+-]?\d+,\d+\s*[NSEW]?\s*$/i;
 
 /**
- * Coordinates typed in the search bar (#173, ADR 0030): decimal degrees,
+ * Coordinates typed in the search bar (ADR 0030): decimal degrees,
  * latitude first ("50.27, 5.44"), or in either order with N/S/E/W after each
  * number ("50.27N 5.44E"). No degrees-minutes-seconds and no decimal commas.
  * Two numbers that can't be a position (out of range, a sign and a letter,
@@ -110,7 +110,7 @@ export type SearchOutcome =
 export type SearchAsked = { readonly id: number; readonly text: string; readonly area: SearchArea };
 
 /**
- * The place search state (#173, ADR 0030): what the bar holds, its dropdown, the
+ * The place search state (ADR 0030): what the bar holds, its dropdown, the
  * shown search result and the last search asked. It is about the map, not the
  * trip, so it is not part of the planner session (ADR 0025).
  */

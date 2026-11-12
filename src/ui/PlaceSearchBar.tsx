@@ -35,7 +35,7 @@ type PlaceSearchBarProps = { search: PlaceSearch } & Pick<
   "className" | "inline" | "leading" | "autoFocus"
 >;
 
-/** Place search over the map (#173): the bar, its results and messages. The map draws the shown result. */
+/** Place search over the map: the bar, its results and messages. The map draws the shown result. */
 export default function PlaceSearchBar({ search, ...box }: PlaceSearchBarProps) {
   const { state } = search;
   const results = state.outcome.kind === "results" ? state.outcome.results : [];

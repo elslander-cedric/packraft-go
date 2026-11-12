@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { AccessPointsState } from "../useAccessPoints";
 import type { MyPosition } from "./position";
 
-/** The flag button in access point editing (#119, ADR 0036). */
+/** The flag button in access point editing (ADR 0036). */
 export type MarkAccessPoint = ReturnType<typeof useMarkAccessPoint>;
 
 /**

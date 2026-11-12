@@ -12,7 +12,7 @@ export function localToday(): CalendarDate {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-/** How long after a failed chunk load to try again (#203 stories 37, 40): soon, as it only takes signal. */
+/** How long after a failed chunk load to try again: soon, as it only takes signal. */
 const CHUNK_RETRY_MS = 60 * 1000;
 
 /** The rules' chunk, shared with what else needs them. A failed load isn't kept, so it can be retried. */
@@ -61,7 +61,7 @@ export function useAccessRules(wanted: boolean): AccessRules | null {
   return useLiveFeed(rulesFeed, wanted) ?? null;
 }
 
-/** The built-in lock markers of Flanders and Brussels (#57), loaded the first time they are wanted. */
+/** The built-in lock markers of Flanders and Brussels, loaded the first time they are wanted. */
 export function useBuiltInLocks(wanted: boolean): readonly LockMarker[] | null {
   return useLiveFeed(locksFeed, wanted) ?? null;
 }

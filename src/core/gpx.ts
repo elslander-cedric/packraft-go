@@ -1,4 +1,4 @@
-// GPX export (#11, #41; ADR 0006, ADR 0037): plans leave the app as one GPX 1.1
+// GPX export (ADR 0006, ADR 0037): plans leave the app as one GPX 1.1
 // file for GPS devices and outdoor apps: one track through the whole trip, so it
 // imports as one course, and a waypoint where each section starts, which course
 // importers show as course points. Pure text building; the download happens outside the core.

@@ -5,7 +5,7 @@ import { strings } from "./strings";
 type RuleReason = Extract<AccessReason, { kind: "rule" }>;
 type Words = Readonly<Record<OfficialCheck, string>>;
 
-/** What wasn't checked with the SPW, in words (#211); empty when everything was. */
+/** What wasn't checked with the SPW, in words; empty when everything was. */
 export function notCheckedText(checks: readonly OfficialCheck[], words: Words = strings.official.notChecked): string {
   return checks.map((check) => words[check]).join(" ");
 }
@@ -47,7 +47,7 @@ function statusText(reason: RuleReason): string {
 /**
  * Why a stretch has its status, in words: the rule text, with what the SPW says
  * today. The SPW's reason only ever comes with a closure (ADR 0035). On a future
- * date that is a note after the rule text (#212).
+ * date that is a note after the rule text.
  */
 export function reasonText(reason: RuleReason): string {
   const text = statusText(reason);

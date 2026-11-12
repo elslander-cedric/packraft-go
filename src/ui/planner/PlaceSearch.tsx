@@ -10,12 +10,12 @@ import type { PlaceSearch } from "../usePlaceSearch";
 const text = strings.placeSearch;
 
 /**
- * Place search (#174, ADR 0030): a pill on the top row, between the menu and the
+ * Place search (ADR 0030): a pill on the top row, between the menu and the
  * right-hand buttons. Tapping it widens it over them into a field with Back, its results and
- * messages under it, kept above the on-screen keyboard (#163). A newly shown result (picked, or
+ * messages under it, kept above the on-screen keyboard. A newly shown result (picked, or
  * coordinates) narrows it back, and its name stays in the pill; × clears it. Back, or Escape,
  * closes the field and leaves a shown result on the map. Focus that was in the field goes back
- * to the pill (#189).
+ * to the pill.
  */
 export default function PlaceSearch({ search }: { search: PlaceSearch }) {
   const { shown } = search.state;

@@ -43,9 +43,9 @@ export type PlannerMenuProps = {
 };
 
 /**
- * The planner's floating menu top left (#124, ADR 0026), each item with an icon, in three
- * groups: New trip, Edit trip (#154), which opens the trip's name and start date in a
- * dialog, Save trip and Open trip; Export GPX; Settings (#151), which opens the settings
+ * The planner's floating menu top left (ADR 0026), each item with an icon, in three
+ * groups: New trip, Edit trip, which opens the trip's name and start date in a
+ * dialog, Save trip and Open trip; Export GPX; Settings, which opens the settings
  * dialog. Save and Export ask for the trip name first, prefilled with the current one.
  * A new trip starts with today in Brussels as its start date. New trip and Open trip
  * ask before losing points.

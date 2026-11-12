@@ -1,5 +1,5 @@
-// Assembles the shipped Walloon stretch dataset (#54): built geometry plus gauges,
-// source and research date on every record (spec #51, ADR 0024).
+// Assembles the shipped Walloon stretch dataset: built geometry plus gauges,
+// source and research date on every record (ADR 0024).
 import type { DraftStretch } from "./build";
 
 /** AGW Annex 2 gauge names mapped to KiWIS station numbers (docs/research/hydrometry.md §5). */
@@ -32,7 +32,7 @@ export const ASSUMED_GAUGES: readonly string[] = ["Martelange", "Membre", "Marti
 
 /**
  * Annex 2 gauges with no KiWIS station, and the gauge the SPW itself uses there
- * (`station` on kayak.spw.wallonie.be, #205). Annex 2 says otherwise, so these are
+ * (`station` on kayak.spw.wallonie.be). Annex 2 says otherwise, so these are
  * marked as SPW practice.
  */
 export const SPW_PRACTICE_GAUGES: Readonly<Record<string, { name: string; stationNo: string }>> = {
@@ -67,7 +67,7 @@ export type DatasetReview = {
   reviewedBy: string;
   reviewedAt: string;
   decisions: number;
-  /** The official split boundaries (#209) not reviewed yet: the data ships them but nobody has confirmed them. */
+  /** The official split boundaries not reviewed yet: the data ships them but nobody has confirmed them. */
   pending?: string[];
 };
 
@@ -75,7 +75,7 @@ export type WalloonStretchDataset = {
   dataset: "walloon-stretches";
   formatVersion: 1;
   researchDate: string;
-  /** Who reviewed the uncertain end points, and when (the review page, #54). */
+  /** Who reviewed the uncertain end points, and when (the review page). */
   review?: DatasetReview;
   credit: string;
   licence: string;

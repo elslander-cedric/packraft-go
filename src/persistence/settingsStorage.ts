@@ -1,4 +1,4 @@
-// The planner's settings in browser storage (spec #2, ADR 0011), under their
+// The planner's settings in browser storage (ADR 0011), under their
 // own key. Thin on purpose: reading and validating settings live in the core.
 import { restoreSettings, serialiseSettings, type Settings } from "@/core/settings";
 

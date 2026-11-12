@@ -1,4 +1,4 @@
-// Place search (#173, ADR 0030): runs the core's search reducer and sends each
+// Place search (ADR 0030): runs the core's search reducer and sends each
 // search to the page's shared Nominatim client (shared with default names, one
 // lazy import). Kept apart from the planner session: trip actions never touch it.
 import { useEffect, useReducer, useRef } from "react";

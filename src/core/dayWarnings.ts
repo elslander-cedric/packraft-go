@@ -3,7 +3,7 @@
 import type { AireWarning } from "./aire";
 import type { AccessWarning, DayAccess } from "./tripAccess";
 
-/** The kinds of warning a leg can have, most serious first. Unknown access is a note, not one (#78). */
+/** The kinds of warning a leg can have, most serious first. Unknown access is a note, not one. */
 export const dayWarningKinds = ["forbidden", "closed", "check-flow", "lock", "incident", "obstacle", "aire"] as const;
 export type DayWarningKind = (typeof dayWarningKinds)[number];
 

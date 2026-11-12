@@ -1,5 +1,5 @@
 // Routing orchestration: decides which legs to route and reports what happened.
-// The router is injected, so tests pass a fake (spec #2).
+// The router is injected, so tests pass a fake.
 //
 // Contract (ADR 0025): the auto router never writes the trip. It reports plain-data
 // routing actions to a dispatch: "route requested" (the legs waiting for this

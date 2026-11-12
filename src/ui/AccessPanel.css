@@ -65,7 +65,7 @@
   filter: drop-shadow(0 0 2px #000);
 }
 
-/* Lock marker swatch (#57): a dark ring, like the marker on the map. */
+/* Lock marker swatch: a dark ring, like the marker on the map. */
 .access-lock-swatch {
   display: inline-block;
   width: 0.8rem;

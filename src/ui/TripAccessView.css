@@ -1,4 +1,4 @@
-/* Access status and warnings on leg rows, and the warning chips on day cards (#58). */
+/* Access status and warnings on leg rows, and the warning chips on day cards. */
 .leg-access {
   min-width: 0;
   font-size: 0.85rem;
@@ -60,12 +60,12 @@
   font-size: 0.8rem;
 }
 
-/* Unknown access: a quiet note, visibly lighter than the coloured warnings (#78). */
+/* Unknown access: a quiet note, visibly lighter than the coloured warnings. */
 .access-note {
   font-style: italic;
 }
 
-/* No official reading behind the status (#211): plain text, so it reads as a caveat on the status above it. */
+/* No official reading behind the status: plain text, so it reads as a caveat on the status above it. */
 .access-not-checked {
   margin: var(--space-1) 0 0;
   color: var(--color-warning);

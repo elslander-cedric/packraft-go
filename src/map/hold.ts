@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import type { LatLng } from "@/core/trip";
 
-/** How long a finger or the mouse holds a map shape (a leg to insert a point, #122; a water for its details, #125). */
+/** How long a finger or the mouse holds a map shape (a leg to insert a point; a water for its details). */
 export const HOLD_MS = 400;
 
 // A finger or mouse that moves more than this (in screen pixels) while held is panning, not holding.
@@ -16,7 +16,7 @@ export const isPrimaryPress = (event: PointerEvent) => event.pointerType !== "mo
  * Hold on a map shape's element (ADR 0026): a finger, pen or the left mouse
  * button held still for `HOLD_MS` calls `onHold` with where it was pressed
  * (the same gesture for touch and mouse, ADR 0034), timed by our own timer:
- * Leaflet's `contextmenu` is not reliable for touch (#112). A right-click calls
+ * Leaflet's `contextmenu` is not reliable for touch. A right-click calls
  * it at once. The shape's own `contextmenu` never opens the browser's menu, and
  * the one a long touch press can give is ignored (the timer already handled
  * it). Nothing is stopped: a tap on the shape is still a tap on the map, and a

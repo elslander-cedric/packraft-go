@@ -1,4 +1,4 @@
-// Test support for ADR 0013 (#26): finds user-facing text written directly in
+// Test support for ADR 0013: finds user-facing text written directly in
 // JSX instead of coming from the strings module. Parses the source with the
 // TypeScript compiler, so generics, arrow functions and other code are never
 // mistaken for text. Test-only; never imported by app code.

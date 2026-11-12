@@ -1,4 +1,4 @@
-// Live PKAYAK check (#218, ADR 0035): compares what the SPW's undocumented map service
+// Live PKAYAK check (ADR 0035): compares what the SPW's undocumented map service
 // answers today with the recorded fixtures our tests replay, so we notice when it
 // changes its fields or codes. Run by hand with `npm run check:kayak`; never part of
 // `npm test`, `npm run e2e` or CI (ADR 0019). Nothing here writes fixtures:

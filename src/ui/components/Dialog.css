@@ -10,7 +10,7 @@
   background: var(--color-backdrop);
 }
 
-/* Centred in the visible area, which shrinks above an on-screen keyboard (#163):
+/* Centred in the visible area, which shrinks above an on-screen keyboard:
    useVisibleArea sets --visible-top and --visible-height from window.visualViewport.
    A dialog taller than that area scrolls inside. */
 .dialog {

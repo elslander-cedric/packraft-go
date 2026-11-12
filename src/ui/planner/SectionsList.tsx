@@ -36,7 +36,7 @@ export type SectionsListProps = {
  * The Sections tab: one row per section (GLOSSARY), like a leg row with the totals of its legs
  * and which legs those are. The warnings and routing state are its legs', gathered (ADR 0029):
  * one "Routing" line while any leg waits, and each failed leg, by number when there are several, with its own Retry.
- * A tap on the selected section of several legs shows them under it (#200): figures, access and
+ * A tap on the selected section of several legs shows them under it: figures, access and
  * warning icons, a tap that zooms to the leg and a button to its own details. Retry stays on the
  * section.
  */

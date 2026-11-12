@@ -1,4 +1,4 @@
-// The app's UI icons (#143, ADR 0028): Font Awesome Free Solid, imported only here,
+// The app's UI icons (ADR 0028): Font Awesome Free Solid, imported only here,
 // so switching to another set only touches src/ui/icons/. Their names stay in strings.ts.
 import {
   faArrowDown,
@@ -97,7 +97,7 @@ export const icons = {
   // The side panel is on the right: it opens leftwards and collapses rightwards.
   expandPanel: faChevronLeft,
   collapsePanel: faChevronRight,
-  // A leg row's button that opens its access details (#158).
+  // A leg row's button that opens its access details.
   legDetails: faCircleInfo,
   // A leg's access status (rows and details), in the status's colour.
   accessOpen: faCircleCheck,
@@ -122,10 +122,10 @@ export const icons = {
   openTrip: faFolderOpen,
   exportGpx: faFileExport,
   settings: faGear,
-  // Place search (#173): the bar's magnifier and ×, and the search result's pin on the map.
+  // Place search: the bar's magnifier and ×, and the search result's pin on the map.
   search: faMagnifyingGlass,
   clearSearch: faXmark,
   searchResult: faLocationDot,
-  // The open search field closes back to its pill (#174).
+  // The open search field closes back to its pill.
   closeSearch: faArrowLeft,
 };

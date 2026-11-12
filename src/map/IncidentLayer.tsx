@@ -1,6 +1,6 @@
 "use client";
 
-// The SPW's incidents on the map (ADR 0035, #216): an amber disc with a warning sign in it,
+// The SPW's incidents on the map (ADR 0035): an amber disc with a warning sign in it,
 // unlike the dark diamonds of the obstacles, as these are temporary. Read-only: a tap only
 // opens the details. Only loaded through AccessLayer.
 import { divIcon } from "leaflet";

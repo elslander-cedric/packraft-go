@@ -1,5 +1,5 @@
 // Access status and warnings on a trip's paddle legs (GLOSSARY: Access status;
-// ADRs 0022, 0024; #58). Built on the generic evaluation in ./access, so any
+// ADRs 0022, 0024). Built on the generic evaluation in ./access, so any
 // rule data or flow readings passed in feed in without changes here.
 import {
   accessAlong,
@@ -28,19 +28,19 @@ export type LegAccess = {
   /** The day's date; absent for an undated trip. */
   readonly date?: CalendarDate;
   readonly status: AccessStatus;
-  /** What couldn't be checked with the SPW for this leg (#211, #216). */
+  /** What couldn't be checked with the SPW for this leg. */
   readonly notChecked: readonly OfficialCheck[];
   /** True on a future date where the rules allow paddling but flow decides on the day. */
   readonly checkFlowOnTheDay: boolean;
   /** Why this leg may not be paddleable, most serious first. Information only: warnings never block. */
   readonly warnings: readonly AccessWarning[];
-  /** Water on this leg with no known rules. A gentle note, never a warning (#78). */
+  /** Water on this leg with no known rules. A gentle note, never a warning. */
   readonly notes: readonly AccessNote[];
-  /** Locks this leg passes: portage required (#60). Real warnings, kept apart from the water's own. */
+  /** Locks this leg passes: portage required. Real warnings, kept apart from the water's own. */
   readonly lockWarnings: readonly LockWarning[];
-  /** Obstacles this leg passes, in the order it meets them (#215). Independent of date and flow. */
+  /** Obstacles this leg passes, in the order it meets them. Independent of date and flow. */
   readonly obstacleWarnings: readonly ObstacleWarning[];
-  /** Incidents that apply on the leg's date and that it passes, in the order it meets them (#217). They never change `status`. */
+  /** Incidents that apply on the leg's date and that it passes, in the order it meets them. They never change `status`. */
   readonly incidentWarnings: readonly IncidentWarning[];
 };
 
@@ -62,7 +62,7 @@ export type AccessWarning = {
 /**
  * Water on a paddle leg with no rule or no data (GLOSSARY: unknown means no
  * data, not "not allowed"). Presented as a quiet note and not counted as a
- * warning (#78). The reason is either "no-rule" or a region record that is
+ * warning. The reason is either "no-rule" or a region record that is
  * itself unknown, with its rule text.
  */
 export type AccessNote = {
@@ -77,7 +77,7 @@ const warningKind: Record<AccessState, AccessWarning["kind"] | undefined> = {
   "closed-today": "closed",
   forbidden: "forbidden",
   unknown: undefined, // A note, not a warning.
-  checking: undefined, // Nothing is claimed while the flow loads (#85).
+  checking: undefined, // Nothing is claimed while the flow loads.
 };
 
 export type TripAccess = {
@@ -97,15 +97,15 @@ export type TripAccess = {
  */
 export type AccessSummary = {
   readonly state?: AccessState;
-  /** Real warnings only: forbidden, closed, check flow. Unknown access is not one (#78). */
+  /** Real warnings only: forbidden, closed, check flow. Unknown access is not one. */
   readonly warnings: readonly AccessWarning[];
   /** The notes of these legs, in leg order. */
   readonly notes: readonly AccessNote[];
-  /** Lock warnings of these legs, in leg order (#60). Counted as warnings in summaries. */
+  /** Lock warnings of these legs, in leg order. Counted as warnings in summaries. */
   readonly lockWarnings: readonly LockWarning[];
-  /** Obstacle warnings of these legs, in leg order (#215). */
+  /** Obstacle warnings of these legs, in leg order. */
   readonly obstacleWarnings: readonly ObstacleWarning[];
-  /** Incident warnings of these legs, in leg order (#217). */
+  /** Incident warnings of these legs, in leg order. */
   readonly incidentWarnings: readonly IncidentWarning[];
   /** How many of these legs have water without known rules. */
   readonly legsWithoutRules: number;
@@ -122,19 +122,19 @@ export type DayAccess = AccessSummary & {
 export type TripAccessOptions = {
   /** Today's date, YYYY-MM-DD: later dates are in the future. */
   readonly today: CalendarDate;
-  /** Today's live flow readings (#61), once known: legs dated today use them. */
+  /** Today's live flow readings, once known: legs dated today use them. */
   readonly flows?: FlowReadings;
-  /** True while today's flows are loading: legs dated today on flow-dependent water are "checking" (#85). */
+  /** True while today's flows are loading: legs dated today on flow-dependent water are "checking". */
   readonly flowsPending?: boolean;
-  /** Today's official status (#210), once known: legs dated today use it. */
+  /** Today's official status, once known: legs dated today use it. */
   readonly official?: OfficialReadings;
   /** True while today's official status is loading: legs dated today on water it decides are "checking". */
   readonly officialPending?: boolean;
-  /** The SPW's incidents (#216), once known: a paddle leg passing one on any date gets a warning (#217). They never change a leg's status. */
+  /** The SPW's incidents, once known: a paddle leg passing one on any date gets a warning. They never change a leg's status. */
   readonly incidents?: OfficialIncidents;
-  /** Lock markers (#57): a paddle leg passing one gets a lock warning (#60). */
+  /** Lock markers: a paddle leg passing one gets a lock warning. */
   readonly locks?: readonly LockMarker[];
-  /** Obstacles (ADR 0035): a paddle leg passing one gets an obstacle warning (#215). */
+  /** Obstacles (ADR 0035): a paddle leg passing one gets an obstacle warning. */
   readonly obstacles?: readonly Obstacle[];
 };
 
@@ -234,6 +234,6 @@ function summary(legs: readonly LegAccess[]): AccessSummary {
   const legsWithoutRules = legs.filter((leg) => leg.notes.length > 0).length;
   const gathered = { warnings, notes, lockWarnings, obstacleWarnings, incidentWarnings, legsWithoutRules };
   if (legs.length === 0) return gathered;
-  // A leg still checking its flow keeps the summary from reading open (#85); a worse state wins as usual.
+  // A leg still checking its flow keeps the summary from reading open; a worse state wins as usual.
   return { state: combineAccess(legs.map((leg) => leg.status)).state, ...gathered };
 }

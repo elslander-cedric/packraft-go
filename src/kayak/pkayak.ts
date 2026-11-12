@@ -1,5 +1,5 @@
 // PKAYAK adapter: implements the core's OfficialStatusSource with the SPW's public
-// ArcGIS map service (ADR 0035, #210, #216). The browser calls it directly (it allows
+// ArcGIS map service (ADR 0035). The browser calls it directly (it allows
 // any origin), with only the fields needed: layer 5 without geometry for the status,
 // layer 0 for the incidents. A refresh is at most those two requests, which fail apart. The
 // answers are cached for 15 minutes, and a request that doesn't answer in time counts

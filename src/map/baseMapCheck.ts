@@ -1,4 +1,4 @@
-// Live base map check (#179, ADR 0031): asks every base map and overlay (ADR 0032) source for one
+// Live base map check (ADR 0031): asks every base map and overlay (ADR 0032) source for one
 // tile, so we notice when a service moves its URL or ends keyless access. Run by hand with
 // `npm run check:basemaps`; never part of `npm test`, `npm run e2e` or CI (ADR 0019).
 import { baseMaps, initialMapView, overlays, type Bounds, type LatLng, type TileSource } from "./mapConfig";

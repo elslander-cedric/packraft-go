@@ -1,4 +1,4 @@
-/* An access point's fields (#55, #63), in its dialog; planner.css sizes them for a finger. */
+/* An access point's fields, in its dialog; planner.css sizes them for a finger. */
 .access-point-dates {
   margin: var(--space-1) 0;
   color: var(--color-muted);

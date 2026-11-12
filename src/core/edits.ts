@@ -1,5 +1,5 @@
 // Edits for the trip planner core: move, insert and delete points, switch a
-// leg's mode, mark or unmark a camp (spec #2, ADR 0017, #122).
+// leg's mode, mark or unmark a camp (ADR 0017).
 // Legs an edit changes are replaced by fresh, unrouted legs; legs it does not
 // change are carried over as they are, so their routed results are kept.
 import { nearestOnLine } from "./geo";
@@ -109,7 +109,7 @@ export function deletePoint(trip: Trip, index: number): Trip {
 
 /**
  * Inserts a point on a leg, nearest to `near`: on the leg's route when it is
- * routed, else on the straight line between its points (#122). The leg splits
+ * routed, else on the straight line between its points. The leg splits
  * into two unrouted legs with its mode; every other leg keeps its route. Camps
  * stay on their points, so later camps shift by one.
  */

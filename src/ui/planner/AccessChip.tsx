@@ -7,9 +7,9 @@ import { icons } from "../icons/icons";
 import { strings } from "../strings";
 
 /**
- * The chip at the top of the map while the access layer is on (#125): it says which date
+ * The chip at the top of the map while the access layer is on: it says which date
  * the colours are for, and opens a dialog with the "Indicative only" disclaimer, the date
- * (today or a trip day, #59), the legend and the note about the regions.
+ * (today or a trip day), the legend and the note about the regions.
  */
 export default function AccessChip({ dateSelector }: { dateSelector: AccessDateProps }) {
   const [open, setOpen] = useState(false);

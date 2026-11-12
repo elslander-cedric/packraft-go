@@ -1,6 +1,6 @@
-// Your access points by the trip's route (#156, GLOSSARY "On the route"): the
+// Your access points by the trip's route (GLOSSARY "On the route"): the
 // ones on the route in route order, then the rest nearest to you. Pure: your
-// position is passed in by the caller. Official aires on the route (#208) are worked out
+// position is passed in by the caller. Official aires on the route are worked out
 // apart, so `accessPointsByRoute` stays about your points, and merged in for the list.
 import type { AccessPoint, AccessPoints } from "./accessPoints";
 import { distanceM, projectOntoLine } from "./geo";

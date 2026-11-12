@@ -3,10 +3,10 @@ import { positionFailure, type MyPosition } from "./position";
 
 /**
  * Your position from the browser's Geolocation API, only once asked for:
- * the browser asks for permission on the first request, never on load (#56).
+ * the browser asks for permission on the first request, never on load.
  * Once shown, the position follows you until the screen closes.
  * `show` can be given a callback, called once with the first result: a fix
- * (`shown`) or a failure (#63: "mark access point here" waits for it).
+ * (`shown`) or a failure ("mark access point here" waits for it).
  */
 export function usePosition(): [MyPosition, (onFirst?: (first: MyPosition) => void) => void] {
   const [position, setPosition] = useState<MyPosition>({ state: "off" });
