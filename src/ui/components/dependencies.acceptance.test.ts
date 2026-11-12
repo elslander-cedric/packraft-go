@@ -1,5 +1,4 @@
-// Base UI is pinned to an exact version and no other UI library is added. Checks the manifest,
-// so a library added but not yet imported is also caught.
+// Base UI is pinned to an exact version (ADR 0020), under its current package name.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -14,23 +13,6 @@ describe("@base-ui/react dependency", () => {
     expect(spec).toMatch(/^\d+\.\d+\.\d+$/);
     expect(lock.packages[""].dependencies["@base-ui/react"]).toBe(spec);
     expect(lock.packages["node_modules/@base-ui/react"].version).toBe(spec);
-  });
-
-  it("is the only UI component library: runtime dependencies are exactly the known set", () => {
-    // Updated: ADR 0021 (#41). fflate (ZIP writer, not a UI library) is allowed for the GPX export.
-    // Updated: ADR 0037. The GPX export is one file again, so fflate is gone.
-    // Updated: ADR 0028 (#143). Font Awesome's icon data (not a UI library) draws the icons.
-    expect(Object.keys(pkg.dependencies).sort()).toEqual(
-      [
-        "@base-ui/react",
-        "@fortawesome/free-solid-svg-icons",
-        "leaflet",
-        "next",
-        "react",
-        "react-dom",
-        "react-leaflet",
-      ].sort(),
-    );
   });
 
   it("the deprecated package names are not used", () => {

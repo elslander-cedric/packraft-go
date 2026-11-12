@@ -1,6 +1,6 @@
 # UI components
 
-Thin wrappers around Base UI (ADR 0020), each with its own stylesheet. Screens import these, never `@base-ui/react`; `boundary.test.ts` enforces this. Wrappers take their text as props from the screens. Design tokens (colours, spacing) are CSS variables at the top of `src/app/globals.css`.
+Thin wrappers around Base UI (ADR 0020), each with its own stylesheet. Screens import these, never `@base-ui/react`; lint enforces this. Wrappers take their text as props from the screens. Design tokens (colours, spacing) are CSS variables at the top of `src/app/globals.css`.
 
 - `ConfirmDialog`: Alert Dialog.
 - `ToggleGroup`, `NumberField`, `Button`.
