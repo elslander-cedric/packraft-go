@@ -5,7 +5,7 @@ import { brouterFixture, serveOffline } from "./support/offline";
 import { touch } from "./support/touch";
 import { freeMapBox, openPlanner } from "./support/planner";
 
-// A tall touch tablet gets the side panel (see acceptance-118).
+// A tall touch tablet gets the side panel (see sheet-stops.acceptance).
 test.use({ viewport: { width: 820, height: 1180 }, hasTouch: true, isMobile: true });
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
