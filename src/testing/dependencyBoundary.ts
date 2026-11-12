@@ -1,4 +1,4 @@
-// Test support for the dependency boundary (#31, #26, ADR 0020): which packages
+// Test support for the dependency boundary (ADR 0020): which packages
 // a source file imports, and whether it uses the browser's native confirm
 // dialog. Parses the source with the TypeScript compiler, so comments and
 // strings are never mistaken for code. Test-only; never imported by app code.

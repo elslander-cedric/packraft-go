@@ -7,7 +7,7 @@ import "./FlowFiguresView.css";
 const HYDROMETRY_URL = "https://hydrometrie.wallonie.be/";
 
 /**
- * A Walloon stretch's live flow for today (#61): the gauge (and whether it is
+ * A Walloon stretch's live flow for today: the gauge (and whether it is
  * assumed or SPW practice), the flow at 08:00, the 72-hour mean, the limits, when the gauge was
  * last measured, and the SPW credit. Renders the core's figures; no domain logic.
  */

@@ -29,7 +29,7 @@ export type LegModeCardProps = {
 };
 
 /**
- * The selected leg's card (#230), floating above the sheet or panel where the snap offers
+ * The selected leg's card, floating above the sheet or panel where the snap offers
  * show: which leg it is, its mode as a Hike / Paddle toggle, and a button that unselects it.
  */
 export default function LegModeCard({ leg, mode, distanceKm, onChange, onClose }: LegModeCardProps) {

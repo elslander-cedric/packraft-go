@@ -24,7 +24,7 @@ async function askFlows(): Promise<FlowReadings> {
 const flowsFeed = createLiveFeed(askFlows, { everyMs: REFRESH_MS });
 
 /**
- * Today's live flows for the Walloon stretches' gauges (#61), asked for only while they are
+ * Today's live flows for the Walloon stretches' gauges, asked for only while they are
  * wanted (something is shown for today) and the rules have loaded, and again every 15 minutes
  * while they are, so a failure heals. Undefined until they arrive.
  */

@@ -13,11 +13,11 @@ export const strings = {
   sectionsPanelEmpty: "Click the map to place the start point, then click again to add legs.",
   tripNameLabel: "Trip name",
   tripNamePlaceholder: "Untitled trip",
-  // The trip's optional start date (#52, GLOSSARY "Start date"); days get dates from it.
+  // The trip's optional start date (GLOSSARY "Start date"); days get dates from it.
   startDateLabel: "Start date",
   clearStartDateButton: "Clear date",
   newTripButton: "New trip",
-  // Asked in an in-page dialog before a trip with points is replaced (#31).
+  // Asked in an in-page dialog before a trip with points is replaced.
   newTripConfirm: {
     title: "Start a new trip?",
     message: "Your current trip will be lost.",
@@ -32,7 +32,7 @@ export const strings = {
   openFileInvalid: "This is not a packraft-go trip file, or it is damaged. Your current trip is unchanged.",
   openFileUnknownVersion:
     "This trip file is from a newer or unknown version of packraft-go and can't be opened here. Your current trip is unchanged.",
-  // Shown while the autosaved trip is from a newer or unknown version and is kept, not overwritten (#28).
+  // Shown while the autosaved trip is from a newer or unknown version and is kept, not overwritten.
   autosaveUnknownVersion:
     "Your saved trip is from a newer or unknown version of packraft-go. Reload the page to update. " +
     "It is kept until you start a new trip or open a file; changes made here are not saved.",
@@ -54,7 +54,7 @@ export const strings = {
   dayLabel: (n: number) => `Day ${n}`,
   // An undated day's calendar tile: "Day" above its number.
   dayTileWord: "Day",
-  // A day's calendar date from the trip's start date (#52), e.g. "Sat 31 Oct 2026".
+  // A day's calendar date from the trip's start date, e.g. "Sat 31 Oct 2026".
   dayDate: (weekday: string, day: number, month: string, year: number) => `${weekday} ${day} ${month} ${year}`,
   weekdayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   monthNames: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -77,19 +77,19 @@ export const strings = {
   paceFactorLabel: "Hiking pace factor",
   paceFactorHint: "1.0 is Naismith's pace; 1.2 is 20% slower, 0.8 is 20% faster.",
   paddleSpeedLabel: "Paddling speed (km/h)",
-  // Your access points (#55, ADR 0023, GLOSSARY "Access point"): your own collection, apart from trips.
+  // Your access points (ADR 0023, GLOSSARY "Access point"): your own collection, apart from trips.
   accessPoints: {
     autosaveUnknownVersion:
       "Your saved access points are from a newer or unknown version of packraft-go. Reload the page to update. " +
       "They are kept; access point changes made here are not saved.",
-    // A damaged autosave is copied to a backup key before it is replaced (round 2 of #55).
+    // A damaged autosave is copied to a backup key before it is replaced.
     damagedBackedUp: (key: string) =>
       `Your saved access points were damaged and couldn't be read, so you start with none. ` +
       `The damaged data was kept as a backup in this browser's storage, under "${key}".`,
     damagedNotBackedUp:
       "Your saved access points are damaged and couldn't be read or backed up. " +
       "They are kept; access point changes made here are not saved.",
-    // The marker's accessible name and tooltip, led by its heading (#136), e.g.
+    // The marker's accessible name and tooltip, led by its heading, e.g.
     // "Access point: Hotton bridge (Put-in, Slipway)" or "Access point: Put-in, Official aire".
     marker: (heading: string, detail: string | null) =>
       detail === null ? `Access point: ${heading}` : `Access point: ${heading} (${detail})`,
@@ -98,7 +98,7 @@ export const strings = {
     // Zoomed out, access points whose markers would overlap show as one marker with their count.
     groupMarker: (count: number) => `${count} access points`,
     // Its use and kind, e.g. "Put-in, Official aire": a list entry's detail line, or its heading
-    // when it has no name or note (#136).
+    // when it has no name or note.
     useAndKind: (use: string, kind: string) => `${use}, ${kind}`,
     detailsLabel: "Access point",
     useLabel: "Use",
@@ -135,7 +135,7 @@ export const strings = {
   retryRouting: "Retry",
   // The planner (ADRs 0026, 0034), with your position and access points on it (ADR 0023).
   planner: {
-    // The planner's sheet and tabs (#118, ADR 0026).
+    // The planner's sheet and tabs (ADR 0026).
     sheetLabel: "Trip",
     tabsLabel: "Trip details",
     tabs: { sections: "Sections", days: "Days", accessPoints: "Access points" },
@@ -160,7 +160,7 @@ export const strings = {
       // A paddle leg that ends higher than it starts (ADR 0018).
       rise: "Rise, upstream?",
     },
-    // The dialog with a leg's access and warnings (#158), from a day card's chip or its row.
+    // The dialog with a leg's access and warnings, from a day card's chip or its row.
     legDetailsTitle: (n: number, mode: string, distance: string) => `Leg ${n} · ${mode} · ${distance}`,
     legDetailsClose: "Close",
     // The button to a section's or a leg's details, on its row.
@@ -179,20 +179,20 @@ export const strings = {
       descent: "Descent",
       time: "Estimated time",
     },
-    // The side panel that replaces the sheet on every screen but a narrow one in portrait (#126, ADR 0034).
+    // The side panel that replaces the sheet on every screen but a narrow one in portrait (ADR 0034).
     collapsePanelButton: "Collapse the trip panel",
     expandPanelButton: "Open the trip panel",
     // Its left edge, a splitter: drag it or use the arrow keys to resize the panel (ADR 0034).
     resizePanelHandle: "Resize the trip panel",
-    // The sheet's handle (#189): a slider over its stops; arrow up and down move the sheet one stop.
+    // The sheet's handle: a slider over its stops; arrow up and down move the sheet one stop.
     resizeSheetHandle: "Resize the trip sheet",
     sheetStops: { peek: "Header only", half: "Half the screen", full: "Full screen" },
-    // The card a tap on a leg on the map shows (#230): its toggle's name is `legModeLabel`.
+    // The card a tap on a leg on the map shows: its toggle's name is `legModeLabel`.
     // Its accessible name is the title; it shows the short form, e.g. "L2 · 1.2 km".
     selectedLegTitle: (n: number, distance: string) => `Leg ${n} · ${distance}`,
     selectedLegShortTitle: (n: number, distance: string) => `L${n} · ${distance}`,
     selectedLegClose: "Unselect the leg",
-    // The floating hike / paddle toggle for the leg the next map tap adds (#121).
+    // The floating hike / paddle toggle for the leg the next map tap adds.
     nextLegModeLabel: "Next leg's mode",
     // Its toggles are icon-only; their names are `legModeHike` and `legModePaddle`.
     // The position and undo buttons are icon-only too; their names are `showPositionButton` and `undoButton`.
@@ -206,9 +206,9 @@ export const strings = {
     positionUnavailable: "Your position isn't available right now. Try again in the open, away from steep valley sides.",
     positionTimeout: "Finding your position took too long. Try again.",
     positionUnsupported: "This browser can't share your location.",
-    // Your access points in the planner (#119; first #63, ADR 0023).
+    // Your access points in the planner (ADR 0023).
     accessPointsLabel: "Your access points",
-    // Access point editing (ADR 0036, #225): the planner's mode for changing your access points.
+    // Access point editing (ADR 0036): the planner's mode for changing your access points.
     // The floating button bottom left that enters it and, pressed again, leaves it; icon-only,
     // coloured while in it.
     editAccessPointsButton: "Edit access points",
@@ -224,7 +224,7 @@ export const strings = {
     // Without a position fix, the flag button asks for a tap on the map.
     markTapMap: "Tap the map to place the access point.",
     noAccessPoints: "No access points yet. Tap the map to place one, drag it into place, then tap the flag button.",
-    // The tab's two lists while the trip has a route (#156): on the route in route order, then the rest nearest you.
+    // The tab's two lists while the trip has a route: on the route in route order, then the rest nearest you.
     onRouteHeading: "On the route",
     notOnRouteHeading: "Not on the route",
     noneOnRoute: "None of your access points is on this route.",
@@ -240,24 +240,24 @@ export const strings = {
     // The edit dialog: what you change is kept until Save stores it on the device.
     accessPointDialogTitle: "Access point details",
     accessPointSave: "Save",
-    // The access layer (#125): switched on and off in the Map menu, named `accessLayerToggle`.
+    // The access layer: switched on and off in the Map menu, named `accessLayerToggle`.
     // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a dialog.
     accessChip: (when: string) => `Access · ${when}`,
     accessChipToday: "today",
     accessDialogTitle: "Access layer",
     accessDialogClose: "Close",
-    // The floating menu top left (#124): the rare actions on the whole trip.
+    // The floating menu top left: the rare actions on the whole trip.
     menu: {
       button: "Menu",
       newTrip: "New trip",
-      // Edit trip opens the trip's name and start date in the Trip details dialog (#154); Save applies what was typed.
+      // Edit trip opens the trip's name and start date in the Trip details dialog; Save applies what was typed.
       tripDetails: "Edit trip",
       tripDetailsTitle: "Trip details",
       tripDetailsConfirm: "Save",
       saveFile: "Save trip",
       openFile: "Open trip",
       exportGpx: "Export GPX",
-      // Settings opens the settings in a dialog (#151); Save stores what was typed.
+      // Settings opens the settings in a dialog; Save stores what was typed.
       settings: "Settings",
       settingsConfirm: "Save",
       // Save trip and Export GPX ask for the trip name first, prefilled with the current one.
@@ -269,7 +269,7 @@ export const strings = {
   },
   // The disclaimer shown above the map (ADR 0024).
   navigationRulesNotice: "Indicative only; you're responsible for checking local rules.",
-  // The access layer (#53): where paddling is allowed (GLOSSARY: Access status).
+  // The access layer: where paddling is allowed (GLOSSARY: Access status).
   accessLayerToggle: "Access layer",
   accessLegendLabel: "Access status",
   accessState: {
@@ -278,7 +278,7 @@ export const strings = {
     forbidden: "Forbidden",
     unknown: "Unknown",
   },
-  // Transient status while today's live Walloon flow or official status loads (#85, #210); not one of the legend's states.
+  // Transient status while today's live Walloon flow or official status loads; not one of the legend's states.
   accessChecking: "Checking status…",
   // What a Walloon category's calendar allows, in one sentence.
   accessCalendar: {
@@ -287,10 +287,10 @@ export const strings = {
     "1.C":
       "Category 1.C: open from 1 October to 15 March only, except on the fishing opening days (3rd Saturday of March, 1st Saturday of June).",
   },
-  // The SPW's official status for today (#210, ADR 0035).
+  // The SPW's official status for today (ADR 0035).
   official: {
     closed: (why: string) => `Closed today by the SPW: ${why}`,
-    // On a future date (#212): the status stays rule-based, but an order "until further notice" may still apply.
+    // On a future date: the status stays rule-based, but an order "until further notice" may still apply.
     closedTodayNote: (why: string) => `Officially closed today, says the SPW: ${why}`,
     tooLow: "the water is too low.",
     causes: { "high-water": "high water.", "out-of-season": "out of season." },
@@ -299,7 +299,7 @@ export const strings = {
     unrecognised: (code: string) =>
       `The SPW gives a status the app doesn't know (code ${code}); check today's official status on kayak.spw.wallonie.be.`,
     none: "The SPW publishes no official status for this stretch.",
-    // With no official reading (#211): one sentence per check that didn't happen, then the link.
+    // With no official reading: one sentence per check that didn't happen, then the link.
     notChecked: {
       closures: "Official closures weren't checked, so the SPW may have closed this stretch.",
       incidents: "The SPW's incidents couldn't be loaded, so there may be hazards here that aren't shown.",
@@ -314,7 +314,7 @@ export const strings = {
   accessLegendNote:
     "In Flanders, water that isn't marked is open by default. In Wallonia, only the listed stretches may be paddled; other water is treated as not allowed, but isn't painted red. " +
     "In Brussels, only the canal is known to be open; other water is unknown.",
-  // The access layer's date (#59): the status of dated rules (Walloon seasons, fishing days) is for this day.
+  // The access layer's date: the status of dated rules (Walloon seasons, fishing days) is for this day.
   accessDateLabel: "Date",
   accessTodayButton: "Today",
   accessTripDayLabel: "Trip day",
@@ -322,7 +322,7 @@ export const strings = {
   accessTripDayOption: (day: number, date: string) => `Day ${day}: ${date}`,
   accessStatusOn: (date: string) => `On ${date}`,
   accessCategory: (category: string) => `Walloon category ${category}`,
-  // Locks (#57, GLOSSARY "Lock"): marked on the access layer in Flanders and Brussels.
+  // Locks (GLOSSARY "Lock"): marked on the access layer in Flanders and Brussels.
   lockLegend: "Lock: portage required (shown when zoomed in)",
   lockPortageRequired: "Portage required",
   lockPortageText: "Don't go through the lock on the water: get out before it and carry your packraft around it.",
@@ -385,7 +385,7 @@ export const strings = {
   accessResearched: (date: string) => `Researched ${date}`,
   accessUnverified: (what: string) => `Not confirmed: ${what}`,
   accessDataCredit: "Access geometry © OpenStreetMap contributors (ODbL).",
-  // Access status and warnings on paddle legs, and the warning chips on day cards (#58).
+  // Access status and warnings on paddle legs, and the warning chips on day cards.
   tripAccess: {
     legStatusOn: (date: string, state: string) => `Access on ${date}: ${state}`,
     legStatusInGeneral: (state: string) => `Access in general (no start date): ${state}`,
@@ -396,13 +396,13 @@ export const strings = {
       closed: "Closed on this date",
       "check-flow": "Check the flow on the day",
     },
-    // Unknown access is a gentle note, never a warning (#78).
+    // Unknown access is a gentle note, never a warning.
     noRule: "No access rules known here.",
-    // Lock warning (#60): the lock's name is the lock's own, from the data.
+    // Lock warning: the lock's name is the lock's own, from the data.
     lockWarning: (name: string) => `Lock at ${name}: portage required.`,
-    // Obstacle warning (#215): one line per kind, whose meaning is strings.obstacles.meanings.
+    // Obstacle warning: one line per kind, whose meaning is strings.obstacles.meanings.
     obstacleWarning: (name: string, count: number) => (count === 1 ? `${name}.` : `${name}, ${count} on this leg.`),
-    // Incident warning (#217): the text is the SPW's own.
+    // Incident warning: the text is the SPW's own.
     incidentWarning: (text: string) => `Incident: ${text}`,
     // A day card's chips: one per leg with warnings, its most serious kind; the text is on the leg.
     dayWarningsLabel: "Access warnings",
@@ -420,7 +420,7 @@ export const strings = {
     chipName: (leg: number, kind: string, count: number) =>
       count === 1 ? `Leg ${leg}: ${kind}. Show the leg` : `Leg ${leg}: ${kind} and ${count - 1} more. Show the leg`,
   },
-  // Live Walloon flows on a stretch for today (#61, ADR 0024).
+  // Live Walloon flows on a stretch for today (ADR 0024).
   flow: {
     heading: "Live flow today",
     gauge: (name: string) => `Gauge: ${name}`,
@@ -441,10 +441,10 @@ export const strings = {
     credit: "Sources des données : Service public de Wallonie",
   },
   // Snapping a new put-in or take-out to one of your access points or an official aire
-  // (#62, ADR 0023, ADR 0035).
+  // (ADR 0023, ADR 0035).
   snap: {
     label: "Snap to an access point or aire",
-    // `name` is the access point's name (#136), or null when it has none.
+    // `name` is the access point's name, or null when it has none.
     offer: (kind: string, metres: number, name: string | null, use: string, accessKind: string) =>
       name === null
         ? `The new ${kind} is ${metres} m from your access point (${use}, ${accessKind}). Snap it there?`
@@ -457,7 +457,7 @@ export const strings = {
     decline: "Keep",
     kinds: { "put-in": "put-in", "take-out": "take-out" },
   },
-  // The Walloon aire warning (#62, AGW art. 5): information only, never blocks.
+  // The Walloon aire warning (AGW art. 5): information only, never blocks.
   aire: {
     warningKind: "No official aire",
     text: (kind: string, point: number) =>
@@ -466,13 +466,13 @@ export const strings = {
       "In Wallonia you may only get on or off the water at an aire (AGW art. 5).",
     kinds: { "put-in": "put-in", "take-out": "take-out" },
   },
-  // Place search (#173, ADR 0030): the bar over the map, its dropdown and the result's pin.
+  // Place search (ADR 0030): the bar over the map, its dropdown and the result's pin.
   placeSearch: {
     label: "Search a place",
     placeholder: "Place or coordinates",
     search: "Search",
     clear: "Clear search",
-    // The pill opens the field, which closes back to it (#174).
+    // The pill opens the field, which closes back to it.
     pill: (shown?: string) => (shown ? `Search a place, showing ${shown}` : "Search a place"),
     back: "Close search",
     resultsLabel: "Search results",
@@ -519,7 +519,7 @@ export const strings = {
   } satisfies Record<BaseMapId, string>,
   // The menus' name for the choice of base map.
   baseMapChoice: "Base map",
-  // The Map menu's button (ADR 0032): the layers button under the position button (#179), whose
+  // The Map menu's button (ADR 0032): the layers button under the position button, whose
   // menu has the base maps, then the access layer's switch and the overlays.
   mapMenuButton: "Map",
   // The overlays (ADR 0032): switched on and off in the Map menu.
@@ -550,6 +550,6 @@ export const strings = {
     'Routing: <a href="https://brouter.de/">BRouter</a>',
 } as const;
 
-/** The label of any access status, including the transient "checking" (#85). */
+/** The label of any access status, including the transient "checking". */
 export const accessStateLabel = (state: AccessState): string =>
   state === "checking" ? strings.accessChecking : strings.accessState[state];

@@ -1,4 +1,4 @@
-// Lock warnings on paddle legs (#60, GLOSSARY: Lock). A paddle leg whose line
+// Lock warnings on paddle legs (GLOSSARY: Lock). A paddle leg whose line
 // passes a lock must portage there. Information only: it never blocks.
 import type { LockMarker, Position } from "./access";
 import type { CalendarDate } from "./calendarDate";

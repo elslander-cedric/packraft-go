@@ -1,5 +1,5 @@
-// Turns the reviewed Walloon stretch dataset (#54, src/data/walloon-stretches.json)
-// into access records for the core (#59, ADR 0024). Season, fishing days and
+// Turns the reviewed Walloon stretch dataset (src/data/walloon-stretches.json)
+// into access records for the core (ADR 0024). Season, fishing days and
 // hours follow from the category (AGW art. 4) in the core; this only maps data.
 import type { AccessRecord } from "@/core/access";
 import type { AgwCategory } from "@/core/agw";

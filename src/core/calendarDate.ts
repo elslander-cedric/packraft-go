@@ -28,7 +28,7 @@ const brussels = new Intl.DateTimeFormat("en-CA", {
 
 /**
  * The calendar date in Europe/Brussels at an instant, given as a date or in milliseconds
- * since the epoch: the day a new trip starts on (#124) and the day the SPW means by its
+ * since the epoch: the day a new trip starts on and the day the SPW means by its
  * dates, whatever time zone the device is set to, so a date never moves a day.
  */
 export function dateInBrussels(instant: Date | number): CalendarDate {

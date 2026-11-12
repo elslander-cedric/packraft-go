@@ -33,7 +33,7 @@ export type AccessLayer = {
   /** The date the layer is for, YYYY-MM-DD, and whether that is today. */
   date: string;
   isToday: boolean;
-  /** The date controls' props (#59). */
+  /** The date controls' props. */
   dateSelector: AccessDateProps;
   /** The waters, locks, official aires, obstacles and incidents to draw, once the rules have loaded; null while off or loading. */
   shown: {
@@ -54,11 +54,11 @@ export type AccessLayer = {
   selectedAireStatus: AccessStatus | undefined;
   selectedObstacle: Obstacle | undefined;
   selectedIncident: Incident | undefined;
-  /** Today's incidents, once asked for and answered: the details say if they failed (#216). */
+  /** Today's incidents, once asked for and answered: the details say if they failed. */
   incidents: OfficialIncidents | undefined;
-  /** What the SPW couldn't answer for the map, while the layer is on: the map says so (#211, #216). */
+  /** What the SPW couldn't answer for the map, while the layer is on: the map says so. */
   notChecked: readonly OfficialCheck[];
-  /** The official aires once loaded, on or off: the Access points tab lists the ones on the route (#208). */
+  /** The official aires once loaded, on or off: the Access points tab lists the ones on the route. */
   officialAires: readonly OfficialAire[];
 };
 
@@ -68,8 +68,8 @@ const ALL_CHECKED: readonly OfficialCheck[] = [];
 
 /**
  * The access layer's state for the planner: on or off,
- * the date (today unless another is picked, #59), the coloured waters and locks for that
- * date (with live Walloon flows, #61, and the official status, #210, for today), and the water or lock whose details are open.
+ * the date (today unless another is picked), the coloured waters and locks for that
+ * date (with live Walloon flows, and the official status, for today), and the water or lock whose details are open.
  * An official aire's details also open with the layer off, from the Access points tab: pass
  * `wantAires` while that tab shows.
  */
@@ -78,7 +78,7 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const [selectedId, select] = useState<string | null>(null);
   const builtInAires = useBuiltInOfficialAires(on || wantAires);
   const selectedAire = builtInAires?.aires.find((a) => a.id === selectedId);
-  // An aire's details show its stretch's status, also with the layer off (#213).
+  // An aire's details show its stretch's status, also with the layer off.
   const statusShown = on || selectedAire !== undefined;
   const rules = useAccessRules(statusShown);
   const locks = useBuiltInLocks(on);
@@ -88,7 +88,7 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   const date = pickedDate ?? today;
   const shownToday = statusShown && date === today;
   const flows = useWalloonFlows(rules, shownToday);
-  // A future date notes today's closures (#212); a past date has no use for them.
+  // A future date notes today's closures; a past date has no use for them.
   const official = useOfficialStatus(rules, statusShown && date >= today);
   const incidents = useOfficialIncidents(rules, statusShown && date >= today);
   const shownIncidents = useMemo(

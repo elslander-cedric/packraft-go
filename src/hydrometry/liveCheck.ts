@@ -1,4 +1,4 @@
-// Live KiWIS check (issue #64): compares what the SPW's hydrometry service answers
+// Live KiWIS check: compares what the SPW's hydrometry service answers
 // today with the recorded fixtures our tests replay, so we notice when the service
 // changes its table layout, series names or timestamp offset. Run by hand with
 // `npm run check:kiwis`; never part of `npm test`, `npm run e2e` or CI (ADR 0019).

@@ -33,7 +33,7 @@ const now = () => new Date().toISOString();
 /** Why autosave is paused: the stored save is kept as it is. */
 export type SavingPaused = "unknown-version" | "damaged";
 
-/** Your access points and what the planner can do with them (#55, ADR 0023). */
+/** Your access points and what the planner can do with them (ADR 0023). */
 export type AccessPointsState = ReturnType<typeof useAccessPoints>;
 
 /**
@@ -62,7 +62,7 @@ export function useAccessPoints() {
     if (!keepStoredSave) storeAccessPoints(points);
   }, [points, keepStoredSave]);
 
-  // Default names (#136, ADR 0027): looked up in the background whenever the
+  // Default names (ADR 0027): looked up in the background whenever the
   // app is online, for every point still waiting for one, the draft too, so its
   // details show it; never blocks marking.
   const latest = useRef(points);

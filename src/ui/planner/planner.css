@@ -23,7 +23,7 @@
   --sheet-height: 90dvh;
 }
 
-/* Held sideways (#126): no sheet below; the side panel covers the right, so the right-hand
+/* Held sideways: no sheet below; the side panel covers the right, so the right-hand
    buttons sit beside it, in the same corners. */
 .planner-sideways {
   --sheet-height: 0px;
@@ -267,7 +267,7 @@
   font-size: 0.95rem;
 }
 
-/* Access points (#63, #119): big targets for the form and the list. */
+/* Access points: big targets for the form and the list. */
 .planner-access-point-form .toggle,
 .planner-access-point-form .button,
 .planner-access-point-form input {
@@ -319,7 +319,7 @@
   margin-top: var(--space-3);
 }
 
-/* The lists run edge to edge like the Legs and Days rows (#156): cancel the body's side
+/* The lists run edge to edge like the Legs and Days rows: cancel the body's side
    padding, and the panels' top gap unless the saved note comes first. */
 .planner-access-point-lists {
   margin: 0 calc(-1 * var(--space-3));
@@ -384,7 +384,7 @@
   font-size: 1.1rem;
 }
 
-/* One background whether selected or not (#156): the left bar marks the selected row. */
+/* One background whether selected or not: the left bar marks the selected row. */
 .button.planner-access-point-row:hover:not([data-disabled]) {
   background: var(--color-surface);
 }
@@ -393,13 +393,13 @@
   border-left-color: var(--color-focus);
 }
 
-/* Under the heading: the rest of the note, then use and kind, small and muted (#136). */
+/* Under the heading: the rest of the note, then use and kind, small and muted. */
 .planner-access-point-note {
   flex-basis: 100%;
   white-space: pre-line;
 }
 
-/* How far along the route, or from you (#156). */
+/* How far along the route, or from you. */
 .planner-access-point-figure {
   flex-basis: 100%;
   color: var(--color-muted);
@@ -413,7 +413,7 @@
   font-size: 0.8rem;
 }
 
-/* A row's head (#121) is the button that shows its leg or section on the map. */
+/* A row's head is the button that shows its leg or section on the map. */
 .planner-row-head {
   display: flex;
   flex-basis: 100%;
@@ -636,7 +636,7 @@
   pointer-events: auto;
 }
 
-/* The selected leg's card (#230), above any snap offers: one width whatever the leg, centred in
+/* The selected leg's card, above any snap offers: one width whatever the leg, centred in
    the slot (narrower on a small screen, where a long title is cut short). */
 .planner-leg-card {
   display: flex;
@@ -705,7 +705,7 @@
 }
 
 
-/* The Days tab (#123): a card per day; tapping one zooms the map to that day.
+/* The Days tab: a card per day; tapping one zooms the map to that day.
    Scoped to the tab panels, not .planner: the bottom sheet is rendered in a portal outside it.
    Like the leg rows, the cards run edge to edge right under the tab row, touching, with a rule between. */
 .planner-tab-panels .days-panel {
@@ -831,7 +831,7 @@
   margin-left: auto;
 }
 
-/* The Trip details dialog from the menu (#154): name and start date. */
+/* The Trip details dialog from the menu: name and start date. */
 .planner-trip-details {
   display: flex;
   flex-direction: column;
@@ -865,7 +865,7 @@
   font-size: 0.85rem;
 }
 
-/* The settings dialog from the menu (#151): finger-sized fields. */
+/* The settings dialog from the menu: finger-sized fields. */
 .form-dialog .settings-panel .number-field {
   margin-bottom: 0.75rem;
 }
@@ -875,7 +875,7 @@
   font-size: 1rem;
 }
 
-/* Place search (#174): a pill on the top row, between the menu and the right-hand buttons;
+/* Place search: a pill on the top row, between the menu and the right-hand buttons;
    sideways it stops short of the side panel, as those buttons do. */
 .planner-place-search {
   position: absolute;
@@ -933,7 +933,7 @@
 }
 
 /* Open, it widens over the buttons beside it into a field with its results under it, kept in the
-   area above the on-screen keyboard (--visible-*, set while open; #163). It goes over the sheet
+   area above the on-screen keyboard (--visible-*, set while open). It goes over the sheet
    (z-index 1000), however high that is, but never over the side panel, which it stops short of. */
 .planner-place-search-open {
   top: calc(var(--visible-top, 0px) + var(--space-3));
@@ -965,7 +965,7 @@
   border-top: 1px solid var(--color-border-subtle);
 }
 
-/* The access layer's chip (#125): on the second row, under the pill (#174), at the right beside the
+/* The access layer's chip: on the second row, under the pill, at the right beside the
    access layer's own button. A long trip day shortens it rather than push it off the map. */
 .planner-access-chip-slot {
   position: absolute;
@@ -981,7 +981,7 @@
   pointer-events: none;
 }
 
-/* The official data the map couldn't check (#211, #216): a small caveat under the chip, not in the way. */
+/* The official data the map couldn't check: a small caveat under the chip, not in the way. */
 .planner-map-not-checked {
   max-width: 100%;
   margin: 0;
@@ -1025,7 +1025,7 @@
   margin-left: var(--space-1);
 }
 
-/* The access layer's dialog (#163): the dialogs' text size; the date row's fields take
+/* The access layer's dialog: the dialogs' text size; the date row's fields take
    the dialogs' 44 px height from Dialog.css. */
 .planner-access-dialog .access-date {
   align-items: flex-end;

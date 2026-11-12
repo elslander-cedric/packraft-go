@@ -31,8 +31,8 @@ function useOfficialAnswer<T>(feed: LiveFeed<T>, rules: AccessRules | null, want
 }
 
 /**
- * Today's official status (#210), asked for only while it is wanted (something is
- * shown for today, or for a future date, which notes a closure today, #212), and again
+ * Today's official status, asked for only while it is wanted (something is
+ * shown for today, or for a future date, which notes a closure today), and again
  * every 15 minutes while it is, so a failure heals and a page left open doesn't go stale.
  */
 export function useOfficialStatus(rules: AccessRules | null, wanted: boolean): OfficialReadings | undefined {
@@ -40,7 +40,7 @@ export function useOfficialStatus(rules: AccessRules | null, wanted: boolean): O
 }
 
 /**
- * Today's incidents (#216), from the same refresh as the official status when both are
+ * Today's incidents, from the same refresh as the official status when both are
  * wanted. Undefined until they arrive, and while they aren't wanted: the map on a past date
  * neither shows them nor says they failed, whatever the trip has asked for.
  */

@@ -19,7 +19,7 @@ export const legCasingStyle: Record<LegMode, { color: string; weight: number; op
   paddle: { color: "#fff", weight: legStyle.paddle.weight + 5, opacity: 1 },
 };
 
-// The selected leg's casing is wider and in the selected point's yellow (#230).
+// The selected leg's casing is wider and in the selected point's yellow.
 export const selectedLegCasingStyle: Record<LegMode, { color: string; weight: number; opacity: number }> = {
   hike: { color: "#ffd400", weight: legStyle.hike.weight + 9, opacity: 1 },
   paddle: { color: "#ffd400", weight: legStyle.paddle.weight + 9, opacity: 1 },

@@ -1,4 +1,4 @@
-// Autosave of your access points in browser storage (#55, ADR 0023), under
+// Autosave of your access points in browser storage (ADR 0023), under
 // their own key: they belong to you, not to a trip. Thin on purpose: the
 // format and its validation live in the core.
 import {
@@ -34,7 +34,7 @@ function existingBackup(storage: AccessPointStorage, text: string): string | nul
 }
 
 /**
- * Copies a damaged save to a new backup key (round 2 of #55), never over an
+ * Copies a damaged save to a new backup key, never over an
  * existing backup, and only once per damaged text. Null when it can't be written.
  */
 function backUp(storage: AccessPointStorage, text: string, now: () => string): string | null {

@@ -16,7 +16,7 @@ import { notCheckedText, reasonText } from "./reasonText";
 import { accessStateLabel, strings } from "./strings";
 import "./TripAccessView.css";
 
-// Access status and warnings on leg rows, and the warning chips on day cards (#58).
+// Access status and warnings on leg rows, and the warning chips on day cards.
 // Renders the core's trip access; no domain logic. Warnings are paragraphs, not
 // list items, so leg rows keep exactly one list item each.
 
@@ -106,7 +106,7 @@ function Note({ note }: { note: AccessNote }) {
 }
 
 /**
- * What the map can't tell because the SPW didn't answer (#211, #216): always in view while the
+ * What the map can't tell because the SPW didn't answer: always in view while the
  * access layer is on, with a link to the SPW. Only the link takes taps; the map works through the rest.
  */
 export function MapNotCheckedNote({ checks }: { checks: readonly OfficialCheck[] }) {
@@ -122,7 +122,7 @@ export function MapNotCheckedNote({ checks }: { checks: readonly OfficialCheck[]
   );
 }
 
-/** How far to trust a status with no official reading behind it (#211), with a link to the SPW. */
+/** How far to trust a status with no official reading behind it, with a link to the SPW. */
 export function OfficialNotCheckedNote({ checks }: { checks: readonly OfficialCheck[] }) {
   if (checks.length === 0) return null;
   const { title, url } = strings.official.notCheckedLink;
@@ -136,7 +136,7 @@ export function OfficialNotCheckedNote({ checks }: { checks: readonly OfficialCh
   );
 }
 
-/** Lock warnings (#60): "lock at X: portage required", with the region's rule source. Never blocks. */
+/** Lock warnings: "lock at X: portage required", with the region's rule source. Never blocks. */
 function LockWarnings({ warnings }: { warnings: readonly LockWarning[] }) {
   if (warnings.length === 0) return null;
   return (
@@ -154,7 +154,7 @@ function LockWarnings({ warnings }: { warnings: readonly LockWarning[] }) {
   );
 }
 
-/** Obstacle warnings (#215): one line per kind, however many the leg passes. Never blocks. */
+/** Obstacle warnings: one line per kind, however many the leg passes. Never blocks. */
 function ObstacleWarnings({ warnings }: { warnings: readonly ObstacleWarning[] }) {
   const groups = obstacleGroups(warnings);
   if (groups.length === 0) return null;
@@ -175,7 +175,7 @@ function ObstacleWarnings({ warnings }: { warnings: readonly ObstacleWarning[] }
 }
 
 /**
- * Incident warnings (#217): one line each, in the SPW's words, as each can ask something different.
+ * Incident warnings: one line each, in the SPW's words, as each can ask something different.
  * The date always shows, as an incident can be years old (ADR 0035). Never blocks.
  */
 function IncidentWarnings({ warnings }: { warnings: readonly IncidentWarning[] }) {
@@ -229,7 +229,7 @@ export function LegAccessView({ access }: { access: LegAccess }) {
     reason.kind === "rule" && (reason.conditions?.length || reason.link) ? [reason] : [],
   );
   // Without a date, the rules that allow paddling are shown in general terms too (warnings show the others);
-  // on open water today, so is what the SPW adds: a closure coming, or no official status at all (#210).
+  // on open water today, so is what the SPW adds: a closure coming, or no official status at all.
   const generalRules = status.reasons.flatMap((reason) =>
     reason.kind === "rule" &&
     reason.state === "open" &&
@@ -356,7 +356,7 @@ export function LegAccessIcons({
   );
 }
 
-/** Walloon aire warnings (#62): a put-in or take-out in Wallonia without an official aire of yours nearby. */
+/** Walloon aire warnings: a put-in or take-out in Wallonia without an official aire of yours nearby. */
 export function AireWarnings({ warnings }: { warnings: readonly AireWarning[] }) {
   if (warnings.length === 0) return null;
   return (

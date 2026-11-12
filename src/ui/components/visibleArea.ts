@@ -24,7 +24,7 @@ const snapshot = () => {
 const noArea = () => "";
 
 /**
- * Keeps an open dialog in the visible area (#163): follows `window.visualViewport`, which
+ * Keeps an open dialog in the visible area: follows `window.visualViewport`, which
  * shrinks when the on-screen keyboard opens, and returns the style for the dialog's popup.
  * When the area changes, the focused field in `popup` scrolls back into view.
  */

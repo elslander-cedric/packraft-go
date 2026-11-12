@@ -1,4 +1,4 @@
-// Test support for GPX export (#11): parses GPX text and checks it against the
+// Test support for GPX export: parses GPX text and checks it against the
 // GPX 1.1 schema's structure (https://www.topografix.com/GPX/1/1/gpx.xsd),
 // without fetching the schema. Shared by unit and e2e tests.
 import { DOMParser, type Element } from "@xmldom/xmldom";

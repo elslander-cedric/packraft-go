@@ -168,7 +168,7 @@ export const overlays: readonly Overlay[] = [
 ];
 
 /**
- * Lock markers (#57) show from this zoom on. Further out a marker covers a few
+ * Lock markers show from this zoom on. Further out a marker covers a few
  * kilometres of the waters around it, so a click on a river would open a lock.
  */
 export const lockMarkersMinZoom = 11;
@@ -213,6 +213,6 @@ export const paneZIndex = {
   tripLegHits: 450,
   /** The lock, official aire and obstacle markers: above the leg hit lines, so a tap on one on a leg opens it. */
   accessLocks: 460,
-  /** The points' hit areas: above the access-point markers, so a route point there is grabbed first (#120). */
+  /** The points' hit areas: above the access-point markers, so a route point there is grabbed first. */
   tripPointHits: 620,
 } as const;

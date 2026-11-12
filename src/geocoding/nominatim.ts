@@ -1,6 +1,6 @@
 // Nominatim adapter: one client that implements the core's DefaultNameSource
-// with OpenStreetMap Nominatim's reverse geocoding (ADR 0027, #136) and its
-// PlaceSearchSource with Nominatim's search (ADR 0030, #172). It is the only
+// with OpenStreetMap Nominatim's reverse geocoding (ADR 0027) and its
+// PlaceSearchSource with Nominatim's search (ADR 0030). It is the only
 // module that talks to Nominatim, and the only one that sends your access point
 // positions anywhere; nothing else about a point is sent. A search sends only
 // its text and the visible map area. Usage policy: at most one request a second

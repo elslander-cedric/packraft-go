@@ -1,7 +1,7 @@
 import { useEffect, type RefObject } from "react";
 
 /**
- * A leg a day card's warning chip asked to show (#58). Each request has its own `seq`,
+ * A leg a day card's warning chip asked to show. Each request has its own `seq`,
  * so asking for the same leg again scrolls to it again.
  */
 export type ShownLeg = { readonly leg: number; readonly seq: number };

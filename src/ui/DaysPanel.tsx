@@ -12,9 +12,9 @@ import { DayWarningChips } from "./TripAccessView";
 /**
  * Totals for each day (ADR 0008): the trip is split into days at camps.
  * Renders the core's day summaries; no domain logic. Each day is a card titled by a
- * calendar tile with its date (#52), its figures shown after icons. A day with access,
+ * calendar tile with its date, its figures shown after icons. A day with access,
  * lock, incident, obstacle or aire warnings shows one chip per leg that has any; the warnings themselves
- * are on the leg, which a chip shows (#58).
+ * are on the leg, which a chip shows.
  */
 export default function DaysPanel({
   days,
@@ -27,7 +27,7 @@ export default function DaysPanel({
   days: readonly DaySummary[];
   access?: readonly DayAccess[];
   aire?: readonly AireWarning[];
-  /** A day card was tapped: the planner zooms the map to that day (#123). */
+  /** A day card was tapped: the planner zooms the map to that day. */
   onSelectDay: (day: number) => void;
   /** The tapped card; none when undefined. */
   selectedDay?: number;
@@ -73,7 +73,7 @@ function DayFigure({ figure, value }: { figure: DayFigureKey; value: string | fa
  * trip's tile shows "Day" and the day's number. Beside it, like a leg row, the hike and
  * paddle distances as a headline with the time on the right, and under them the climb,
  * descent and legs; a figure that is zero is left out. The card takes the tap and zooms
- * the map to that day (#123); its warning chips take taps of their own.
+ * the map to that day; its warning chips take taps of their own.
  */
 function DayCard({
   day,

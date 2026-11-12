@@ -23,7 +23,7 @@ type AccessPointDetailsProps = {
   onChange: (changes: AccessPointChanges) => void;
 };
 
-/** An access point's details, editable: the fields of its dialog (#63). */
+/** An access point's details, editable: the fields of its dialog. */
 export function AccessPointDetails({ point, onChange: update }: AccessPointDetailsProps) {
   const headingId = `access-point-${point.id}`;
   return (

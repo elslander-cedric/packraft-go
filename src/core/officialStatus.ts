@@ -1,4 +1,4 @@
-// Official status (ADR 0035, #210, GLOSSARY "Official status"): the SPW's own
+// Official status (ADR 0035, GLOSSARY "Official status"): the SPW's own
 // status per official stretch for today, and what each of its codes means. Pure:
 // readings are passed in by whoever asked the source.
 import type { OfficialIncidents } from "./incident";
@@ -49,7 +49,7 @@ export type OfficialVerdict =
   | { readonly kind: "unavailable" }
   | { readonly kind: "none" };
 
-/** What the app asks the SPW and may have to go without, today or on a future date (#211): the note names each one. */
+/** What the app asks the SPW and may have to go without, today or on a future date: the note names each one. */
 export type OfficialCheck = "closures" | "incidents";
 
 /** A stretch the SPW has closed today, with its reason if it gives one. */

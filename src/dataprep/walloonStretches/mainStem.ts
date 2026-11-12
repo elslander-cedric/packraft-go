@@ -1,4 +1,4 @@
-// Assembles a river's main course from its OSM ways (#54). OSM draws waterways
+// Assembles a river's main course from its OSM ways. OSM draws waterways
 // in the direction of flow, so the longest downstream path through the ways is
 // the main course: side channels and mill races drop out. Small gaps in the
 // mapping (e.g. where a river runs underground) are bridged.

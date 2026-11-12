@@ -1,4 +1,4 @@
-// File names for files the trip leaves the app as: the save file (#10) and the GPX export (#11, #41).
+// File names for files the trip leaves the app as: the save file and the GPX export.
 import type { Trip } from "./trip";
 
 // Characters Windows, macOS or Linux do not allow in file names, and control characters.

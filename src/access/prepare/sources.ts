@@ -324,7 +324,7 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
   },
 ];
 
-/** Brussels waters (#57; docs/research/brussels.md, researched 2026-10-12). Geometry is kept inside the region. */
+/** Brussels waters (docs/research/brussels.md, researched 2026-10-12). Geometry is kept inside the region. */
 const BRUSSELS_BBOX = "50.76,4.24,50.93,4.50";
 const isSenne = (tags: Record<string, string>) => /senne|zenne/i.test(tags.name ?? "");
 const isCulvert = (tags: Record<string, string>) => ["culvert", "building_passage", "covered"].includes(tags.tunnel ?? "");

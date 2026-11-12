@@ -80,7 +80,7 @@ function positionOf(geometry: PkayakAnswer["features"][number]["geometry"]): rea
     : null;
 }
 
-/** Each official stretch's line as prepared for the mapping to AGW records (#209). Never shipped in the app. */
+/** Each official stretch's line as prepared for the mapping to AGW records. Never shipped in the app. */
 export type OfficialLineDataset = {
   readonly attribution: string;
   readonly source: AccessSource;

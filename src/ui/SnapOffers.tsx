@@ -32,7 +32,7 @@ type SnapOffersProps = {
 
 /**
  * Offers to snap a new put-in or take-out to a nearby access point of yours or
- * official aire (#62, ADR 0035). Declining changes nothing; accepting is an undoable move. Renders the
+ * official aire (ADR 0035). Declining changes nothing; accepting is an undoable move. Renders the
  * core's offers; no domain logic.
  */
 export default function SnapOffers({ offers, onAccept, onDecline }: SnapOffersProps) {

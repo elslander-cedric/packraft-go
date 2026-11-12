@@ -40,13 +40,13 @@ export function formatDayDate(date: string): string {
   return strings.dayDate(weekday, day, month, year);
 }
 
-/** A river's flow for display, in m³/s with at most two decimals (#61). */
+/** A river's flow for display, in m³/s with at most two decimals. */
 export function formatFlow(m3s: number): string {
   return strings.flow.m3s(String(Math.round(m3s * 100) / 100));
 }
 
 /**
- * When a flow reading was taken (#61). The service's timestamp is the gauge's
+ * When a flow reading was taken. The service's timestamp is the gauge's
  * local time with its offset; its date and time are read from the text, so the
  * planner's own time zone never shifts them.
  */

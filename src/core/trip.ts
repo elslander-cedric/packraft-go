@@ -1,4 +1,4 @@
-// Trip planner core: pure TypeScript, no React, no network (spec #2, Seam 1).
+// Trip planner core: pure TypeScript, no React, no network.
 import {
   canUndo,
   deletePoint,
@@ -53,7 +53,7 @@ export type Edit =
   | { readonly type: "addPoint"; readonly at: LatLng; readonly mode?: LegMode }
   | { readonly type: "movePoint"; readonly index: number; readonly to: LatLng }
   | { readonly type: "deletePoint"; readonly index: number }
-  /** Inserts a point on leg `index`, nearest to `near` on its route (#122). */
+  /** Inserts a point on leg `index`, nearest to `near` on its route. */
   | { readonly type: "insertPoint"; readonly index: number; readonly near: LatLng }
   | { readonly type: "setLegMode"; readonly index: number; readonly mode: LegMode }
   | { readonly type: "toggleCamp"; readonly index: number }

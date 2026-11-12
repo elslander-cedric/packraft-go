@@ -2,7 +2,7 @@
 // river. They come live and need signal. Kept apart from the access status on purpose:
 // nothing here reaches `accessAt`, so an incident never changes an access state, even
 // when its text says the river is closed. A paddle leg that passes one gets a warning
-// with its text (#217), as for an obstacle. Information only: it never blocks.
+// with its text, as for an obstacle. Information only: it never blocks.
 import type { Position } from "./access";
 import type { CalendarDate } from "./calendarDate";
 import { markersPassedInOrder } from "./locks";

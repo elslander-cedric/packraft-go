@@ -1,4 +1,4 @@
-// Live BRouter check (issue #29): compares what the public BRouter server answers
+// Live BRouter check: compares what the public BRouter server answers
 // today with the recorded fixtures our tests replay, so we notice when the server
 // changes its profiles or response format. Run by hand with `npm run check:brouter`;
 // never part of `npm test`, `npm run e2e` or CI (ADR 0019). Nothing here writes

@@ -1,4 +1,4 @@
-// Builds the Walloon stretch geometry from OSM extracts and the Annex 1/2 data (#54, ADR 0024).
+// Builds the Walloon stretch geometry from OSM extracts and the Annex 1/2 data (ADR 0024).
 // Pure: the OSM answers, recipes and Cedric's review decisions are all passed in.
 import { crossings, distanceM, lengthM, pointAt, project, simplify, slice, type Projection, type Pt } from "./geo";
 import { mainStem } from "./mainStem";

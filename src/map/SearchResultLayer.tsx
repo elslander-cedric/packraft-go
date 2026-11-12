@@ -1,6 +1,6 @@
 "use client";
 
-// The shown search result (#173, ADR 0030): a pin with its name, where the map
+// The shown search result (ADR 0030): a pin with its name, where the map
 // moves when a result is picked. Imports Leaflet: only used inside TripMap.
 import { divIcon, latLngBounds } from "leaflet";
 import { useEffect } from "react";
@@ -21,7 +21,7 @@ const pin = divIcon({
   tooltipAnchor: [0, -30],
 });
 
-/** How many pixels of the map are hidden at its top, right and bottom (the pill, the side panel or the sheet; #174). */
+/** How many pixels of the map are hidden at its top, right and bottom (the pill, the side panel or the sheet). */
 export type MapCover = { top: number; right: number; bottom: number };
 
 const UNCOVERED: MapCover = { top: 0, right: 0, bottom: 0 };

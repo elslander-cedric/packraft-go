@@ -1,4 +1,4 @@
-// Your GPS position (#56, ADR 0023): what is known about it, and
+// Your GPS position (ADR 0023): what is known about it, and
 // what to tell the user. Browser access lives in usePosition.ts.
 import type { LatLng } from "@/core/trip";
 import { strings } from "../strings";

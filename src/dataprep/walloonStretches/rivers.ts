@@ -1,5 +1,5 @@
 // The rivers that carry Walloon stretches (AGW Annex 1), with the names OSM uses
-// for them and a generous search box. One Overpass query per river (#54).
+// for them and a generous search box. One Overpass query per river.
 
 export type Bbox = { south: number; west: number; north: number; east: number };
 

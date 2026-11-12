@@ -25,9 +25,9 @@ const pointText = strings.accessPoints;
 
 type Props = {
   access: AccessPointsState;
-  /** The trip, whose route splits the list (#156). */
+  /** The trip, whose route splits the list. */
   trip: Trip;
-  /** The official aires; the ones on the route are listed among your points (#208). */
+  /** The official aires; the ones on the route are listed among your points. */
   officialAires: readonly OfficialAire[];
   /** Your position when shown, to order the points not on the route; null otherwise. */
   position: LatLng | null;
@@ -48,10 +48,10 @@ function alongRoute({ alongKm, role }: OnRoute | OnRouteAire): string {
 }
 
 /**
- * The planner's Access points tab (#119, ADR 0026): your list, each row
+ * The planner's Access points tab (ADR 0026): your list, each row
  * with edit and delete buttons. While the trip has a route, the points on it
- * come first in route order, then the rest nearest to you (#156). Official
- * aires on the route sit among them, read-only (#208). Marking is the floating
+ * come first in route order, then the rest nearest to you. Official
+ * aires on the route sit among them, read-only. Marking is the floating
  * button on the map; the details are a dialog. Every change is saved on the
  * device at once by `useAccessPoints`, with or without signal.
  */
@@ -77,7 +77,7 @@ export default function AccessPoints({ access, trip, officialAires, position, on
       {access.savingPaused === "unknown-version" ? pointText.autosaveUnknownVersion : pointText.damagedNotBackedUp}
     </p>
   );
-  // A damaged save was backed up on load, before it was replaced (round 2 of #55).
+  // A damaged save was backed up on load, before it was replaced.
   const backedUpNote = access.backupKey !== null && (
     <p role="status" className="planner-position-alert">
       {pointText.damagedBackedUp(access.backupKey)}

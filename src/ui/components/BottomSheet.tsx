@@ -33,7 +33,7 @@ export type BottomSheetProps = {
  * closes and doesn't block the page behind it (non-modal), and settles at one of
  * three stops, picked by how far it is dragged. From the keyboard, the handle
  * is a slider over the stops: arrow up and down go one stop, Home and End to
- * the peek and the top (#189). It isn't a button, so a drag can start on it.
+ * the peek and the top. It isn't a button, so a drag can start on it.
  * At the peek the sheet's body is off screen and inert, so Tab doesn't land there.
  */
 export function BottomSheet({

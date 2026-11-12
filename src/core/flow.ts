@@ -1,4 +1,4 @@
-// Live Walloon flows (ADR 0024, #61): the flow source interface and the AGW
+// Live Walloon flows (ADR 0024): the flow source interface and the AGW
 // art. 6 flow rules. Pure: readings are passed in by whoever asked the flow
 // source; the core never calls a service or reads a clock.
 import type { AgwGauge, AgwRule } from "./access";

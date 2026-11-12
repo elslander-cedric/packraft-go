@@ -81,12 +81,12 @@ function DetailsButton({ details }: { details: NonNullable<TripRowProps["details
 }
 
 /**
- * One row of the Sections tab (#121), a section or one of its legs: its mode icon and distance as a headline with
+ * One row of the Sections tab, a section or one of its legs: its mode icon and distance as a headline with
  * the time on the right, and under it the climb and descent (drop on a paddle row), each
  * after its icon, then icons for the access and each kind of warning, with the button to its
  * details at the right of that last line, or under the routing state while there is one.
  * The rest of the row is one button: a tap zooms the map, and on a selected section of several
- * legs also opens it (#200).
+ * legs also opens it.
  */
 export function TripRow({
   row,

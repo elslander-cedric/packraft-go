@@ -1,5 +1,5 @@
 /* Map markers: fill by use, shape by kind (drawn in AccessPointLayer). */
-/* A 44 px hit box with the shape in its middle, for press-and-drag (#120). */
+/* A 44 px hit box with the shape in its middle, for press-and-drag. */
 .access-point-marker {
   display: flex;
   align-items: center;
@@ -8,7 +8,7 @@
   border: none;
 }
 
-/* Only in access point editing do the markers take taps and drags (ADR 0036, #226). */
+/* Only in access point editing do the markers take taps and drags (ADR 0036). */
 .access-point-marker.access-point-editable {
   cursor: pointer;
 }

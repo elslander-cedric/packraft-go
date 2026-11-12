@@ -1,4 +1,4 @@
-// Save to file / open from file (#10, ADR 0011) and GPX export (#11, #41; ADR 0006, ADR 0037).
+// Save to file / open from file (ADR 0011) and GPX export (ADR 0006, ADR 0037).
 // Uses the same save format as autosave; the formats, their validation and the
 // file names live in the core.
 import { tripToGpx, type GpxNames } from "@/core/gpx";

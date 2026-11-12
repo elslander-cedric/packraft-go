@@ -3,7 +3,7 @@ import { strings } from "./strings";
 
 const text = strings.accessPoints;
 
-/** How an access point reads in a list, a marker or a snap offer (#136). */
+/** How an access point reads in a list, a marker or a snap offer. */
 export type AccessPointText = {
   /** What makes it recognisable: its name, else its note's first line, else its use and kind. */
   readonly heading: string;

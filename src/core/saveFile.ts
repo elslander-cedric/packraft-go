@@ -1,4 +1,4 @@
-// Save format (spec #2, ADR 0011): the trip as versioned JSON, including
+// Save format (ADR 0011): the trip as versioned JSON, including
 // routed results, so a restored trip needs no routing requests (ADR 0014).
 import { isCalendarDate } from "./calendarDate";
 import { tripFileName } from "./fileName";
@@ -8,7 +8,7 @@ import { emptyTrip, type LatLng, type Leg, type LegMode, type Trip } from "./tri
 export const SAVE_FORMAT = "packraft-go-trip";
 /**
  * The save format's version (ADR 0011, amended): the only version the app
- * saves and the only one it opens. The format was reset for v2 (#52): version 1
+ * saves and the only one it opens. The format was reset for v2: version 1
  * holds camps and the optional start date. The earlier "version 2" format is
  * refused like any other version; there is no code to read older formats.
  */
@@ -86,7 +86,7 @@ export function restoreTrip(stored: string | null): Trip {
 
 /**
  * The trip to start with, and whether browser storage holds a save from a
- * newer or unknown version (#28). Such a save is not discarded: the planner
+ * newer or unknown version. Such a save is not discarded: the planner
  * keeps it in storage and warns, since a newer deployment may be able to read
  * it. Corrupt data is not flagged; it just gives an empty trip.
  */

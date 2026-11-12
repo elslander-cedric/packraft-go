@@ -1,10 +1,10 @@
 "use client";
 
-// Your access points on the map (#55, ADR 0023): one marker each, shaped by
+// Your access points on the map (ADR 0023): one marker each, shaped by
 // kind, with a white flag in it (ADR 0028), grey in normal mode and green in
 // access point editing (ADR 0036). While `editable`
 // (access point editing, ADR 0036), tap a marker to select it; press and drag
-// it to move it (#120). Otherwise the markers are inert (#226): a press passes
+// it to move it. Otherwise the markers are inert: a press passes
 // through to the route point, leg or map under it, and the trip is drawn over
 // them (their own pane below the legs). In normal mode, points whose markers would
 // overlap at the current zoom show as one marker with their count (`accessPointGroups.ts`);
@@ -67,7 +67,7 @@ const SIZE = 24;
 const markerIcons = new Map<string, ReturnType<typeof divIcon>>();
 
 /**
- * Drawn in a 44 px hit box, for press-and-drag (#120) instead of Leaflet's marker drag,
+ * Drawn in a 44 px hit box, for press-and-drag instead of Leaflet's marker drag,
  * which a finger can't use.
  */
 function accessPointIcon(point: AccessPoint, selected: boolean, editable: boolean, draft = false) {

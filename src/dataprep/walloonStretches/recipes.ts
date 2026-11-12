@@ -1,4 +1,4 @@
-// How to find each Walloon stretch end in OSM (#54). Each end is a recipe:
+// How to find each Walloon stretch end in OSM. Each end is a recipe:
 // confluences and borders are computed, dams and bridges looked up, villages
 // snapped. `inferred` marks ends Annex 1 doesn't state: they always need review.
 import type { Pt } from "./geo";

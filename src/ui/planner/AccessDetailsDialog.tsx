@@ -21,12 +21,12 @@ export type AccessDetailsDialogProps = {
   incident?: Incident;
   /** The date the water's or the aire's status is for. */
   date: string;
-  /** Today's incidents, once asked for: the note on a water or an aire says if they failed (#216). */
+  /** Today's incidents, once asked for: the note on a water or an aire says if they failed. */
   incidents?: OfficialIncidents;
   onClose: () => void;
 };
 
-/** A water's, a lock's, an official aire's, an obstacle's or an incident's details (#125), in a dialog over the map. */
+/** A water's, a lock's, an official aire's, an obstacle's or an incident's details, in a dialog over the map. */
 export default function AccessDetailsDialog({
   water,
   lock,

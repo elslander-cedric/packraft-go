@@ -45,7 +45,7 @@ export type SettingsDialogProps = {
 };
 
 /**
- * The planner's pace factor and paddling speed (#151): a dialog from the menu. What the planner types
+ * The planner's pace factor and paddling speed: a dialog from the menu. What the planner types
  * is a draft; Save stores it, Cancel drops it. Save waits until every field
  * holds a usable value.
  */

@@ -1,4 +1,4 @@
-/* Offers to snap a new put-in or take-out to an access point (#62). */
+/* Offers to snap a new put-in or take-out to an access point. */
 .snap-offers {
   display: flex;
   flex-direction: column;

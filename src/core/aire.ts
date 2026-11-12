@@ -1,4 +1,4 @@
-// The Walloon aire warning (#62, ADR 0023, AGW art. 5): in Wallonia you may only
+// The Walloon aire warning (ADR 0023, AGW art. 5): in Wallonia you may only
 // get on or off the water at an aire. A put-in or take-out there that is not
 // near an aire gets a warning. It never blocks. Two things count as an aire: your
 // own access points of kind official aire, whatever their use, and the built-in

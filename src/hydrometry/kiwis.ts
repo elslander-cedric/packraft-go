@@ -1,5 +1,5 @@
 // KiWIS adapter: implements the core's FlowSource with the SPW's public
-// hydrometry service (ADR 0024, #61). The browser calls it directly (it allows
+// hydrometry service (ADR 0024). The browser calls it directly (it allows
 // any origin): one batched request resolves the series, one batched request
 // reads their values, and the answer is cached for 15 minutes. A request that
 // doesn't answer in time counts as a failure. It is the only module that talks
@@ -15,7 +15,7 @@ export const HOURLY_SERIES = "10-Debit.1h.Moyen";
 /** How long an answer (or a failure) is reused: about 15 minutes (ADR 0024). */
 export const CACHE_MS = 15 * 60 * 1000;
 
-/** How long one request may take, body included, before it counts as a failure (#205). */
+/** How long one request may take, body included, before it counts as a failure. */
 export const REQUEST_TIMEOUT_MS = 15 * 1000;
 
 type Fetch = (input: string, init?: { signal: AbortSignal }) => Promise<Response>;
