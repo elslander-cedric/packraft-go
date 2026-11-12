@@ -2,6 +2,17 @@
 
 The one planner (ADRs 0026, 0034), on every screen, with `src/map/TripMap.tsx`. `ClientTripPlanner` loads `Planner`. It runs `usePlanner` and adds no planning rules. Its text is in `strings.planner`, its styles in `planner.css` (classes `planner-*`).
 
+## How `Planner.tsx` is split
+
+`Planner` wires the pieces together and holds the two modes' enter/leave logic. Its state lives in hooks, one concern each:
+
+- `usePanel`: the bottom sheet or the side panel (which one, its stop or width, raising it, how much of the map it covers).
+- `useNextLegMode`: the mode the next leg gets.
+- `useTripRows`: the marked row, the open sections and the open details dialog in the Sections and Days tabs.
+- `useMarkAccessPoint`, `usePosition`: the flag button and your GPS position.
+
+`PlannerPanel` draws the totals, tabs and tab panels in the sheet or the panel. `TripButtons` (bottom right) and `AccessPointButtons` (bottom left) are the floating button stacks.
+
 ## Layout
 
 - A full-screen map with floating buttons and, in portrait at width ≤ 640 px, a bottom sheet; everywhere else the resizable side panel on the right (`SHEET_QUERY` in `usePlannerLayout.ts`).
@@ -19,7 +30,7 @@ The one planner (ADRs 0026, 0034), on every screen, with `src/map/TripMap.tsx`. 
 
 - Leg and section rows are one `TripRow`.
 - `SectionsList` and `SectionDetailsDialog` show a section's totals (`TripSummary.sections`) and its legs' warnings (`legsAccess`, ADR 0029).
-- A tap on the selected section of several legs opens it to show its legs (#200), and `Planner` keeps which are open by first leg. Its legs sit in line with it on a grey band.
+- A tap on the selected section of several legs opens it to show its legs (#200), and `useTripRows` keeps which are open by first leg. Its legs sit in line with it on a grey band.
 - A section or leg with details has an Access details button on its row, at the right of the last line, or under the routing state while there is one. It only opens the dialog.
 
 ## Access point editing
