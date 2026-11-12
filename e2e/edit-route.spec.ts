@@ -27,7 +27,7 @@ const expectNear = (actual: Pixel, expected: Pixel, tolerance = 3) => {
 async function openMap(page: Page) {
   const network = await serveOffline(page);
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return { network, cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
 }
 
@@ -60,9 +60,7 @@ async function drag(page: Page, from: Pixel, to: Pixel) {
 
 test.beforeEach(({ page }) => showAllLegs(page));
 
-test("draw, drag a point, delete a point, then undo everything back to an empty trip", async ({
-  page,
-}) => {
+test("draw, drag a point, delete a point, then undo everything back to an empty trip", async ({ page }) => {
   const { network, cx, cy } = await openMap(page);
   const a = { x: cx - 200, y: cy };
   const b = { x: cx, y: cy - 100 };
@@ -71,7 +69,9 @@ test("draw, drag a point, delete a point, then undo everything back to an empty 
 
   // Draw three points: two legs.
   await expect(undoButton(page)).toBeDisabled();
-  for (const p of [a, b, c]) await page.mouse.click(p.x, p.y);
+  for (const p of [a, b, c]) {
+    await page.mouse.click(p.x, p.y);
+  }
   await expect(points(page)).toHaveCount(3);
   await expect(legRows(page)).toHaveCount(2);
   const totalBefore = await totals(page).textContent();
@@ -126,14 +126,14 @@ test("draw, drag a point, delete a point, then undo everything back to an empty 
   expect(network.blocked).toEqual([]);
 });
 
-test("the Delete key removes the selected point; deleting an end point removes its leg", async ({
-  page,
-}) => {
+test("the Delete key removes the selected point; deleting an end point removes its leg", async ({ page }) => {
   const { cx, cy } = await openMap(page);
   const a = { x: cx - 150, y: cy };
   const b = { x: cx, y: cy };
   const c = { x: cx + 150, y: cy };
-  for (const p of [a, b, c]) await page.mouse.click(p.x, p.y);
+  for (const p of [a, b, c]) {
+    await page.mouse.click(p.x, p.y);
+  }
   await expect(legRows(page)).toHaveCount(2);
 
   await page.mouse.click(c.x, c.y);
@@ -158,14 +158,14 @@ test("the Delete key removes the selected point; deleting an end point removes i
   await expect(points(page)).toHaveCount(2);
 });
 
-test("a selected point can still be dragged, and dragging does not select or add points", async ({
-  page,
-}) => {
+test("a selected point can still be dragged, and dragging does not select or add points", async ({ page }) => {
   const { cx, cy } = await openMap(page);
   const a = { x: cx - 150, y: cy };
   const b = { x: cx + 150, y: cy };
   const moved = { x: cx + 150, y: cy + 100 };
-  for (const p of [a, b]) await page.mouse.click(p.x, p.y);
+  for (const p of [a, b]) {
+    await page.mouse.click(p.x, p.y);
+  }
 
   await page.mouse.click(b.x, b.y);
   await expect(mapRegion(page).locator("path.point.point-selected")).toHaveCount(1);

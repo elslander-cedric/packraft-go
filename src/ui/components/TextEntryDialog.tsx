@@ -43,7 +43,9 @@ export function TextEntryDialog({
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setValue(initialValue);
+    if (open) {
+      setValue(initialValue);
+    }
   }
 
   const popup = useRef<HTMLDivElement>(null);
@@ -54,7 +56,9 @@ export function TextEntryDialog({
     <Dialog.Root
       open={open}
       onOpenChange={(next) => {
-        if (!next) onCancel();
+        if (!next) {
+          onCancel();
+        }
       }}
     >
       <Dialog.Portal>

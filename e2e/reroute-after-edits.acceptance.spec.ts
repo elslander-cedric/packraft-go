@@ -19,7 +19,7 @@ const SNAPPED: BRouterReply = { status: 200, body: brouterFixture("hiking-succes
 
 async function openMap(page: Page) {
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
@@ -51,7 +51,9 @@ test("drag re-requests only the two changed legs; undo restores the routes witho
     { x: c.x + 80, y: c.y + 60 },
     { x: c.x + 240, y: c.y - 60 },
   ];
-  for (const p of pts) await page.mouse.click(p.x, p.y);
+  for (const p of pts) {
+    await page.mouse.click(p.x, p.y);
+  }
   await expectAllRouted(page, 3);
   await page.waitForTimeout(300);
   expect(net.brouter).toHaveLength(3);
@@ -92,12 +94,15 @@ test("undoing a drag while its request is still out leaves no leg stuck pending"
   const net = await serveOffline(page, {
     brouter: async () => {
       // The first answer comes at once; later ones wait until the test releases them.
-      if (++n > 1) await held;
+      if (++n > 1) {
+        await held;
+      }
       return SNAPPED;
     },
   });
   const c = await openMap(page);
-  const a = { x: c.x - 150, y: c.y }, b = { x: c.x + 150, y: c.y };
+  const a = { x: c.x - 150, y: c.y },
+    b = { x: c.x + 150, y: c.y };
   await page.mouse.click(a.x, a.y);
   await page.mouse.click(b.x, b.y);
   await expectAllRouted(page, 1);
@@ -116,8 +121,12 @@ test("undoing a drag while its request is still out leaves no leg stuck pending"
 test("repeated drag and undo keeps every leg routed and asks only for the dragged legs", async ({ page }) => {
   const net = await serveOffline(page, { brouter: () => SNAPPED });
   const c = await openMap(page);
-  const a = { x: c.x - 150, y: c.y }, b = { x: c.x, y: c.y - 80 }, d = { x: c.x + 150, y: c.y };
-  for (const p of [a, b, d]) await page.mouse.click(p.x, p.y);
+  const a = { x: c.x - 150, y: c.y },
+    b = { x: c.x, y: c.y - 80 },
+    d = { x: c.x + 150, y: c.y };
+  for (const p of [a, b, d]) {
+    await page.mouse.click(p.x, p.y);
+  }
   await expectAllRouted(page, 2);
   for (let i = 0; i < 3; i++) {
     await drag(page, b, { x: c.x + 20 * i, y: c.y + 100 });

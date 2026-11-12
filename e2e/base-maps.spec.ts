@@ -157,7 +157,9 @@ test("aerial photos go to zoom 18 and further; switching to OpenTopoMap there zo
     await expect(mapRegion(page).locator(".leaflet-map-pane")).not.toHaveClass(/leaflet-zoom-anim/);
   };
   for (let step = 0; step < 30; step++) {
-    if (network.tiles.some((tile) => tile.source === "wallonia" && tile.z === 18)) break;
+    if (network.tiles.some((tile) => tile.source === "wallonia" && tile.z === 18)) {
+      break;
+    }
     await wheelIn();
     await page.waitForTimeout(300);
   }

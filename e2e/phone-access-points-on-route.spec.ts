@@ -72,7 +72,9 @@ const POINTS = [
 async function openWithTrip(page: Page) {
   await page.addInitScript(
     (entries) => {
-      for (const [key, value] of entries) localStorage.setItem(key, value);
+      for (const [key, value] of entries) {
+        localStorage.setItem(key, value);
+      }
     },
     [
       [TRIP_KEY, serialiseTrip(TRIP)],
@@ -134,7 +136,9 @@ test("rows run edge to edge like the legs, and a selected row keeps its backgrou
 test("none on the route says so, and the rest still follow", async ({ page }) => {
   await page.addInitScript(
     (entries) => {
-      for (const [key, value] of entries) localStorage.setItem(key, value);
+      for (const [key, value] of entries) {
+        localStorage.setItem(key, value);
+      }
     },
     [
       [TRIP_KEY, serialiseTrip(TRIP)],

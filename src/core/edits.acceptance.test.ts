@@ -133,7 +133,9 @@ describe("undo reverses add, move and delete, repeatedly, back to an empty trip"
       del(0),
     ];
     const states: Trip[] = [emptyTrip()];
-    for (const e of edits) states.push(applyEdit(states[states.length - 1], e));
+    for (const e of edits) {
+      states.push(applyEdit(states[states.length - 1], e));
+    }
 
     let trip = states[states.length - 1];
     for (let i = states.length - 2; i >= 0; i--) {
@@ -172,9 +174,15 @@ describe("undo reverses add, move and delete, repeatedly, back to an empty trip"
 
   it("a long history (200 edits) undoes all the way back", () => {
     let trip = emptyTrip();
-    for (let i = 0; i < 100; i++) trip = add(trip, { lat: 50 + i / 1000, lng: 5 });
-    for (let i = 0; i < 100; i++) trip = applyEdit(trip, move(i, { lat: 51, lng: 5 + i / 1000 }));
-    for (let i = 0; i < 200; i++) trip = applyEdit(trip, undo);
+    for (let i = 0; i < 100; i++) {
+      trip = add(trip, { lat: 50 + i / 1000, lng: 5 });
+    }
+    for (let i = 0; i < 100; i++) {
+      trip = applyEdit(trip, move(i, { lat: 51, lng: 5 + i / 1000 }));
+    }
+    for (let i = 0; i < 200; i++) {
+      trip = applyEdit(trip, undo);
+    }
     expect(trip.points).toEqual([]);
   });
 });
@@ -183,12 +191,7 @@ describe("edits clear routed results only for legs they change", () => {
   const five = () => routedTrip(P, ["hike", "paddle", "hike", "paddle"]);
 
   it("moving a middle point clears just the two legs that touch it", () => {
-    expect(routed(applyEdit(five(), move(2, ELSEWHERE)))).toEqual([
-      "route-0",
-      undefined,
-      undefined,
-      "route-3",
-    ]);
+    expect(routed(applyEdit(five(), move(2, ELSEWHERE)))).toEqual(["route-0", undefined, undefined, "route-3"]);
   });
 
   it("moving the start or end point clears just its one leg", () => {

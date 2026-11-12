@@ -11,9 +11,7 @@ const [river, name, ...box] = process.argv.slice(2);
 const [south, west, north, east] = box.map(Number);
 const inside = (lat: number, lon: number) => lat >= south && lat <= north && lon >= west && lon <= east;
 const keep = (e: OverpassElement) =>
-  e.type === "node"
-    ? inside(e.lat!, e.lon!)
-    : (e.geometry ?? []).some((p) => p !== null && inside(p.lat, p.lon));
+  e.type === "node" ? inside(e.lat!, e.lon!) : (e.geometry ?? []).some((p) => p !== null && inside(p.lat, p.lon));
 const slim = (e: OverpassElement): OverpassElement => ({
   type: e.type,
   id: e.id,

@@ -61,7 +61,9 @@ describe("adapter converts recorded BRouter GeoJSON", () => {
     expect(b).toEqual([TO.lng, TO.lat]);
 
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) {
+      return;
+    }
     const raw = JSON.parse(fixture("hiking-success.geojson")).features[0].geometry.coordinates as number[][];
     expect(result.geometry).toHaveLength(raw.length);
     result.geometry.forEach((p, i) => {
@@ -75,7 +77,9 @@ describe("adapter converts recorded BRouter GeoJSON", () => {
   it("the recorded track's figures roughly match BRouter's own track length", async () => {
     const r = recorded(fixture("hiking-success.geojson"));
     const result = await createBRouterRouter({ fetch: r.fetch }).route("hike", [FROM, TO]);
-    if (!result.ok) throw new Error("expected a route");
+    if (!result.ok) {
+      throw new Error("expected a route");
+    }
     const base = [FROM, TO].reduce((t, at) => applyEdit(t, { type: "addPoint", at }), emptyTrip());
     const trip: Trip = { ...base, legs: [{ mode: "hike", route: { status: "routed", geometry: result.geometry } }] };
     const props = JSON.parse(fixture("hiking-success.geojson")).features[0].properties;
@@ -104,7 +108,9 @@ describe("adapter converts recorded BRouter GeoJSON", () => {
     const r = recorded(body, status);
     const result = await createBRouterRouter({ fetch: r.fetch }).route("hike", [FROM, TO]);
     expect(result.ok).toBe(false);
-    if (result.ok) return;
+    if (result.ok) {
+      return;
+    }
     expect(["no-route", "unavailable"]).toContain(result.failure.kind);
   });
 
@@ -126,7 +132,9 @@ describe("adapter converts recorded BRouter GeoJSON", () => {
       ],
     });
     const result = await createBRouterRouter({ fetch: recorded(body).fetch }).route("hike", [FROM, TO]);
-    if (!result.ok) throw new Error("expected a route");
+    if (!result.ok) {
+      throw new Error("expected a route");
+    }
     expect(result.geometry).toHaveLength(3);
     expect(result.geometry[1].elevation).toBe(100);
   });

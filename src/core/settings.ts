@@ -65,7 +65,9 @@ export function withBaseMap(settings: Settings, baseMap: BaseMapId): Settings {
 
 /** Settings with an overlay switched on or off; the same settings when it already is. */
 export function withOverlay(settings: Settings, overlay: OverlayId, on: boolean): Settings {
-  if (settings.overlays.includes(overlay) === on) return settings;
+  if (settings.overlays.includes(overlay) === on) {
+    return settings;
+  }
   return { ...settings, overlays: overlayIds.filter((id) => (id === overlay ? on : settings.overlays.includes(id))) };
 }
 
@@ -77,7 +79,9 @@ export function withSidePanel(settings: Settings, change: { width?: number; open
   const width = change.width === undefined ? settings.sidePanelWidth : Math.round(change.width);
   const sidePanelWidth = isUsableSetting(width) ? width : settings.sidePanelWidth;
   const sidePanelOpen = change.open ?? settings.sidePanelOpen;
-  if (sidePanelWidth === settings.sidePanelWidth && sidePanelOpen === settings.sidePanelOpen) return settings;
+  if (sidePanelWidth === settings.sidePanelWidth && sidePanelOpen === settings.sidePanelOpen) {
+    return settings;
+  }
   return { ...settings, sidePanelWidth, sidePanelOpen };
 }
 
@@ -97,7 +101,9 @@ export function restoreSettings(stored: string | null): Settings {
   } catch {
     // Unreadable: use the defaults.
   }
-  if (typeof parsed !== "object" || parsed === null) return defaultSettings;
+  if (typeof parsed !== "object" || parsed === null) {
+    return defaultSettings;
+  }
   const { paceFactor, paddleSpeedKmh, baseMap, overlays, sidePanelWidth, sidePanelOpen } = parsed as Record<
     string,
     unknown

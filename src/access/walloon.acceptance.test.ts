@@ -79,7 +79,14 @@ describe("through the access evaluation (built-in data)", () => {
   });
   it("unlisted Walloon water (Meuse at Dinant) is forbidden, with a reason, on any date", () => {
     for (const date of [undefined, "2026-07-15", "2027-01-15"]) {
-      const s = accessAlong([{ lat: 50.26, lng: 4.91 }, { lat: 50.265, lng: 4.915 }], builtInAccessRules, { date, today });
+      const s = accessAlong(
+        [
+          { lat: 50.26, lng: 4.91 },
+          { lat: 50.265, lng: 4.915 },
+        ],
+        builtInAccessRules,
+        { date, today },
+      );
       expect(s.state).toBe("forbidden");
       expect(JSON.stringify(s.reasons)).toMatch(/AGW/);
     }
@@ -89,6 +96,8 @@ describe("through the access evaluation (built-in data)", () => {
     expect(new Set(assumed.map((r) => (r.rule.type === "agw" ? r.rule.gauge!.name : "")))).toEqual(
       new Set(["Martinrive", "Gendron", "Martelange", "Membre"]),
     );
-    for (const r of assumed) expect(r.unverified).toMatch(/assumed/i);
+    for (const r of assumed) {
+      expect(r.unverified).toMatch(/assumed/i);
+    }
   });
 });

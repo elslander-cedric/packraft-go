@@ -29,7 +29,9 @@ const lines = (row: Locator, wanted: string) =>
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       const at = n.textContent!.indexOf(w);
-      if (at < 0) continue;
+      if (at < 0) {
+        continue;
+      }
       const range = document.createRange();
       range.setStart(n, at);
       range.setEnd(n, at + w.length);
@@ -43,7 +45,9 @@ test("the app's own font is loaded and used, not an operating system font", asyn
   const row = await twoPoints(page);
   await expect(row).toContainText(strings.climbLabel);
   expect(await row.evaluate((el) => getComputedStyle(el).fontFamily)).toContain("Inter");
-  const loaded = await page.evaluate(() => [...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family));
+  const loaded = await page.evaluate(() =>
+    [...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family),
+  );
   expect(loaded.join()).toContain("Inter");
 });
 
@@ -55,7 +59,8 @@ test("seeded: a figure squeezed until it wraps inside itself is caught by the me
   await expect(row).toContainText(`${strings.climbLabel} ${figure}`);
   expect(await lines(row, figure)).toBe(1);
   await page.addStyleTag({
-    content: ".planner-row-figure { white-space: normal !important; display: inline-block !important; width: 1ch !important; }",
+    content:
+      ".planner-row-figure { white-space: normal !important; display: inline-block !important; width: 1ch !important; }",
   });
   expect(await lines(row, figure)).toBeGreaterThan(1);
 });

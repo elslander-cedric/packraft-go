@@ -24,9 +24,13 @@ export function lockMarkers(
 ): Omit<LockMarker, "source" | "researched">[] {
   const candidates: Candidate[] = [];
   for (const element of [...response.elements].sort((a, b) => a.id - b.id)) {
-    if (element.type !== "way" || element.tags?.lock !== "yes" || !element.tags.waterway) continue;
+    if (element.type !== "way" || element.tags?.lock !== "yes" || !element.tags.waterway) {
+      continue;
+    }
     const points = (element.geometry ?? []).filter((p): p is { lat: number; lon: number } => p !== null);
-    if (points.length === 0) continue;
+    if (points.length === 0) {
+      continue;
+    }
     const lat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
     const lng = points.reduce((sum, p) => sum + p.lon, 0) / points.length;
     const tags = element.tags;
@@ -40,18 +44,27 @@ export function lockMarkers(
   const kept: (Candidate & { region: string })[] = [];
   for (const candidate of candidates) {
     const region = regions.find((r) => insideAny(r.area)(candidate.position));
-    if (!region) continue;
+    if (!region) {
+      continue;
+    }
     const twin = kept.find(
       (k) =>
         k.region === region.id &&
-        distanceM({ lng: k.position[0], lat: k.position[1] }, { lng: candidate.position[0], lat: candidate.position[1] }) <
-          SAME_LOCK_M,
+        distanceM(
+          { lng: k.position[0], lat: k.position[1] },
+          { lng: candidate.position[0], lat: candidate.position[1] },
+        ) < SAME_LOCK_M,
     );
-    if (!twin) kept.push({ ...candidate, region: region.id });
+    if (!twin) {
+      kept.push({ ...candidate, region: region.id });
+    }
   }
 
   const regionOrder = (id: string) => regions.findIndex((r) => r.id === id);
   return kept
-    .sort((a, b) => regionOrder(a.region) - regionOrder(b.region) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+    .sort(
+      (a, b) =>
+        regionOrder(a.region) - regionOrder(b.region) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+    )
     .map(({ id, name, region, position }) => ({ id, name, region, position }));
 }

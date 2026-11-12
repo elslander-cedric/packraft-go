@@ -17,7 +17,9 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
  */
 async function visibleCentre(page: Page) {
   const box = await mapRegion(page).boundingBox();
-  if (!box) throw new Error("map has no bounding box");
+  if (!box) {
+    throw new Error("map has no bounding box");
+  }
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
   // The tile the user sees is the loaded tile under the centre in the level
@@ -35,9 +37,13 @@ async function visibleCentre(page: Page) {
     },
     [cx, cy] as const,
   );
-  if (!top) throw new Error("no tile under the map centre");
+  if (!top) {
+    throw new Error("no tile under the map centre");
+  }
   const m = new URL(top.src).pathname.match(/^\/(\d+)\/(\d+)\/(\d+)\.png$/);
-  if (!m) throw new Error(`unexpected tile url ${top.src}`);
+  if (!m) {
+    throw new Error(`unexpected tile url ${top.src}`);
+  }
   const tile = { ...top, z: Number(m[1]), tx: Number(m[2]), ty: Number(m[3]) };
   const n = 2 ** tile.z;
   const fx = tile.tx + (cx - tile.x) / tile.w;
@@ -53,7 +59,9 @@ async function settledZoom(page: Page) {
   for (let i = 0; i < 40; i++) {
     await page.waitForTimeout(250);
     const z = (await visibleCentre(page)).z;
-    if (z === last) return z;
+    if (z === last) {
+      return z;
+    }
     last = z;
   }
   throw new Error("map zoom never settled");
@@ -63,7 +71,9 @@ function collectErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
   page.on("console", (m) => {
-    if (m.type() === "error") errors.push(`console: ${m.text()}`);
+    if (m.type() === "error") {
+      errors.push(`console: ${m.text()}`);
+    }
   });
   return errors;
 }
@@ -118,8 +128,13 @@ test.describe("app skeleton", () => {
         const moved = await expect
           .poll(async () => (await visibleCentre(page)).z * dir, { timeout: 1500 })
           .toBeGreaterThan(before * dir)
-          .then(() => true, () => false);
-        if (!moved) return;
+          .then(
+            () => true,
+            () => false,
+          );
+        if (!moved) {
+          return;
+        }
       }
       throw new Error(`zooming ${name} never reached its limit`);
     };

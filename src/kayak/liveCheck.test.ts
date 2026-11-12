@@ -140,7 +140,9 @@ describe("PKAYAK contract check: codes", () => {
       l.features[1].properties!.codico = "12";
     });
     expect(await atLevel("mismatch", { obstacles })).toEqual([]);
-    expect(await atLevel("drift", { obstacles })).toEqual([expect.stringMatching(/obstacle codes? 9, 12.*prepare:spw-data/)]);
+    expect(await atLevel("drift", { obstacles })).toEqual([
+      expect.stringMatching(/obstacle codes? 9, 12.*prepare:spw-data/),
+    ]);
   });
 
   it("calls an aire type the snapshot can't take drift", async () => {
@@ -148,7 +150,9 @@ describe("PKAYAK contract check: codes", () => {
       l.features[0].properties!.typemb = "X";
     });
     expect(await atLevel("mismatch", { aires })).toEqual([]);
-    expect(await atLevel("drift", { aires })).toContainEqual(expect.stringMatching(/prepare:spw-data.*unknown type "X"/));
+    expect(await atLevel("drift", { aires })).toContainEqual(
+      expect.stringMatching(/prepare:spw-data.*unknown type "X"/),
+    );
   });
 
   it("calls an aire on a stretch layer 5 doesn't list drift", async () => {
@@ -174,7 +178,9 @@ describe("PKAYAK contract check: records", () => {
     const aires = editedAires((l) => {
       l.features.pop();
     });
-    expect(await atLevel("drift", { aires })).toContainEqual(expect.stringMatching(/layer 3.*91 records, fixture has 92/));
+    expect(await atLevel("drift", { aires })).toContainEqual(
+      expect.stringMatching(/layer 3.*91 records, fixture has 92/),
+    );
   });
 
   it("takes incidents coming and going as normal", async () => {
@@ -185,7 +191,10 @@ describe("PKAYAK contract check: records", () => {
   });
 
   it("calls an answer cut off by the record limit drift on a snapshot layer", async () => {
-    const aires = { status: 200, body: JSON.stringify({ ...JSON.parse(fixture("layer3-aires.json")), exceededTransferLimit: true }) };
+    const aires = {
+      status: 200,
+      body: JSON.stringify({ ...JSON.parse(fixture("layer3-aires.json")), exceededTransferLimit: true }),
+    };
     expect(await atLevel("drift", { aires })).toContainEqual(expect.stringMatching(/cut off/));
   });
 });
@@ -201,14 +210,18 @@ describe("PKAYAK contract check: the app's adapter", () => {
     const incidents = editedIncidents((l) => {
       l.features.forEach((f) => (f.attributes!.id = `incident-${String(f.attributes!.id)}`));
     });
-    expect(await atLevel("mismatch", { incidents })).toContainEqual(expect.stringMatching(/adapter reads 0 of 3 incidents/));
+    expect(await atLevel("mismatch", { incidents })).toContainEqual(
+      expect.stringMatching(/adapter reads 0 of 3 incidents/),
+    );
   });
 
   it("calls stretches the adapter silently drops a mismatch", async () => {
     const stretches = editedStretches((l) => {
       l.features[0].attributes!.nomtro = null;
     });
-    expect(await atLevel("mismatch", { stretches })).toContainEqual(expect.stringMatching(/adapter reads 20 of 21 stretches/));
+    expect(await atLevel("mismatch", { stretches })).toContainEqual(
+      expect.stringMatching(/adapter reads 20 of 21 stretches/),
+    );
   });
 });
 
@@ -219,7 +232,9 @@ describe("the PKAYAK check run", () => {
       fetch: async (url: string, init: { headers: Record<string, string> }) => {
         calls.push({ url, userAgent: init.headers["User-Agent"] });
         const layer = /MapServer\/(\d)\/query/.exec(url)?.[1];
-        const name = { "0": "layer0-incidents", "1": "layer1-obstacles", "3": "layer3-aires", "5": "layer5-stretches" }[layer ?? ""];
+        const name = { "0": "layer0-incidents", "1": "layer1-obstacles", "3": "layer3-aires", "5": "layer5-stretches" }[
+          layer ?? ""
+        ];
         return new Response(fixture(`${name}.json`), { status: 200 });
       },
       wait: vi.fn(async () => {}),
@@ -257,7 +272,9 @@ describe("the PKAYAK check run", () => {
     const result = await runKayakCheck({
       ...deps,
       fetch: async (url, init) =>
-        url === stretchesUrl() ? new Response(JSON.stringify({ error: { message: "Failed to execute query." } })) : deps.fetch(url, init),
+        url === stretchesUrl()
+          ? new Response(JSON.stringify({ error: { message: "Failed to execute query." } }))
+          : deps.fetch(url, init),
     });
     expect(result.passed).toBe(false);
     expect(result.report).toMatch(/MISMATCH.*Failed to execute query/);
@@ -269,7 +286,9 @@ describe("the PKAYAK check run", () => {
     const result = await runKayakCheck({
       ...deps,
       fetch: async (url, init) =>
-        url.includes("/1/query") ? new Response(editedObstacles((l) => void l.features.pop()).body) : deps.fetch(url, init),
+        url.includes("/1/query")
+          ? new Response(editedObstacles((l) => void l.features.pop()).body)
+          : deps.fetch(url, init),
     });
     expect(result.passed).toBe(true);
     expect(result.report).toMatch(/DRIFT.*95 records, fixture has 96/);
@@ -281,7 +300,9 @@ describe("the PKAYAK check run", () => {
     const result = await runKayakCheck({
       ...deps,
       fetch: async (url, init) => {
-        if (url === incidentsUrl()) throw new Error("connection reset");
+        if (url === incidentsUrl()) {
+          throw new Error("connection reset");
+        }
         return deps.fetch(url, init);
       },
     });

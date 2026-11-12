@@ -5,7 +5,19 @@ import { icons } from "../src/ui/icons/icons";
 import { strings } from "../src/ui/strings";
 import { iconIn } from "./support/icons";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { figure, freeMapCentre, legLines, openPlanner, openSectionDetails, panelTab, points, sectionRowButton, showTab, toggleSection, tripPanel } from "./support/planner";
+import {
+  figure,
+  freeMapCentre,
+  legLines,
+  openPlanner,
+  openSectionDetails,
+  panelTab,
+  points,
+  sectionRowButton,
+  showTab,
+  toggleSection,
+  tripPanel,
+} from "./support/planner";
 
 const text = strings.planner;
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
@@ -22,7 +34,10 @@ const C = { lat: 50.8265, lng: 4.3075, elevation: 20 };
 const D = { lat: 50.8275, lng: 4.3085, elevation: 20 };
 const E = { lat: 50.8285, lng: 4.3095, elevation: 20 };
 
-async function seed(page: Page, trip: { points: readonly Point[]; legs: readonly SeedLeg[]; camps?: readonly number[] }) {
+async function seed(
+  page: Page,
+  trip: { points: readonly Point[]; legs: readonly SeedLeg[]; camps?: readonly number[] },
+) {
   const save = JSON.stringify({
     format: "packraft-go-trip",
     version: 1,
@@ -38,7 +53,9 @@ async function seed(page: Page, trip: { points: readonly Point[]; legs: readonly
     },
   });
   await page.addInitScript((tripSave) => {
-    if (sessionStorage.getItem("seeded")) return;
+    if (sessionStorage.getItem("seeded")) {
+      return;
+    }
     sessionStorage.setItem("seeded", "1");
     localStorage.setItem("packraft-go.trip", tripSave);
   }, save);
@@ -59,7 +76,9 @@ const canalTrip = {
 const sectionRows = (page: Page) =>
   tripPanel(page).getByRole("list", { name: strings.sectionsPanelLabel }).locator("> li");
 const legsOf = (page: Page, section: number) =>
-  tripPanel(page).getByRole("list", { name: text.sectionLegs(section) }).getByRole("listitem");
+  tripPanel(page)
+    .getByRole("list", { name: text.sectionLegs(section) })
+    .getByRole("listitem");
 const rowButton = (row: Locator, name: string) => row.getByRole("button", { name, exact: false }).first();
 const marked = (page: Page) => tripPanel(page).locator(".planner-row-toggle[aria-current]");
 // Leaflet resets the map pane after a zoom, so a zoom shows in where a leg is drawn.
@@ -204,7 +223,9 @@ test("a leg's details button shows that leg alone", async ({ page }) => {
   await openPlanner(page);
   await toggleSection(page, 2);
 
-  await tripPanel(page).getByRole("button", { name: text.legDetailsButton(3) }).click();
+  await tripPanel(page)
+    .getByRole("button", { name: text.legDetailsButton(3) })
+    .click();
   const dialog = page.getByRole("dialog", { name: /^Leg 3 · / });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: text.legDetailsClose }).click();
@@ -219,7 +240,9 @@ test("the details button sits under the time, at the right of the row's last lin
   await page.evaluate(() => document.fonts.ready);
 
   const row = sectionRows(page).nth(1);
-  const button = await tripPanel(page).getByRole("button", { name: text.sectionDetailsButton(2) }).boundingBox();
+  const button = await tripPanel(page)
+    .getByRole("button", { name: text.sectionDetailsButton(2) })
+    .boundingBox();
   const time = await row.locator(".planner-row-time").first().boundingBox();
   const icons = await row.locator(".planner-row-access").first().boundingBox();
   const line = await row.locator(".planner-row-toggle").first().boundingBox();
@@ -228,42 +251,55 @@ test("the details button sits under the time, at the right of the row's last lin
   expect(Math.abs(button!.x + button!.width - (time!.x + time!.width))).toBeLessThanOrEqual(1);
   expect(Math.abs(button!.y + button!.height - (line!.y + line!.height))).toBeLessThanOrEqual(1);
   // The icons keep clear of the button's text, however many there are.
-  const iconsRight = await row.locator(".planner-row-access").first().evaluate((el) => {
-    const icons = [...el.children].map((child) => child.getBoundingClientRect().right);
-    return Math.max(...icons);
-  });
-  const label = await tripPanel(page).getByRole("button", { name: text.sectionDetailsButton(2) }).evaluate((el) => {
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    return range.getBoundingClientRect().left;
-  });
+  const iconsRight = await row
+    .locator(".planner-row-access")
+    .first()
+    .evaluate((el) => {
+      const icons = [...el.children].map((child) => child.getBoundingClientRect().right);
+      return Math.max(...icons);
+    });
+  const label = await tripPanel(page)
+    .getByRole("button", { name: text.sectionDetailsButton(2) })
+    .evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return range.getBoundingClientRect().left;
+    });
   expect(iconsRight).toBeLessThanOrEqual(label);
 });
 
 test("a section of hike legs opens to its legs alone", async ({ page }) => {
   await serveOffline(page);
-  await seed(page, { points: [D, A, B], legs: [{ mode: "hike", line: [D, A] }, { mode: "hike", line: [A, B] }] });
+  await seed(page, {
+    points: [D, A, B],
+    legs: [
+      { mode: "hike", line: [D, A] },
+      { mode: "hike", line: [A, B] },
+    ],
+  });
   await openPlanner(page);
   await toggleSection(page, 1);
   await expect(legsOf(page, 1)).toHaveCount(2);
   await expect(tripPanel(page).getByRole("button", { name: text.sectionDetailsButton(1) })).toHaveCount(0);
 });
 
-test("a second tap on a selected section of one leg only zooms, and a hike without details has no button", async ({ page }) => {
+test("a second tap on a selected section of one leg only zooms, and a hike without details has no button", async ({
+  page,
+}) => {
   await serveOffline(page);
   await seed(page, canalTrip);
   await openPlanner(page);
   await expect(sectionRows(page).nth(2).locator(".leg-access-icons")).toBeVisible();
 
   // The hike has no details and nothing to open.
-  await expect(sectionRows(page).nth(0).locator('[aria-expanded]')).toHaveCount(0);
+  await expect(sectionRows(page).nth(0).locator("[aria-expanded]")).toHaveCount(0);
   await expect(tripPanel(page).getByRole("button", { name: text.sectionDetailsButton(1) })).toHaveCount(0);
 
   await sectionRowButton(page, 3).click();
   await expect(sectionRowButton(page, 3)).toHaveAttribute("aria-current", "true");
   await sectionRowButton(page, 3).click();
   await expect(sectionDialog(page)).toHaveCount(0);
-  await expect(sectionRows(page).nth(2).locator('[aria-expanded]')).toHaveCount(0);
+  await expect(sectionRows(page).nth(2).locator("[aria-expanded]")).toHaveCount(0);
   await expect(tripPanel(page).getByRole("button", { name: text.sectionDetailsButton(3) })).toBeVisible();
 });
 
@@ -308,7 +344,12 @@ test.describe("on a phone with the sheet raised", () => {
     await row.click();
     await expect(row).toBeInViewport({ ratio: 1 });
     await row.click();
-    await expect(page.getByRole("list", { name: text.sectionLegs(4) }).getByRole("listitem").last()).toBeInViewport();
+    await expect(
+      page
+        .getByRole("list", { name: text.sectionLegs(4) })
+        .getByRole("listitem")
+        .last(),
+    ).toBeInViewport();
   });
 });
 
@@ -403,7 +444,10 @@ test("a section whose legs are waiting for routes says so once", async ({ page }
 test("each failed leg shows by number with its own Retry", async ({ page }) => {
   let up = false;
   const network = await serveOffline(page, { brouter: () => (up ? TRAIL : { status: 503, body: "" }) });
-  await seed(page, { points: [D, A, B, C], legs: [{ mode: "hike" }, { mode: "hike", line: [A, B] }, { mode: "hike" }] });
+  await seed(page, {
+    points: [D, A, B, C],
+    legs: [{ mode: "hike" }, { mode: "hike", line: [A, B] }, { mode: "hike" }],
+  });
   await openPlanner(page);
   await showSections(page);
 
@@ -431,11 +475,15 @@ test("a failed section's details button drops under its Retry, and comes back wi
   const retry = row.getByRole("button", { name: strings.retryRouting });
   await expect(retry).toBeVisible();
   await expect(button).toBeVisible();
-  expect((await button.boundingBox())!.y).toBeGreaterThanOrEqual((await retry.boundingBox())!.y + (await retry.boundingBox())!.height);
+  expect((await button.boundingBox())!.y).toBeGreaterThanOrEqual(
+    (await retry.boundingBox())!.y + (await retry.boundingBox())!.height,
+  );
   up = true;
   await retry.click();
   await expect(retry).toHaveCount(0);
-  await expect(row.locator(".planner-row-head").getByRole("button", { name: text.sectionDetailsButton(1) })).toBeVisible();
+  await expect(
+    row.locator(".planner-row-head").getByRole("button", { name: text.sectionDetailsButton(1) }),
+  ).toBeVisible();
 });
 
 test.describe("on a 320 px phone", () => {

@@ -20,10 +20,7 @@ export function Tabs<T extends string>({ value, onChange, children }: TabsProps<
 /** The row of tabs, sharing its width equally. */
 export function TabList({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <BaseTabs.List
-      className="tab-list"
-      aria-label={label}
-    >
+    <BaseTabs.List className="tab-list" aria-label={label}>
       {children}
     </BaseTabs.List>
   );

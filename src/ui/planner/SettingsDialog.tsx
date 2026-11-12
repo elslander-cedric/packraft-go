@@ -55,7 +55,9 @@ export default function SettingsDialog({ open, settings, onSave, onClose }: Sett
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setDraft(settings);
+    if (open) {
+      setDraft(settings);
+    }
   }
   const change = (name: PaceSetting, value: number | null) => setDraft((current) => ({ ...current, [name]: value }));
   const { paceFactor, paddleSpeedKmh } = draft;
@@ -69,7 +71,9 @@ export default function SettingsDialog({ open, settings, onSave, onClose }: Sett
       cancelLabel={strings.confirmCancel}
       confirmDisabled={!usable}
       onConfirm={() => {
-        if (usable) onSave({ ...settings, paceFactor, paddleSpeedKmh });
+        if (usable) {
+          onSave({ ...settings, paceFactor, paddleSpeedKmh });
+        }
         onClose();
       }}
       onCancel={onClose}

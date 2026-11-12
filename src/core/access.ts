@@ -195,28 +195,42 @@ const DEFAULT_MATCH_WITHIN_M = 30;
 /** Leg samples are at most this far apart, so short exceptions aren't skipped. */
 const SAMPLE_STEP_M = 25;
 
-const restrictiveness: Record<AccessState, number> = { open: 0, checking: 0.5, unknown: 1, "closed-today": 2, forbidden: 3 };
+const restrictiveness: Record<AccessState, number> = {
+  open: 0,
+  checking: 0.5,
+  unknown: 1,
+  "closed-today": 2,
+  forbidden: 3,
+};
 
 const boundsCache = new WeakMap<AccessRecord, Bounds>();
 function cachedBounds(record: AccessRecord): Bounds {
   let bounds = boundsCache.get(record);
-  if (!bounds) boundsCache.set(record, (bounds = boundsOf(record.geometry)));
+  if (!bounds) {
+    boundsCache.set(record, (bounds = boundsOf(record.geometry)));
+  }
   return bounds;
 }
 
 /** True when the point is on (or in) the record's water or region. */
 function applies(record: AccessRecord, point: LatLng): boolean {
   const withinM = record.scope === "region" ? 0 : (record.matchWithinM ?? DEFAULT_MATCH_WITHIN_M);
-  if (!nearBounds(point, cachedBounds(record), withinM)) return false;
+  if (!nearBounds(point, cachedBounds(record), withinM)) {
+    return false;
+  }
   // A region is an area: only its inside counts, not a margin around its border.
-  if (record.scope === "region") return insideArea(point, record.geometry);
+  if (record.scope === "region") {
+    return insideArea(point, record.geometry);
+  }
   return touches(point, record.geometry, withinM);
 }
 
 /** The status one record gives on the context's date. */
 export function evaluateRecord(record: AccessRecord, context: AccessContext): AccessStatus {
   const { rule } = record;
-  if (rule.type === "agw") return evaluateAgw(record, rule, context);
+  if (rule.type === "agw") {
+    return evaluateAgw(record, rule, context);
+  }
   const reason: AccessReason = {
     kind: "rule",
     state: rule.state,
@@ -368,15 +382,21 @@ export function officialNotChecked(status: AccessStatus, incidents?: OfficialInc
  * unknown, then open), and every reason is kept, once.
  */
 export function combineAccess(statuses: readonly AccessStatus[]): AccessStatus {
-  if (statuses.length === 0) return noRule;
+  if (statuses.length === 0) {
+    return noRule;
+  }
   let state: AccessState = "open";
   const reasons: AccessReason[] = [];
   const seen = new Set<string>();
   for (const status of statuses) {
-    if (restrictiveness[status.state] > restrictiveness[state]) state = status.state;
+    if (restrictiveness[status.state] > restrictiveness[state]) {
+      state = status.state;
+    }
     for (const reason of status.reasons) {
       const key = reason.kind === "rule" ? `rule:${reason.recordId}:${reason.state}` : reason.kind;
-      if (seen.has(key)) continue;
+      if (seen.has(key)) {
+        continue;
+      }
       seen.add(key);
       reasons.push(reason);
     }
@@ -396,7 +416,9 @@ export function accessAt(point: LatLng, rules: AccessRules, context: AccessConte
   const matching = rules.records.filter((record) => applies(record, point));
   const waters = matching.filter((record) => record.scope === "water");
   const chosen = waters.length > 0 ? waters : matching;
-  if (chosen.length === 0) return noRule;
+  if (chosen.length === 0) {
+    return noRule;
+  }
   return combineAccess(chosen.map((record) => evaluateRecord(record, context)));
 }
 
@@ -406,7 +428,9 @@ export function accessAt(point: LatLng, rules: AccessRules, context: AccessConte
  */
 export function accessAlong(line: readonly LatLng[], rules: AccessRules, context: AccessContext): AccessStatus {
   const samples = samplesAlong(line, SAMPLE_STEP_M);
-  if (samples.length === 0) return noRule;
+  if (samples.length === 0) {
+    return noRule;
+  }
   return combineAccess(samples.map((point) => accessAt(point, rules, context)));
 }
 
@@ -415,10 +439,12 @@ export function accessAlong(line: readonly LatLng[], rules: AccessRules, context
  * on it is evaluated and the most restrictive wins. One official stretch can hold
  * several records, of different categories. Unknown when no record lies on it.
  */
-export function officialStretchAccess(officialStretch: string, rules: AccessRules, context: AccessContext): AccessStatus {
-  const records = rules.records.filter(
-    ({ rule }) => rule.type === "agw" && rule.officialStretch === officialStretch,
-  );
+export function officialStretchAccess(
+  officialStretch: string,
+  rules: AccessRules,
+  context: AccessContext,
+): AccessStatus {
+  const records = rules.records.filter(({ rule }) => rule.type === "agw" && rule.officialStretch === officialStretch);
   return combineAccess(records.map((record) => evaluateRecord(record, context)));
 }
 

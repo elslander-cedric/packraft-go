@@ -93,7 +93,9 @@ test.describe("sheet stops by drag distance", () => {
     await drag(page, screen * 0.3);
     await expect.poll(async () => Math.abs((await height(page)) - screen * 0.5)).toBeLessThan(screen * 0.05);
 
-    for (let i = 0; i < 3; i++) await drag(page, screen);
+    for (let i = 0; i < 3; i++) {
+      await drag(page, screen);
+    }
     await expect.poll(() => height(page)).toBeLessThan(132);
     await expect(sheet(page)).toBeVisible();
     await page.keyboard.press("Escape");

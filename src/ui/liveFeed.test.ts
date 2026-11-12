@@ -14,7 +14,9 @@ function fakeTimers() {
       const timer = { fire, ms };
       waiting = timer;
       return () => {
-        if (waiting === timer) waiting = null;
+        if (waiting === timer) {
+          waiting = null;
+        }
       };
     },
     get waitingMs() {

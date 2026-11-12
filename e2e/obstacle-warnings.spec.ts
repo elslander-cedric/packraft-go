@@ -44,7 +44,9 @@ async function seed(page: Page, line: Place[]) {
     },
   };
   await page.addInitScript((trip) => {
-    if (sessionStorage.getItem("seeded")) return;
+    if (sessionStorage.getItem("seeded")) {
+      return;
+    }
     sessionStorage.setItem("seeded", "1");
     localStorage.setItem("packraft-go.trip", trip);
   }, JSON.stringify(save));
@@ -52,8 +54,7 @@ async function seed(page: Page, line: Place[]) {
 
 const warnings = (page: Page) => legDetailsDialog(page).locator(".access-warning-obstacle");
 const credit = (page: Page) => legDetailsDialog(page).locator(".leg-access-credit");
-const legRow = (page: Page) =>
-  page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
+const legRow = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
 const closeDetails = (page: Page) =>
   legDetailsDialog(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();
 const dayChip = (page: Page) =>
@@ -63,7 +64,8 @@ const dayChip = (page: Page) =>
     .getByRole("button");
 
 const { names, meanings } = strings.obstacles;
-const line = (name: string, meaning: string, count = 1) => `${strings.tripAccess.obstacleWarning(name, count)} ${meaning}`;
+const line = (name: string, meaning: string, count = 1) =>
+  `${strings.tripAccess.obstacleWarning(name, count)} ${meaning}`;
 
 test.describe("on a wide screen", () => {
   test.use({ viewport: { width: 1400, height: 900 } });
@@ -130,7 +132,11 @@ test.describe("on the phone", () => {
     await page.goto("/");
     const sheet = page.getByRole("dialog", { name: strings.planner.sheetLabel });
     await sheet.getByRole("tab", { name: strings.planner.tabs.sections }).click();
-    const icons = sheet.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first().locator(".leg-access-icons");
+    const icons = sheet
+      .getByRole("list", { name: strings.sectionsPanelLabel })
+      .locator(leafRows)
+      .first()
+      .locator(".leg-access-icons");
     await expect(icons.locator(`svg[data-icon="triangle-exclamation"]`)).toHaveCount(1);
     await expect(icons).toContainText(strings.tripAccess.chipKind.obstacle);
   });

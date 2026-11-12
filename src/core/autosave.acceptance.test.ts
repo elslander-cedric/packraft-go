@@ -44,7 +44,10 @@ function countingRouter() {
 async function syncOnce(trip: Trip) {
   const { router, calls } = countingRouter();
   let current = trip;
-  const auto = createAutoRouter(router, routingInto((change) => (current = change(current))));
+  const auto = createAutoRouter(
+    router,
+    routingInto((change) => (current = change(current))),
+  );
   await auto.sync(current);
   return { trip: current, calls };
 }
@@ -102,7 +105,11 @@ describe("a restored trip makes no routing requests", () => {
   });
 
   it("a leg that was still pending when saved is routed once after a restore and does not stay pending", async () => {
-    const trip: Trip = { name: "", points: [A, B, C], legs: [ROUTED_99_VS_100, { mode: "hike", route: { status: "pending" } }] };
+    const trip: Trip = {
+      name: "",
+      points: [A, B, C],
+      legs: [ROUTED_99_VS_100, { mode: "hike", route: { status: "pending" } }],
+    };
     const { trip: after, calls } = await syncOnce(saveAndRestore(trip));
     expect(calls).toEqual([[B, C]]);
     expect(after.legs[0]).toEqual(ROUTED_99_VS_100);

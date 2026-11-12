@@ -41,9 +41,15 @@ function fakeServer(replies: { list?: Reply; values?: Reply } = {}) {
         : request === "getTimeseriesValues"
           ? (replies.values ?? { status: 200, body: VALUES })
           : { status: 400, body: "" };
-    if (reply === "network-error") throw new TypeError("Failed to fetch");
-    if (reply === "hangs") return new Promise<Response>(() => {});
-    if (reply === "hangs-in-body") return new Response(new ReadableStream());
+    if (reply === "network-error") {
+      throw new TypeError("Failed to fetch");
+    }
+    if (reply === "hangs") {
+      return new Promise<Response>(() => {});
+    }
+    if (reply === "hangs-in-body") {
+      return new Response(new ReadableStream());
+    }
     return new Response(reply.body, { status: reply.status });
   };
   return {
@@ -54,7 +60,9 @@ function fakeServer(replies: { list?: Reply; values?: Reply } = {}) {
       clock += ms;
       const due = timers.filter((t) => t.at <= clock);
       timers = timers.filter((t) => t.at > clock);
-      for (const t of due) t.fire();
+      for (const t of due) {
+        t.fire();
+      }
     },
     source: createKiwisFlowSource({
       fetch,
@@ -70,10 +78,20 @@ function fakeServer(replies: { list?: Reply; values?: Reply } = {}) {
   };
 }
 
-type Stretch = { gauge: { stationNo: string; name: string; assumed: boolean } | null; minM3s: number | null; maxM3s: number };
+type Stretch = {
+  gauge: { stationNo: string; name: string; assumed: boolean } | null;
+  minM3s: number | null;
+  maxM3s: number;
+};
 const stretches = (builtIn as unknown as { stretches: (Stretch & { id: string; category: AgwRule["category"] })[] })
   .stretches;
-const rules: AgwRule[] = stretches.map((s) => ({ type: "agw", category: s.category, minM3s: s.minM3s, maxM3s: s.maxM3s, gauge: s.gauge }));
+const rules: AgwRule[] = stretches.map((s) => ({
+  type: "agw",
+  category: s.category,
+  minM3s: s.minM3s,
+  maxM3s: s.maxM3s,
+  gauge: s.gauge,
+}));
 const stations = gaugeStations(rules);
 /** The recording is older than the Hérock gauge (#205): it has the other 21 gauges. */
 const HEROCK = "L6610";
@@ -104,7 +122,9 @@ describe("KiWIS answers", () => {
   it("success: readings for every gauge, and the stretches' verdicts on the recording day", async () => {
     const readings = await fakeServer().source.readings(stations);
     expect(readings.status).toBe("ok");
-    if (readings.status !== "ok") return;
+    if (readings.status !== "ok") {
+      return;
+    }
     expect(Object.keys(readings.gauges).sort()).toEqual(recordedStations);
     for (const gauge of Object.values(readings.gauges)) {
       expect(gauge.mean72h.length).toBeGreaterThan(0);
@@ -138,7 +158,13 @@ describe("KiWIS answers", () => {
   it("missing series: a gauge the service has no series for is absent, and its stretch unknown", async () => {
     const readings = await fakeServer().source.readings([...stations, "L0000"]);
     expect(readings.status === "ok" && readings.gauges["L0000"]).toBeFalsy();
-    const rule: AgwRule = { type: "agw", category: "1.C", minM3s: null, maxM3s: 5, gauge: { name: "Nowhere", stationNo: "L0000", assumed: false } };
+    const rule: AgwRule = {
+      type: "agw",
+      category: "1.C",
+      minM3s: null,
+      maxM3s: 5,
+      gauge: { name: "Nowhere", stationNo: "L0000", assumed: false },
+    };
     expect(flowCheck(rule, readings, RECORDED_ON)).toMatchObject({ kind: "unknown", why: "missing" });
   });
 
@@ -189,7 +215,13 @@ describe("a request that doesn't answer", () => {
     await settle();
     expect(answer).toEqual({ status: "failed" });
     expect(REQUEST_TIMEOUT_MS).toBe(15_000);
-    expect(flowCheck(rules.find((r) => r.gauge)!, answer, RECORDED_ON)).toMatchObject({ kind: "unknown", why: "failed" });
+    expect(
+      flowCheck(
+        rules.find((r) => r.gauge)!,
+        answer,
+        RECORDED_ON,
+      ),
+    ).toMatchObject({ kind: "unknown", why: "failed" });
   });
 
   const hanging: [string, { list?: Reply; values?: Reply }, number][] = [

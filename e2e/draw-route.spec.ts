@@ -8,8 +8,7 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
 
 /** Ground distance per screen pixel for Web Mercator tiles at a latitude and zoom. */
-const kmPerPixel = (lat: number, zoom: number) =>
-  (40075.016686 * Math.cos((lat * Math.PI) / 180)) / (256 * 2 ** zoom);
+const kmPerPixel = (lat: number, zoom: number) => (40075.016686 * Math.cos((lat * Math.PI) / 180)) / (256 * 2 ** zoom);
 
 /** Latitude shown `dy` pixels below a pixel row at latitude `lat` (Web Mercator). */
 function latitudeBelow(lat: number, dy: number, zoom: number) {
@@ -21,7 +20,9 @@ function latitudeBelow(lat: number, dy: number, zoom: number) {
 
 const kmShown = async (locator: Locator) => {
   const match = (await locator.textContent())?.match(/([\d.]+)\s*km/);
-  if (!match) throw new Error(`no distance in "${await locator.textContent()}"`);
+  if (!match) {
+    throw new Error(`no distance in "${await locator.textContent()}"`);
+  }
   return Number(match[1]);
 };
 
@@ -31,9 +32,7 @@ const expectWithinOneKm = (shownKm: number, expectedKm: number) =>
 
 test.beforeEach(({ page }) => showAllLegs(page));
 
-test("clicking three points draws two straight hike legs and shows their distances and total", async ({
-  page,
-}) => {
+test("clicking three points draws two straight hike legs and shows their distances and total", async ({ page }) => {
   const network = await serveOffline(page);
   await page.goto("/");
   const map = mapRegion(page);

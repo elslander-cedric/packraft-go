@@ -4,7 +4,12 @@
 import type { LatLng } from "./trip";
 
 /** An area of the map, in degrees: the visible map when searching, or a result's extent. */
-export type SearchArea = { readonly west: number; readonly south: number; readonly east: number; readonly north: number };
+export type SearchArea = {
+  readonly west: number;
+  readonly south: number;
+  readonly east: number;
+  readonly north: number;
+};
 
 /** The kinds of place a packrafter meets; anything else has no kind. */
 export type PlaceKind =
@@ -40,8 +45,7 @@ export type SearchResult = {
 
 /** "Nothing found" is `found` with an empty list; `failed` means ask again later. */
 export type PlaceSearchAnswer =
-  | { readonly status: "found"; readonly results: readonly SearchResult[] }
-  | { readonly status: "failed" };
+  { readonly status: "found"; readonly results: readonly SearchResult[] } | { readonly status: "failed" };
 
 /**
  * Searches places by text, ranking those in `area` first. The real
@@ -76,23 +80,33 @@ const DECIMAL_COMMAS = /^\s*[+-]?\d+,\d+\s*[NSEW]?\s*(?:;|\s)\s*[+-]?\d+,\d+\s*[
 export function parseCoordinates(text: string): ParsedCoordinates {
   const bad = { kind: "bad-coordinates" } as const;
   // "50,27 5,44" is plainly meant as coordinates, so it is never sent as a search.
-  if (DECIMAL_COMMAS.test(text)) return bad;
+  if (DECIMAL_COMMAS.test(text)) {
+    return bad;
+  }
   const match = COORDINATES.exec(text);
-  if (!match) return { kind: "not-coordinates" };
+  if (!match) {
+    return { kind: "not-coordinates" };
+  }
   const [, firstNumber, firstLetter, secondNumber, secondLetter] = match;
   const first = firstLetter?.toUpperCase();
   const second = secondLetter?.toUpperCase();
   const isLongitude = (letter?: string) => letter === "E" || letter === "W";
   const isLatitude = (letter?: string) => letter === "N" || letter === "S";
-  if ((first && /^[+-]/.test(firstNumber)) || (second && /^[+-]/.test(secondNumber))) return bad;
-  if ((isLatitude(first) && isLatitude(second)) || (isLongitude(first) && isLongitude(second))) return bad;
+  if ((first && /^[+-]/.test(firstNumber)) || (second && /^[+-]/.test(secondNumber))) {
+    return bad;
+  }
+  if ((isLatitude(first) && isLatitude(second)) || (isLongitude(first) && isLongitude(second))) {
+    return bad;
+  }
   // A letter on either number can say the longitude came first.
   const swapped = isLongitude(first) || isLatitude(second);
   const signed = (number: string, letter?: string) => (letter === "S" || letter === "W" ? -1 : 1) * Number(number);
   const [lat, lng] = swapped
     ? [signed(secondNumber, second), signed(firstNumber, first)]
     : [signed(firstNumber, first), signed(secondNumber, second)];
-  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return bad;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    return bad;
+  }
   return { kind: "coordinates", at: { lat, lng } };
 }
 
@@ -153,22 +167,36 @@ export function placeSearch(state: PlaceSearchState, action: PlaceSearchAction):
       return { ...state, text: action.text, outcome: state.outcome.kind === "searching" ? state.outcome : IDLE };
     case "submit": {
       const text = state.text.trim();
-      if (!text) return state;
+      if (!text) {
+        return state;
+      }
       const coordinates = parseCoordinates(text);
-      if (coordinates.kind === "coordinates") return { ...state, outcome: IDLE, shown: { label: text, at: coordinates.at } };
-      if (coordinates.kind === "bad-coordinates") return { ...state, outcome: { kind: "bad-coordinates" } };
+      if (coordinates.kind === "coordinates") {
+        return { ...state, outcome: IDLE, shown: { label: text, at: coordinates.at } };
+      }
+      if (coordinates.kind === "bad-coordinates") {
+        return { ...state, outcome: { kind: "bad-coordinates" } };
+      }
       return ask(state, text, action.area, action.online);
     }
     case "answer": {
-      if (state.outcome.kind !== "searching" || state.asked?.id !== action.id) return state;
-      if (action.answer.status === "failed") return { ...state, outcome: { kind: "failed" } };
+      if (state.outcome.kind !== "searching" || state.asked?.id !== action.id) {
+        return state;
+      }
+      if (action.answer.status === "failed") {
+        return { ...state, outcome: { kind: "failed" } };
+      }
       const { results } = action.answer;
       // Nothing found for the new text: the old result no longer matches what you asked.
-      if (results.length === 0) return { ...state, outcome: { kind: "nothing-found" }, shown: null };
+      if (results.length === 0) {
+        return { ...state, outcome: { kind: "nothing-found" }, shown: null };
+      }
       return { ...state, outcome: { kind: "results", results } };
     }
     case "retry":
-      if ((state.outcome.kind !== "failed" && state.outcome.kind !== "offline") || !state.asked) return state;
+      if ((state.outcome.kind !== "failed" && state.outcome.kind !== "offline") || !state.asked) {
+        return state;
+      }
       return ask(state, state.asked.text, state.asked.area, action.online);
     case "pick":
       return { ...state, text: action.result.label, outcome: IDLE, shown: { ...action.result } };

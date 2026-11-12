@@ -44,7 +44,11 @@ export default function AccessDetailsDialog({
   return (
     <InfoDialog
       open={
-        water !== undefined || lock !== undefined || aire !== undefined || obstacle !== undefined || incident !== undefined
+        water !== undefined ||
+        lock !== undefined ||
+        aire !== undefined ||
+        obstacle !== undefined ||
+        incident !== undefined
       }
       title={water?.record.name ?? lock?.name ?? aire?.name ?? obstacleName ?? incidentTitle ?? ""}
       closeLabel={strings.accessDetailClose}

@@ -3,7 +3,13 @@
 // editing access points the trip is frozen (#227).
 import { describe, expect, it } from "vitest";
 import { addAccessPoint, updateAccessPoint } from "./accessPoints";
-import { firstSession, plannerSession, type PanelView, type PlannerAction, type PlannerSession } from "./plannerSession";
+import {
+  firstSession,
+  plannerSession,
+  type PanelView,
+  type PlannerAction,
+  type PlannerSession,
+} from "./plannerSession";
 import { applyEdit, emptyTrip, type LatLng } from "./trip";
 
 const A: LatLng = { lat: 50.3527, lng: 5.4563 };

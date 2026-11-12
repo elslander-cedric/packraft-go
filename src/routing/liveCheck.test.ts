@@ -17,7 +17,9 @@ const fixture = (name: string) => readFileSync(path.join(__dirname, "fixtures", 
 
 const caseFor = (fixtureName: string) => {
   const found = liveCheckCases.find((c) => c.fixture === fixtureName);
-  if (!found) throw new Error(`no live check case for ${fixtureName}`);
+  if (!found) {
+    throw new Error(`no live check case for ${fixtureName}`);
+  }
   return found;
 };
 
@@ -49,26 +51,41 @@ describe("live check cases", () => {
   });
 
   it("only names fixtures that exist", () => {
-    for (const c of liveCheckCases) expect(() => fixture(c.fixture)).not.toThrow();
+    for (const c of liveCheckCases) {
+      expect(() => fixture(c.fixture)).not.toThrow();
+    }
   });
 });
 
 describe("comparing a live response with its fixture", () => {
-  it.each(liveCheckCases.map((c) => c.fixture))("reports only matches when the live response equals %s", async (name) => {
-    const findings = await compareWithFixture(caseFor(name), recorded(name), recorded(name));
-    expect(findings.length).toBeGreaterThan(0);
-    expect(levels(findings)).toEqual(new Set(["match"]));
-  });
+  it.each(liveCheckCases.map((c) => c.fixture))(
+    "reports only matches when the live response equals %s",
+    async (name) => {
+      const findings = await compareWithFixture(caseFor(name), recorded(name), recorded(name));
+      expect(findings.length).toBeGreaterThan(0);
+      expect(levels(findings)).toEqual(new Set(["match"]));
+    },
+  );
 
   it("reports a mismatch when the HTTP status differs", async () => {
     const name = "hiking-success.geojson";
-    const findings = await compareWithFixture(caseFor(name), { status: 500, body: "profile not found" }, recorded(name));
-    expect(findings).toContainEqual(expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/status/i) }));
+    const findings = await compareWithFixture(
+      caseFor(name),
+      { status: 500, body: "profile not found" },
+      recorded(name),
+    );
+    expect(findings).toContainEqual(
+      expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/status/i) }),
+    );
   });
 
   it("reports a mismatch when the body is no longer GeoJSON", async () => {
     const name = "river-success.geojson";
-    const findings = await compareWithFixture(caseFor(name), { status: 200, body: "<html>maintenance</html>" }, recorded(name));
+    const findings = await compareWithFixture(
+      caseFor(name),
+      { status: 200, body: "<html>maintenance</html>" },
+      recorded(name),
+    );
     expect(levels(findings)).toContain("mismatch");
   });
 
@@ -78,7 +95,9 @@ describe("comparing a live response with its fixture", () => {
       f.geometry.coordinates = (f.geometry.coordinates as number[][]).map(([lng, lat]) => ({ lng, lat }));
     });
     const findings = await compareWithFixture(caseFor(name), live, recorded(name));
-    expect(findings).toContainEqual(expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/coordinates/i) }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/coordinates/i) }),
+    );
   });
 
   it("reports a mismatch when 'filtered ascend' disappears", async () => {
@@ -96,13 +115,17 @@ describe("comparing a live response with its fixture", () => {
       f.geometry.coordinates = (f.geometry.coordinates as number[][]).map(([lng, lat]) => [lng, lat]);
     });
     const findings = await compareWithFixture(caseFor(name), live, recorded(name));
-    expect(findings).toContainEqual(expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/elevation/i) }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/elevation/i) }),
+    );
   });
 
   it("reports a mismatch when the adapter's outcome changes (a no-route that now routes)", async () => {
     const name = "hiking-no-route-400.txt";
     const findings = await compareWithFixture(caseFor(name), recorded("hiking-success.geojson"), recorded(name));
-    expect(findings).toContainEqual(expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/adapter/i) }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/adapter/i) }),
+    );
   });
 
   it("reports drift, not a mismatch, when the track length changes a lot but the shape still fits", async () => {
@@ -112,7 +135,9 @@ describe("comparing a live response with its fixture", () => {
     });
     const findings = await compareWithFixture(caseFor(name), live, recorded(name));
     expect(levels(findings)).not.toContain("mismatch");
-    expect(findings).toContainEqual(expect.objectContaining({ level: "drift", message: expect.stringContaining("track-length") }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({ level: "drift", message: expect.stringContaining("track-length") }),
+    );
   });
 
   it("reports drift when the server's BRouter version changes", async () => {
@@ -120,7 +145,9 @@ describe("comparing a live response with its fixture", () => {
     const live = editedTrack(name, (f) => (f.properties.creator = "BRouter-1.8.0"));
     const findings = await compareWithFixture(caseFor(name), live, recorded(name));
     expect(levels(findings)).not.toContain("mismatch");
-    expect(findings).toContainEqual(expect.objectContaining({ level: "drift", message: expect.stringContaining("BRouter-1.8.0") }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({ level: "drift", message: expect.stringContaining("BRouter-1.8.0") }),
+    );
   });
 
   it("tolerates small changes in the track (map data edits) as a match", async () => {
@@ -161,7 +188,9 @@ describe("running the live check", () => {
 
   function recordedFor(url: URL): RecordedResponse {
     const c = liveCheckCases.find((c) => brouterUrl(c.mode, c.points) === url.toString());
-    if (!c) throw new Error(`unexpected request ${url}`);
+    if (!c) {
+      throw new Error(`unexpected request ${url}`);
+    }
     return recorded(c.fixture);
   }
 
@@ -190,7 +219,9 @@ describe("running the live check", () => {
     expect(result.passed).toBe(true);
     expect(result.report).toMatch(/MATCH/);
     expect(result.report).not.toMatch(/MISMATCH/);
-    for (const c of liveCheckCases) expect(result.report).toContain(c.name);
+    for (const c of liveCheckCases) {
+      expect(result.report).toContain(c.name);
+    }
   });
 
   it("fails and names the problem when a live response no longer fits", async () => {
@@ -220,7 +251,9 @@ describe("running the live check", () => {
     let calls = 0;
     const fetch = async (url: string, init: FetchInit) => {
       calls += 1;
-      if (calls === 1) throw new TypeError("fetch failed");
+      if (calls === 1) {
+        throw new TypeError("fetch failed");
+      }
       return server.fetch(url, init);
     };
     const result = await runLiveCheck({ fetch, wait: server.wait, readFixture: fixture });

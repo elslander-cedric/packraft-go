@@ -7,7 +7,11 @@ import type { Leg, LegMode, Trip } from "./trip";
 
 /** A routed line of `elevations`, starting `start` thousandths of a degree east. */
 function routed(start: number, elevations: number[]): Extract<LegRoute, { status: "routed" }> {
-  const geometry: RoutedPoint[] = elevations.map((elevation, i) => ({ lat: 50, lng: 5 + (start + i) / 1000, elevation }));
+  const geometry: RoutedPoint[] = elevations.map((elevation, i) => ({
+    lat: 50,
+    lng: 5 + (start + i) / 1000,
+    elevation,
+  }));
   return { status: "routed", geometry };
 }
 
@@ -80,19 +84,25 @@ describe("section totals", () => {
   });
 
   it("has a net drop from the first put-in to the last take-out", () => {
-    const [section] = summarise(trip([leg("paddle", routed(0, [100, 88])), leg("paddle", routed(1, [88, 93]))])).sections;
+    const [section] = summarise(
+      trip([leg("paddle", routed(0, [100, 88])), leg("paddle", routed(1, [88, 93]))]),
+    ).sections;
     expect(section.dropM).toBe(7);
     expect(section.riseM).toBeUndefined();
   });
 
   it("has a rise when the section ends higher, past the elevation noise", () => {
-    const [section] = summarise(trip([leg("paddle", routed(0, [100, 96])), leg("paddle", routed(1, [96, 110]))])).sections;
+    const [section] = summarise(
+      trip([leg("paddle", routed(0, [100, 96])), leg("paddle", routed(1, [96, 110]))]),
+    ).sections;
     expect(section.riseM).toBe(10);
     expect(section.dropM).toBeUndefined();
   });
 
   it("treats a small net rise as no drop, like a leg", () => {
-    const [section] = summarise(trip([leg("paddle", routed(0, [100, 101])), leg("paddle", routed(1, [101, 102]))])).sections;
+    const [section] = summarise(
+      trip([leg("paddle", routed(0, [100, 101])), leg("paddle", routed(1, [101, 102]))]),
+    ).sections;
     expect(section.dropM).toBe(0);
     expect(section.riseM).toBeUndefined();
   });

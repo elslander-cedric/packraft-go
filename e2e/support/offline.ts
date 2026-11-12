@@ -34,7 +34,9 @@ const MERCATOR_HALF = 20037508.342789244;
 /** The tile a WMS GetMap in EPSG:3857 asks for, from its BBOX (minx,miny,maxx,maxy). */
 function wmsTile(url: URL): Omit<TileRequest, "source" | "baseMap"> | null {
   const bbox = (url.searchParams.get("bbox") ?? url.searchParams.get("BBOX"))?.split(",").map(Number);
-  if (bbox?.length !== 4 || bbox.some((n) => !Number.isFinite(n))) return null;
+  if (bbox?.length !== 4 || bbox.some((n) => !Number.isFinite(n))) {
+    return null;
+  }
   const [minX, , maxX, maxY] = bbox;
   const width = maxX - minX;
   return {
@@ -58,8 +60,9 @@ function tileRequest(url: URL): TileRequest | null {
   });
   const param = (name: string) => url.searchParams.get(name) ?? url.searchParams.get(name.toLowerCase());
   let match: RegExpMatchArray | null;
-  if (url.hostname.endsWith("tile.opentopomap.org") && (match = url.pathname.match(/^\/(\d+)\/(\d+)\/(\d+)\.png$/)))
+  if (url.hostname.endsWith("tile.opentopomap.org") && (match = url.pathname.match(/^\/(\d+)\/(\d+)\/(\d+)\.png$/))) {
     return tile("opentopomap", match[1], match[2], match[3]);
+  }
   if (
     url.hostname === "geoservices.wallonie.be" &&
     url.pathname === "/arcgis/services/IMAGERIE/ORTHO_LAST/MapServer/WMSServer" &&
@@ -68,22 +71,33 @@ function tileRequest(url: URL): TileRequest | null {
     const at = wmsTile(url);
     return at && { ...at, source: "wallonia", baseMap: baseMapOf.wallonia };
   }
-  if (url.hostname === "geo.api.vlaanderen.be" && url.pathname === "/OMWRGBMRVL/wmts" && param("REQUEST") === "GetTile")
+  if (
+    url.hostname === "geo.api.vlaanderen.be" &&
+    url.pathname === "/OMWRGBMRVL/wmts" &&
+    param("REQUEST") === "GetTile"
+  ) {
     return tile("flanders", param("TILEMATRIX") ?? "", param("TILECOL") ?? "", param("TILEROW") ?? "");
+  }
   if (
     url.hostname === "geoservices-urbis.irisnet.be" &&
     (match = decodeURIComponent(url.pathname).match(
       /^\/geowebcache\/service\/wmts\/rest\/Ortho\/default\/EPSG:900913\/EPSG:900913:(\d+)\/(\d+)\/(\d+)$/,
     ))
-  )
+  ) {
     return tile("brussels", match[1], match[3], match[2]);
+  }
   if (
     url.hostname === "cartoweb.wmts.ngi.be" &&
     (match = url.pathname.match(/^\/1\.0\.0\/topo\/default\/3857\/(\d+)\/(\d+)\/(\d+)\.png$/))
-  )
+  ) {
     return tile("ngi", match[1], match[3], match[2]);
-  if (url.hostname === "tile.waymarkedtrails.org" && (match = url.pathname.match(/^\/hiking\/(\d+)\/(\d+)\/(\d+)\.png$/)))
+  }
+  if (
+    url.hostname === "tile.waymarkedtrails.org" &&
+    (match = url.pathname.match(/^\/hiking\/(\d+)\/(\d+)\/(\d+)\.png$/))
+  ) {
     return tile("hiking-trails", match[1], match[2], match[3]);
+  }
   return null;
 }
 
@@ -153,8 +167,12 @@ export const kiwisFixture = (name: string) => readFileSync(path.join(HYDROMETRY_
 export function kiwisFixtures(list: string, values: string): (url: URL) => BRouterReply {
   return (url) => {
     const request = url.searchParams.get("request");
-    if (request === "getTimeseriesList") return { status: 200, body: kiwisFixture(list) };
-    if (request === "getTimeseriesValues") return { status: 200, body: kiwisFixture(values) };
+    if (request === "getTimeseriesList") {
+      return { status: 200, body: kiwisFixture(list) };
+    }
+    if (request === "getTimeseriesValues") {
+      return { status: 200, body: kiwisFixture(values) };
+    }
     return { status: 400, body: "" };
   };
 }

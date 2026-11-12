@@ -22,7 +22,7 @@ test.beforeEach(({ page }) => showAllLegs(page));
 test("Back to start closes the route on the start point, is disabled when it can't, and undoes", async ({ page }) => {
   await serveOffline(page);
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   const [cx, cy] = [box.x + box.width / 2, box.y + box.height / 2];
 
   await expect(backButton(page)).toBeDisabled();

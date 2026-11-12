@@ -26,7 +26,6 @@ test.use({ viewport: { width: 1400, height: 900 } });
 const putIn = { lat: 50.3527, lng: 5.4563 };
 const nearby = { lat: 50.3537, lng: 5.4563 };
 
-
 async function seed(page: Page, kind: "slipway" | "official-aire") {
   const trip = JSON.stringify({
     format: "packraft-go-trip",
@@ -39,7 +38,9 @@ async function seed(page: Page, kind: "slipway" | "official-aire") {
   const points = serialiseAccessPoints(updateAccessPoint(added, "ap1", { kind, use: "put-in" }, now));
   await page.addInitScript(
     ([tripSave, pointsSave]) => {
-      if (sessionStorage.getItem("seeded")) return;
+      if (sessionStorage.getItem("seeded")) {
+        return;
+      }
       sessionStorage.setItem("seeded", "1");
       localStorage.setItem("packraft-go.trip", tripSave);
       localStorage.setItem("packraft-go.access-points", pointsSave);
@@ -70,7 +71,9 @@ const offer = (page: Page) => page.getByRole("region", { name: strings.snap.labe
 const storedFirstPoint = (page: Page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem("packraft-go.trip") ?? "null")?.trip?.points?.[0]);
 
-test("a new put-in near your access point offers a snap; accepting moves it and undo brings it back", async ({ page }) => {
+test("a new put-in near your access point offers a snap; accepting moves it and undo brings it back", async ({
+  page,
+}) => {
   await serveOffline(page);
   await seed(page, "slipway");
   await drawPaddleLeg(page);
@@ -137,7 +140,9 @@ const north = (at: LatLng, degrees: number): LatLng => ({ lat: at.lat + degrees,
 async function storeTripOnce(page: Page, trip: Trip) {
   await page.addInitScript(
     ([key, value]) => {
-      if (sessionStorage.getItem("seeded")) return;
+      if (sessionStorage.getItem("seeded")) {
+        return;
+      }
       sessionStorage.setItem("seeded", "1");
       localStorage.setItem(key, value);
     },
@@ -151,7 +156,9 @@ const closeLegDetails = (page: Page) =>
   legDetails(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();
 
 test.describe("official aires (#207)", () => {
-  test("a new put-in near an official aire is offered it by name; accepting moves the trip point only", async ({ page }) => {
+  test("a new put-in near an official aire is offered it by name; accepting moves the trip point only", async ({
+    page,
+  }) => {
     const network = await serveOffline(page);
     const start = north(MOYEN, 0.001); // about 111 m from the aire
     await storeTripOnce(page, justTheStart(start));

@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -38,6 +40,7 @@
     "@xmldom/xmldom": "^0.9.12",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.3",
+    "prettier": "3.10.1",
     "tsx": "4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.0.5"

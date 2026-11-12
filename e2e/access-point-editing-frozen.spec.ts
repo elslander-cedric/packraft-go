@@ -251,7 +251,9 @@ test.describe("on a wide screen", () => {
     await expect.poll(async () => (await storedAccessPoints(page))[0].position.lng).toBeGreaterThan(trip.points[0].lng);
   });
 
-  test("undo, delete, camp and the next leg's mode are off, by button and by key; leaving brings them back", async ({ page }) => {
+  test("undo, delete, camp and the next leg's mode are off, by button and by key; leaving brings them back", async ({
+    page,
+  }) => {
     await serveOffline(page, hiking);
     await openPlanner(page);
     const click = await mapClicker(page);
@@ -267,7 +269,9 @@ test.describe("on a wide screen", () => {
     await expect(page.getByRole("button", { name: text.backToStartButton })).toHaveCount(0);
     await expect(page.getByRole("group", { name: text.nextLegModeLabel })).toHaveCount(0);
     await page.locator("body").focus();
-    for (const key of ["Control+z", "Meta+z", "Delete", "Backspace"]) await page.keyboard.press(key);
+    for (const key of ["Control+z", "Meta+z", "Delete", "Backspace"]) {
+      await page.keyboard.press(key);
+    }
     await inputHandled(page);
     await expect(points(page)).toHaveCount(2);
 
@@ -305,7 +309,9 @@ test.describe("on a wide screen", () => {
     await serveOffline(page, river);
     await page.addInitScript(
       ([tripKey, tripValue, key, value]) => {
-        if (sessionStorage.getItem("seeded")) return;
+        if (sessionStorage.getItem("seeded")) {
+          return;
+        }
         sessionStorage.setItem("seeded", "1");
         localStorage.setItem(tripKey, tripValue);
         localStorage.setItem(key, value);
@@ -314,7 +320,9 @@ test.describe("on a wide screen", () => {
     );
     await openPlanner(page);
     // Beside the hike leg, which runs up the middle of the map: a click on a leg selects it (#230).
-    await (await mapClicker(page))(100, -150, "paddle");
+    await (
+      await mapClicker(page)
+    )(100, -150, "paddle");
     await expect(legLines(page)).toHaveCount(2);
     await expect(snapOffer(page)).toBeVisible();
 

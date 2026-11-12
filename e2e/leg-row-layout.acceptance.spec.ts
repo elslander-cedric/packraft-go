@@ -39,10 +39,12 @@ async function openMap(page: Page) {
   await openPlanner(page);
   // Updated: line counts are only meaningful once the self-hosted font has loaded (#70).
   await page.evaluate(() => document.fonts.ready);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   const click = async (dx: number, dy = 0, mode?: "hike" | "paddle") => {
-    if (mode) await pickNextMode(page, mode);
+    if (mode) {
+      await pickNextMode(page, mode);
+    }
     await page.mouse.click(centre.x + dx, centre.y + dy);
   };
   return { click, centre };
@@ -54,7 +56,9 @@ const linesOfText = (scope: Locator, text: string) =>
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       const at = n.textContent!.indexOf(wanted);
-      if (at < 0) continue;
+      if (at < 0) {
+        continue;
+      }
       const range = document.createRange();
       range.setStart(n, at);
       range.setEnd(n, at + wanted.length);
@@ -72,20 +76,32 @@ const textLineCount = (scope: Locator) =>
     const tops: number[] = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-      if (!n.textContent!.trim()) continue;
+      if (!n.textContent!.trim()) {
+        continue;
+      }
       // Updated: a paddle leg's access status and warnings sit in their own block below
       // the figures and are not part of the two-line rule for the figures (#58).
-      if (n.parentElement?.closest(".leg-access")) continue;
-      if (n.parentElement?.closest(hidden)) continue;
+      if (n.parentElement?.closest(".leg-access")) {
+        continue;
+      }
+      if (n.parentElement?.closest(hidden)) {
+        continue;
+      }
       const range = document.createRange();
       range.selectNodeContents(n);
-      for (const r of range.getClientRects()) if (r.width > 0) tops.push(r.top);
+      for (const r of range.getClientRects()) {
+        if (r.width > 0) {
+          tops.push(r.top);
+        }
+      }
     }
     tops.sort((a, b) => a - b);
     let lines = 0;
     let last = -Infinity;
     for (const t of tops) {
-      if (t - last > 6) lines++;
+      if (t - last > 6) {
+        lines++;
+      }
       last = t;
     }
     return lines;
@@ -117,7 +133,12 @@ async function fullyUnclipped(el: Locator) {
         };
       }
     }
-    return r.top >= clip.top - 0.5 && r.left >= clip.left - 0.5 && r.right <= clip.right + 0.5 && r.bottom <= clip.bottom + 0.5;
+    return (
+      r.top >= clip.top - 0.5 &&
+      r.left >= clip.left - 0.5 &&
+      r.right <= clip.right + 0.5 &&
+      r.bottom <= clip.bottom + 0.5
+    );
   });
 }
 
@@ -131,10 +152,10 @@ async function expectRetryUsable(page: Page, row: Locator, net: { brouter: URL[]
   expect(box.height).toBeGreaterThanOrEqual(16);
   // The Retry text itself fits on one line inside the button.
   expect(await linesOfText(retry, strings.retryRouting)).toBe(1);
-  const hit = await page.evaluate(
-    ({ x, y }) => document.elementFromPoint(x, y)?.closest("button")?.textContent,
-    { x: box.x + box.width / 2, y: box.y + box.height / 2 },
-  );
+  const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest("button")?.textContent, {
+    x: box.x + box.width / 2,
+    y: box.y + box.height / 2,
+  });
   expect(hit, "something covers the Retry button").toBe(strings.retryRouting);
   const before = net.brouter.length;
   await retry.click();
@@ -221,17 +242,24 @@ test.describe("Retry on a failed leg at 1280×800", () => {
     await expectRetryUsable(page, row, net);
   });
 
-  test("with many failed legs, the last leg's Retry can be scrolled to and used, also by keyboard", async ({ page }) => {
+  test("with many failed legs, the last leg's Retry can be scrolled to and used, also by keyboard", async ({
+    page,
+  }) => {
     const net = await serveOffline(page);
     const { click } = await openMap(page);
-    for (const dx of [-250, -150, -50, 50, 150, 250]) await click(dx);
+    for (const dx of [-250, -150, -50, 50, 150, 250]) {
+      await click(dx);
+    }
     await expect(legRows(page)).toHaveCount(5);
     // One section: its row lists each failed leg by number, with its own Retry.
     await expect(tripPanel(page).getByRole("alert")).toHaveCount(5);
     const last = tripPanel(page).locator(".planner-row-failed").nth(4);
     await expectRetryUsable(page, last, net);
 
-    const retry = tripPanel(page).locator(".planner-row-failed").nth(2).getByRole("button", { name: strings.retryRouting });
+    const retry = tripPanel(page)
+      .locator(".planner-row-failed")
+      .nth(2)
+      .getByRole("button", { name: strings.retryRouting });
     await expect(retry).toBeVisible(); // still failed after a retry of another leg
     await retry.focus();
     const before = net.brouter.length;
@@ -266,7 +294,9 @@ test.describe("hike and paddle rows, totals at 1280×800", () => {
     expect(paddle.font).toBeGreaterThanOrEqual(12);
   });
 
-  test("day and trip totals: each figure on one line, no sideways overflow, apart from the leg rows", async ({ page }) => {
+  test("day and trip totals: each figure on one line, no sideways overflow, apart from the leg rows", async ({
+    page,
+  }) => {
     await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
     const { click, centre } = await openMap(page);
     await click(-150);
@@ -308,7 +338,7 @@ test.describe("hike and paddle rows, totals at 1280×800", () => {
   test("the map keeps most of a 1280 px window (desktop-first)", async ({ page }) => {
     await serveOffline(page);
     await openMap(page);
-    const map = (await freeMapBox(page));
+    const map = await freeMapBox(page);
     expect(map.width).toBeGreaterThanOrEqual(800);
   });
 });

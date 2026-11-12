@@ -12,11 +12,7 @@ const rule = (over: Partial<AgwRule> = {}): AgwRule => ({
   gauge: { name: "Test gauge", stationNo: "1234", assumed: false },
   ...over,
 });
-const gauge = (
-  mean72h: number,
-  at8: number | null,
-  meanDate = today,
-): GaugeReadings => ({
+const gauge = (mean72h: number, at8: number | null, meanDate = today): GaugeReadings => ({
   mean72h: [{ at: `${meanDate}T01:00:00.000+02:00`, m3s: mean72h }],
   hourly: [
     { at: `${today}T07:00:00.000+02:00`, m3s: 9 },
@@ -56,9 +52,7 @@ describe("flow check (AGW art. 6)", () => {
   });
 
   it("has no low-flow closure on stretches without a minimum", () => {
-    expect(
-      flowCheck(rule({ minM3s: null }), ok(gauge(0.1, 3)), today).kind,
-    ).toBe("ok");
+    expect(flowCheck(rule({ minM3s: null }), ok(gauge(0.1, 3)), today).kind).toBe("ok");
   });
 
   it("is unknown when the 72-hour mean isn't from today (stale)", () => {
@@ -108,9 +102,7 @@ describe("flow check (AGW art. 6)", () => {
   });
 
   it("is unknown when the gauge's series are missing", () => {
-    expect(
-      flowCheck(rule(), { status: "ok", gauges: {} }, today),
-    ).toMatchObject({ kind: "unknown", why: "missing" });
+    expect(flowCheck(rule(), { status: "ok", gauges: {} }, today)).toMatchObject({ kind: "unknown", why: "missing" });
     const noMean: GaugeReadings = { mean72h: [], hourly: gauge(5, 10).hourly };
     expect(flowCheck(rule(), ok(noMean), today)).toMatchObject({
       kind: "unknown",
@@ -119,9 +111,10 @@ describe("flow check (AGW art. 6)", () => {
   });
 
   it("is unknown without a matching gauge", () => {
-    expect(
-      flowCheck(rule({ gauge: null }), ok(gauge(5, 10)), today),
-    ).toMatchObject({ kind: "unknown", why: "no-gauge" });
+    expect(flowCheck(rule({ gauge: null }), ok(gauge(5, 10)), today)).toMatchObject({
+      kind: "unknown",
+      why: "no-gauge",
+    });
     expect(flowCheck(rule({ gauge: null }), undefined, today)).toMatchObject({
       kind: "unknown",
       why: "no-gauge",

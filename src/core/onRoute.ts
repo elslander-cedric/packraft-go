@@ -54,7 +54,8 @@ export type AccessPointsByRoute = {
  */
 function routeLine(trip: Trip): LatLng[] {
   return trip.legs.flatMap((leg, i): readonly LatLng[] => {
-    const line: readonly LatLng[] = leg.route?.status === "routed" ? leg.route.geometry : [trip.points[i], trip.points[i + 1]];
+    const line: readonly LatLng[] =
+      leg.route?.status === "routed" ? leg.route.geometry : [trip.points[i], trip.points[i + 1]];
     // Each leg starts where the one before it ended: drop the repeated point.
     return i === 0 ? line : line.slice(1);
   });
@@ -68,7 +69,9 @@ function roleAt(trip: Trip, position: LatLng): OnRoute["role"] {
 /** The official aires on the trip's route, in route order; none without a route. */
 export function officialAiresOnRoute(trip: Trip, aires: readonly OfficialAire[]): readonly OnRouteAire[] {
   const line = routeLine(trip);
-  if (line.length < 2) return [];
+  if (line.length < 2) {
+    return [];
+  }
   return aires
     .flatMap((aire) => {
       const position = airePosition(aire);
@@ -93,15 +96,20 @@ export function accessPointsByRoute(trip: Trip, points: AccessPoints, you: LatLn
   const fromYouKm = (point: AccessPoint) => (you ? distanceM(you, point.position) / 1000 : null);
   if (!hasRoute) {
     const notOnRoute = points.map((point) => ({ point, fromYouKm: fromYouKm(point) }));
-    if (you) notOnRoute.sort((a, b) => a.fromYouKm! - b.fromYouKm!);
+    if (you) {
+      notOnRoute.sort((a, b) => a.fromYouKm! - b.fromYouKm!);
+    }
     return { hasRoute, onRoute: [], notOnRoute };
   }
   const onRoute: OnRoute[] = [];
   const rest: (NotOnRoute & { offM: number })[] = [];
   for (const point of points) {
     const { offM, alongM } = projectOntoLine(point.position, line);
-    if (offM <= ON_ROUTE_M) onRoute.push({ point, alongKm: alongM / 1000, role: roleAt(trip, point.position) });
-    else rest.push({ point, fromYouKm: fromYouKm(point), offM });
+    if (offM <= ON_ROUTE_M) {
+      onRoute.push({ point, alongKm: alongM / 1000, role: roleAt(trip, point.position) });
+    } else {
+      rest.push({ point, fromYouKm: fromYouKm(point), offM });
+    }
   }
   onRoute.sort((a, b) => a.alongKm - b.alongKm);
   rest.sort((a, b) => (you ? a.fromYouKm! - b.fromYouKm! : a.offM - b.offM));

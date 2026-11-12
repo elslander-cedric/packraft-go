@@ -36,9 +36,13 @@ async function drawTrip(router: Router, points: LatLng[], modes: LegMode[] = [])
     state.trip = applyEdit(state.trip, e);
     await auto.sync(state.trip);
   };
-  for (const at of points) await edit({ type: "addPoint", at });
+  for (const at of points) {
+    await edit({ type: "addPoint", at });
+  }
   for (const [index, mode] of modes.entries()) {
-    if (mode !== "hike") await edit({ type: "setLegMode", index, mode });
+    if (mode !== "hike") {
+      await edit({ type: "setLegMode", index, mode });
+    }
   }
   // Let any outstanding routing finish.
   await auto.sync(state.trip);
@@ -151,8 +155,16 @@ describe("(core side): each leg and the trip have a time", () => {
 
 describe("(core side): changing and restoring settings", () => {
   it("withSetting changes one setting and keeps the other", () => {
-    expect(withSetting(defaultSettings, "paceFactor", 1.2)).toEqual({ ...defaultSettings, paceFactor: 1.2, paddleSpeedKmh: 5 });
-    expect(withSetting(defaultSettings, "paddleSpeedKmh", 3.5)).toEqual({ ...defaultSettings, paceFactor: 1, paddleSpeedKmh: 3.5 });
+    expect(withSetting(defaultSettings, "paceFactor", 1.2)).toEqual({
+      ...defaultSettings,
+      paceFactor: 1.2,
+      paddleSpeedKmh: 5,
+    });
+    expect(withSetting(defaultSettings, "paddleSpeedKmh", 3.5)).toEqual({
+      ...defaultSettings,
+      paceFactor: 1,
+      paddleSpeedKmh: 3.5,
+    });
   });
 
   it("unusable values (zero, negative, NaN, Infinity) are ignored", () => {
@@ -174,8 +186,16 @@ describe("(core side): changing and restoring settings", () => {
   });
 
   it("bad individual fields fall back to their default; good ones are kept", () => {
-    expect(restoreSettings('{"paceFactor":-2,"paddleSpeedKmh":4}')).toEqual({ ...defaultSettings, paceFactor: 1, paddleSpeedKmh: 4 });
-    expect(restoreSettings('{"paceFactor":1.4,"paddleSpeedKmh":"fast"}')).toEqual({ ...defaultSettings, paceFactor: 1.4, paddleSpeedKmh: 5 });
+    expect(restoreSettings('{"paceFactor":-2,"paddleSpeedKmh":4}')).toEqual({
+      ...defaultSettings,
+      paceFactor: 1,
+      paddleSpeedKmh: 4,
+    });
+    expect(restoreSettings('{"paceFactor":1.4,"paddleSpeedKmh":"fast"}')).toEqual({
+      ...defaultSettings,
+      paceFactor: 1.4,
+      paddleSpeedKmh: 5,
+    });
     expect(restoreSettings('{"paceFactor":0,"paddleSpeedKmh":null}')).toEqual(defaultSettings);
   });
 

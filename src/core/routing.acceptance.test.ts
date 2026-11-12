@@ -26,7 +26,9 @@ const track = (from: LatLng, to: LatLng): RouteResult => ({
 
 /** The geometry of a successful result. */
 const geometryOf = (result: RouteResult) => {
-  if (!result.ok) throw new Error("expected a routed result");
+  if (!result.ok) {
+    throw new Error("expected a routed result");
+  }
   return result.geometry;
 };
 
@@ -196,7 +198,11 @@ describe("failure keeps the leg and can be retried", () => {
   });
 
   it("a router that throws becomes an 'unavailable' failure, not a stuck pending leg", async () => {
-    const throwing: Router = { route: async () => { throw new Error("boom"); } };
+    const throwing: Router = {
+      route: async () => {
+        throw new Error("boom");
+      },
+    };
     const { state, update } = planner(through(P1, P2));
     await createAutoRouter(throwing, routingInto(update)).sync(state.trip);
     expect(state.trip.legs[0].route).toEqual({ status: "failed", failure: { kind: "unavailable" } });

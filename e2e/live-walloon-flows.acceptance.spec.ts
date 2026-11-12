@@ -14,7 +14,6 @@ test.use({ viewport: { width: 1400, height: 900 } });
 const water = accessWater;
 const detail = (page: Page) => page.getByRole("dialog");
 
-
 async function openAccessLayer(page: Page) {
   await page.goto("/");
   await expect(page.getByRole("region", { name: strings.mapLabel }).locator(".leaflet-container")).toBeVisible();
@@ -27,7 +26,13 @@ function highAt8(url: URL) {
     return { status: 200, body: kiwisFixture("timeseries-list.json") };
   }
   const entries = JSON.parse(kiwisFixture("timeseries-values.json")) as { data: [string, number][] }[];
-  for (const e of entries) for (const row of e.data) if (row[0].includes("T08:00")) row[1] = 9999;
+  for (const e of entries) {
+    for (const row of e.data) {
+      if (row[0].includes("T08:00")) {
+        row[1] = 9999;
+      }
+    }
+  }
   return { status: 200, body: JSON.stringify(entries) };
 }
 

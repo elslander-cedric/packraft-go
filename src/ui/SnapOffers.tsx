@@ -36,7 +36,9 @@ type SnapOffersProps = {
  * core's offers; no domain logic.
  */
 export default function SnapOffers({ offers, onAccept, onDecline }: SnapOffersProps) {
-  if (offers.length === 0) return null;
+  if (offers.length === 0) {
+    return null;
+  }
   return (
     <section className="snap-offers" role="region" aria-label={text.label}>
       {offers.map((offer) => (

@@ -38,8 +38,12 @@ export function createBRouterRouter(options: BRouterOptions = {}): Router {
         return UNAVAILABLE;
       }
       // BRouter reports routing problems (unmapped points, islands) as 400 with a text message.
-      if (response.status === 400) return NO_ROUTE;
-      if (!response.ok) return UNAVAILABLE;
+      if (response.status === 400) {
+        return NO_ROUTE;
+      }
+      if (!response.ok) {
+        return UNAVAILABLE;
+      }
       try {
         return toRouteResult(JSON.parse(await response.text()));
       } catch {
@@ -59,8 +63,12 @@ type BRouterFeature = {
 function toRouteResult(geojson: unknown): RouteResult {
   const feature = (geojson as { features?: BRouterFeature[] }).features?.[0];
   const coordinates = feature?.geometry?.coordinates;
-  if (!Array.isArray(coordinates)) return UNAVAILABLE;
-  if (coordinates.length < 2) return NO_ROUTE;
+  if (!Array.isArray(coordinates)) {
+    return UNAVAILABLE;
+  }
+  if (coordinates.length < 2) {
+    return NO_ROUTE;
+  }
   const geometry = withElevations(coordinates as Position[]);
   // BRouter's smoothed climb ("filtered ascend", whole metres, sent as a string).
   const climbM = Number.parseFloat(String(feature?.properties?.["filtered ascend"]));
@@ -77,7 +85,9 @@ function withElevations(positions: readonly Position[]): RoutedPoint[] {
   const firstKnown = positions.find(known)?.[2] ?? 0;
   let last = firstKnown;
   return positions.map(([lng, lat, elevation]) => {
-    if (typeof elevation === "number") last = elevation;
+    if (typeof elevation === "number") {
+      last = elevation;
+    }
     return { lat, lng, elevation: last };
   });
 }

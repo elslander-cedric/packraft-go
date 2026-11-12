@@ -58,8 +58,12 @@ const undo: Edit = { type: "undo" };
 async function routedThroughAll() {
   const { router, calls } = manualRouter();
   const p = planner(router);
-  for (const at of P) void p.edit(add(at));
-  for (const c of calls) c.answer(track(c.points[0], c.points[1]));
+  for (const at of P) {
+    void p.edit(add(at));
+  }
+  for (const c of calls) {
+    c.answer(track(c.points[0], c.points[1]));
+  }
   await flush();
   expect(statuses(p.state.trip)).toEqual(["routed", "routed", "routed"]);
   expect(calls).toHaveLength(3);
@@ -197,7 +201,9 @@ describe("undo restores route state", () => {
     void edit(undo);
     // Failures are not remembered, so the leg is asked for again; whatever the answer, it settles.
     expect(statuses(state.trip)).not.toContain(undefined);
-    for (const c of calls.slice(2)) c.answer({ ok: false, failure: { kind: "unavailable" } });
+    for (const c of calls.slice(2)) {
+      c.answer({ ok: false, failure: { kind: "unavailable" } });
+    }
     await flush();
     expect(statuses(state.trip)).toEqual(["failed"]);
   });
@@ -205,10 +211,16 @@ describe("undo restores route state", () => {
   it("undoing everything while requests are out leaves an empty trip; late answers change nothing", async () => {
     const { router, calls } = manualRouter();
     const { state, edit } = planner(router);
-    for (const at of P) void edit(add(at));
-    for (let i = 0; i < 4; i++) void edit(undo);
+    for (const at of P) {
+      void edit(add(at));
+    }
+    for (let i = 0; i < 4; i++) {
+      void edit(undo);
+    }
     expect(state.trip).toMatchObject({ points: [], legs: [] });
-    for (const c of calls) c.answer(track(c.points[0], c.points[1]));
+    for (const c of calls) {
+      c.answer(track(c.points[0], c.points[1]));
+    }
     await flush();
     expect(state.trip).toMatchObject({ points: [], legs: [] });
   });
@@ -217,7 +229,9 @@ describe("undo restores route state", () => {
     const { state, edit, calls } = await routedThroughAll();
     const before = summarise(state.trip);
     void edit({ type: "movePoint", index: 2, to: MOVED });
-    for (const c of calls.slice(3)) c.answer(track(c.points[0], c.points[1], 500));
+    for (const c of calls.slice(3)) {
+      c.answer(track(c.points[0], c.points[1], 500));
+    }
     await flush();
     expect(summarise(state.trip)).not.toEqual(before);
     await edit(undo);
@@ -228,7 +242,7 @@ describe("undo restores route state", () => {
 describe("no leg is ever left pending once its requests are answered", () => {
   it("a random mix of adds, moves, deletes and undos settles with every leg routed", async () => {
     let seed = 7;
-    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let run = 0; run < 25; run++) {
       const { router, calls } = manualRouter();
       const { state, edit } = planner(router);
@@ -237,10 +251,15 @@ describe("no leg is ever left pending once its requests are answered", () => {
         const n = state.trip.points.length;
         const r = rand();
         const at = { lat: 50 + Math.round(rand() * 20) / 1000, lng: 5 + Math.round(rand() * 20) / 1000 };
-        if (r < 0.35 || n === 0) void edit(add(at));
-        else if (r < 0.55) void edit({ type: "movePoint", index: Math.floor(rand() * n), to: at });
-        else if (r < 0.7) void edit({ type: "deletePoint", index: Math.floor(rand() * n) });
-        else void edit(undo);
+        if (r < 0.35 || n === 0) {
+          void edit(add(at));
+        } else if (r < 0.55) {
+          void edit({ type: "movePoint", index: Math.floor(rand() * n), to: at });
+        } else if (r < 0.7) {
+          void edit({ type: "deletePoint", index: Math.floor(rand() * n) });
+        } else {
+          void edit(undo);
+        }
         // Answer some of the outstanding requests, in a shuffled order.
         while (answered < calls.length && rand() < 0.5) {
           const c = calls[answered++];

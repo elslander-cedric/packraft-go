@@ -33,18 +33,22 @@ export async function showAllLegs(page: Page) {
     let opening = 0;
     let patched = false;
     new MutationObserver(() => {
-      const map = (window as unknown as { L?: { Map: { prototype: { fitBounds(...args: unknown[]): unknown } } } }).L?.Map
-        .prototype;
+      const map = (window as unknown as { L?: { Map: { prototype: { fitBounds(...args: unknown[]): unknown } } } }).L
+        ?.Map.prototype;
       if (map && !patched) {
         patched = true;
         const { fitBounds } = map;
         map.fitBounds = function (this: unknown, bounds, options) {
-          if (opening > 0 && (options as { paddingBottomRight?: unknown })?.paddingBottomRight) return this;
+          if (opening > 0 && (options as { paddingBottomRight?: unknown })?.paddingBottomRight) {
+            return this;
+          }
           return fitBounds.call(this, bounds, options);
         };
       }
       const row = document.querySelector<HTMLElement>('.planner-row-toggle[aria-expanded="false"]');
-      if (!row) return;
+      if (!row) {
+        return;
+      }
       opening += 1;
       row.click();
       setTimeout(() => (opening -= 1), 100);
@@ -64,7 +68,9 @@ export const sectionRowButton = (page: Page, n: number) =>
 /** Taps section `n`'s row so that the next tap acts on the selected row. */
 export async function selectSection(page: Page, n: number) {
   const row = sectionRowButton(page, n);
-  if ((await row.getAttribute("aria-current")) === null) await row.click();
+  if ((await row.getAttribute("aria-current")) === null) {
+    await row.click();
+  }
   await expect(row).toHaveAttribute("aria-current", "true");
 }
 
@@ -87,7 +93,9 @@ export const legRowButton = (page: Page, n: number) =>
 /** Shows one of the panel's tabs (only the shown tab's content is in the page). */
 export async function showTab(page: Page, name: string) {
   const tab = panelTab(page, name);
-  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+  if ((await tab.getAttribute("aria-selected")) !== "true") {
+    await tab.click();
+  }
   await expect(tab).toHaveAttribute("aria-selected", "true");
 }
 
@@ -128,7 +136,9 @@ export async function freeMapCentre(page: Page) {
 export async function km(locator: Locator) {
   const shown = (await locator.textContent()) ?? "";
   const m = shown.match(/([\d.,]+)\s*km/);
-  if (!m) throw new Error(`no distance in "${shown}"`);
+  if (!m) {
+    throw new Error(`no distance in "${shown}"`);
+  }
   return Number(m[1].replace(",", ""));
 }
 
@@ -136,7 +146,9 @@ export async function km(locator: Locator) {
 export async function figure(within: Locator, label: string) {
   const all = await within.locator(".planner-row-figure, .planner-total, .day-figure").allTextContents();
   const found = all.find((shown) => shown.startsWith(`${label} `));
-  if (found === undefined) throw new Error(`no "${label}" in ${JSON.stringify(all)}`);
+  if (found === undefined) {
+    throw new Error(`no "${label}" in ${JSON.stringify(all)}`);
+  }
   return found.slice(label.length + 1);
 }
 
@@ -163,8 +175,11 @@ export async function renameTrip(page: Page, name: string) {
 export async function setStartDate(page: Page, date: string) {
   await menuItem(page, text.menu.tripDetails);
   const dialog = tripDetailsDialog(page);
-  if (date === "") await dialog.getByRole("button", { name: strings.clearStartDateButton }).click();
-  else await dialog.getByLabel(strings.startDateLabel).fill(date);
+  if (date === "") {
+    await dialog.getByRole("button", { name: strings.clearStartDateButton }).click();
+  } else {
+    await dialog.getByLabel(strings.startDateLabel).fill(date);
+  }
   await dialog.getByRole("button", { name: text.menu.tripDetailsConfirm }).click();
   await expect(dialog).toHaveCount(0);
 }
@@ -173,8 +188,12 @@ export async function setStartDate(page: Page, date: string) {
 export async function changeSettings(page: Page, values: { paceFactor?: string; paddleSpeed?: string }) {
   await menuItem(page, text.menu.settings);
   const dialog = settingsDialog(page);
-  if (values.paceFactor !== undefined) await dialog.getByLabel(strings.paceFactorLabel).fill(values.paceFactor);
-  if (values.paddleSpeed !== undefined) await dialog.getByLabel(strings.paddleSpeedLabel).fill(values.paddleSpeed);
+  if (values.paceFactor !== undefined) {
+    await dialog.getByLabel(strings.paceFactorLabel).fill(values.paceFactor);
+  }
+  if (values.paddleSpeed !== undefined) {
+    await dialog.getByLabel(strings.paddleSpeedLabel).fill(values.paddleSpeed);
+  }
   await dialog.getByRole("button", { name: text.menu.settingsConfirm }).click();
   await expect(dialog).toHaveCount(0);
 }
@@ -198,12 +217,16 @@ export async function mapClicker(page: Page) {
   const centre = await freeMapCentre(page);
   let last: { x: number; y: number; at: number } | null = null;
   return async (dx: number, dy: number, mode?: "hike" | "paddle") => {
-    if (mode) await pickNextMode(page, mode);
+    if (mode) {
+      await pickNextMode(page, mode);
+    }
     const at = { x: centre.x + dx, y: centre.y + dy };
     // A second click on the same spot within 0.4 s is a double tap, which gives one tap.
     if (last && Math.hypot(at.x - last.x, at.y - last.y) < 40) {
       const wait = 450 - (Date.now() - last.at);
-      if (wait > 0) await page.waitForTimeout(wait);
+      if (wait > 0) {
+        await page.waitForTimeout(wait);
+      }
     }
     await page.mouse.click(at.x, at.y);
     last = { ...at, at: Date.now() };
@@ -226,7 +249,9 @@ export async function openTripFile(page: Page, file: ChosenFile) {
 async function downloadFromMenu(page: Page, item: string, title: string, confirm: string, name?: string) {
   await menuItem(page, item);
   const dialog = page.getByRole("dialog", { name: title });
-  if (name !== undefined) await dialog.getByLabel(strings.tripNameLabel).fill(name);
+  if (name !== undefined) {
+    await dialog.getByLabel(strings.tripNameLabel).fill(name);
+  }
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     dialog.getByRole("button", { name: confirm }).click(),
@@ -268,7 +293,9 @@ export async function startGpxExport(page: Page) {
 /** The menu's Export GPX item, disabled while the trip has no leg; the menu is closed again. */
 export async function exportGpxDisabled(page: Page) {
   await menuButton(page).click();
-  const disabled = (await page.getByRole("menuitem", { name: text.menu.exportGpx, exact: true }).getAttribute("aria-disabled")) === "true";
+  const disabled =
+    (await page.getByRole("menuitem", { name: text.menu.exportGpx, exact: true }).getAttribute("aria-disabled")) ===
+    "true";
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
   return disabled;
@@ -291,7 +318,9 @@ export const accessPointDialog = (page: Page) => page.getByRole("dialog", { name
  * (ADR 0036). Leaves the new point's dialog open; Save stores it.
  */
 export async function markAccessPointAt(page: Page, at: { x: number; y: number }) {
-  if (!(await isEditing(page))) await enterAccessPointEditing(page);
+  if (!(await isEditing(page))) {
+    await enterAccessPointEditing(page);
+  }
   await page.mouse.click(at.x, at.y);
   await expect(draftMarker(page)).toHaveCount(1);
   await markAccessPointButton(page).click();
@@ -318,7 +347,12 @@ export async function saveAccessPoint(page: Page) {
  */
 export async function pointOnPath(page: Page, path: Locator) {
   const free = await freeMapBox(page);
-  const area = { minX: free.x + 80, maxX: free.x + free.width - 80, minY: free.y + 140, maxY: free.y + free.height - 140 };
+  const area = {
+    minX: free.x + 80,
+    maxX: free.x + free.width - 80,
+    minY: free.y + 140,
+    maxY: free.y + free.height - 140,
+  };
   const at = await path.first().evaluate((element, { minX, maxX, minY, maxY }) => {
     const svg = element as SVGPathElement;
     const length = svg.getTotalLength();
@@ -329,11 +363,15 @@ export async function pointOnPath(page: Page, path: Locator) {
       const p = svg.getPointAtLength(length * share);
       const x = p.x * m.a + p.y * m.c + m.e;
       const y = p.x * m.b + p.y * m.d + m.f;
-      if (x > minX && x < maxX && y > minY && y < maxY && document.elementFromPoint(x, y) === svg) return { x, y };
+      if (x > minX && x < maxX && y > minY && y < maxY && document.elementFromPoint(x, y) === svg) {
+        return { x, y };
+      }
     }
     return null;
   }, area);
-  if (!at) throw new Error("no part of the path is in the free part of the map");
+  if (!at) {
+    throw new Error("no part of the path is in the free part of the map");
+  }
   return at;
 }
 

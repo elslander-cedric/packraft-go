@@ -45,12 +45,13 @@ function routedTrip(modes: LegMode[], camps: number[] = [], perLeg = 4): Trip {
   return { ...base, legs } as unknown as Trip;
 }
 
-const compact = (t: Trip) =>
-  tripSections(t).map((s) => `${s.mode}:${s.firstLeg}-${s.lastLeg}:d${s.day}`);
+const compact = (t: Trip) => tripSections(t).map((s) => `${s.mode}:${s.firstLeg}-${s.lastLeg}:d${s.day}`);
 /** The export's text (the trip has legs). */
 function gpxOf(t: Trip): string {
   const file = tripToGpx(t, names);
-  if (!file) throw new Error("no GPX for this trip");
+  if (!file) {
+    throw new Error("no GPX for this trip");
+  }
   return file.text;
 }
 /** The names of the export's waypoints: one per section, then the end. */
@@ -80,39 +81,24 @@ describe("sections split per ADR 0021", () => {
   });
 
   it("consecutive same-mode legs: one section", () => {
-    expect(
-      compact(trip(["hike", "hike", "paddle", "paddle", "paddle"])),
-    ).toEqual(["hike:0-1:d1", "paddle:2-4:d1"]);
+    expect(compact(trip(["hike", "hike", "paddle", "paddle", "paddle"]))).toEqual(["hike:0-1:d1", "paddle:2-4:d1"]);
   });
 
   it("camp in the middle of a same-mode run: splits it, next day", () => {
-    expect(compact(trip(["paddle", "paddle", "paddle"], [2]))).toEqual([
-      "paddle:0-1:d1",
-      "paddle:2-2:d2",
-    ]);
+    expect(compact(trip(["paddle", "paddle", "paddle"], [2]))).toEqual(["paddle:0-1:d1", "paddle:2-2:d2"]);
   });
 
   it("camp at a mode change: one split only, no empty section", () => {
-    expect(compact(trip(["hike", "hike", "paddle", "paddle"], [2]))).toEqual([
-      "hike:0-1:d1",
-      "paddle:2-3:d2",
-    ]);
+    expect(compact(trip(["hike", "hike", "paddle", "paddle"], [2]))).toEqual(["hike:0-1:d1", "paddle:2-3:d2"]);
   });
 
   it("portage: paddle → hike → paddle gives three sections (three section waypoints)", () => {
-    expect(compact(trip(["paddle", "hike", "paddle"]))).toEqual([
-      "paddle:0-0:d1",
-      "hike:1-1:d1",
-      "paddle:2-2:d1",
-    ]);
+    expect(compact(trip(["paddle", "hike", "paddle"]))).toEqual(["paddle:0-0:d1", "hike:1-1:d1", "paddle:2-2:d1"]);
     expect(waypointNames(trip(["paddle", "hike", "paddle"]))).toHaveLength(3 + 1);
   });
 
   it("trip ending on a camp point: no extra section, no extra day", () => {
-    expect(compact(trip(["hike", "paddle"], [2]))).toEqual([
-      "hike:0-0:d1",
-      "paddle:1-1:d1",
-    ]);
+    expect(compact(trip(["hike", "paddle"], [2]))).toEqual(["hike:0-0:d1", "paddle:1-1:d1"]);
   });
 
   it("camp at the start point: splits nothing", () => {
@@ -120,9 +106,11 @@ describe("sections split per ADR 0021", () => {
   });
 
   it("a camp on every point of a three-leg same-mode trip: three sections on days 1-3", () => {
-    expect(compact(trip(["paddle", "paddle", "paddle"], [0, 1, 2, 3]))).toEqual(
-      ["paddle:0-0:d1", "paddle:1-1:d2", "paddle:2-2:d3"],
-    );
+    expect(compact(trip(["paddle", "paddle", "paddle"], [0, 1, 2, 3]))).toEqual([
+      "paddle:0-0:d1",
+      "paddle:1-1:d2",
+      "paddle:2-2:d3",
+    ]);
   });
 
   it("no legs: no sections, no file", () => {
@@ -136,14 +124,9 @@ describe("day numbers in section names match the app's day totals", () => {
   const cases: Trip[] = [];
   for (let n = 1; n <= 5; n += 1) {
     for (let modeBits = 0; modeBits < 1 << n; modeBits += 1) {
-      const modes = Array.from(
-        { length: n },
-        (_, i) => ((modeBits >> i) & 1 ? "paddle" : "hike") as LegMode,
-      );
+      const modes = Array.from({ length: n }, (_, i) => ((modeBits >> i) & 1 ? "paddle" : "hike") as LegMode);
       for (let campBits = 0; campBits < 1 << (n + 1); campBits += 1) {
-        const camps = Array.from({ length: n + 1 }, (_, i) => i).filter(
-          (i) => (campBits >> i) & 1,
-        );
+        const camps = Array.from({ length: n + 1 }, (_, i) => i).filter((i) => (campBits >> i) & 1);
         cases.push(trip(modes, camps));
       }
     }
@@ -169,8 +152,9 @@ describe("day numbers in section names match the app's day totals", () => {
       let next = 0;
       for (const s of sections) {
         expect(s.firstLeg).toBe(next);
-        for (let i = s.firstLeg; i <= s.lastLeg; i += 1)
+        for (let i = s.firstLeg; i <= s.lastLeg; i += 1) {
           expect(t.legs[i].mode).toBe(s.mode);
+        }
         next = s.lastLeg + 1;
       }
       expect(next).toBe(t.legs.length);
@@ -239,10 +223,7 @@ describe("naming", () => {
 
 describe("the GPX file", () => {
   const samples: [string, Trip][] = [
-    [
-      "routed mixed with camps",
-      routedTrip(["hike", "paddle", "paddle", "hike", "paddle"], [3]),
-    ],
+    ["routed mixed with camps", routedTrip(["hike", "paddle", "paddle", "hike", "paddle"], [3])],
     ["routed single leg", routedTrip(["paddle"])],
     ["unrouted", trip(["hike", "hike", "paddle"])],
   ];
@@ -261,9 +242,7 @@ describe("the GPX file", () => {
     it(`${label}: points are continuous, with no point repeated where legs meet`, () => {
       const pts = parseGpx11(gpxOf(t)).tracks[0].points;
       for (let i = 1; i < pts.length; i += 1) {
-        expect(
-          pts[i].lat === pts[i - 1].lat && pts[i].lon === pts[i - 1].lon,
-        ).toBe(false);
+        expect(pts[i].lat === pts[i - 1].lat && pts[i].lon === pts[i - 1].lon).toBe(false);
       }
     });
 

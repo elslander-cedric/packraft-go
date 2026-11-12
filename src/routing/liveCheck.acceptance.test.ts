@@ -38,7 +38,9 @@ function fakeServer(doctor: (fixture: string, answer: Answer) => Answer = (_f, a
       await new Promise((r) => setTimeout(r, 5));
       const c = liveCheckCases.find((k) => brouterUrl(k.mode, k.points) === url);
       inFlight -= 1;
-      if (!c) return new Response("unexpected request", { status: 500 });
+      if (!c) {
+        return new Response("unexpected request", { status: 500 });
+      }
       const answer = doctor(c.fixture, { status: c.status, body: readFixture(c.fixture) });
       return new Response(answer.body, { status: answer.status });
     },
@@ -77,13 +79,17 @@ describe("at most ~4 live requests, sequential and polite", () => {
     // Every pair of consecutive fetches has a wait in between.
     const types = server.log.map((e) => e.type).join(",");
     expect(types).not.toContain("fetch,fetch");
-    for (const w of server.log.filter((e) => e.type === "wait")) expect(w.ms).toBeGreaterThanOrEqual(1000);
+    for (const w of server.log.filter((e) => e.type === "wait")) {
+      expect(w.ms).toBeGreaterThanOrEqual(1000);
+    }
   });
 
   it("covers both the hiking-mountain and river profiles", async () => {
     const server = fakeServer();
     await runLiveCheck(server.deps);
-    const profiles = server.log.filter((e) => e.type === "fetch").map((e) => new URL(e.url!).searchParams.get("profile"));
+    const profiles = server.log
+      .filter((e) => e.type === "fetch")
+      .map((e) => new URL(e.url!).searchParams.get("profile"));
     expect(profiles).toContain("hiking-mountain");
     expect(profiles).toContain("river");
   });
@@ -92,7 +98,9 @@ describe("at most ~4 live requests, sequential and polite", () => {
     const result = await runLiveCheck(fakeServer().deps);
     expect(result.passed).toBe(true);
     expect(result.report).toMatch(/^PASSED/m);
-    for (const c of liveCheckCases) expect(result.report).toContain(c.fixture);
+    for (const c of liveCheckCases) {
+      expect(result.report).toContain(c.fixture);
+    }
   });
 });
 
@@ -100,7 +108,9 @@ describe("User-Agent", () => {
   it("names only the project, with no email or personal name outside the project URL", async () => {
     const server = fakeServer();
     await runLiveCheck(server.deps);
-    for (const f of server.log.filter((e) => e.type === "fetch")) expect(f.userAgent).toBe(LIVE_CHECK_USER_AGENT);
+    for (const f of server.log.filter((e) => e.type === "fetch")) {
+      expect(f.userAgent).toBe(LIVE_CHECK_USER_AGENT);
+    }
 
     expect(LIVE_CHECK_USER_AGENT).not.toMatch(/[^\s@]+@[^\s@]+/);
     const withoutUrl = LIVE_CHECK_USER_AGENT.replace("https://github.com/elslander-cedric/packraft-go", "");
@@ -113,7 +123,9 @@ describe("never part of npm test, npm run e2e or CI", () => {
 
   it("no other npm script (including pre/post hooks) runs the live check", () => {
     for (const [name, command] of Object.entries(pkg.scripts)) {
-      if (name === "check:brouter") continue;
+      if (name === "check:brouter") {
+        continue;
+      }
       expect(command, name).not.toMatch(/check:brouter|check-brouter|liveCheck/);
     }
     expect(pkg.scripts.test).toBe("vitest run");
@@ -140,14 +152,21 @@ describe("never part of npm test, npm run e2e or CI", () => {
 describe("fixtures are only read, never written", () => {
   const hashFixtures = () =>
     Object.fromEntries(
-      readdirSync(fixturesDir).map((f) => [f, createHash("sha256").update(readFileSync(path.join(fixturesDir, f))).digest("hex")]),
+      readdirSync(fixturesDir).map((f) => [
+        f,
+        createHash("sha256")
+          .update(readFileSync(path.join(fixturesDir, f)))
+          .digest("hex"),
+      ]),
     );
 
   it("leaves every fixture byte-for-byte unchanged after a run full of drift and mismatches", async () => {
     const before = hashFixtures();
     await runLiveCheck(
       fakeServer((name, a) =>
-        name.endsWith(".geojson") ? { status: 200, body: a.body.replace("BRouter-1.7.10", "BRouter-9.9.9") } : { status: 500, body: "" },
+        name.endsWith(".geojson")
+          ? { status: 200, body: a.body.replace("BRouter-1.7.10", "BRouter-9.9.9") }
+          : { status: 500, body: "" },
       ).deps,
     );
     expect(hashFixtures()).toEqual(before);
@@ -156,7 +175,9 @@ describe("fixtures are only read, never written", () => {
   it("neither the check nor its entry script uses any file-writing API", () => {
     for (const file of ["src/routing/liveCheck.ts", "scripts/check-brouter.mts"]) {
       const text = readFileSync(path.join(root, file), "utf8");
-      expect(text, file).not.toMatch(/writeFile|appendFile|createWriteStream|copyFile|rename|unlink|rmSync|\brm\(|mkdir/);
+      expect(text, file).not.toMatch(
+        /writeFile|appendFile|createWriteStream|copyFile|rename|unlink|rmSync|\brm\(|mkdir/,
+      );
     }
   });
 });
@@ -191,7 +212,10 @@ describe("MATCH / DRIFT / MISMATCH on doctored copies of the fixtures", () => {
   it("an empty features list is a mismatch", async () => {
     const result = await runLiveCheck(
       fakeServer(
-        onlyFor("hiking-success.geojson", (a) => ({ ...a, body: JSON.stringify({ type: "FeatureCollection", features: [] }) })),
+        onlyFor("hiking-success.geojson", (a) => ({
+          ...a,
+          body: JSON.stringify({ type: "FeatureCollection", features: [] }),
+        })),
       ).deps,
     );
     expect(result.passed).toBe(false);
@@ -227,26 +251,31 @@ describe("MATCH / DRIFT / MISMATCH on doctored copies of the fixtures", () => {
     expect(result.report).toMatch(/(DRIFT|MISMATCH).*filtered ascend/);
   });
 
-  it.each([0.5, 1.5])("a distance change to %s x (track-length and points) is drift: reported, but the run passes", async (factor) => {
-    const result = await runLiveCheck(
-      fakeServer(
-        onlyFor("river-success.geojson", (a) => ({
-          ...a,
-          body: editTrack(a.body, (f) => {
-            f.properties["track-length"] = String(Math.round(Number(f.properties["track-length"]) * factor));
-            const coords = f.geometry.coordinates;
-            f.geometry.coordinates =
-              factor < 1 ? coords.slice(0, Math.round(coords.length * factor)) : [...coords, ...coords.slice(0, coords.length / 2)];
-          }),
-        })),
-      ).deps,
-    );
-    expect(result.passed).toBe(true);
-    expect(result.report).toMatch(/DRIFT.*track-length/);
-    expect(result.report).toMatch(/DRIFT.*track points/);
-    expect(result.report).toMatch(/PASSED with \d+ drift/);
-    expect(result.report).not.toMatch(/MISMATCH/);
-  });
+  it.each([0.5, 1.5])(
+    "a distance change to %s x (track-length and points) is drift: reported, but the run passes",
+    async (factor) => {
+      const result = await runLiveCheck(
+        fakeServer(
+          onlyFor("river-success.geojson", (a) => ({
+            ...a,
+            body: editTrack(a.body, (f) => {
+              f.properties["track-length"] = String(Math.round(Number(f.properties["track-length"]) * factor));
+              const coords = f.geometry.coordinates;
+              f.geometry.coordinates =
+                factor < 1
+                  ? coords.slice(0, Math.round(coords.length * factor))
+                  : [...coords, ...coords.slice(0, coords.length / 2)];
+            }),
+          })),
+        ).deps,
+      );
+      expect(result.passed).toBe(true);
+      expect(result.report).toMatch(/DRIFT.*track-length/);
+      expect(result.report).toMatch(/DRIFT.*track points/);
+      expect(result.report).toMatch(/PASSED with \d+ drift/);
+      expect(result.report).not.toMatch(/MISMATCH/);
+    },
+  );
 
   it("track-length within 10% is a match; just beyond is drift", async () => {
     const run = (factor: number) =>
@@ -266,7 +295,9 @@ describe("MATCH / DRIFT / MISMATCH on doctored copies of the fixtures", () => {
 
   it("the no-route case that suddenly routes is a mismatch", async () => {
     const result = await runLiveCheck(
-      fakeServer(onlyFor("hiking-no-route-400.txt", () => ({ status: 200, body: readFixture("hiking-success.geojson") }))).deps,
+      fakeServer(
+        onlyFor("hiking-no-route-400.txt", () => ({ status: 200, body: readFixture("hiking-success.geojson") })),
+      ).deps,
     );
     expect(result.passed).toBe(false);
     expect(result.report).toMatch(/MISMATCH.*adapter outcome/);

@@ -44,8 +44,12 @@ const hikeAndPaddle = (name: string) => ({
 });
 
 async function open(page: Page, save?: object) {
-  if (save)
-    await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, JSON.stringify(save)] as const);
+  if (save) {
+    await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [
+      TRIP_KEY,
+      JSON.stringify(save),
+    ] as const);
+  }
   await page.goto("/");
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
   await page.evaluate(() => document.fonts.ready.then(() => true));
@@ -166,8 +170,11 @@ test("the section and day lists sit right under the tab row; every other tab's c
   await open(page, hikeAndPaddle("Dinant weekend"));
   for (const name of Object.values(text.tabs)) {
     // The Access points tab is shown in access point editing only (ADR 0036).
-    if (name === text.tabs.accessPoints) await enterAccessPointEditing(page);
-    else await tab(page, name).click();
+    if (name === text.tabs.accessPoints) {
+      await enterAccessPointEditing(page);
+    } else {
+      await tab(page, name).click();
+    }
     await settled(page);
     // Measured in one go, polled: the panel's content re-renders as the tab opens, and right
     // after Days the flush Days panel may still be the one shown.
@@ -177,8 +184,11 @@ test("the section and day lists sit right under the tab row; every other tab's c
         const first = el.querySelector('[role="tabpanel"]:not([hidden]) > *')!.getBoundingClientRect();
         return Math.round(first.top - tabs.bottom);
       });
-    if (flush.includes(name)) await expect.poll(gap, { message: name }).toBe(0);
-    else await expect.poll(gap, { message: name }).toBeGreaterThanOrEqual(12);
+    if (flush.includes(name)) {
+      await expect.poll(gap, { message: name }).toBe(0);
+    } else {
+      await expect.poll(gap, { message: name }).toBeGreaterThanOrEqual(12);
+    }
   }
 });
 

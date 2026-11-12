@@ -89,10 +89,14 @@ export function SidePanel({
 
   const resize = (to: number) => {
     const within = sidePanelWidthWithin(to, windowWidth);
-    if (within !== chosen) onWidthChange(within);
+    if (within !== chosen) {
+      onWidthChange(within);
+    }
   };
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (!event.isPrimary || event.button !== 0) return;
+    if (!event.isPrimary || event.button !== 0) {
+      return;
+    }
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = { pointerId: event.pointerId, x: event.clientX, width: shown };
@@ -100,14 +104,20 @@ export function SidePanel({
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const start = drag.current;
-    if (start?.pointerId !== event.pointerId) return;
+    if (start?.pointerId !== event.pointerId) {
+      return;
+    }
     // The edge is on the left: moving it left widens the panel.
     setDragWidth(sidePanelWidthWithin(start.width + start.x - event.clientX, windowWidth));
   };
   const endDrag = (event: PointerEvent<HTMLDivElement>) => {
-    if (drag.current?.pointerId !== event.pointerId) return;
+    if (drag.current?.pointerId !== event.pointerId) {
+      return;
+    }
     drag.current = null;
-    if (dragWidth !== null) resize(dragWidth);
+    if (dragWidth !== null) {
+      resize(dragWidth);
+    }
     setDragWidth(null);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -117,7 +127,9 @@ export function SidePanel({
       Home: min,
       End: max,
     }[event.key];
-    if (to === undefined) return;
+    if (to === undefined) {
+      return;
+    }
     event.preventDefault();
     resize(to);
   };

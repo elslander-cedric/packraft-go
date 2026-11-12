@@ -83,7 +83,9 @@ type Feature = { names: string[]; tags: Record<string, string>; geometry: Pt[] }
 const geometryOf = (e: OverpassElement): Pt[] =>
   e.type === "node" && e.lat !== undefined && e.lon !== undefined
     ? [{ lat: e.lat, lng: e.lon }]
-    : (e.geometry ?? []).filter((p): p is { lat: number; lon: number } => p !== null).map((p) => ({ lat: p.lat, lng: p.lon }));
+    : (e.geometry ?? [])
+        .filter((p): p is { lat: number; lon: number } => p !== null)
+        .map((p) => ({ lat: p.lat, lng: p.lon }));
 
 const featureOf = (e: OverpassElement): Feature => {
   const tags = e.tags ?? {};
@@ -119,7 +121,9 @@ class RiverContext {
     let best: Projection | undefined;
     for (const p of feature.geometry) {
       const pr = project(this.stem, p);
-      if (!best || pr.distance < best.distance) best = pr;
+      if (!best || pr.distance < best.distance) {
+        best = pr;
+      }
     }
     return best!;
   }
@@ -153,23 +157,31 @@ class RiverContext {
     const named = candidates.filter(
       ({ f }) =>
         (opts.name !== undefined && contains(f.names, opts.name)) ||
-        (opts.road !== undefined && f.tags.name !== undefined && normaliseName(f.tags.name) === normaliseName(opts.road)),
+        (opts.road !== undefined &&
+          f.tags.name !== undefined &&
+          normaliseName(f.tags.name) === normaliseName(opts.road)),
     );
     if (named.length > 0) {
       named.sort(byAnchor);
       // Several ways of one structure (e.g. both carriageways) count as one find.
       const distinct = named.filter((c) => distanceM(c.at.point, named[0].at.point) > 60);
       const what = named[0].f.names[0] ?? label;
-      if (distinct.length === 0) return { at: named[0].at, status: "confident", reason: `OSM ${label} "${what}".` };
+      if (distinct.length === 0) {
+        return { at: named[0].at, status: "confident", reason: `OSM ${label} "${what}".` };
+      }
       return {
         at: named[0].at,
         status: "needsReview",
         reason: `${named.length} OSM ${label}s match ${described}; picked "${what}"${anchor ? " nearest to it" : ""}.`,
       };
     }
-    if (!anchor) return `no OSM ${label} ${described} found`;
+    if (!anchor) {
+      return `no OSM ${label} ${described} found`;
+    }
     const near = candidates.filter((c) => distanceM(c.at.point, anchor) <= PLACE_MAX_M).sort(byAnchor);
-    if (near.length === 0) return `no OSM ${label} within ${fmt(PLACE_MAX_M)} of ${opts.near ?? "the hint"}`;
+    if (near.length === 0) {
+      return `no OSM ${label} within ${fmt(PLACE_MAX_M)} of ${opts.near ?? "the hint"}`;
+    }
     const what = near[0].f.names[0] ? `"${near[0].f.names[0]}"` : "an unnamed one";
     return {
       at: near[0].at,
@@ -182,18 +194,29 @@ class RiverContext {
     const { stem } = this;
     switch (recipe.kind) {
       case "riverStart":
-        return { at: { along: 0, point: stem[0], distance: 0 }, status: "confident", reason: "Start of the river's mapped course." };
+        return {
+          at: { along: 0, point: stem[0], distance: 0 },
+          status: "confident",
+          reason: "Start of the river's mapped course.",
+        };
       case "riverEnd": {
         const along = lengthM(stem);
-        return { at: { along, point: stem[stem.length - 1], distance: 0 }, status: "confident", reason: "End of the river's mapped course (its mouth)." };
+        return {
+          at: { along, point: stem[stem.length - 1], distance: 0 },
+          status: "confident",
+          reason: "End of the river's mapped course (its mouth).",
+        };
       }
       case "border": {
         const found = this.border.flatMap((way) => crossings(stem, way));
-        if (found.length === 0) return "the river doesn't cross the national border in the OSM extract";
+        if (found.length === 0) {
+          return "the river doesn't cross the national border in the OSM extract";
+        }
         const last = found[found.length - 1];
         const spread = last.along - found[0].along;
-        if (found.length === 1 || spread < 50)
+        if (found.length === 1 || spread < 50) {
           return { at: last, status: "confident", reason: "Where the river crosses the national border." };
+        }
         return {
           at: last,
           status: "needsReview",
@@ -209,17 +232,24 @@ class RiverContext {
         for (const f of partners) {
           for (const p of [f.geometry[0], f.geometry[f.geometry.length - 1]]) {
             const pr = project(stem, p);
-            if (!best || pr.distance < best.distance) best = pr;
+            if (!best || pr.distance < best.distance) {
+              best = pr;
+            }
           }
         }
         const mouth = stem[stem.length - 1];
         for (const f of partners) {
           const pr = project(f.geometry, mouth);
-          if (pr.distance < (best?.distance ?? Infinity)) best = { along: lengthM(stem), point: mouth, distance: pr.distance };
+          if (pr.distance < (best?.distance ?? Infinity)) {
+            best = { along: lengthM(stem), point: mouth, distance: pr.distance };
+          }
         }
-        if (!best) return `no OSM waterway named ${recipe.with.join("/")} near the river`;
-        if (best.distance <= CONFLUENCE_MAX_M)
+        if (!best) {
+          return `no OSM waterway named ${recipe.with.join("/")} near the river`;
+        }
+        if (best.distance <= CONFLUENCE_MAX_M) {
           return { at: best, status: "confident", reason: `Confluence with the ${recipe.with[0]}.` };
+        }
         return {
           at: best,
           status: "needsReview",
@@ -239,7 +269,9 @@ class RiverContext {
             .map(onRiver)
             .filter((at): at is Projection => at !== undefined)
             .sort((a, b) => b.along - a.along);
-          if (all.length === 0) return "no OSM dam or weir on the river";
+          if (all.length === 0) {
+            return "no OSM dam or weir on the river";
+          }
           return {
             at: all[0],
             status: "needsReview",
@@ -258,18 +290,30 @@ class RiverContext {
       case "hydroPlant": {
         const found = this.locateFeature(
           "hydro power plant",
-          (f) => (f.tags.power === "plant" || f.tags.power === "generator") && /hydro|water/.test(f.tags["plant:source"] ?? f.tags["generator:source"] ?? ""),
+          (f) =>
+            (f.tags.power === "plant" || f.tags.power === "generator") &&
+            /hydro|water/.test(f.tags["plant:source"] ?? f.tags["generator:source"] ?? ""),
           (f) => this.nearest(f),
           { near: recipe.near },
         );
-        if (typeof found !== "string") return found;
+        if (typeof found !== "string") {
+          return found;
+        }
         const place = this.place(recipe.near);
-        if (!place) return found;
-        return { at: place.at, status: "needsReview", reason: `${found[0].toUpperCase()}${found.slice(1)}; placed at ${recipe.near} instead.` };
+        if (!place) {
+          return found;
+        }
+        return {
+          at: place.at,
+          status: "needsReview",
+          reason: `${found[0].toUpperCase()}${found.slice(1)}; placed at ${recipe.near} instead.`,
+        };
       }
       case "place": {
         const found = this.place(recipe.name);
-        if (!found) return `no OSM place "${recipe.name}" within ${fmt(PLACE_MAX_M)} of the river`;
+        if (!found) {
+          return `no OSM place "${recipe.name}" within ${fmt(PLACE_MAX_M)} of the river`;
+        }
         return {
           at: found.at,
           status: "needsReview",
@@ -278,7 +322,9 @@ class RiverContext {
       }
       case "offset": {
         const base = this.locate(recipe.base);
-        if (typeof base === "string") return base;
+        if (typeof base === "string") {
+          return base;
+        }
         const along = Math.max(0, Math.min(lengthM(stem), base.at.along + recipe.metres));
         const dir = recipe.metres < 0 ? "upstream" : "downstream";
         return {
@@ -305,7 +351,9 @@ export function buildStretches(input: BuildInput): BuildResult {
     if (!contexts.has(river)) {
       const config = input.rivers.find((r) => r.river === river);
       const result = input.osm.rivers[river];
-      if (!config || !result) throw new Error(`no OSM data for the ${river}`);
+      if (!config || !result) {
+        throw new Error(`no OSM data for the ${river}`);
+      }
       contexts.set(river, new RiverContext(config, result, border));
     }
     return contexts.get(river)!;
@@ -318,7 +366,9 @@ export function buildStretches(input: BuildInput): BuildResult {
     if (spec.recipe.kind === "sameAs") {
       const target = `${spec.recipe.stretch}.${spec.recipe.end}`;
       const other = resolved.get(target);
-      if (!other) throw new Error(`${id}: ${target} must be listed before it`);
+      if (!other) {
+        throw new Error(`${id}: ${target} must be listed before it`);
+      }
       const at = project(ctx.stem, other.at.point);
       resolved.set(id, { ...other, at, sameAs: other.sameAs ?? target });
       return;
@@ -345,7 +395,11 @@ export function buildStretches(input: BuildInput): BuildResult {
       const reviewed = { lat: decision.lat, lng: decision.lng };
       if (decision.action === "move") {
         const at = project(ctx.stem, reviewed);
-        resolved.set(id, { at, status: "reviewed", reason: `Moved by review${decision.note ? `: ${decision.note}` : "."}` });
+        resolved.set(id, {
+          at,
+          status: "reviewed",
+          reason: `Moved by review${decision.note ? `: ${decision.note}` : "."}`,
+        });
         return;
       }
       if (distanceM(located.at.point, reviewed) <= CONFIRM_TOLERANCE_M) {
@@ -361,7 +415,9 @@ export function buildStretches(input: BuildInput): BuildResult {
   const stretches: DraftStretch[] = [];
   for (const recipe of input.recipes) {
     const row = input.annex.find((r) => r.id === recipe.id);
-    if (!row) throw new Error(`no Annex row ${recipe.id}`);
+    if (!row) {
+      throw new Error(`no Annex row ${recipe.id}`);
+    }
     const ctx = contextFor(row.river);
     if (ctx.stem.length < 2) {
       problems.push(`${row.id}: no OSM course for the ${row.river}`);

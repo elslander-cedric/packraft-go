@@ -37,7 +37,6 @@ describe("always written as the current version (1)", () => {
     expect(saved.trip.camps).toEqual([1]);
     expect(parseTrip(serialiseTrip(withCamp))).toEqual({ ok: true, trip: withCamp });
   });
-
 });
 
 // Updated: v1 dropped (#33). This block used to accept version 1 as well.

@@ -41,16 +41,25 @@ async function watchStatuses(page: import("@playwright/test").Page) {
     const record = () => {
       for (const el of document.querySelectorAll(".leg-access-icons, .day-warning-chip")) {
         const text = `${el.className}|${el.textContent}`;
-        if (seen[seen.length - 1] !== text) seen.push(text);
+        if (seen[seen.length - 1] !== text) {
+          seen.push(text);
+        }
       }
     };
-    new MutationObserver(record).observe(document, { subtree: true, childList: true, characterData: true, attributes: true });
+    new MutationObserver(record).observe(document, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+    });
   });
 }
 const history = (page: import("@playwright/test").Page) =>
   page.evaluate(() => (window as unknown as { __seen: string[] }).__seen);
 
-test("status history is checking, then closed: open never appears; nothing leaks into the saved trip", async ({ page }) => {
+test("status history is checking, then closed: open never appears; nothing leaks into the saved trip", async ({
+  page,
+}) => {
   await page.clock.setFixedTime(RECORDED_AT);
   const held = delayedKiwis(RECORDED);
   const network = await serveOffline(page, { kiwis: held.kiwis });

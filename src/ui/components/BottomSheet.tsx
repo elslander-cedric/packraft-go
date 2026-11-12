@@ -50,7 +50,9 @@ export function BottomSheet({
   const [peekPx, setPeekPx] = useState(MIN_PEEK_PX);
   const measurePeek = useCallback(
     (element: HTMLDivElement | null) => {
-      if (!element) return;
+      if (!element) {
+        return;
+      }
       const observer = new ResizeObserver(() => {
         // From the sheet's top edge, so its border counts too.
         const sheetTop = element.parentElement!.getBoundingClientRect().top;
@@ -74,9 +76,13 @@ export function BottomSheet({
       Home: 0,
       End: stops.length - 1,
     }[event.key];
-    if (to === undefined) return;
+    if (to === undefined) {
+      return;
+    }
     event.preventDefault();
-    if (to !== at) onStopChange(stops[to]);
+    if (to !== at) {
+      onStopChange(stops[to]);
+    }
   };
   return (
     <Drawer.Root
@@ -103,7 +109,9 @@ export function BottomSheet({
           return;
         }
         const index = snapPoints.indexOf(point);
-        if (index >= 0) onStopChange(stops[index]);
+        if (index >= 0) {
+          onStopChange(stops[index]);
+        }
       }}
       snapToSequentialPoints
     >

@@ -78,11 +78,15 @@ type Feature = { attributes?: Record<string, unknown>; geometry?: { x?: unknown;
 /** The features' attributes as readings, or null when the body isn't a layer's answer (an ArcGIS error is a 200). */
 function parseStretches(body: unknown): Record<string, OfficialReading> | null {
   const features = (body as { features?: unknown } | null)?.features;
-  if (!Array.isArray(features)) return null;
+  if (!Array.isArray(features)) {
+    return null;
+  }
   const stretches: Record<string, OfficialReading> = {};
   for (const { attributes } of features as Feature[]) {
     const id = text(attributes?.nomtro);
-    if (!id) continue;
+    if (!id) {
+      continue;
+    }
     const [reasonEn, reasonFr] = [text(attributes?.justie), text(attributes?.justif)];
     stretches[id] = {
       code: String(attributes?.stapub ?? ""),
@@ -100,9 +104,19 @@ function spwDay(value: unknown): CalendarDate | undefined {
 
 function parseIncident({ attributes, geometry }: Feature): Incident | null {
   const [spwId, x, y] = [attributes?.id, geometry?.x, geometry?.y];
-  if (typeof spwId !== "number" || typeof x !== "number" || typeof y !== "number") return null;
-  const [officialStretch, textEn, textFr] = [text(attributes?.nomtro), text(attributes?.commene), text(attributes?.commen)];
-  const [created, changed, expires] = [spwDay(attributes?.datcre), spwDay(attributes?.datmod), spwDay(attributes?.datexp)];
+  if (typeof spwId !== "number" || typeof x !== "number" || typeof y !== "number") {
+    return null;
+  }
+  const [officialStretch, textEn, textFr] = [
+    text(attributes?.nomtro),
+    text(attributes?.commene),
+    text(attributes?.commen),
+  ];
+  const [created, changed, expires] = [
+    spwDay(attributes?.datcre),
+    spwDay(attributes?.datmod),
+    spwDay(attributes?.datexp),
+  ];
   return {
     id: `incident-${spwId}`,
     spwId,
@@ -119,7 +133,9 @@ function parseIncident({ attributes, geometry }: Feature): Incident | null {
 /** The features as incidents, or null when the body isn't a layer's answer. A feature with no place on the map is left out. */
 function parseIncidents(body: unknown): readonly Incident[] | null {
   const features = (body as { features?: unknown } | null)?.features;
-  if (!Array.isArray(features)) return null;
+  if (!Array.isArray(features)) {
+    return null;
+  }
   return (features as Feature[]).flatMap((feature) => parseIncident(feature) ?? []);
 }
 
@@ -134,7 +150,9 @@ async function getJson(fetchFn: Fetch, setTimer: SetTimer, url: string): Promise
   });
   const answer = async () => {
     const response = await fetchFn(url, { signal: request.signal });
-    if (!response.ok) throw new Error(`PKAYAK answered ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`PKAYAK answered ${response.status}`);
+    }
     return JSON.parse(await response.text()) as unknown;
   };
   try {
@@ -180,7 +198,9 @@ export function createPkayakStatusSource(options: PkayakOptions = {}): OfficialS
   }
 
   function current(): Refresh {
-    if (!cached || now() - cached.at >= CACHE_MS) cached = { at: now() };
+    if (!cached || now() - cached.at >= CACHE_MS) {
+      cached = { at: now() };
+    }
     return cached;
   }
 

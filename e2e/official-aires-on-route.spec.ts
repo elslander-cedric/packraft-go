@@ -64,7 +64,9 @@ const row = (page: Page, name: string) => onRouteRows(page).filter({ hasText: na
 async function seed(page: Page, trip: Trip, accessPoints: readonly AccessPoint[]) {
   await page.addInitScript(
     (entries) => {
-      for (const [key, value] of entries) localStorage.setItem(key, value);
+      for (const [key, value] of entries) {
+        localStorage.setItem(key, value);
+      }
     },
     [
       [TRIP_KEY, serialiseTrip(trip)],
@@ -103,7 +105,9 @@ test.describe("on a desktop", () => {
     ]);
     await expect(section(page)).not.toContainText(STAVELOT);
     // Your point off the route stays in its own list, the only one under that heading.
-    await expect(section(page).getByRole("list", { name: text.notOnRouteHeading, exact: true })).toHaveText(/Durbuy jetty/);
+    await expect(section(page).getByRole("list", { name: text.notOnRouteHeading, exact: true })).toHaveText(
+      /Durbuy jetty/,
+    );
     expect(network.blocked).toEqual([]);
   });
 

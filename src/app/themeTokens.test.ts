@@ -16,9 +16,7 @@ function declarations(block: string): Record<string, string> {
 }
 
 const light = declarations(css.match(/\n:root \{([^}]*)\}/)?.[1] ?? "");
-const darkOnly = declarations(
-  css.match(/@media \(prefers-color-scheme: dark\) \{\s*:root \{([^}]*)\}/)?.[1] ?? "",
-);
+const darkOnly = declarations(css.match(/@media \(prefers-color-scheme: dark\) \{\s*:root \{([^}]*)\}/)?.[1] ?? "");
 const dark = { ...light, ...darkOnly };
 
 function luminance(hex: string): number {

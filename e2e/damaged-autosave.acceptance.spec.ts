@@ -13,7 +13,11 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 const panel = (page: Page) => tripPanel(page);
 const backups = (page: Page) =>
   page.evaluate(
-    (p) => Object.keys(localStorage).filter((k) => k.startsWith(p)).sort().map((k) => [k, localStorage.getItem(k)]),
+    (p) =>
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith(p))
+        .sort()
+        .map((k) => [k, localStorage.getItem(k)]),
     PREFIX,
   );
 
@@ -32,7 +36,9 @@ test("backup write fails: damaged save kept byte for byte and warned", async ({ 
       }
       const orig = Storage.prototype.setItem;
       Storage.prototype.setItem = function (k: string, v: string) {
-        if (k.startsWith(prefix!)) throw new DOMException("full", "QuotaExceededError");
+        if (k.startsWith(prefix!)) {
+          throw new DOMException("full", "QuotaExceededError");
+        }
         return orig.call(this, k, v);
       };
     },

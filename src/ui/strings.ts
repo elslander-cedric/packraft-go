@@ -203,7 +203,8 @@ export const strings = {
     positionLocating: "Finding your position…",
     positionDenied:
       "Location permission was denied, so your position can't be shown. To show it, allow location for this site in your browser settings, then try again.",
-    positionUnavailable: "Your position isn't available right now. Try again in the open, away from steep valley sides.",
+    positionUnavailable:
+      "Your position isn't available right now. Try again in the open, away from steep valley sides.",
     positionTimeout: "Finding your position took too long. Try again.",
     positionUnsupported: "This browser can't share your location.",
     // Your access points in the planner (ADR 0023).
@@ -283,7 +284,8 @@ export const strings = {
   // What a Walloon category's calendar allows, in one sentence.
   accessCalendar: {
     "1.A": "Category 1.A (navigable): open all year, within the permitted hours.",
-    "1.B": "Category 1.B: open all year, except on the fishing opening days (3rd Saturday of March, 1st Saturday of June).",
+    "1.B":
+      "Category 1.B: open all year, except on the fishing opening days (3rd Saturday of March, 1st Saturday of June).",
     "1.C":
       "Category 1.C: open from 1 October to 15 March only, except on the fishing opening days (3rd Saturday of March, 1st Saturday of June).",
   },
@@ -366,7 +368,8 @@ export const strings = {
     },
     legendNote: "Obstacles show when zoomed in.",
     // No obstacle list is complete (ADR 0035).
-    incomplete: "The SPW marks only where this is; what it says here is this app's reading. No list of obstacles is complete.",
+    incomplete:
+      "The SPW marks only where this is; what it says here is this app's reading. No list of obstacles is complete.",
   },
   // Incidents (ADR 0035, GLOSSARY "Incident"): the text is the SPW's own, and can be old, so its date always shows.
   incidents: {

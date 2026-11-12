@@ -13,11 +13,7 @@ import {
   saveAccessPoint,
   tripPanel,
 } from "./support/planner";
-import {
-  draftMarker,
-  enterAccessPointEditing,
-  leaveAccessPointEditing,
-} from "./support/accessPointEditing";
+import { draftMarker, enterAccessPointEditing, leaveAccessPointEditing } from "./support/accessPointEditing";
 
 const text = strings.accessPoints;
 const ACCESS_POINTS_KEY = "packraft-go.access-points";
@@ -26,13 +22,14 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 // Not through the map region, which the details dialog hides from the accessibility tree while open.
 const markers = (page: Page) => page.locator(".leaflet-container .access-point-marker");
 const details = accessPointDialog;
-const markButton = (page: Page) => page.getByRole("button", { name: strings.planner.markAccessPointButton, exact: true });
+const markButton = (page: Page) =>
+  page.getByRole("button", { name: strings.planner.markAccessPointButton, exact: true });
 const toggle = (page: Page, group: string, option: string) =>
   details(page).getByRole("group", { name: group }).getByRole("button", { name: option });
 
 async function openMap(page: Page) {
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
@@ -209,9 +206,7 @@ test("delete an access point after confirming", async ({ page }) => {
   expect((await stored(page)).accessPoints).toEqual([]);
 });
 
-test("access points are autosaved under their own key, apart from the trip, and survive a reload", async ({
-  page,
-}) => {
+test("access points are autosaved under their own key, apart from the trip, and survive a reload", async ({ page }) => {
   await serveOffline(page);
   const middle = await openMap(page);
   await addAccessPoint(page, middle);

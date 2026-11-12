@@ -37,7 +37,12 @@ export default function PointCard({ point, distanceKm, camp, onDelete, onCamp, o
         <Button className="planner-point-card-button" aria-label={strings.deletePointButton} onClick={onDelete}>
           <Icon icon={icons.deletePoint} />
         </Button>
-        <Button className="planner-point-card-button" aria-label={strings.campButton} aria-pressed={camp} onClick={onCamp}>
+        <Button
+          className="planner-point-card-button"
+          aria-label={strings.campButton}
+          aria-pressed={camp}
+          onClick={onCamp}
+        >
           <Icon icon={icons.camp} />
         </Button>
       </div>

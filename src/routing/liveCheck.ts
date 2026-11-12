@@ -91,9 +91,13 @@ export async function compareWithFixture(
 
   if (live.status === recorded.status) {
     match(`HTTP status ${live.status}`);
-    if (recorded.status === 200) compareTracks(live.body, recorded.body, { match, drift, mismatch });
-    else if (live.body.trim() === "") mismatch("routing error came back with an empty body");
-    else match(`routing error message: ${live.body.trim()}`);
+    if (recorded.status === 200) {
+      compareTracks(live.body, recorded.body, { match, drift, mismatch });
+    } else if (live.body.trim() === "") {
+      mismatch("routing error came back with an empty body");
+    } else {
+      match(`routing error message: ${live.body.trim()}`);
+    }
   } else {
     mismatch(`HTTP status ${live.status}, fixture has ${recorded.status}`);
   }
@@ -102,8 +106,11 @@ export async function compareWithFixture(
     adapterOutcome(check, live),
     adapterOutcome(check, recorded),
   ]);
-  if (liveOutcome === recordedOutcome) match(`adapter outcome: ${liveOutcome}`);
-  else mismatch(`adapter outcome: ${liveOutcome}, fixture gives ${recordedOutcome}`);
+  if (liveOutcome === recordedOutcome) {
+    match(`adapter outcome: ${liveOutcome}`);
+  } else {
+    mismatch(`adapter outcome: ${liveOutcome}, fixture gives ${recordedOutcome}`);
+  }
 
   return findings;
 }
@@ -117,7 +124,9 @@ type Track = {
 
 function compareTracks(liveBody: string, recordedBody: string, report: Report) {
   const fixture = readTrack(recordedBody);
-  if (typeof fixture === "string") throw new Error(`recorded fixture is not a BRouter track: ${fixture}`);
+  if (typeof fixture === "string") {
+    throw new Error(`recorded fixture is not a BRouter track: ${fixture}`);
+  }
   const live = readTrack(liveBody);
   if (typeof live === "string") {
     report.mismatch(live);
@@ -159,8 +168,11 @@ function compareTracks(liveBody: string, recordedBody: string, report: Report) {
 
   const liveCreator = String(live.properties.creator);
   const fixtureCreator = String(fixture.properties.creator);
-  if (liveCreator === fixtureCreator) report.match(`server version ${liveCreator}`);
-  else report.drift(`server version ${liveCreator}, fixture recorded with ${fixtureCreator}`);
+  if (liveCreator === fixtureCreator) {
+    report.match(`server version ${liveCreator}`);
+  } else {
+    report.drift(`server version ${liveCreator}, fixture recorded with ${fixtureCreator}`);
+  }
 }
 
 /** Returns the track, or a description of why the body is not one. */
@@ -176,11 +188,16 @@ function readTrack(body: string): Track | string {
     return "body is not a GeoJSON FeatureCollection";
   }
   const feature = collection.features[0] as
-    | { properties?: unknown; geometry?: { type?: unknown; coordinates?: unknown } }
-    | undefined;
-  if (feature?.geometry?.type !== "LineString") return "first feature is not a LineString";
-  if (!Array.isArray(feature.geometry.coordinates)) return "LineString has no coordinates array";
-  if (typeof feature.properties !== "object" || feature.properties === null) return "feature has no properties";
+    { properties?: unknown; geometry?: { type?: unknown; coordinates?: unknown } } | undefined;
+  if (feature?.geometry?.type !== "LineString") {
+    return "first feature is not a LineString";
+  }
+  if (!Array.isArray(feature.geometry.coordinates)) {
+    return "LineString has no coordinates array";
+  }
+  if (typeof feature.properties !== "object" || feature.properties === null) {
+    return "feature has no properties";
+  }
   return { properties: feature.properties as Record<string, unknown>, coordinates: feature.geometry.coordinates };
 }
 
@@ -235,7 +252,9 @@ export async function runLiveCheck(deps: LiveCheckDeps): Promise<LiveCheckResult
   let drifts = 0;
 
   for (const [index, check] of liveCheckCases.entries()) {
-    if (index > 0) await deps.wait(LIVE_CHECK_DELAY_MS);
+    if (index > 0) {
+      await deps.wait(LIVE_CHECK_DELAY_MS);
+    }
     const url = brouterUrl(check.mode, check.points);
     const recorded: RecordedResponse = { status: check.status, body: deps.readFixture(check.fixture) };
 
@@ -244,11 +263,15 @@ export async function runLiveCheck(deps: LiveCheckDeps): Promise<LiveCheckResult
       const response = await deps.fetch(url, { headers: { "User-Agent": LIVE_CHECK_USER_AGENT } });
       findings = await compareWithFixture(check, { status: response.status, body: await response.text() }, recorded);
     } catch (error) {
-      findings = [{ level: "mismatch", message: `request failed: ${error instanceof Error ? error.message : String(error)}` }];
+      findings = [
+        { level: "mismatch", message: `request failed: ${error instanceof Error ? error.message : String(error)}` },
+      ];
     }
 
     lines.push("", `${check.name} (${check.fixture})`, `  ${url}`);
-    for (const finding of findings) lines.push(`  ${finding.level.toUpperCase().padEnd(8)} ${finding.message}`);
+    for (const finding of findings) {
+      lines.push(`  ${finding.level.toUpperCase().padEnd(8)} ${finding.message}`);
+    }
     mismatches += findings.filter((f) => f.level === "mismatch").length;
     drifts += findings.filter((f) => f.level === "drift").length;
   }

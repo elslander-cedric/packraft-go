@@ -35,17 +35,25 @@ const { url: SPW, title: LINK } = strings.official.notCheckedLink;
 const CLOSED_RIVER = { spwId: 2003, lat: 50.18092, lng: 5.57605 };
 
 /** An answer of one incident, with the fields the recording leaves as they are unless overridden. */
-const oneIncident = (attributes: object, geometry = { x: CLOSED_RIVER.lng, y: CLOSED_RIVER.lat }) => () => ({
-  status: 200,
-  body: JSON.stringify({
-    features: [
-      {
-        attributes: { id: 9, nomtro: "OURTHE2", commen: "Travaux au pont", datcre: Date.UTC(2026, 9, 1, 8), ...attributes },
-        geometry,
-      },
-    ],
-  }),
-});
+const oneIncident =
+  (attributes: object, geometry = { x: CLOSED_RIVER.lng, y: CLOSED_RIVER.lat }) =>
+  () => ({
+    status: 200,
+    body: JSON.stringify({
+      features: [
+        {
+          attributes: {
+            id: 9,
+            nomtro: "OURTHE2",
+            commen: "Travaux au pont",
+            datcre: Date.UTC(2026, 9, 1, 8),
+            ...attributes,
+          },
+          geometry,
+        },
+      ],
+    }),
+  });
 
 const markers = (page: Page) => mapRegion(page).locator(".incident-marker");
 const marker = (page: Page, spwId: number) => mapRegion(page).locator(`.incident-${spwId}`);
@@ -307,7 +315,9 @@ test.describe("on a paddle leg (#217)", () => {
 
   test("a leg with no date warns of what applies today", async ({ page }) => {
     await seedSalm(page, undefined);
-    await openWith(page, { incidents: onTheSalm({ commene: "Tree across the river", datexp: Date.UTC(2026, 10, 2, 12) }) });
+    await openWith(page, {
+      incidents: onTheSalm({ commene: "Tree across the river", datexp: Date.UTC(2026, 10, 2, 12) }),
+    });
 
     await openSectionDetails(page, 1);
     await expect(warnings(page)).toContainText("Tree across the river");
@@ -340,7 +350,9 @@ test.describe("on a paddle leg (#217)", () => {
     await expect(warnings(page)).toHaveCount(0);
   });
 
-  test("an incident saying the river is closed leaves open water open, and shows on the day's chip", async ({ page }) => {
+  test("an incident saying the river is closed leaves open water open, and shows on the day's chip", async ({
+    page,
+  }) => {
     // On Flemish water, open by default, where nothing outranks the incident on the chip.
     const line = [
       { lat: 51.05, lng: 3.72 },
@@ -390,7 +402,11 @@ test.describe("at phone size", () => {
     await page.goto("/");
     const sheet = page.getByRole("dialog", { name: strings.planner.sheetLabel });
     await sheet.getByRole("tab", { name: strings.planner.tabs.sections }).click();
-    const icons = sheet.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first().locator(".leg-access-icons");
+    const icons = sheet
+      .getByRole("list", { name: strings.sectionsPanelLabel })
+      .locator(leafRows)
+      .first()
+      .locator(".leg-access-icons");
     await expect(icons).toContainText(strings.tripAccess.chipKind.incident);
     await expect(icons.locator(`svg[data-icon="circle-exclamation"]`)).toHaveCount(1);
   });

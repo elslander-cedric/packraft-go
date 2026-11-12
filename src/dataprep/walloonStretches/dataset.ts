@@ -51,7 +51,9 @@ export type Gauge = { name: string; stationNo: string; assumed: boolean; spwPrac
 
 function gaugeFor(annex2Name: string): Gauge | null {
   const practice = SPW_PRACTICE_GAUGES[annex2Name];
-  if (practice) return { ...practice, assumed: false, spwPractice: true };
+  if (practice) {
+    return { ...practice, assumed: false, spwPractice: true };
+  }
   const stationNo = KIWIS_STATIONS[annex2Name];
   return stationNo ? { name: annex2Name, stationNo, assumed: ASSUMED_GAUGES.includes(annex2Name) } : null;
 }
@@ -83,10 +85,7 @@ export type WalloonStretchDataset = {
   stretches: ShippedStretch[];
 };
 
-export function toDataset(
-  stretches: readonly DraftStretch[],
-  review?: DatasetReview,
-): WalloonStretchDataset {
+export function toDataset(stretches: readonly DraftStretch[], review?: DatasetReview): WalloonStretchDataset {
   return {
     dataset: "walloon-stretches",
     formatVersion: 1,

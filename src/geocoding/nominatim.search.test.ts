@@ -20,7 +20,9 @@ function fakeServer(reply: Reply | ((url: URL) => Reply)) {
     const url = new URL(input);
     requests.push({ url, at: Date.now() });
     const answer = typeof reply === "function" ? reply(url) : reply;
-    if (answer === "network-error") throw new TypeError("Failed to fetch");
+    if (answer === "network-error") {
+      throw new TypeError("Failed to fetch");
+    }
     return new Response(answer.body, { status: answer.status });
   };
   return { requests, ...createNominatim({ fetch }) };
@@ -100,7 +102,9 @@ describe("search results from Nominatim", () => {
 
   it("Ourthe (recorded): river stretches told apart by their village and municipality", async () => {
     const answer = await settle(fakeServer(ok("search-ourthe.json")).search.search("Ourthe", hottonArea));
-    expect(answer.status === "found" && answer.results.map(({ label, kind, addressLine }) => [label, kind, addressLine])).toEqual([
+    expect(
+      answer.status === "found" && answer.results.map(({ label, kind, addressLine }) => [label, kind, addressLine]),
+    ).toEqual([
       ["Ourthe", "river", "Ronzon, Rendeux"],
       ["L'Ourthe", "river", "Melreux, Hotton"],
       ["L'Ourthe", "river", "Petite Enneille, Durbuy"],
@@ -108,7 +112,9 @@ describe("search results from Nominatim", () => {
   });
 
   it("an address (recorded) has no name: the label is the start of the full address", async () => {
-    const answer = await settle(fakeServer(ok("search-address.json")).search.search("Rue du Batty 12, Hotton", hottonArea));
+    const answer = await settle(
+      fakeServer(ok("search-address.json")).search.search("Rue du Batty 12, Hotton", hottonArea),
+    );
     expect(answer).toEqual({
       status: "found",
       results: [

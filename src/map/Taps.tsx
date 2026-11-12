@@ -48,7 +48,9 @@ export function Taps({ onTap, onLegTap }: { onTap: (at: LatLng) => void; onLegTa
       const now = event.originalEvent.timeStamp;
       const previous = lastTap.current;
       lastTap.current = { at: now, point: event.containerPoint };
-      if (pinched.current) return;
+      if (pinched.current) {
+        return;
+      }
       const downAt = pressedAt.current;
       pressedAt.current = null;
       // A hold is not a tap, so it doesn't start a double tap either.
@@ -56,12 +58,19 @@ export function Taps({ onTap, onLegTap }: { onTap: (at: LatLng) => void; onLegTa
         lastTap.current = previous;
         return;
       }
-      if (previous && now - previous.at < DOUBLE_TAP_MS && previous.point.distanceTo(event.containerPoint) < DOUBLE_TAP_PX) {
+      if (
+        previous &&
+        now - previous.at < DOUBLE_TAP_MS &&
+        previous.point.distanceTo(event.containerPoint) < DOUBLE_TAP_PX
+      ) {
         return;
       }
       const leg = legOf(event.originalEvent.target);
-      if (leg !== null) onLegTap(leg);
-      else onTap({ lat: event.latlng.lat, lng: event.latlng.lng });
+      if (leg !== null) {
+        onLegTap(leg);
+      } else {
+        onTap({ lat: event.latlng.lat, lng: event.latlng.lng });
+      }
     },
   });
   return null;

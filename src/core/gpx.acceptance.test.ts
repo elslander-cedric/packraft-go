@@ -12,7 +12,11 @@ import { routingInto } from "./testing/routingDispatch";
 import { createFakeRouter } from "./testing/fakeRouter";
 import { applyEdit, emptyTrip, renameTrip, type Edit, type LatLng, type Trip } from "./trip";
 
-const names: GpxNames = { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName, end: strings.gpxEnd };
+const names: GpxNames = {
+  untitledTrip: strings.tripNamePlaceholder,
+  section: strings.gpxSectionName,
+  end: strings.gpxEnd,
+};
 
 const P0 = { lat: 50.3527, lng: 5.4561 };
 const P1 = { lat: 50.2678, lng: 5.4469 };
@@ -35,21 +39,28 @@ const routedBetween = (a: LatLng, b: LatLng, base: number): RouteResult => ({
 /** Routes every leg of `trip` once with a fake router answering each mode. */
 async function routeAll(trip: Trip, results: Parameters<typeof createFakeRouter>[0]) {
   let current = trip;
-  const auto = createAutoRouter(createFakeRouter(results), routingInto((change) => (current = change(current))));
+  const auto = createAutoRouter(
+    createFakeRouter(results),
+    routingInto((change) => (current = change(current))),
+  );
   await auto.sync(current);
   return current;
 }
 
 const routedGeometry = (trip: Trip, leg: number): readonly RoutedPoint[] => {
   const route = trip.legs[leg].route;
-  if (route?.status !== "routed") throw new Error(`leg ${leg} is not routed`);
+  if (route?.status !== "routed") {
+    throw new Error(`leg ${leg} is not routed`);
+  }
   return route.geometry;
 };
 
 /** The export's file (the trip has legs), parsed with the GPX 1.1 structure check. */
 function exported(trip: Trip) {
   const file = tripToGpx(trip, names);
-  if (!file) throw new Error("no GPX for this trip");
+  if (!file) {
+    throw new Error("no GPX for this trip");
+  }
   return { ...file, gpx: parseGpx11(file.text) };
 }
 
@@ -57,7 +68,9 @@ function exported(trip: Trip) {
 function xml(text: string) {
   return new DOMParser({
     onError: (level, message) => {
-      if (level !== "warning") throw new Error(message);
+      if (level !== "warning") {
+        throw new Error(message);
+      }
     },
   }).parseFromString(text, "application/xml");
 }
@@ -79,10 +92,9 @@ describe("export produces valid GPX 1.1", () => {
   });
 
   it("The file holds metadata, a waypoint per section and the end, then exactly one track", async () => {
-    const trip = await routeAll(
-      edit(emptyTrip(), add(P0), add(P1), add(P2), { type: "toggleCamp", index: 1 }),
-      { hike: routedBetween(P0, P1, 100) },
-    );
+    const trip = await routeAll(edit(emptyTrip(), add(P0), add(P1), add(P2), { type: "toggleCamp", index: 1 }), {
+      hike: routedBetween(P0, P1, 100),
+    });
     const { text } = exported(trip);
     const order = [...(xml(text).documentElement!.childNodes as unknown as Node[])]
       .filter((n) => n.nodeType === 1)
@@ -115,7 +127,11 @@ describe("one track through every leg, with a waypoint per section, including el
   });
 
   it("joins consecutive same-mode legs into one section, uses an en dash and numbers sections from 1 in trip order", async () => {
-    const trip = edit(emptyTrip(), add(P0), add(P1), add(P2), add(P3), { type: "setLegMode", index: 2, mode: "paddle" });
+    const trip = edit(emptyTrip(), add(P0), add(P1), add(P2), add(P3), {
+      type: "setLegMode",
+      index: 2,
+      mode: "paddle",
+    });
     const { gpx } = exported(trip);
     expect(gpx.waypoints).toEqual([
       { lat: P0.lat, lon: P0.lng, name: "1 – hike" },
@@ -160,7 +176,9 @@ describe("one track through every leg, with a waypoint per section, including el
   });
 
   it("has no file for a trip without legs", () => {
-    for (const trip of [emptyTrip(), edit(emptyTrip(), add(P0))]) expect(tripToGpx(trip, names)).toBeUndefined();
+    for (const trip of [emptyTrip(), edit(emptyTrip(), add(P0))]) {
+      expect(tripToGpx(trip, names)).toBeUndefined();
+    }
   });
 });
 
@@ -177,7 +195,12 @@ describe("camps start a section, whose waypoint names its day", () => {
     );
     trip = await routeAll(trip, { hike: routedBetween(P0, P1, 100) });
     const { gpx } = exported(trip);
-    expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – Day 1 – hike", "2 – Day 2 – hike", "3 – Day 3 – hike", "End"]);
+    expect(gpx.waypoints.map((w) => w.name)).toEqual([
+      "1 – Day 1 – hike",
+      "2 – Day 2 – hike",
+      "3 – Day 3 – hike",
+      "End",
+    ]);
     expect(gpx.tracks).toHaveLength(1);
   });
 
@@ -254,7 +277,9 @@ describe("trip name in metadata and file name (story 39)", () => {
   });
 
   it("Names the GPX file like the save file, with .gpx instead of the save extension", () => {
-    expect(exported(renameTrip(edit(emptyTrip(), add(P0), add(P1)), "Lesse & Lomme")).fileName).toBe("Lesse & Lomme.gpx");
+    expect(exported(renameTrip(edit(emptyTrip(), add(P0), add(P1)), "Lesse & Lomme")).fileName).toBe(
+      "Lesse & Lomme.gpx",
+    );
   });
 });
 
@@ -273,6 +298,8 @@ describe("edge cases: the file stays valid GPX 1.1 for any trip the app accepts"
     const lons = [...exported(trip).text.matchAll(/lon="([^"]+)"/g)].map((m) => Number(m[1]));
     // Updated: ADR 0037. Two track points and two waypoints (the start and the end).
     expect(lons).toHaveLength(4);
-    for (const lon of lons) expect(lon >= -180 && lon < 180).toBe(true);
+    for (const lon of lons) {
+      expect(lon >= -180 && lon < 180).toBe(true);
+    }
   });
 });

@@ -52,7 +52,9 @@ const exportGpx = (page: Page) => downloadGpx(page, () => startGpxExport(page));
 function strictXml(text: string) {
   return new DOMParser({
     onError: (level, message) => {
-      if (level !== "warning") throw new Error(message);
+      if (level !== "warning") {
+        throw new Error(message);
+      }
     },
   }).parseFromString(text, "application/xml");
 }
@@ -60,12 +62,18 @@ function strictXml(text: string) {
 async function openSave(page: Page, trip: object) {
   // Updated: format reset (#52). Opened files are version 1.
   const text = JSON.stringify({ format: "packraft-go-trip", version: 1, trip });
-  await openTripFile(page, { name: "t.packraft.json", mimeType: "application/json", buffer: Buffer.from(text, "utf8") });
+  await openTripFile(page, {
+    name: "t.packraft.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(text, "utf8"),
+  });
 }
 
 test.beforeEach(({ page }) => showAllLegs(page));
 
-test("hike + paddle legs and a camp export as GPX 1.1 with routed elevations, named after the trip", async ({ page }) => {
+test("hike + paddle legs and a camp export as GPX 1.1 with routed elevations, named after the trip", async ({
+  page,
+}) => {
   const net = await serveOffline(page, { brouter: byProfile });
   const click = await openMap(page);
   const name = `Lesse & Lomme <"été"> 'n' co`;
@@ -114,7 +122,9 @@ test("hike + paddle legs and a camp export as GPX 1.1 with routed elevations, na
   expect(net.blocked).toEqual([]);
 });
 
-test("an unnamed trip with unrouted legs exports straight lines at the drawn points, without elevation", async ({ page }) => {
+test("an unnamed trip with unrouted legs exports straight lines at the drawn points, without elevation", async ({
+  page,
+}) => {
   const net = await serveOffline(page); // BRouter unavailable
   const click = await openMap(page);
   await click(-100, 20);
@@ -227,5 +237,7 @@ test("a point at the antimeridian (from an opened file) exports a longitude GPX 
   const lons = [...file.text.matchAll(/lon="([^"]+)"/g)].map((m) => Number(m[1]));
   expect(lons).toHaveLength(4);
   // GPX 1.1 longitudeType: -180 <= lon < 180.
-  for (const lon of lons) expect(lon >= -180 && lon < 180).toBe(true);
+  for (const lon of lons) {
+    expect(lon >= -180 && lon < 180).toBe(true);
+  }
 });

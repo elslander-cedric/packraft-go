@@ -36,7 +36,10 @@ const markers = (page: Page) => mapRegion(page).locator(".access-point-marker");
 const storedTrip = (page: Page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null")?.trip, TRIP_KEY);
 const storedAccessPoint = (page: Page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null")?.accessPoints?.[0]?.position, ACCESS_POINTS_KEY);
+  page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key) ?? "null")?.accessPoints?.[0]?.position,
+    ACCESS_POINTS_KEY,
+  );
 
 async function centreOf(shape: Locator) {
   const box = (await shape.boundingBox())!;
@@ -49,7 +52,9 @@ async function openWith(page: Page, accessAt: LatLng) {
   const trip: Trip = { name: "", points: [start], legs: [] };
   await page.addInitScript(
     ([tripKey, tripValue, key, value]) => {
-      if (sessionStorage.getItem("seeded")) return;
+      if (sessionStorage.getItem("seeded")) {
+        return;
+      }
       sessionStorage.setItem("seeded", "1");
       localStorage.setItem(tripKey, tripValue);
       localStorage.setItem(key, value);
@@ -130,7 +135,11 @@ test.describe("on a wide screen", () => {
     await enterAccessPointEditing(page);
     expect(await stacking()).toEqual({ inOverlay: false, belowTrip: false });
     await expect(markers(page).first()).toHaveClass(/access-point-editable/);
-    expect(await markers(page).first().evaluate((m) => m.closest(".leaflet-marker-pane") !== null)).toBe(true);
+    expect(
+      await markers(page)
+        .first()
+        .evaluate((m) => m.closest(".leaflet-marker-pane") !== null),
+    ).toBe(true);
 
     await leaveAccessPointEditing(page);
     expect(await stacking()).toEqual({ inOverlay: true, belowTrip: true });

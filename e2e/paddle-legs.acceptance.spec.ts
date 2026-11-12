@@ -3,7 +3,16 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { freeMapCentre, legLines, legRows as rows, mapClicker, mapRegion, nextLegMode, openPlanner, showAllLegs } from "./support/planner";
+import {
+  freeMapCentre,
+  legLines,
+  legRows as rows,
+  mapClicker,
+  mapRegion,
+  nextLegMode,
+  openPlanner,
+  showAllLegs,
+} from "./support/planner";
 
 const profiles = (urls: URL[]) => urls.map((u) => u.searchParams.get("profile"));
 
@@ -25,7 +34,9 @@ test.beforeEach(({ page }) => showAllLegs(page));
 test("a leg is drawn with the next leg's mode; paddle legs look different in the panel and on the map", async ({
   page,
 }) => {
-  const network = await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
+  const network = await serveOffline(page, {
+    brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL),
+  });
   const clickMap = await openMap(page);
   await expect(nextLegMode(page, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
   await clickMap(-100, 0);
@@ -80,7 +91,9 @@ test("picking the next leg's mode sends no request and adds no undo step", async
 test("a paddle leg is routed on the river once; Ctrl+Z removes it and drawing it as a hike asks the trail profile", async ({
   page,
 }) => {
-  const network = await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
+  const network = await serveOffline(page, {
+    brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL),
+  });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
   await clickMap(100, 0, "paddle");
@@ -183,9 +196,7 @@ test(", rule 2: a paddle leg ending 1.5 m higher shows Drop 0 m and no upstream 
   expect(figures).not.toMatch(/-\s*\d/);
 });
 
-test(", rule 2: a paddle leg ending 5 m higher shows the rise with the upstream hint and no drop", async ({
-  page,
-}) => {
+test(", rule 2: a paddle leg ending 5 m higher shows the rise with the upstream hint and no drop", async ({ page }) => {
   const RISE = riverEndingAbove(5);
   await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RISE : TRAIL) });
   const clickMap = await openMap(page);

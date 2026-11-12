@@ -19,8 +19,12 @@ const trip = (a: LatLng, mode: "hike" | "paddle" = "hike"): Trip => ({
   points: [a, north(a, 0.01)],
   legs: [{ mode }],
 });
-const point = (id: string, at: LatLng, kind: "official-aire" | "slipway", use: "put-in" | "take-out" | "both" = "both"): AccessPoints =>
-  updateAccessPoint(addAccessPoint([], { id, at, now: T }), id, { kind, use }, T);
+const point = (
+  id: string,
+  at: LatLng,
+  kind: "official-aire" | "slipway",
+  use: "put-in" | "take-out" | "both" = "both",
+): AccessPoints => updateAccessPoint(addAccessPoint([], { id, at, now: T }), id, { kind, use }, T);
 
 /** A faked official aire: built-in positions are [lng, lat], unlike your access points. */
 const officialAire = (id: string, at: LatLng, use: OfficialAire["use"] = "both"): OfficialAire => ({
@@ -228,7 +232,9 @@ describe("the Walloon aire warning", () => {
 
   it("your own official-aire mark counts whatever its use", () => {
     const takeOutOnly = point("mark", north(durbuy, 0.001), "official-aire", "take-out");
-    expect(aireWarnings(paddling(durbuy), builtInAccessRules, takeOutOnly, []).map((w) => w.kind)).toEqual(["take-out"]);
+    expect(aireWarnings(paddling(durbuy), builtInAccessRules, takeOutOnly, []).map((w) => w.kind)).toEqual([
+      "take-out",
+    ]);
   });
 
   it("no warning outside Wallonia, and none for a hike", () => {

@@ -40,16 +40,22 @@ export function snapCandidate(
   officialAires: readonly OfficialAire[],
 ): SnapOffer | undefined {
   const at = trip.points[change.point];
-  if (!at) return undefined;
+  if (!at) {
+    return undefined;
+  }
   const targets: { readonly use: AccessPointUse; readonly target: SnapTarget }[] = [
     ...points.map((accessPoint) => ({ use: accessPoint.use, target: { kind: "access-point", accessPoint } as const })),
     ...officialAires.map((aire) => ({ use: aire.use, target: { kind: "official-aire", aire } as const })),
   ];
   let best: SnapOffer | undefined;
   for (const { use, target } of targets) {
-    if (!fitsUse(use, change.kind)) continue;
+    if (!fitsUse(use, change.kind)) {
+      continue;
+    }
     const metres = distanceM(at, targetPosition(target));
-    if (metres > SNAP_DISTANCE_M || (best && metres >= best.distanceM)) continue;
+    if (metres > SNAP_DISTANCE_M || (best && metres >= best.distanceM)) {
+      continue;
+    }
     best = { change, target, distanceM: metres };
   }
   return best && best.distanceM > 0 ? best : undefined;
@@ -75,7 +81,9 @@ export function snapOffers(
   points: AccessPoints,
   officialAires: readonly OfficialAire[],
 ): SnapOffer[] {
-  if (!before.points.every((point, i) => after.points[i] === point)) return [];
+  if (!before.points.every((point, i) => after.points[i] === point)) {
+    return [];
+  }
   return newModeChanges(before, after).flatMap((change) => snapCandidate(after, change, points, officialAires) ?? []);
 }
 

@@ -42,12 +42,23 @@ describe("back to start", () => {
   });
 
   it("is available again once the end is moved off the start", () => {
-    const moved = run(add(A), add(B), { type: "backToStart" }, { type: "movePoint", index: 2, to: C, accessPoints: [], officialAires: [] });
+    const moved = run(
+      add(A),
+      add(B),
+      { type: "backToStart" },
+      { type: "movePoint", index: 2, to: C, accessPoints: [], officialAires: [] },
+    );
     expect(canGoBackToStart(moved.trip)).toBe(true);
   });
 
   it("takes the next leg's mode: the last leg's mode, unless one is given", () => {
-    const paddled = run(add(A), add(B), { type: "setLegMode", index: 0, mode: "paddle", accessPoints: [], officialAires: [] });
+    const paddled = run(add(A), add(B), {
+      type: "setLegMode",
+      index: 0,
+      mode: "paddle",
+      accessPoints: [],
+      officialAires: [],
+    });
     expect(plannerSession(paddled, { type: "backToStart" }).trip.legs.map((l) => l.mode)).toEqual(["paddle", "paddle"]);
     expect(plannerSession(paddled, { type: "backToStart", mode: "hike" }).trip.legs.map((l) => l.mode)).toEqual([
       "paddle",
@@ -65,10 +76,23 @@ describe("back to start", () => {
   it("makes no snap offer for the closing point, though a tap on the start would", () => {
     const T = "2026-10-28T08:00:00.000Z";
     const nearA: LatLng = { lat: 50.3532, lng: 5.4563 }; // about 55 m from A
-    const slipway = updateAccessPoint(addAccessPoint([], { id: "s", at: nearA, now: T }), "s", { kind: "slipway", use: "both" }, T);
-    const paddled = run(add(A), add(B), { type: "setLegMode", index: 0, mode: "paddle", accessPoints: [], officialAires: [] });
+    const slipway = updateAccessPoint(
+      addAccessPoint([], { id: "s", at: nearA, now: T }),
+      "s",
+      { kind: "slipway", use: "both" },
+      T,
+    );
+    const paddled = run(add(A), add(B), {
+      type: "setLegMode",
+      index: 0,
+      mode: "paddle",
+      accessPoints: [],
+      officialAires: [],
+    });
     // Control: a paddle leg tapped back onto A makes A a take-out, and the slipway is offered.
-    expect(plannerSession(paddled, { type: "addPoint", at: A, accessPoints: slipway, officialAires: [] }).offers).toHaveLength(1);
+    expect(
+      plannerSession(paddled, { type: "addPoint", at: A, accessPoints: slipway, officialAires: [] }).offers,
+    ).toHaveLength(1);
     const after = plannerSession(paddled, { type: "backToStart" });
     expect(after.trip.points.at(-1)).toEqual(A);
     expect(after.offers).toEqual([]);

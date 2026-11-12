@@ -38,11 +38,15 @@ describe("base maps", () => {
   });
 
   it("each have their name from the strings", () => {
-    for (const map of baseMaps) expect(map.name).toBe(strings.baseMaps[map.id]);
+    for (const map of baseMaps) {
+      expect(map.name).toBe(strings.baseMaps[map.id]);
+    }
   });
 
   it("are found by id", () => {
-    for (const id of baseMapIds) expect(baseMap(id).id).toBe(id);
+    for (const id of baseMapIds) {
+      expect(baseMap(id).id).toBe(id);
+    }
   });
 
   describe("OpenTopoMap", () => {
@@ -74,12 +78,16 @@ describe("base maps", () => {
     });
 
     it("gives every source its own attribution", () => {
-      for (const source of map.sources) expect(source.attribution).not.toBe("");
+      for (const source of map.sources) {
+        expect(source.attribution).not.toBe("");
+      }
       expect(new Set(map.sources.map((source) => source.attribution)).size).toBe(map.sources.length);
     });
 
     it("never asks a source for tiles past its own max zoom", () => {
-      for (const source of map.sources) expect(source.maxNativeZoom).toBeLessThanOrEqual(map.maxZoom);
+      for (const source of map.sources) {
+        expect(source.maxNativeZoom).toBeLessThanOrEqual(map.maxZoom);
+      }
     });
   });
 
@@ -171,7 +179,9 @@ describe("base maps", () => {
 describe("overlays (ADR 0032)", () => {
   it("offer Hiking trails, one per overlay id, each named from the strings", () => {
     expect(overlays.map((overlay) => overlay.id)).toEqual([...overlayIds]);
-    for (const overlay of overlays) expect(overlay.name).toBe(strings.overlays[overlay.id]);
+    for (const overlay of overlays) {
+      expect(overlay.name).toBe(strings.overlays[overlay.id]);
+    }
   });
 
   it("draw Hiking trails from Waymarked Trails, native tiles up to zoom 18 (it answers 404 at 19)", () => {

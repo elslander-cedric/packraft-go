@@ -141,7 +141,10 @@ describe("official status against the rest", () => {
     const context = { date: today, today, flows: flows(0.1, 0.1) };
     expect(accessAt(onWalloonWinter, noMinimum, context).state).toBe("open");
     const drought = "En raison des étiages sévères";
-    const status = accessAt(onWalloonWinter, noMinimum, { ...context, official: official({ code: "0", reasonFr: drought }) });
+    const status = accessAt(onWalloonWinter, noMinimum, {
+      ...context,
+      official: official({ code: "0", reasonFr: drought }),
+    });
     expect(status.state).toBe("closed-today");
     expect(rule(status).official).toMatchObject({ reason: drought });
   });
@@ -196,7 +199,11 @@ describe("on a future date", () => {
     const status = later({ code: "0", reasonFr: "Arrêté ministériel" });
     expect(status.state).toBe("open");
     expect(rule(status)).not.toHaveProperty("closedBy");
-    expect(rule(status).closedToday).toEqual({ kind: "closed", cause: "too-low-or-stated", reason: "Arrêté ministériel" });
+    expect(rule(status).closedToday).toEqual({
+      kind: "closed",
+      cause: "too-low-or-stated",
+      reason: "Arrêté ministériel",
+    });
   });
 
   it.each([
@@ -216,9 +223,9 @@ describe("on a future date", () => {
     expect(rule(accessAt(onWalloonAllYear, rules, { ...context, official: { status: "failed" } }))).not.toHaveProperty(
       "closedToday",
     );
-    expect(rule(accessAt(onWalloonAllYear, unlistedRules, { ...context, official: official({ code: "0" }) }))).not.toHaveProperty(
-      "closedToday",
-    );
+    expect(
+      rule(accessAt(onWalloonAllYear, unlistedRules, { ...context, official: official({ code: "0" }) })),
+    ).not.toHaveProperty("closedToday");
   });
 
   it("nothing waits for the official status", () => {
@@ -240,14 +247,24 @@ describe("on a future date", () => {
   });
 
   it("the note goes by calendar days, so the day after today is future whatever the time zone", () => {
-    const lateTonight = accessAt(onWalloonAllYear, rules, { date: "2026-11-01", today: "2026-10-31", official: official({ code: "0" }) });
+    const lateTonight = accessAt(onWalloonAllYear, rules, {
+      date: "2026-11-01",
+      today: "2026-10-31",
+      official: official({ code: "0" }),
+    });
     expect(rule(lateTonight).closedToday).toBeDefined();
-    const newMonth = accessAt(onWalloonAllYear, rules, { date: "2027-01-01", today: "2026-12-31", official: official({ code: "0" }) });
+    const newMonth = accessAt(onWalloonAllYear, rules, {
+      date: "2027-01-01",
+      today: "2026-12-31",
+      official: official({ code: "0" }),
+    });
     expect(rule(newMonth).closedToday).toBeDefined();
   });
 
   it("an undated status has no note", () => {
-    expect(rule(accessAt(onWalloonAllYear, rules, { today, official: official({ code: "0" }) }))).not.toHaveProperty("closedToday");
+    expect(rule(accessAt(onWalloonAllYear, rules, { today, official: official({ code: "0" }) }))).not.toHaveProperty(
+      "closedToday",
+    );
   });
 
   it("the map's waters carry it", () => {
@@ -258,7 +275,10 @@ describe("on a future date", () => {
 
   it("a paddle leg on that date gets check-flow with the note on its reason, and never a closure", () => {
     const points = [onWalloonAllYear, { ...onWalloonAllYear, lng: onWalloonAllYear.lng + 0.001 }];
-    const leg: Leg = { mode: "paddle", route: { status: "routed", geometry: points.map((p) => ({ ...p, elevation: 0 })) } };
+    const leg: Leg = {
+      mode: "paddle",
+      route: { status: "routed", geometry: points.map((p) => ({ ...p, elevation: 0 })) },
+    };
     const trip: Trip = { name: "Test", points, legs: [leg], startDate: tomorrow };
     const access = tripAccess(trip, rules, { today, official: official({ code: "0", reasonFr: "Travaux" }) });
     expect(access.legs[0]!.status.state).toBe("open");
@@ -273,7 +293,10 @@ describe("on a future date", () => {
 
 describe("a paddle leg dated today", () => {
   const points = [onWalloonAllYear, { ...onWalloonAllYear, lng: onWalloonAllYear.lng + 0.001 }];
-  const leg: Leg = { mode: "paddle", route: { status: "routed", geometry: points.map((p) => ({ ...p, elevation: 0 })) } };
+  const leg: Leg = {
+    mode: "paddle",
+    route: { status: "routed", geometry: points.map((p) => ({ ...p, elevation: 0 })) },
+  };
   const paddle: Trip = { name: "Test", points, legs: [leg], startDate: today };
 
   describe("when the incidents couldn't be loaded (#216)", () => {
@@ -340,7 +363,10 @@ describe("a paddle leg dated today", () => {
     expect(access.legs[0]!.warnings).toEqual([
       expect.objectContaining({
         kind: "closed",
-        reason: expect.objectContaining({ closedBy: "official", official: expect.objectContaining({ reason: "Travaux" }) }),
+        reason: expect.objectContaining({
+          closedBy: "official",
+          official: expect.objectContaining({ reason: "Travaux" }),
+        }),
       }),
     ]);
   });
@@ -406,7 +432,12 @@ describe("official status and flows fail apart (#211)", () => {
     expect(closed.state).toBe("closed-today");
     expect(rule(closed)).toMatchObject({ closedBy: "official", official: { kind: "closed", reason: "Travaux" } });
 
-    const open = accessAt(onWalloonAllYear, rules, { date: today, today, flows: down, official: official({ code: "1" }) });
+    const open = accessAt(onWalloonAllYear, rules, {
+      date: today,
+      today,
+      flows: down,
+      official: official({ code: "1" }),
+    });
     expect(open.state).toBe("open");
     expect(officialNotChecked(open)).toEqual([]);
   });
@@ -422,9 +453,9 @@ describe("what wasn't checked with the SPW (#211)", () => {
   const context = { date: today, today, flows: flows(5, 10) };
 
   it("is the official closures when the service failed", () => {
-    expect(officialNotChecked(accessAt(onWalloonAllYear, rules, { ...context, official: { status: "failed" } }))).toEqual([
-      "closures",
-    ]);
+    expect(
+      officialNotChecked(accessAt(onWalloonAllYear, rules, { ...context, official: { status: "failed" } })),
+    ).toEqual(["closures"]);
   });
 
   it("is the official closures when the answer leaves the stretch out", () => {
@@ -455,13 +486,21 @@ describe("what wasn't checked with the SPW (#211)", () => {
   });
 
   it("is the official closures on a future date too, as a closure today can't be known then", () => {
-    const status = accessAt(onWalloonAllYear, rules, { ...context, date: "2026-11-20", official: { status: "failed" } });
+    const status = accessAt(onWalloonAllYear, rules, {
+      ...context,
+      date: "2026-11-20",
+      official: { status: "failed" },
+    });
     expect(status.state).toBe("open");
     expect(officialNotChecked(status)).toEqual(["closures"]);
   });
 
   it("is the official closures on a future date when the answer leaves the stretch out", () => {
-    const status = accessAt(onWalloonAllYear, rules, { today, date: "2026-11-20", official: { status: "ok", stretches: {} } });
+    const status = accessAt(onWalloonAllYear, rules, {
+      today,
+      date: "2026-11-20",
+      official: { status: "ok", stretches: {} },
+    });
     expect(officialNotChecked(status)).toEqual(["closures"]);
   });
 
@@ -478,7 +517,11 @@ describe("what wasn't checked with the SPW (#211)", () => {
   });
 
   it("is nothing on a future date on a stretch the SPW doesn't list", () => {
-    const status = accessAt(onWalloonAllYear, unlistedRules, { today, date: "2026-11-20", official: { status: "failed" } });
+    const status = accessAt(onWalloonAllYear, unlistedRules, {
+      today,
+      date: "2026-11-20",
+      official: { status: "failed" },
+    });
     expect(officialNotChecked(status)).toEqual([]);
   });
 
@@ -501,7 +544,11 @@ describe("what wasn't checked with the SPW (#211)", () => {
     });
 
     it("names them on a future date with a reading", () => {
-      const status = accessAt(onWalloonAllYear, rules, { today, date: "2026-11-20", official: official({ code: "1" }) });
+      const status = accessAt(onWalloonAllYear, rules, {
+        today,
+        date: "2026-11-20",
+        official: official({ code: "1" }),
+      });
       expect(officialNotChecked(status, failed)).toEqual(["incidents"]);
     });
 
@@ -540,7 +587,11 @@ describe("while the official status loads", () => {
   });
 
   it("a calendar closure needs no waiting", () => {
-    const status = accessAt(onWalloonAllYear, rules, { date: "2026-03-21", today: "2026-03-21", officialPending: true });
+    const status = accessAt(onWalloonAllYear, rules, {
+      date: "2026-03-21",
+      today: "2026-03-21",
+      officialPending: true,
+    });
     expect(status.state).toBe("closed-today");
   });
 
@@ -613,7 +664,11 @@ describe("an official stretch's status (#213)", () => {
       official: official(closedReading),
     });
     expect(status.state).toBe("open");
-    expect(rule(status).closedToday).toEqual({ kind: "closed", cause: "too-low-or-stated", reason: "Arrêté ministériel" });
+    expect(rule(status).closedToday).toEqual({
+      kind: "closed",
+      cause: "too-low-or-stated",
+      reason: "Arrêté ministériel",
+    });
   });
 
   it("has no rule for a stretch no record lies on", () => {

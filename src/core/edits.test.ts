@@ -17,10 +17,7 @@ describe("moving a point", () => {
     const trip = applyEdit(through(A, B, C), { type: "movePoint", index: 1, to: ELSEWHERE });
     expect(trip.points).toEqual([A, ELSEWHERE, C]);
     expect(trip.legs).toHaveLength(2);
-    expect(summarise(trip).trip.distanceKm).toBeCloseTo(
-      summarise(through(A, ELSEWHERE, C)).trip.distanceKm,
-      9,
-    );
+    expect(summarise(trip).trip.distanceKm).toBeCloseTo(summarise(through(A, ELSEWHERE, C)).trip.distanceKm, 9);
   });
 
   it("moving the start or end point changes only that point", () => {
@@ -56,13 +53,9 @@ describe("deleting a point", () => {
 
   it("the merged leg takes the earlier leg's mode", () => {
     const paddleThenHike = withModes([A, B, C], ["paddle", "hike"]);
-    expect(applyEdit(paddleThenHike, { type: "deletePoint", index: 1 }).legs).toEqual([
-      { mode: "paddle" },
-    ]);
+    expect(applyEdit(paddleThenHike, { type: "deletePoint", index: 1 }).legs).toEqual([{ mode: "paddle" }]);
     const hikeThenPaddle = withModes([A, B, C], ["hike", "paddle"]);
-    expect(applyEdit(hikeThenPaddle, { type: "deletePoint", index: 1 }).legs).toEqual([
-      { mode: "hike" },
-    ]);
+    expect(applyEdit(hikeThenPaddle, { type: "deletePoint", index: 1 }).legs).toEqual([{ mode: "hike" }]);
   });
 
   it("deleting the start point removes the first leg", () => {
@@ -164,7 +157,12 @@ describe("edits clear routed results only for legs they change", () => {
       legs: [{ mode: "hike", route: { status: "pending" } }, { mode: "hike", route: failed }, ...trip.legs.slice(2)],
     };
     const moved = applyEdit(mixed, { type: "movePoint", index: 4, to: A });
-    expect(routes(applyEdit(moved, { type: "undo" }))).toEqual([undefined, failed, routeFor(C, D), routeFor(D, ELSEWHERE)]);
+    expect(routes(applyEdit(moved, { type: "undo" }))).toEqual([
+      undefined,
+      failed,
+      routeFor(C, D),
+      routeFor(D, ELSEWHERE),
+    ]);
   });
 
   it("undo brings back the routes an edit dropped", () => {

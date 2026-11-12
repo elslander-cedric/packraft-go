@@ -36,7 +36,9 @@ export default function TripDetailsDialog({
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setDraft({ name, startDate });
+    if (open) {
+      setDraft({ name, startDate });
+    }
   }
 
   return (
@@ -46,8 +48,12 @@ export default function TripDetailsDialog({
       confirmLabel={strings.planner.menu.tripDetailsConfirm}
       cancelLabel={strings.confirmCancel}
       onConfirm={() => {
-        if (draft.name !== name) onRename(draft.name);
-        if (draft.startDate !== startDate) onSetStartDate(draft.startDate);
+        if (draft.name !== name) {
+          onRename(draft.name);
+        }
+        if (draft.startDate !== startDate) {
+          onSetStartDate(draft.startDate);
+        }
         onClose();
       }}
       onCancel={onClose}

@@ -29,7 +29,8 @@ const sources = {
     url: "https://bx1.be/categories/news/une-descente-en-kayak-pas-comme-les-autres-sur-la-senne-souterraine/",
   },
   brusselsStreams: {
-    title: "Bruxelles Environnement: management and protection of non-navigable watercourses and ponds (ordinance of 16 May 2019)",
+    title:
+      "Bruxelles Environnement: management and protection of non-navigable watercourses and ponds (ordinance of 16 May 2019)",
     url: "https://environnement.brussels/citoyen/reglementation-et-inspection/obligations-et-autorisations/la-gestion-et-la-protection-des-cours-deau-non-navigables-et-des-etangs-bruxellois",
   },
   bruges: {
@@ -166,7 +167,9 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     id: "flanders-bruges-reien",
     name: "Reien (inner canals), Bruges",
     region: "flanders",
-    rule: forbidden("Bruges doesn't allow going on the Reien on your own initiative; De Vlaamse Waterweg excludes them too."),
+    rule: forbidden(
+      "Bruges doesn't allow going on the Reien on your own initiative; De Vlaamse Waterweg excludes them too.",
+    ),
     source: sources.bruges,
     query: 'way["waterway"="canal"](51.193,3.212,51.222,3.242);',
     shape: "lines",
@@ -182,7 +185,8 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     source: sources.visurisKano,
     query: 'way["waterway"]["name"="Afleidingsvaart van de Nete"](51.11,4.54,51.15,4.60);',
     shape: "lines",
-    unverified: "Whether Visuris means this diversion channel (as mapped in OpenStreetMap) or the Binnennete through the centre.",
+    unverified:
+      "Whether Visuris means this diversion channel (as mapped in OpenStreetMap) or the Binnennete through the centre.",
     toleranceM: 5,
   },
   {
@@ -196,7 +200,8 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     include: isDock,
     // The docks on both banks, north of the city centre's marinas up to the Dutch border.
     envelope: box(4.18, 51.225, 4.43, 51.4),
-    unverified: "Whether a newer Port of Antwerp-Bruges regulation replaces the 2021 one; the port's edge is approximated by its docks.",
+    unverified:
+      "Whether a newer Port of Antwerp-Bruges regulation replaces the 2021 one; the port's edge is approximated by its docks.",
     toleranceM: 10,
   },
   {
@@ -307,7 +312,7 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
     rule: {
       type: "fixed",
       state: "open",
-      text: "Open under the VMM agreement \"Peddelroute Waasland\" (February 2020), with extra rules.",
+      text: 'Open under the VMM agreement "Peddelroute Waasland" (February 2020), with extra rules.',
       conditions: ["Read the agreement for its rules before you go."],
       link: {
         title: "VMM: Peddelroute Waasland agreement",
@@ -327,7 +332,8 @@ export const flandersWaterSpecs: readonly WaterSpec[] = [
 /** Brussels waters (docs/research/brussels.md, researched 2026-10-12). Geometry is kept inside the region. */
 const BRUSSELS_BBOX = "50.76,4.24,50.93,4.50";
 const isSenne = (tags: Record<string, string>) => /senne|zenne/i.test(tags.name ?? "");
-const isCulvert = (tags: Record<string, string>) => ["culvert", "building_passage", "covered"].includes(tags.tunnel ?? "");
+const isCulvert = (tags: Record<string, string>) =>
+  ["culvert", "building_passage", "covered"].includes(tags.tunnel ?? "");
 
 export const brusselsWaterSpecs: readonly WaterSpec[] = [
   {

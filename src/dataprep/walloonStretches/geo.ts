@@ -15,7 +15,9 @@ export function distanceM(a: Pt, b: Pt): number {
 /** Cumulative distance along the line at each vertex. */
 export function cumulative(line: readonly Pt[]): number[] {
   const out = [0];
-  for (let i = 1; i < line.length; i++) out.push(out[i - 1] + distanceM(line[i - 1], line[i]));
+  for (let i = 1; i < line.length; i++) {
+    out.push(out[i - 1] + distanceM(line[i - 1], line[i]));
+  }
   return out;
 }
 
@@ -57,7 +59,9 @@ export function project(line: readonly Pt[], p: Pt): Projection {
 /** The point at a distance along the line (clamped to its ends). */
 export function pointAt(line: readonly Pt[], along: number): Pt {
   const cum = cumulative(line);
-  if (along <= 0) return line[0];
+  if (along <= 0) {
+    return line[0];
+  }
   for (let i = 1; i < line.length; i++) {
     if (cum[i] >= along) {
       const span = cum[i] - cum[i - 1];
@@ -74,7 +78,11 @@ export function pointAt(line: readonly Pt[], along: number): Pt {
 export function slice(line: readonly Pt[], from: number, to: number): Pt[] {
   const cum = cumulative(line);
   const out: Pt[] = [pointAt(line, from)];
-  for (let i = 0; i < line.length; i++) if (cum[i] > from && cum[i] < to) out.push(line[i]);
+  for (let i = 0; i < line.length; i++) {
+    if (cum[i] > from && cum[i] < to) {
+      out.push(line[i]);
+    }
+  }
   out.push(pointAt(line, to));
   return out;
 }
@@ -90,7 +98,9 @@ export function crossings(line: readonly Pt[], other: readonly Pt[]): Projection
       const q1 = other[j - 1];
       const q2 = other[j];
       const d = (p2.lng - p1.lng) * (q2.lat - q1.lat) - (p2.lat - p1.lat) * (q2.lng - q1.lng);
-      if (d === 0) continue;
+      if (d === 0) {
+        continue;
+      }
       const t = ((q1.lng - p1.lng) * (q2.lat - q1.lat) - (q1.lat - p1.lat) * (q2.lng - q1.lng)) / d;
       const u = ((q1.lng - p1.lng) * (p2.lat - p1.lat) - (q1.lat - p1.lat) * (p2.lng - p1.lng)) / d;
       if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
@@ -107,7 +117,9 @@ export function crossings(line: readonly Pt[], other: readonly Pt[]): Projection
 
 /** Douglas–Peucker simplification with a tolerance in metres. */
 export function simplify(line: readonly Pt[], toleranceM: number): Pt[] {
-  if (line.length <= 2) return [...line];
+  if (line.length <= 2) {
+    return [...line];
+  }
   const keep = new Array<boolean>(line.length).fill(false);
   keep[0] = keep[line.length - 1] = true;
   const stack: Array<[number, number]> = [[0, line.length - 1]];

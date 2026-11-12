@@ -24,7 +24,9 @@ export function downloadTripFile(trip: Trip, untitledName: string): void {
 /** Downloads the trip as one GPX file named after it (`names.untitledTrip` when it has no name). A trip without legs downloads nothing. */
 export function downloadGpx(trip: Trip, names: GpxNames): void {
   const gpx = tripToGpx(trip, names);
-  if (gpx) download(gpx.text, gpx.fileName, "application/gpx+xml");
+  if (gpx) {
+    download(gpx.text, gpx.fileName, "application/gpx+xml");
+  }
 }
 
 /** Reads a chosen file as a trip. Any file that is not a valid save file is rejected. */

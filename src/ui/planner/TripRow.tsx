@@ -19,15 +19,30 @@ function figures(row: LegSummary): Figure[] {
   const labels = strings.planner.legFigures;
   const all: (Figure | false)[] = [
     { key: "time", icon: icons.time, label: labels.time, value: formatTimeEstimate(row.timeH, row.timeStatus) },
-    row.climbM !== undefined && { key: "climb", icon: icons.climb, label: labels.climb, value: formatElevation(row.climbM) },
+    row.climbM !== undefined && {
+      key: "climb",
+      icon: icons.climb,
+      label: labels.climb,
+      value: formatElevation(row.climbM),
+    },
     row.descentM !== undefined && {
       key: "descent",
       icon: icons.descent,
       label: labels.descent,
       value: formatElevation(row.descentM),
     },
-    row.dropM !== undefined && { key: "drop", icon: icons.descent, label: labels.drop, value: formatElevation(row.dropM) },
-    row.riseM !== undefined && { key: "rise", icon: icons.climb, label: labels.rise, value: `${formatElevation(row.riseM)}?` },
+    row.dropM !== undefined && {
+      key: "drop",
+      icon: icons.descent,
+      label: labels.drop,
+      value: formatElevation(row.dropM),
+    },
+    row.riseM !== undefined && {
+      key: "rise",
+      icon: icons.climb,
+      label: labels.rise,
+      value: `${formatElevation(row.riseM)}?`,
+    },
   ];
   return all.filter((figure): figure is Figure => figure !== false);
 }
@@ -106,7 +121,12 @@ export function TripRow({
   return (
     <li className={`planner-row planner-row-${row.mode}`}>
       <div className="planner-row-head">
-        <Button className="planner-row-toggle" aria-current={selected || undefined} aria-expanded={open} onClick={onSelect}>
+        <Button
+          className="planner-row-toggle"
+          aria-current={selected || undefined}
+          aria-expanded={open}
+          onClick={onSelect}
+        >
           <span className="visually-hidden">{`${label} `}</span>
           <span className="planner-row-headline">
             <FigureView
@@ -160,7 +180,10 @@ export function RoutingFailure({
   leg?: number;
   onRetry: () => void;
 }) {
-  const message = mode === "paddle" && failure.kind === "no-route" ? strings.legRouteFailedNoRiver : strings.legRouteFailed[failure.kind];
+  const message =
+    mode === "paddle" && failure.kind === "no-route"
+      ? strings.legRouteFailedNoRiver
+      : strings.legRouteFailed[failure.kind];
   return (
     <span className="planner-row-failed">
       <span role="alert">{leg === undefined ? message : strings.planner.sectionLegFailed(leg, message)}</span>

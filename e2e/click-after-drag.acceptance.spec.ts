@@ -15,7 +15,7 @@ const deleteButton = (page: Page) => page.getByRole("button", { name: strings.de
 async function openMap(page: Page) {
   await serveOffline(page);
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return { cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
 }
 
@@ -55,13 +55,17 @@ for (const busy of [false, true]) {
   const when = busy ? " (busy page)" : "";
 
   test(`clicking the empty map right after dragging a point adds exactly one point${when}`, async ({ page }) => {
-    if (busy) await busyPage(page);
+    if (busy) {
+      await busyPage(page);
+    }
     const { cx, cy } = await openMap(page);
     const a = { x: cx - 150, y: cy };
     const b = { x: cx + 150, y: cy };
     const moved = { x: cx + 150, y: cy + 100 };
     const empty = { x: cx, y: cy - 120 };
-    for (const p of [a, b]) await page.mouse.click(p.x, p.y);
+    for (const p of [a, b]) {
+      await page.mouse.click(p.x, p.y);
+    }
     await expect(points(page)).toHaveCount(2);
 
     await drag(page, b, moved);
@@ -71,11 +75,15 @@ for (const busy of [false, true]) {
   });
 
   test(`the leftover click of a drag is ignored, even if nothing follows it${when}`, async ({ page }) => {
-    if (busy) await busyPage(page);
+    if (busy) {
+      await busyPage(page);
+    }
     const { cx, cy } = await openMap(page);
     const a = { x: cx - 150, y: cy };
     const b = { x: cx + 150, y: cy };
-    for (const p of [a, b]) await page.mouse.click(p.x, p.y);
+    for (const p of [a, b]) {
+      await page.mouse.click(p.x, p.y);
+    }
     await expect(points(page)).toHaveCount(2);
 
     // Long drag, released over empty map far from where it started.
@@ -94,7 +102,9 @@ for (const busy of [false, true]) {
   });
 
   test(`after panning the map, an immediate click selects a point and a pan adds none${when}`, async ({ page }) => {
-    if (busy) await busyPage(page);
+    if (busy) {
+      await busyPage(page);
+    }
     const { cx, cy } = await openMap(page);
     const a = { x: cx - 150, y: cy };
     await page.mouse.click(a.x, a.y);
@@ -105,7 +115,7 @@ for (const busy of [false, true]) {
     await expect(points(page)).toHaveCount(1);
     // Leaflet's inertia may still be moving the map; read the point once it has stopped.
     await mapSettled(page);
-    const box =(await points(page).first().boundingBox())!;
+    const box = (await points(page).first().boundingBox())!;
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await expect(selected(page)).toHaveCount(1);
     await expect(points(page)).toHaveCount(1);
@@ -116,7 +126,9 @@ test("a press that moves less than the drag threshold is still a click and selec
   const { cx, cy } = await openMap(page);
   const a = { x: cx - 150, y: cy };
   const b = { x: cx + 150, y: cy };
-  for (const p of [a, b]) await page.mouse.click(p.x, p.y);
+  for (const p of [a, b]) {
+    await page.mouse.click(p.x, p.y);
+  }
   await expect(points(page)).toHaveCount(2);
 
   // A real drag first, so a stale "was a drag" state would show up here.

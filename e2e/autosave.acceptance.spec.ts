@@ -4,7 +4,16 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { expectTripName, freeMapBox, menuItem, renameTrip, tripDetailsDialog, tripPanel, showAllLegs, leafRows } from "./support/planner";
+import {
+  expectTripName,
+  freeMapBox,
+  menuItem,
+  renameTrip,
+  tripDetailsDialog,
+  tripPanel,
+  showAllLegs,
+  leafRows,
+} from "./support/planner";
 
 type Px = { x: number; y: number };
 
@@ -35,7 +44,7 @@ async function waitForMap(page: Page) {
 async function openMap(page: Page): Promise<Px> {
   await page.goto("/");
   await waitForMap(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
@@ -72,7 +81,9 @@ test("every change is autosaved without a reload: add, move, delete, undo, renam
     await page.mouse.click(p.x, p.y);
     await expect.poll(async () => (await stored(page))?.trip.points.length).toBe(i + 1);
   }
-  await expect.poll(async () => (await stored(page))?.trip.legs.map((l: { route?: { status: string } }) => l.route?.status)).toEqual(["routed", "routed"]);
+  await expect
+    .poll(async () => (await stored(page))?.trip.legs.map((l: { route?: { status: string } }) => l.route?.status))
+    .toEqual(["routed", "routed"]);
   const before = (await stored(page)).trip.points[1];
 
   await drag(page, pts[1], { x: c.x + 20, y: c.y + 120 });
@@ -214,10 +225,20 @@ test("new trip clears everything; a late route answer does not bring legs back",
 for (const [label, text] of [
   ["not JSON", "{corrupt"],
   ["JSON null", "null"],
-  ["a newer version", JSON.stringify({ format: "packraft-go-trip", version: 99, trip: { name: "x", points: [], legs: [] } })],
+  [
+    "a newer version",
+    JSON.stringify({ format: "packraft-go-trip", version: 99, trip: { name: "x", points: [], legs: [] } }),
+  ],
   // Updated: v1 dropped (#33). Version 2, so this stays about damaged data, not the version.
   // Updated: format reset (#52). Version 1, the current version.
-  ["legs that do not match points", JSON.stringify({ format: "packraft-go-trip", version: 1, trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] } })],
+  [
+    "legs that do not match points",
+    JSON.stringify({
+      format: "packraft-go-trip",
+      version: 1,
+      trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] },
+    }),
+  ],
   ["an empty string", ""],
 ] as const) {
   test(`corrupt storage (${label}) opens an empty trip with no errors, and drawing works again`, async ({ page }) => {
@@ -280,7 +301,9 @@ test("blocked browser storage does not crash the planner", async ({ page }) => {
 // Updated for Base UI (#31): the question is an in-page Alert Dialog (title +
 // message, same wording) answered with its buttons, instead of window.confirm.
 
-test("a single point is enough to ask; cancel keeps it, OK clears it, and an empty trip is not asked about", async ({ page }) => {
+test("a single point is enough to ask; cancel keeps it, OK clears it, and an empty trip is not asked about", async ({
+  page,
+}) => {
   await serveOffline(page, { brouter: () => SNAPPED });
   const c = await openMap(page);
   expect(`${strings.newTripConfirm.title} ${strings.newTripConfirm.message}`).toBe(

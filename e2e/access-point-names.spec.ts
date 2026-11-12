@@ -99,7 +99,9 @@ test.describe("on a desktop-sized window", () => {
     await editPoint(page);
     await dialogName(page).fill("Hotton bridge");
     await saveAccessPoint(page);
-    await expect.poll(async () => (await stored(page))[0]).toMatchObject({ name: "Hotton bridge", nameSource: "typed" });
+    await expect
+      .poll(async () => (await stored(page))[0])
+      .toMatchObject({ name: "Hotton bridge", nameSource: "typed" });
     await drag(page, -60, -40);
     await expect.poll(async () => (await stored(page))[0].position).not.toEqual(moved);
     await page.waitForTimeout(1500);
@@ -163,11 +165,13 @@ test.describe("on the phone", () => {
     await context.setOffline(false);
     await expect(nameField(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
     await dialog(page).getByRole("button", { name: plannerText.accessPointSave }).click();
-    await expect.poll(async () => (await stored(page))[0]).toMatchObject({
-      name: DEFAULT_NAME,
-      nameSource: "default",
-      note: "Gravel bank",
-    });
+    await expect
+      .poll(async () => (await stored(page))[0])
+      .toMatchObject({
+        name: DEFAULT_NAME,
+        nameSource: "default",
+        note: "Gravel bank",
+      });
     await expect(rows(page).first().locator(".planner-row-heading")).toHaveText(DEFAULT_NAME);
     expect(network.blocked).toEqual([]);
   });
@@ -193,7 +197,10 @@ test.describe("on the phone", () => {
     await context.setOffline(false);
     await expect(rows(page).first().locator(".planner-row-heading")).toHaveText(DEFAULT_NAME);
     await expect(rows(page).first()).toContainText(text.useAndKind(text.uses.both, text.kinds["informal-bank"]));
-    await rows(page).first().getByRole("button", { name: plannerText.editAccessPoint(DEFAULT_NAME) }).click();
+    await rows(page)
+      .first()
+      .getByRole("button", { name: plannerText.editAccessPoint(DEFAULT_NAME) })
+      .click();
     await expect(nameField(page)).toHaveAttribute("placeholder", DEFAULT_NAME);
     await expect.poll(async () => (await stored(page))[0]).toMatchObject({ name: DEFAULT_NAME, nameSource: "default" });
     expect(network.blocked).toEqual([]);

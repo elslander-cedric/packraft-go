@@ -55,7 +55,9 @@ describe("building a water record", () => {
     });
     expect(record.geometry.type).toBe("LineString");
     const line = record.geometry.type === "LineString" ? record.geometry.coordinates : [];
-    const raw = extract("lier-nete-diversion.json").elements.flatMap((e) => (e.type === "way" ? (e.geometry ?? []) : []));
+    const raw = extract("lier-nete-diversion.json").elements.flatMap((e) =>
+      e.type === "way" ? (e.geometry ?? []) : [],
+    );
     expect(line.length).toBeGreaterThanOrEqual(2);
     expect(line.length).toBeLessThan(raw.length);
     for (const [lng, lat] of line) {
@@ -78,7 +80,12 @@ describe("building a water record", () => {
       ],
     ];
     const record = await waterRecord(lierSpec, westOnly, saved(extract("lier-nete-diversion.json")).overpass);
-    const lines = record.geometry.type === "LineString" ? [record.geometry.coordinates] : record.geometry.type === "MultiLineString" ? record.geometry.coordinates : [];
+    const lines =
+      record.geometry.type === "LineString"
+        ? [record.geometry.coordinates]
+        : record.geometry.type === "MultiLineString"
+          ? record.geometry.coordinates
+          : [];
     expect(lines.flat().every(([lng]) => lng <= 4.5625)).toBe(true);
   });
 
@@ -120,7 +127,13 @@ describe("serialising a dataset", () => {
           scope: "water" as const,
           region: "flanders",
           rule: { type: "fixed" as const, state: "forbidden" as const, text: "No." },
-          geometry: { type: "LineString" as const, coordinates: [[4, 51], [4.1, 51]] as [number, number][] },
+          geometry: {
+            type: "LineString" as const,
+            coordinates: [
+              [4, 51],
+              [4.1, 51],
+            ] as [number, number][],
+          },
           source: { title: "S", url: "https://example.org" },
           researched: "2026-10-12",
         },

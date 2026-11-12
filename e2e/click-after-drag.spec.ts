@@ -15,7 +15,7 @@ const deleteButton = (page: Page) => page.getByRole("button", { name: strings.de
 async function openMap(page: Page) {
   await serveOffline(page);
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return { cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
 }
 
@@ -47,7 +47,9 @@ test("a click right after a drag selects the point, even on a busy page", async 
   const a = { x: cx - 150, y: cy };
   const b = { x: cx + 150, y: cy };
   const moved = { x: cx + 150, y: cy + 100 };
-  for (const p of [a, b]) await page.mouse.click(p.x, p.y);
+  for (const p of [a, b]) {
+    await page.mouse.click(p.x, p.y);
+  }
   await expect(points(page)).toHaveCount(2);
 
   await dragThenClick(page, b, moved);
@@ -67,7 +69,9 @@ test(`clicking a point right after dragging it always selects it (${probeRuns} t
     { x: cx + 100, y: cy - 60 },
     { x: cx + 160, y: cy + 60 },
   ];
-  for (const p of [a, spots[0]]) await page.mouse.click(p.x, p.y);
+  for (const p of [a, spots[0]]) {
+    await page.mouse.click(p.x, p.y);
+  }
   await expect(points(page)).toHaveCount(2);
 
   for (let run = 0; run < probeRuns; run++) {

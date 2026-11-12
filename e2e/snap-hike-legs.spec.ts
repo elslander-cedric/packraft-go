@@ -15,7 +15,7 @@ const NO_ROUTE: BRouterReply = { status: 400, body: brouterFixture("hiking-no-ro
 /** Opens the app and returns a function that clicks the map `dx`, `dy` pixels from its centre. */
 async function openMap(page: Page) {
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return (dx: number, dy: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
 }
 
@@ -78,7 +78,9 @@ test("an already routed leg is never requested again when the trip grows", async
   expect(new Set(lonlats).size).toBe(2);
 });
 
-test("a leg that fails to snap stays as a dashed straight line with a message, and retry snaps it", async ({ page }) => {
+test("a leg that fails to snap stays as a dashed straight line with a message, and retry snaps it", async ({
+  page,
+}) => {
   const replies = [NO_ROUTE, SNAPPED];
   const network = await serveOffline(page, { brouter: () => replies.shift()! });
   const clickMap = await openMap(page);

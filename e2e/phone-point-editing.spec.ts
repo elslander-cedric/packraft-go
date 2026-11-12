@@ -131,8 +131,9 @@ test("the selected point's card holds delete and camp; the bottom buttons never 
   await expect(bottomRight.getByRole("button", { name: strings.deletePointButton })).toHaveCount(0);
   // Its number and distance are shown whole, never cut short (#70: measured once the font is in).
   await page.evaluate(() => document.fonts.ready);
-  for (const line of await card.locator(".planner-point-card-title > span").all())
+  for (const line of await card.locator(".planner-point-card-title > span").all()) {
     expect(await line.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  }
 
   await raiseSheet(page);
   await sheetSettled(page);

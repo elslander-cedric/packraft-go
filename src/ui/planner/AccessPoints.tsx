@@ -42,8 +42,12 @@ type Props = {
 /** How far along the route an on-route row is, and whether the trip's put-in or take-out is there. */
 function alongRoute({ alongKm, role }: OnRoute | OnRouteAire): string {
   const along = text.alongRoute(alongKm.toFixed(1));
-  if (role === "put-in") return `${along} · ${text.yourPutIn}`;
-  if (role === "take-out") return `${along} · ${text.yourTakeOut}`;
+  if (role === "put-in") {
+    return `${along} · ${text.yourPutIn}`;
+  }
+  if (role === "take-out") {
+    return `${along} · ${text.yourTakeOut}`;
+  }
   return along;
 }
 
@@ -69,7 +73,9 @@ export default function AccessPoints({ access, trip, officialAires, position, on
 
   // Bring the selected row into view, e.g. after a marker tap.
   useEffect(() => {
-    if (selected) lists.current?.querySelector("[aria-current]")?.scrollIntoView?.({ block: "nearest" });
+    if (selected) {
+      lists.current?.querySelector("[aria-current]")?.scrollIntoView?.({ block: "nearest" });
+    }
   }, [selected]);
 
   const savingPausedAlert = access.savingPaused !== null && (
@@ -174,7 +180,9 @@ export default function AccessPoints({ access, trip, officialAires, position, on
         confirmLabel={pointText.deleteConfirm.confirm}
         cancelLabel={strings.confirmCancel}
         onConfirm={() => {
-          if (pendingDelete !== null) access.remove(pendingDelete);
+          if (pendingDelete !== null) {
+            access.remove(pendingDelete);
+          }
           setPendingDelete(null);
         }}
         onCancel={() => setPendingDelete(null)}

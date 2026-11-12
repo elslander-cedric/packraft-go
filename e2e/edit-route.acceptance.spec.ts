@@ -53,7 +53,9 @@ async function drag(page: Page, from: Px, to: Px) {
 
 async function markerCentres(page: Page) {
   const out: Px[] = [];
-  for (const m of await markers(page).all()) out.push(await centre(m));
+  for (const m of await markers(page).all()) {
+    out.push(await centre(m));
+  }
   return out;
 }
 
@@ -61,9 +63,13 @@ test.beforeEach(({ page }) => showAllLegs(page));
 
 test("dragging a point moves it, the adjacent legs follow, nothing is added", async ({ page }) => {
   const { network, cx, cy } = await openMap(page);
-  const a = { x: cx - 220, y: cy }, b = { x: cx, y: cy - 90 }, c = { x: cx + 220, y: cy };
+  const a = { x: cx - 220, y: cy },
+    b = { x: cx, y: cy - 90 },
+    c = { x: cx + 220, y: cy };
   const to = { x: cx + 30, y: cy + 140 };
-  for (const p of [a, b, c]) await page.mouse.click(p.x, p.y);
+  for (const p of [a, b, c]) {
+    await page.mouse.click(p.x, p.y);
+  }
   await expect(markers(page)).toHaveCount(3);
   const before = await total(page);
 
@@ -90,8 +96,11 @@ test("dragging a point moves it, the adjacent legs follow, nothing is added", as
 
 test("clicking an existing point selects it instead of adding a point", async ({ page }) => {
   const { cx, cy } = await openMap(page);
-  const a = { x: cx - 150, y: cy }, b = { x: cx + 150, y: cy };
-  for (const p of [a, b]) await page.mouse.click(p.x, p.y);
+  const a = { x: cx - 150, y: cy },
+    b = { x: cx + 150, y: cy };
+  for (const p of [a, b]) {
+    await page.mouse.click(p.x, p.y);
+  }
   // The delete button is only shown while a point is selected.
   await expect(deleteBtn(page)).toHaveCount(0);
   await page.mouse.click(b.x, b.y);
@@ -100,9 +109,7 @@ test("clicking an existing point selects it instead of adding a point", async ({
   await expect(deleteBtn(page)).toBeEnabled();
 });
 
-test("deleting a middle point merges its legs; deleting an end point removes its leg", async ({
-  page,
-}) => {
+test("deleting a middle point merges its legs; deleting an end point removes its leg", async ({ page }) => {
   const { cx, cy } = await openMap(page);
   const p = [
     { x: cx - 240, y: cy },
@@ -110,7 +117,9 @@ test("deleting a middle point merges its legs; deleting an end point removes its
     { x: cx + 80, y: cy + 100 },
     { x: cx + 240, y: cy },
   ];
-  for (const q of p) await page.mouse.click(q.x, q.y);
+  for (const q of p) {
+    await page.mouse.click(q.x, q.y);
+  }
   await expect(rows(page)).toHaveCount(3);
 
   // Delete with nothing selected does nothing.
@@ -148,9 +157,13 @@ test("draw, drag, delete, then undo repeatedly back to an empty trip", async ({ 
   await page.keyboard.press("Control+z");
   await expect(markers(page)).toHaveCount(0);
 
-  const a = { x: cx - 200, y: cy }, b = { x: cx, y: cy - 100 }, c = { x: cx + 200, y: cy };
+  const a = { x: cx - 200, y: cy },
+    b = { x: cx, y: cy - 100 },
+    c = { x: cx + 200, y: cy };
   const moved = { x: cx + 20, y: cy + 130 };
-  for (const p of [a, b, c]) await page.mouse.click(p.x, p.y);
+  for (const p of [a, b, c]) {
+    await page.mouse.click(p.x, p.y);
+  }
   const drawn = await markerCentres(page);
   await drag(page, b, moved);
   await page.mouse.click(c.x, c.y);

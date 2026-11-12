@@ -38,7 +38,9 @@ test("a hike → paddle → hike trip: the middle leg follows the river, shows i
   await clickMap(50, 0, "paddle");
   await clickMap(150, 0, "hike");
   await expect(legLines(page)).toHaveCount(3);
-  for (let i = 0; i < 3; i++) await expect(legLines(page).nth(i)).toHaveClass(/leg-routed/);
+  for (let i = 0; i < 3; i++) {
+    await expect(legLines(page).nth(i)).toHaveClass(/leg-routed/);
+  }
 
   // The middle leg is routed with the river profile and drawn as a paddle leg.
   await expect(legLines(page).nth(1)).toHaveClass(/leg-paddle/);
@@ -71,7 +73,7 @@ test("a hike → paddle → hike trip: the middle leg follows the river, shows i
   // The markers sit on the second and third points: put-in left of take-out.
   const putInBox = (await putIn.boundingBox())!;
   const takeOutBox = (await takeOut.boundingBox())!;
-  const mapBox = (await freeMapBox(page));
+  const mapBox = await freeMapBox(page);
   const centreX = mapBox.x + mapBox.width / 2;
   expect(Math.abs(putInBox.x + putInBox.width / 2 - (centreX - 50))).toBeLessThan(3);
   expect(Math.abs(takeOutBox.x + takeOutBox.width / 2 - (centreX + 50))).toBeLessThan(3);
@@ -125,7 +127,7 @@ test("a trip that starts on the water has a put-in at its start", async ({ page 
   const takeOut = mapRegion(page).locator("path.take-out");
   await expect(putIn).toHaveCount(1);
   await expect(takeOut).toHaveCount(1);
-  const mapBox = (await freeMapBox(page));
+  const mapBox = await freeMapBox(page);
   const centreX = mapBox.x + mapBox.width / 2;
   const middle = async (marker: typeof putIn) => {
     const box = (await marker.boundingBox())!;

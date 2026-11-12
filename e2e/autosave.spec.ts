@@ -3,7 +3,16 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { answerConfirmation, confirmDialog } from "./support/confirmDialog";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { expectTripName, freeMapBox, menuItem, pickNextMode, renameTrip, tripPanel, showAllLegs, leafRows } from "./support/planner";
+import {
+  expectTripName,
+  freeMapBox,
+  menuItem,
+  pickNextMode,
+  renameTrip,
+  tripPanel,
+  showAllLegs,
+  leafRows,
+} from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
@@ -23,7 +32,7 @@ async function waitForMap(page: Page) {
 async function openMap(page: Page) {
   await page.goto("/");
   await waitForMap(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return (dx: number, dy: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
 }
 
@@ -40,7 +49,8 @@ test("a drawn trip is restored on reload with its snapped routes, and no routing
   await expect(legLines(page).nth(0)).toHaveClass(/leg-routed/);
   await expect(legLines(page).nth(1)).toHaveClass(/leg-routed/);
   // The map fits the trip when it opens, so the routes are compared as stored, not in pixels.
-  const storedLegs = () => page.evaluate(() => JSON.parse(localStorage.getItem("packraft-go.trip") ?? "null")?.trip.legs);
+  const storedLegs = () =>
+    page.evaluate(() => JSON.parse(localStorage.getItem("packraft-go.trip") ?? "null")?.trip.legs);
   const legsBefore = await storedLegs();
   const requestsBefore = network.brouter.length;
   expect(requestsBefore).toBe(2);
@@ -205,7 +215,9 @@ test("unreadable stored data opens an empty trip without crashing", async ({ pag
   await page.goto("/");
   await waitForMap(page);
   await page.evaluate(() => {
-    for (let i = 0; i < localStorage.length; i++) localStorage.setItem(localStorage.key(i)!, "{corrupt");
+    for (let i = 0; i < localStorage.length; i++) {
+      localStorage.setItem(localStorage.key(i)!, "{corrupt");
+    }
     localStorage.setItem("packraft-go.trip", "{corrupt");
   });
 

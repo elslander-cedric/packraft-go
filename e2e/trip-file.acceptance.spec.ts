@@ -90,7 +90,9 @@ test("an unnamed trip, and an empty trip, can be saved", async ({ page }) => {
   expect(JSON.parse(file.text).trip).toEqual({ name: "", points: [], legs: [] });
 });
 
-test("opening restores paddle legs, climb, drop and failed legs with no routing calls, like a reload", async ({ page }) => {
+test("opening restores paddle legs, climb, drop and failed legs with no routing calls, like a reload", async ({
+  page,
+}) => {
   const { net } = await drawMixedTrip(page, "Round trip");
   const file = await save(page);
   const panelBefore = await panel(page).innerText();
@@ -193,15 +195,29 @@ const INVALID: [string, string, string][] = [
   ["not JSON", "{corrupt", strings.openFileInvalid],
   ["an empty file", "", strings.openFileInvalid],
   ["JSON that is not a trip", JSON.stringify({ hello: "world" }), strings.openFileInvalid],
-  ["a newer version", JSON.stringify({ format: "packraft-go-trip", version: 99, trip: { name: "x", points: [], legs: [] } }), strings.openFileUnknownVersion],
+  [
+    "a newer version",
+    JSON.stringify({ format: "packraft-go-trip", version: 99, trip: { name: "x", points: [], legs: [] } }),
+    strings.openFileUnknownVersion,
+  ],
   // Updated: v1 dropped (#33). Version 2, so this stays a damaged file, not an unknown version.
   // Updated: format reset (#52). Version 1, the current version.
-  ["legs not matching points", JSON.stringify({ format: "packraft-go-trip", version: 1, trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] } }), strings.openFileInvalid],
+  [
+    "legs not matching points",
+    JSON.stringify({
+      format: "packraft-go-trip",
+      version: 1,
+      trip: { name: "x", points: [{ lat: 50, lng: 5 }], legs: [{ mode: "hike" }] },
+    }),
+    strings.openFileInvalid,
+  ],
   ["a GPX file", '<?xml version="1.0"?><gpx version="1.1"><trk><name>x</name></trk></gpx>', strings.openFileInvalid],
 ];
 
 for (const [label, text, message] of INVALID) {
-  test(`an invalid file (${label}) shows an error, never asks, and leaves the trip and storage unchanged`, async ({ page }) => {
+  test(`an invalid file (${label}) shows an error, never asks, and leaves the trip and storage unchanged`, async ({
+    page,
+  }) => {
     const { net } = await drawMixedTrip(page, "Keep me");
     await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").trip?.legs?.length).toBe(3);
     const storedBefore = await storedText(page);
@@ -227,7 +243,9 @@ for (const [label, text, message] of INVALID) {
 // Updated: v1 dropped (#33). A version 1 file used to open as a trip without
 // camps; now it is refused as an unknown version and the current trip stays.
 // Updated: format reset (#52). Version 1 is current again; the old version 2 is the one refused.
-test("an old version 2 file is refused as an unknown version and leaves the trip and storage unchanged", async ({ page }) => {
+test("an old version 2 file is refused as an unknown version and leaves the trip and storage unchanged", async ({
+  page,
+}) => {
   const { net } = await drawMixedTrip(page, "Keep me");
   await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").trip?.legs?.length).toBe(3);
   const storedBefore = await storedText(page);
@@ -282,7 +300,9 @@ test("the error goes away after a successful open, and the same file can be open
   await expect(confirmDialog(page)).toHaveCount(0);
 });
 
-test("opening over a trip with points asks; cancel keeps it; OK replaces it; an empty trip is not asked about", async ({ page }) => {
+test("opening over a trip with points asks; cancel keeps it; OK replaces it; an empty trip is not asked about", async ({
+  page,
+}) => {
   await serveOffline(page, { brouter: byProfile });
   const click = await openMap(page);
   await renameTrip(page, "From file");

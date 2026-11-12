@@ -8,7 +8,10 @@ export function serialiseLocks(dataset: LockDataset): string {
 }
 
 /** An SPW snapshot as JSON with one item of `list` per line, so a refresh reads well as a diff. */
-export function serialiseSnapshot<Key extends string>(dataset: { readonly [key in Key]: readonly unknown[] }, list: Key): string {
+export function serialiseSnapshot<Key extends string>(
+  dataset: { readonly [key in Key]: readonly unknown[] },
+  list: Key,
+): string {
   const head = JSON.stringify({ ...dataset, [list]: "@@items@@" }, null, 2);
   const items = dataset[list].map((item) => `    ${JSON.stringify(item)}`).join(",\n");
   return head.replace('"@@items@@"', () => `[\n${items}\n  ]`) + "\n";
@@ -28,7 +31,9 @@ export function serialiseDataset(dataset: AccessDataset): string {
     }),
   };
   return (
-    JSON.stringify(withPlaceholders, null, 2).replace(/"@@geometry-(\d+)@@"/g, (_, i: string) => geometries[Number(i)]) +
-    "\n"
+    JSON.stringify(withPlaceholders, null, 2).replace(
+      /"@@geometry-(\d+)@@"/g,
+      (_, i: string) => geometries[Number(i)],
+    ) + "\n"
   );
 }

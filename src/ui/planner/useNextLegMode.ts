@@ -37,7 +37,9 @@ export function useNextLegMode(trip: Trip) {
     pickMode: (mode: LegMode) => setPick(pickFor(mode, trip)),
     /** Call just before adding a point, so a pick made on an empty trip survives its first point. */
     keepOverFirstPoint: () => {
-      if (current !== null && trip.points.length === 0) setPick({ ...current, carry: true });
+      if (current !== null && trip.points.length === 0) {
+        setPick({ ...current, carry: true });
+      }
     },
   };
 }

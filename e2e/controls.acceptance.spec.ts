@@ -294,7 +294,10 @@ test.describe("disabled controls say why", () => {
     await expect(undo).toBeEnabled();
     await expect(undo).not.toHaveAccessibleDescription(strings.undoDisabledReason);
     await menuButton(page).click();
-    await expect(page.getByRole("menuitem", { name: text.menu.exportGpx })).not.toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByRole("menuitem", { name: text.menu.exportGpx })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     await page.keyboard.press("Escape");
 
     // A disabled button does nothing when clicked: undo everything, then click Undo again.

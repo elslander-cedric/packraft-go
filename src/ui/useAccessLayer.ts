@@ -120,14 +120,22 @@ export function useAccessLayer(trip: Trip, wantAires: boolean): AccessLayer {
   );
   const setOn = (next: boolean) => {
     setOnState(next);
-    if (!next) select(null);
+    if (!next) {
+      select(null);
+    }
   };
   return {
     on,
     setOn,
     date,
     isToday: pickedDate === null,
-    dateSelector: { date, isToday: pickedDate === null, onDate: setPickedDate, onToday: () => setPickedDate(null), tripDays },
+    dateSelector: {
+      date,
+      isToday: pickedDate === null,
+      onDate: setPickedDate,
+      onToday: () => setPickedDate(null),
+      tripDays,
+    },
     shown:
       on && rules
         ? {

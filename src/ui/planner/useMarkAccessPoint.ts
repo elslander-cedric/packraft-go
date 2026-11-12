@@ -39,7 +39,9 @@ export function useMarkAccessPoint(
       if (first.state === "shown") {
         access.placeDraft(first.at);
         onMarked();
-      } else setNeedsTap(true);
+      } else {
+        setNeedsTap(true);
+      }
     });
   };
 

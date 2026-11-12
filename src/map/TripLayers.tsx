@@ -157,7 +157,10 @@ export function TripLayers({
   onLegHold,
   selectedLeg,
   frozen,
-}: Pick<TripMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold" | "selectedLeg" | "frozen">) {
+}: Pick<
+  TripMapProps,
+  "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold" | "selectedLeg" | "frozen"
+>) {
   const [preview, setPreview] = useState<{ index: number; at: LatLng } | null>(null);
   const zoom = useZoom();
   const points = preview ? trip.points.with(preview.index, preview.at) : trip.points;

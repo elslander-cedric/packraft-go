@@ -2,9 +2,19 @@
 // write the shipped dataset when nothing needs review.
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { buildStretches, endsNeedingReview, type AnnexRow, type ReviewDecisions } from "../../src/dataprep/walloonStretches/build";
+import {
+  buildStretches,
+  endsNeedingReview,
+  type AnnexRow,
+  type ReviewDecisions,
+} from "../../src/dataprep/walloonStretches/build";
 import { toDataset } from "../../src/dataprep/walloonStretches/dataset";
-import { rejoinSplits, splitAtOfficialBoundaries, splitBoundaryEnds, type OfficialLines } from "../../src/dataprep/walloonStretches/official";
+import {
+  rejoinSplits,
+  splitAtOfficialBoundaries,
+  splitBoundaryEnds,
+  type OfficialLines,
+} from "../../src/dataprep/walloonStretches/official";
 import { STRETCH_RECIPES } from "../../src/dataprep/walloonStretches/recipes";
 import { RIVERS } from "../../src/dataprep/walloonStretches/rivers";
 import { loadOsmData, ROOT } from "./osmCache";
@@ -37,7 +47,9 @@ export type SpwLines = { stretches: { id: string; parts: Array<Array<[number, nu
 
 export async function readSpwLines(): Promise<{ raw: SpwLines; lines: OfficialLines }> {
   const raw: SpwLines = JSON.parse(await readFile(SPW_LINES_PATH, "utf8"));
-  const lines = Object.fromEntries(raw.stretches.map(({ id, parts }) => [id, parts.map((part) => part.map(([lng, lat]) => ({ lat, lng })))]));
+  const lines = Object.fromEntries(
+    raw.stretches.map(({ id, parts }) => [id, parts.map((part) => part.map(([lng, lat]) => ({ lat, lng })))]),
+  );
   return { raw, lines };
 }
 
@@ -67,7 +79,12 @@ export async function buildDataset({ offline = false, shipped = false } = {}) {
   const draft = toDataset(
     stretches,
     review.reviewedAt && count > 0
-      ? { reviewedBy: REVIEWER, reviewedAt: review.reviewedAt, decisions: count, ...(pending.length > 0 ? { pending } : {}) }
+      ? {
+          reviewedBy: REVIEWER,
+          reviewedAt: review.reviewedAt,
+          decisions: count,
+          ...(pending.length > 0 ? { pending } : {}),
+        }
       : undefined,
   );
   let finalPath: string | undefined;

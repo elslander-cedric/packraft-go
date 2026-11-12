@@ -9,7 +9,9 @@ export type VisibleArea = { top: number; height: number };
  * the full screen.
  */
 export function visibleAreaStyle(area: VisibleArea | null): CSSProperties {
-  if (area === null || !(area.height > 0)) return {};
+  if (area === null || !(area.height > 0)) {
+    return {};
+  }
   return {
     "--visible-top": `${Math.round(area.top)}px`,
     "--visible-height": `${Math.round(area.height)}px`,
@@ -32,7 +34,9 @@ export function useVisibleArea(open: boolean, popup: RefObject<HTMLElement | nul
   const subscribe = useCallback(
     (changed: () => void) => {
       const viewport = window.visualViewport;
-      if (!open || !viewport) return () => {};
+      if (!open || !viewport) {
+        return () => {};
+      }
       viewport.addEventListener("resize", changed);
       viewport.addEventListener("scroll", changed);
       return () => {
@@ -51,7 +55,9 @@ export function useVisibleArea(open: boolean, popup: RefObject<HTMLElement | nul
     }
   }, [current, popup]);
 
-  if (current === "") return {};
+  if (current === "") {
+    return {};
+  }
   const [top, height] = current.split(" ").map(Number);
   return visibleAreaStyle({ top, height });
 }

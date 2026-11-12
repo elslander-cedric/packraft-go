@@ -45,7 +45,7 @@ async function openWithStored(page: Page, stored: string) {
   await page.evaluate(([key, text]) => localStorage.setItem(key, text), [TRIP_KEY, stored]);
   await page.reload();
   await waitForMap(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return (dx: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2);
 }
 

@@ -1,14 +1,7 @@
 // Seam 1: routing legs through an injected router (fake, never the network).
 import { describe, expect, it } from "vitest";
 import type { RouteResult } from "./router";
-import {
-  applyRoutingAction,
-  createAutoRouter,
-  markPending,
-  retryLeg,
-  storeRoute,
-  type RoutingAction,
-} from "./routing";
+import { applyRoutingAction, createAutoRouter, markPending, retryLeg, storeRoute, type RoutingAction } from "./routing";
 import { createFakeRouter } from "./testing/fakeRouter";
 import { heldSession } from "./testing/heldSession";
 import { applyEdit, emptyTrip, type LatLng, type Trip } from "./trip";
@@ -28,7 +21,6 @@ const TRAIL: RouteResult = {
     { ...B, elevation: 170 },
   ],
 };
-
 
 describe("auto routing", () => {
   it("routes every leg without a routed result through the router, with the leg's mode and endpoints", async () => {
@@ -161,7 +153,13 @@ describe("auto routing", () => {
     await first;
     expect(state.trip.legs[0].route).toEqual({ status: "pending" });
 
-    const otherTrail: RouteResult = { ok: true, geometry: [{ ...A, elevation: 1 }, { ...C, elevation: 2 }] };
+    const otherTrail: RouteResult = {
+      ok: true,
+      geometry: [
+        { ...A, elevation: 1 },
+        { ...C, elevation: 2 },
+      ],
+    };
     answers[1].resolve(otherTrail);
     await second;
     expect(calls).toEqual([
@@ -325,7 +323,7 @@ describe("auto routing with undo", () => {
   });
 });
 
-const TRAIL_ROUTE ={ status: "routed", geometry: TRAIL.ok ? TRAIL.geometry : [] } as const;
+const TRAIL_ROUTE = { status: "routed", geometry: TRAIL.ok ? TRAIL.geometry : [] } as const;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

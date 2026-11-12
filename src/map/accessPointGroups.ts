@@ -17,8 +17,11 @@ export function groupNearby<T>(items: readonly Projected<T>[], distance = ACCESS
   const groups: { x: number; y: number; members: T[] }[] = [];
   for (const { item, x, y } of items) {
     const near = groups.find((group) => Math.hypot(group.x - x, group.y - y) < distance);
-    if (near) near.members.push(item);
-    else groups.push({ x, y, members: [item] });
+    if (near) {
+      near.members.push(item);
+    } else {
+      groups.push({ x, y, members: [item] });
+    }
   }
   return groups.map((group) => group.members);
 }

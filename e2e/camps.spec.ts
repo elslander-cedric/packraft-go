@@ -42,14 +42,16 @@ const byProfile = (url: URL) => (url.searchParams.get("profile") === "river" ? R
 /** Minutes in a shown time such as "1 h 13 min" or "49 min". */
 function minutes(text: string): number {
   const m = text.match(/(?:(\d+) h )?(\d+) min/);
-  if (!m) throw new Error(`no time in "${text}"`);
+  if (!m) {
+    throw new Error(`no time in "${text}"`);
+  }
   return Number(m[1] ?? 0) * 60 + Number(m[2]);
 }
 
 /** Draws a hike leg then a paddle leg, both routed; returns the middle point's position on screen. */
 async function drawHikeThenPaddle(page: Page) {
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   await page.mouse.click(middle.x - 150, middle.y);
   await page.mouse.click(middle.x, middle.y);
@@ -178,7 +180,7 @@ test("a day waits for its legs to be snapped before showing its time", async ({ 
   const held = new Promise<BRouterReply>((resolve) => (answer = resolve));
   await serveOffline(page, { brouter: () => held });
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   await page.mouse.click(box.x + box.width / 2 - 100, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2 + 100, box.y + box.height / 2);
 

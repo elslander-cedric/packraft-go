@@ -23,7 +23,9 @@ describe("Walloon stretch records", () => {
     const assumed = walloon.filter((r) => r.rule.type === "agw" && r.rule.gauge?.assumed);
     const names = new Set(assumed.map((r) => (r.rule.type === "agw" ? r.rule.gauge?.name : "")));
     expect(names).toEqual(new Set(["Martinrive", "Gendron", "Martelange", "Membre"]));
-    for (const r of assumed) expect(r.unverified).toMatch(/assumed/);
+    for (const r of assumed) {
+      expect(r.unverified).toMatch(/assumed/);
+    }
   });
 
   it("the Lesse from Han to Houyet keeps Hérock's SPW practice mark on its rule, as a confirmed gauge (#205)", () => {
@@ -87,7 +89,9 @@ describe("the Walloon stretches in the built-in rules", () => {
 
   it("every stretch is in the built-in rules and drawn as a feature", () => {
     const ids = accessFeatures(builtInAccessRules, { date: "2026-12-15" }).map((f) => f.record.id);
-    for (const r of walloon) expect(ids).toContain(r.id);
+    for (const r of walloon) {
+      expect(ids).toContain(r.id);
+    }
   });
 
   it("a 1.C stretch is closed for the season in July and open in December", () => {
@@ -114,14 +118,19 @@ describe("the Walloon stretches in the built-in rules", () => {
     const status = accessAt({ lat: 50.4655, lng: 4.8665 }, builtInAccessRules, { date: "2026-12-15" });
     expect(status.state).toBe("forbidden");
     expect(status.reasons[0]).toMatchObject({ recordId: "wallonia", state: "forbidden" });
-    expect(status.reasons[0].kind === "rule" && status.reasons[0].ruleText).toMatch(/Not on the AGW list of open stretches/);
+    expect(status.reasons[0].kind === "rule" && status.reasons[0].ruleText).toMatch(
+      /Not on the AGW list of open stretches/,
+    );
   });
 
   it("a point on an unlisted Walloon river (the Meuse at Dinant) is forbidden with that reason", () => {
     const status = accessAt({ lat: 50.2615, lng: 4.9127 }, builtInAccessRules, { date: "2026-07-15" });
     expect(status.state).toBe("forbidden");
     expect(status.reasons).toEqual([
-      expect.objectContaining({ recordId: "wallonia", ruleText: expect.stringContaining("Not on the AGW list of open stretches") }),
+      expect.objectContaining({
+        recordId: "wallonia",
+        ruleText: expect.stringContaining("Not on the AGW list of open stretches"),
+      }),
     ]);
   });
 

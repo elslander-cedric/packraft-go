@@ -35,12 +35,21 @@ export function aireWarnings(
   const ranges = dayRanges(trip);
   return putInsAndTakeOuts(trip).flatMap(({ kind, point }): AireWarning[] => {
     const at = trip.points[point];
-    if (!regionsAt(at, rules).includes("wallonia")) return [];
-    if (marks.some((mark) => distanceM(at, mark.position) <= SNAP_DISTANCE_M)) return [];
+    if (!regionsAt(at, rules).includes("wallonia")) {
+      return [];
+    }
+    if (marks.some((mark) => distanceM(at, mark.position) <= SNAP_DISTANCE_M)) {
+      return [];
+    }
     const usable = officialAires.filter((aire) => fitsUse(aire.use, kind));
-    if (usable.some((aire) => distanceM(at, airePosition(aire)) <= SNAP_DISTANCE_M)) return [];
+    if (usable.some((aire) => distanceM(at, airePosition(aire)) <= SNAP_DISTANCE_M)) {
+      return [];
+    }
     const leg = kind === "put-in" ? point : point - 1;
-    const day = Math.max(0, ranges.findIndex(([first, last]) => leg >= first && leg <= last));
+    const day = Math.max(
+      0,
+      ranges.findIndex(([first, last]) => leg >= first && leg <= last),
+    );
     const date = trip.startDate === undefined ? undefined : addDays(trip.startDate, day);
     return [{ kind, point, leg, day, ...(date !== undefined && { date }) }];
   });

@@ -89,7 +89,9 @@ export function projectOntoLine(point: LatLng, line: readonly LatLng[]): { offM:
     const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSq));
     const offM = Math.hypot(ax + t * dx, ay + t * dy);
     const segmentM = distanceM(a, b);
-    if (offM < best.offM) best = { offM, alongM: startM + t * segmentM };
+    if (offM < best.offM) {
+      best = { offM, alongM: startM + t * segmentM };
+    }
     startM += segmentM;
   }
   return best;
@@ -97,9 +99,13 @@ export function projectOntoLine(point: LatLng, line: readonly LatLng[]): { offM:
 
 /** Distance in metres from `point` to a line; Infinity for an empty line. */
 export function distanceToLineM(point: LatLng, line: readonly Position[]): number {
-  if (line.length === 1) return distanceM(point, { lat: line[0][1], lng: line[0][0] });
+  if (line.length === 1) {
+    return distanceM(point, { lat: line[0][1], lng: line[0][0] });
+  }
   let best = Infinity;
-  for (let i = 1; i < line.length; i++) best = Math.min(best, distanceToSegmentM(point, line[i - 1], line[i]));
+  for (let i = 1; i < line.length; i++) {
+    best = Math.min(best, distanceToSegmentM(point, line[i - 1], line[i]));
+  }
   return best;
 }
 
@@ -118,21 +124,33 @@ function insideRing(point: LatLng, ring: Ring): boolean {
 
 /** True when `point` is inside the polygon: in its outer ring and not in a hole. */
 export function insidePolygon(point: LatLng, polygon: readonly Ring[]): boolean {
-  return polygon.length > 0 && insideRing(point, polygon[0]) && !polygon.slice(1).some((hole) => insideRing(point, hole));
+  return (
+    polygon.length > 0 && insideRing(point, polygon[0]) && !polygon.slice(1).some((hole) => insideRing(point, hole))
+  );
 }
 
 /** True when `point` is inside an area geometry; always false for lines. */
 export function insideArea(point: LatLng, geometry: Geometry): boolean {
-  if (geometry.type === "Polygon") return insidePolygon(point, geometry.coordinates);
-  if (geometry.type === "MultiPolygon") return geometry.coordinates.some((p) => insidePolygon(point, p));
+  if (geometry.type === "Polygon") {
+    return insidePolygon(point, geometry.coordinates);
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates.some((p) => insidePolygon(point, p));
+  }
   return false;
 }
 
 /** The lines of a line geometry, or the rings of an area. */
 export function linesOf(geometry: Geometry): readonly (readonly Position[])[] {
-  if (geometry.type === "LineString") return [geometry.coordinates];
-  if (geometry.type === "MultiLineString") return geometry.coordinates;
-  if (geometry.type === "Polygon") return geometry.coordinates;
+  if (geometry.type === "LineString") {
+    return [geometry.coordinates];
+  }
+  if (geometry.type === "MultiLineString") {
+    return geometry.coordinates;
+  }
+  if (geometry.type === "Polygon") {
+    return geometry.coordinates;
+  }
   return geometry.coordinates.flat();
 }
 
@@ -141,7 +159,9 @@ export function linesOf(geometry: Geometry): readonly (readonly Position[])[] {
  * `withinM` metres of a line or an area's edge.
  */
 export function touches(point: LatLng, geometry: Geometry, withinM: number): boolean {
-  if (insideArea(point, geometry)) return true;
+  if (insideArea(point, geometry)) {
+    return true;
+  }
   return linesOf(geometry).some((line) => distanceToLineM(point, line) <= withinM);
 }
 
@@ -150,13 +170,14 @@ export type Bounds = readonly [west: number, south: number, east: number, north:
 
 export function boundsOf(geometry: Geometry): Bounds {
   let [w, s, e, n] = [Infinity, Infinity, -Infinity, -Infinity];
-  for (const line of linesOf(geometry))
+  for (const line of linesOf(geometry)) {
     for (const [lng, lat] of line) {
       w = Math.min(w, lng);
       e = Math.max(e, lng);
       s = Math.min(s, lat);
       n = Math.max(n, lat);
     }
+  }
   return [w, s, e, n];
 }
 
@@ -172,7 +193,9 @@ export function nearBounds(point: LatLng, [w, s, e, n]: Bounds, marginM: number)
  * vertex: used to check a whole leg against the rules.
  */
 export function samplesAlong(line: readonly LatLng[], stepM: number): LatLng[] {
-  if (line.length === 0) return [];
+  if (line.length === 0) {
+    return [];
+  }
   const samples: LatLng[] = [line[0]];
   for (let i = 1; i < line.length; i++) {
     const a = line[i - 1];
@@ -181,7 +204,9 @@ export function samplesAlong(line: readonly LatLng[], stepM: number): LatLng[] {
     for (let k = 1; k <= steps; k++) {
       samples.push({ lat: a.lat + ((b.lat - a.lat) * k) / steps, lng: a.lng + ((b.lng - a.lng) * k) / steps });
     }
-    if (steps === 0) samples.push(b);
+    if (steps === 0) {
+      samples.push(b);
+    }
   }
   return samples;
 }

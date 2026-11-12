@@ -35,7 +35,7 @@ const zoomLevel = (page: Page) =>
 async function openMap(page: Page, options: Parameters<typeof serveOffline>[1] = {}) {
   const network = await serveOffline(page, options);
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return { network, cx: box.x + box.width / 2, cy: box.y + box.height / 2 };
 }
 
@@ -45,7 +45,9 @@ test("a finger drags a point, the map does not pan, and the legs are routed agai
   });
   const a = { x: cx - 120, y: cy };
   const b = { x: cx + 40, y: cy };
-  for (const p of [a, b]) await page.mouse.click(p.x, p.y);
+  for (const p of [a, b]) {
+    await page.mouse.click(p.x, p.y);
+  }
   await expect(points(page)).toHaveCount(2);
   await expect(legLines(page).first()).toHaveClass(/leg-routed/);
   expect(network.brouter).toHaveLength(1);

@@ -20,7 +20,7 @@ describe("restoring the autosave", () => {
     });
   });
 
-  it.each(["", "null", "[]", "42", "\"text\"", "{", JSON.stringify({ format: "packraft-go-trip", trip: {} })])(
+  it.each(["", "null", "[]", "42", '"text"', "{", JSON.stringify({ format: "packraft-go-trip", trip: {} })])(
     "treats %j as corrupt: empty trip, not flagged, no throw",
     (text) => {
       expect(() => restoreStoredTrip(text)).not.toThrow();

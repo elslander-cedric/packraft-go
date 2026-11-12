@@ -14,10 +14,16 @@ import { RETRY_MS, startDefaultNames } from "./defaultNames";
 const T = "2026-10-26T08:00:00.000Z";
 const hotton = { lat: 50.268, lng: 5.446 };
 const durbuy = { lat: 50.3527, lng: 5.4563 };
-const names: Record<string, string> = { "50.268,5.446": "Rue du Batty, Melreux", "50.3527,5.4563": "Rue de la Gare, Durbuy" };
+const names: Record<string, string> = {
+  "50.268,5.446": "Rue du Batty, Melreux",
+  "50.3527,5.4563": "Rue de la Gare, Durbuy",
+};
 
 /** A planner with points, a fake default name source, and the queue working on them. */
-function setUp(start: AccessPoints, { online = true, answer }: { online?: boolean; answer?: () => DefaultNameLookup } = {}) {
+function setUp(
+  start: AccessPoints,
+  { online = true, answer }: { online?: boolean; answer?: () => DefaultNameLookup } = {},
+) {
   const world = { points: start, online, asked: [] as LatLng[] };
   const queue = startDefaultNames({
     source: {
@@ -95,7 +101,9 @@ describe("default names", () => {
 
   it("after a failure, are not asked again on every edit, but as soon as the app comes back online", async () => {
     let failing = true;
-    const { world, queue } = setUp(twoPoints, { answer: () => (failing ? { status: "failed" } : { status: "found", name: "X" }) });
+    const { world, queue } = setUp(twoPoints, {
+      answer: () => (failing ? { status: "failed" } : { status: "found", name: "X" }),
+    });
     queue.wake();
     await vi.advanceTimersByTimeAsync(0);
     queue.wake();

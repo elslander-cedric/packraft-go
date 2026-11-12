@@ -115,7 +115,6 @@ async function denyLocation(page: Page) {
   });
 }
 
-
 test("the floating button places one at my GPS position and opens its details; Save stores it with the edits, Cancel drops later edits", async ({
   page,
   context,
@@ -356,7 +355,6 @@ test("while the floating button waits for a fix it says so over the map", async 
   await expect(markButton(page)).toBeDisabled();
   await expect(markers(page)).toHaveCount(0);
 });
-
 
 test("tapping a row zooms the map to that access point and selects it, without opening its details", async ({
   page,

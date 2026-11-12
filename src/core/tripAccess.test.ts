@@ -7,7 +7,14 @@ import type { LegRoute } from "./router";
 import { parseTrip, serialiseTrip } from "./saveFile";
 import { applyEdit, type LatLng, type Leg, type Trip } from "./trip";
 import { legsAccess, tripAccess } from "./tripAccess";
-import { onWalloonAllYear, walloonAllYear, agreementStretch, fakeAccessRules, flandersSquare, forbiddenCanal } from "./testing/fakeAccessRules";
+import {
+  onWalloonAllYear,
+  walloonAllYear,
+  agreementStretch,
+  fakeAccessRules,
+  flandersSquare,
+  forbiddenCanal,
+} from "./testing/fakeAccessRules";
 
 const flanders = fakeAccessRules([flandersSquare, forbiddenCanal, agreementStretch]);
 
@@ -30,11 +37,9 @@ function trip(points: LatLng[], legs: Leg[], extra: Partial<Trip> = {}): Trip {
 
 describe("access status per paddle leg", () => {
   it("a paddle leg crossing a forbidden canal is forbidden on its day's date, with every reason", () => {
-    const t = trip(
-      [southOfCanal, northOfCanal],
-      [{ mode: "paddle", route: routed(southOfCanal, northOfCanal) }],
-      { startDate: "2026-10-20" },
-    );
+    const t = trip([southOfCanal, northOfCanal], [{ mode: "paddle", route: routed(southOfCanal, northOfCanal) }], {
+      startDate: "2026-10-20",
+    });
     const access = tripAccess(t, flanders, { today: "2026-10-14" });
     expect(access.dated).toBe(true);
     const leg = access.legs[0]!;
@@ -115,19 +120,30 @@ describe("future dates and flow", () => {
     id: "test-flow-stretch",
     name: "Test flow stretch",
     rule: { type: "fixed", state: "open", text: "Open when the flow allows it.", flowDependent: true },
-    geometry: { type: "LineString", coordinates: [[4.2, 50.6], [4.2, 50.9]] },
+    geometry: {
+      type: "LineString",
+      coordinates: [
+        [4.2, 50.6],
+        [4.2, 50.9],
+      ],
+    },
   };
   const rules = fakeAccessRules([flandersSquare, forbiddenCanal, flowStretch]);
   const flowA: LatLng = { lat: 50.7, lng: 4.2 };
   const flowB: LatLng = { lat: 50.8, lng: 4.2 };
-  const onFlowStretch = (extra: Partial<Trip>) => trip([flowA, flowB], [{ mode: "paddle", route: routed(flowA, flowB) }], extra);
+  const onFlowStretch = (extra: Partial<Trip>) =>
+    trip([flowA, flowB], [{ mode: "paddle", route: routed(flowA, flowB) }], extra);
 
   it("on a future date, rules OK on flow-dependent water says: check flow on the day", () => {
     const leg = tripAccess(onFlowStretch({ startDate: "2026-10-20" }), rules, { today: "2026-10-14" }).legs[0]!;
     expect(leg.status.state).toBe("open");
     expect(leg.checkFlowOnTheDay).toBe(true);
     expect(leg.warnings).toEqual([
-      expect.objectContaining({ kind: "check-flow", date: "2026-10-20", reason: expect.objectContaining({ recordId: "test-flow-stretch" }) }),
+      expect.objectContaining({
+        kind: "check-flow",
+        date: "2026-10-20",
+        reason: expect.objectContaining({ recordId: "test-flow-stretch" }),
+      }),
     ]);
   });
 
@@ -273,8 +289,7 @@ describe("flows still loading (#85)", () => {
   const walloon = fakeAccessRules([walloonAllYear]);
   const a = { lat: onWalloonAllYear.lat, lng: 5.0 };
   const b = { lat: onWalloonAllYear.lat, lng: 5.1 };
-  const dated = (startDate: string): Trip =>
-    trip([a, b], [{ mode: "paddle", route: routed(a, b) }], { startDate });
+  const dated = (startDate: string): Trip => trip([a, b], [{ mode: "paddle", route: routed(a, b) }], { startDate });
 
   it("a flow-dependent stretch dated today is checking, not open, and day and trip summaries don't count it", () => {
     const access = tripAccess(dated("2026-10-14"), walloon, { today: "2026-10-14", flowsPending: true });
@@ -324,7 +339,9 @@ describe("flows still loading (#85)", () => {
   });
 
   it("another date, or flows that have arrived, are unchanged", () => {
-    expect(tripAccess(dated("2026-10-20"), walloon, { today: "2026-10-14", flowsPending: true }).legs[0]!.status.state).toBe("open");
+    expect(
+      tripAccess(dated("2026-10-20"), walloon, { today: "2026-10-14", flowsPending: true }).legs[0]!.status.state,
+    ).toBe("open");
     expect(tripAccess(dated("2026-10-14"), walloon, { today: "2026-10-14" }).legs[0]!.status.state).toBe("open");
   });
 });

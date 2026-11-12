@@ -12,7 +12,9 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 async function waitForServiceWorker(page: Page) {
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
-    if (navigator.serviceWorker.controller) return;
+    if (navigator.serviceWorker.controller) {
+      return;
+    }
     await new Promise((resolve) => navigator.serviceWorker.addEventListener("controllerchange", resolve));
   });
 }
@@ -71,7 +73,7 @@ test("map tiles and routing answers are never cached", async ({ page }) => {
   // Load the page again under the service worker, then route a leg.
   await page.reload();
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   await page.mouse.click(box.x + box.width / 2 - 50, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2 + 50, box.y + box.height / 2);
   await expect(mapRegion(page).locator("path.leg-routed")).toHaveCount(1);

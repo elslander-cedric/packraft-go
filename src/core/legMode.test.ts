@@ -77,9 +77,20 @@ describe("switching a leg's mode", () => {
 });
 
 describe("routing after a mode switch", () => {
-  const TRAIL: RouteResult = { ok: true, geometry: [{ ...A, elevation: 100 }, { ...B, elevation: 140 }] };
-  const RIVER: RouteResult = { ok: true, geometry: [{ ...A, elevation: 99 }, { ...B, elevation: 92 }] };
-
+  const TRAIL: RouteResult = {
+    ok: true,
+    geometry: [
+      { ...A, elevation: 100 },
+      { ...B, elevation: 140 },
+    ],
+  };
+  const RIVER: RouteResult = {
+    ok: true,
+    geometry: [
+      { ...A, elevation: 99 },
+      { ...B, elevation: 92 },
+    ],
+  };
 
   it("routes a leg switched to paddle with the paddle mode (river), and only that leg", async () => {
     const router = createFakeRouter({ hike: TRAIL, paddle: RIVER });
@@ -92,7 +103,10 @@ describe("routing after a mode switch", () => {
 
     expect(router.calls.map((call) => call.mode)).toEqual(["hike", "hike", "paddle"]);
     expect(router.calls[2].points).toEqual([A, B]);
-    expect(state.trip.legs[0]).toEqual({ mode: "paddle", route: { status: "routed", geometry: RIVER.ok && RIVER.geometry } });
+    expect(state.trip.legs[0]).toEqual({
+      mode: "paddle",
+      route: { status: "routed", geometry: RIVER.ok && RIVER.geometry },
+    });
   });
 
   it("undoing a mode switch brings the hike route back without a new request", async () => {

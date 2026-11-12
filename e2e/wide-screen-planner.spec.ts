@@ -37,7 +37,9 @@ const tileZoom = (page: Page) =>
 
 /** Opens the phone planner with `stored` as the autosave, if given. */
 async function openPlanner(page: Page, stored?: string) {
-  if (stored !== undefined) await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, stored]);
+  if (stored !== undefined) {
+    await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, stored]);
+  }
   await page.goto("/");
   await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
   await expect(panel(page)).toBeVisible();
@@ -78,7 +80,9 @@ async function onLeg(page: Page) {
       for (let share = 0.2; share <= 0.8; share += 0.05) {
         const along = path.getPointAtLength(length * share);
         const { x, y } = new DOMPoint(along.x, along.y).matrixTransform(path.getScreenCTM()!);
-        if (x < maxX && y > minY && y < maxY) return { x, y };
+        if (x < maxX && y > minY && y < maxY) {
+          return { x, y };
+        }
       }
       throw new Error("no part of the leg is clear of the buttons and the panel");
     }, free);
@@ -192,7 +196,9 @@ test.describe("keyboard alone", () => {
   async function tabTo(page: Page, target: Locator, limit = 40) {
     await expect(target).toBeVisible();
     for (let i = 0; i < limit; i++) {
-      if (await target.evaluate((element) => element === document.activeElement)) return;
+      if (await target.evaluate((element) => element === document.activeElement)) {
+        return;
+      }
       await page.keyboard.press("Tab");
     }
     await expect(target).toBeFocused();
@@ -223,11 +229,15 @@ test.describe("keyboard alone", () => {
       await page.keyboard.press("Tab");
       const stop = await page.evaluate(() => {
         const element = document.activeElement;
-        if (!element || element === document.body) return null;
+        if (!element || element === document.body) {
+          return null;
+        }
         const { x, y, width, height } = element.getBoundingClientRect();
         return { name: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? "", x, y, width, height };
       });
-      if (stop === null) break;
+      if (stop === null) {
+        break;
+      }
       reached.push(stop.name);
       // Each stop is on screen, not off the page.
       expect(stop.width * stop.height, stop.name).toBeGreaterThan(0);
@@ -421,10 +431,17 @@ test.describe("keyboard alone on a portrait phone", () => {
     await expect(warning).toBeVisible();
     await expect(warning).toBeInViewport({ ratio: 1 });
     const box = (await warning.boundingBox())!;
-    for (const name of [strings.placeSearch.pill(undefined), strings.planner.showPositionButton, strings.mapMenuButton]) {
+    for (const name of [
+      strings.placeSearch.pill(undefined),
+      strings.planner.showPositionButton,
+      strings.mapMenuButton,
+    ]) {
       const other = (await page.getByRole("button", { name, exact: true }).boundingBox())!;
       const overlaps =
-        box.x < other.x + other.width && other.x < box.x + box.width && box.y < other.y + other.height && other.y < box.y + box.height;
+        box.x < other.x + other.width &&
+        other.x < box.x + box.width &&
+        box.y < other.y + other.height &&
+        other.y < box.y + box.height;
       expect(overlaps, name).toBe(false);
     }
   });

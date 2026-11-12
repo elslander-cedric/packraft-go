@@ -14,9 +14,13 @@ export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
   const out = new Map<string, Map<string, number>>();
   const indeg = new Map<string, number>();
   const addEdge = (a: string, b: string, w: number) => {
-    if (a === b) return;
+    if (a === b) {
+      return;
+    }
     const edges = out.get(a)!;
-    if (edges.has(b)) return;
+    if (edges.has(b)) {
+      return;
+    }
     edges.set(b, w);
     indeg.set(b, (indeg.get(b) ?? 0) + 1);
   };
@@ -30,26 +34,38 @@ export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
     return k;
   };
   for (const way of ways) {
-    for (let i = 1; i < way.length; i++) addEdge(touch(way[i - 1]), touch(way[i]), distanceM(way[i - 1], way[i]));
+    for (let i = 1; i < way.length; i++) {
+      addEdge(touch(way[i - 1]), touch(way[i]), distanceM(way[i - 1], way[i]));
+    }
   }
-  if (points.size === 0) return [];
+  if (points.size === 0) {
+    return [];
+  }
 
   // Weakly connected components, to bridge gaps only between separate pieces.
   const parent = new Map<string, string>([...points.keys()].map((k) => [k, k]));
   const find = (k: string): string => {
     let r = k;
-    while (parent.get(r) !== r) r = parent.get(r)!;
+    while (parent.get(r) !== r) {
+      r = parent.get(r)!;
+    }
     parent.set(k, r);
     return r;
   };
-  for (const [a, edges] of out) for (const b of edges.keys()) parent.set(find(a), find(b));
+  for (const [a, edges] of out) {
+    for (const b of edges.keys()) {
+      parent.set(find(a), find(b));
+    }
+  }
   const sinks = [...points.keys()].filter((k) => out.get(k)!.size === 0);
   const sources = [...points.keys()].filter((k) => indeg.get(k) === 0);
   for (const s of sinks) {
     let best: string | undefined;
     let bestD = MAX_GAP_M;
     for (const t of sources) {
-      if (find(t) === find(s)) continue;
+      if (find(t) === find(s)) {
+        continue;
+      }
       const d = distanceM(points.get(s)!, points.get(t)!);
       if (d < bestD) {
         best = t;
@@ -71,14 +87,18 @@ export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
     order.push(k);
     for (const b of out.get(k)!.keys()) {
       remaining.set(b, remaining.get(b)! - 1);
-      if (remaining.get(b) === 0) queue.push(b);
+      if (remaining.get(b) === 0) {
+        queue.push(b);
+      }
     }
   }
   const dist = new Map<string, number>(order.map((k) => [k, 0]));
   const prev = new Map<string, string>();
   for (const a of order) {
     for (const [b, w] of out.get(a)!) {
-      if (!dist.has(b)) continue; // part of a cycle: ignored
+      if (!dist.has(b)) {
+        continue;
+      } // part of a cycle: ignored
       if (dist.get(a)! + w > dist.get(b)!) {
         dist.set(b, dist.get(a)! + w);
         prev.set(b, a);
@@ -86,8 +106,14 @@ export function mainStem(ways: ReadonlyArray<readonly Pt[]>): Pt[] {
     }
   }
   let end = order[0];
-  for (const k of order) if (dist.get(k)! > dist.get(end)!) end = k;
+  for (const k of order) {
+    if (dist.get(k)! > dist.get(end)!) {
+      end = k;
+    }
+  }
   const path = [end];
-  while (prev.has(path[path.length - 1])) path.push(prev.get(path[path.length - 1])!);
+  while (prev.has(path[path.length - 1])) {
+    path.push(prev.get(path[path.length - 1])!);
+  }
   return path.reverse().map((k) => points.get(k)!);
 }

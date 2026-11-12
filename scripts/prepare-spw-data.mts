@@ -33,10 +33,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function layer(url: string): Promise<PkayakAnswer> {
   console.log(`PKAYAK: ${url}`);
   const response = await fetch(url, { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(60_000) });
-  if (!response.ok) throw new Error(`PKAYAK answered ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`PKAYAK answered ${response.status}`);
+  }
   const answer = (await response.json()) as PkayakAnswer & { error?: unknown };
   // The service reports its errors with status 200.
-  if (answer.error) throw new Error(`PKAYAK answered ${JSON.stringify(answer.error)}`);
+  if (answer.error) {
+    throw new Error(`PKAYAK answered ${JSON.stringify(answer.error)}`);
+  }
   return answer;
 }
 
@@ -51,7 +55,11 @@ await sleep(PAUSE_MS);
 const obstacles = buildObstacles(await layer(pkayakQuery(PKAYAK_LAYERS.obstacles, OBSTACLE_FIELDS)), today);
 
 const outputs = [
-  { file: "official-stretches.json", content: serialiseSnapshot(stretches, "stretches"), count: stretches.stretches.length },
+  {
+    file: "official-stretches.json",
+    content: serialiseSnapshot(stretches, "stretches"),
+    count: stretches.stretches.length,
+  },
   { file: "official-aires.json", content: serialiseSnapshot(aires, "aires"), count: aires.aires.length },
   { file: "obstacles.json", content: serialiseSnapshot(obstacles, "obstacles"), count: obstacles.obstacles.length },
 ];

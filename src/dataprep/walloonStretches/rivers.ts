@@ -25,7 +25,12 @@ export const RIVERS: readonly RiverConfig[] = [
   { river: "Houille", osmNames: ["Houille"], bbox: { south: 49.94, west: 4.76, north: 50.13, east: 5.04 } },
   { river: "Sûre", osmNames: ["Sûre", "Sauer"], bbox: { south: 49.77, west: 5.66, north: 49.93, east: 5.9 } },
   { river: "Our", osmNames: ["Our"], bbox: { south: 50.08, west: 6.02, north: 50.34, east: 6.3 } },
-  { river: "Aisne", osmNames: ["Aisne"], streams: ["Estin"], bbox: { south: 50.2, west: 5.44, north: 50.41, east: 5.78 } },
+  {
+    river: "Aisne",
+    osmNames: ["Aisne"],
+    streams: ["Estin"],
+    bbox: { south: 50.2, west: 5.44, north: 50.41, east: 5.78 },
+  },
   {
     river: "Ourthe occidentale",
     osmNames: ["Ourthe occidentale"],
@@ -43,24 +48,22 @@ const ARTICLE = /^(l'|l’|la |le |les |die |der |d')/;
 
 /** Lower case, no accents, no leading article: "L'Ourthe" -> "ourthe". */
 export function normaliseName(name: string): string {
-  return name
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim()
-    .replace(ARTICLE, "")
-    .trim();
+  return name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim().replace(ARTICLE, "").trim();
 }
 
 /** True when any of a waterway's OSM names (name, alt_name, name:fr, ...) names one of these rivers. */
 export function tagsMatch(tags: Readonly<Record<string, string>> | undefined, names: readonly string[]): boolean {
-  if (!tags) return false;
+  if (!tags) {
+    return false;
+  }
   return ["name", "alt_name", "name:fr", "name:de", "official_name"].some((k) => nameMatches(tags[k], names));
 }
 
 /** True when an OSM name ("La Sûre", "Sauer - Sûre", "Amblève/Amel") names one of these rivers. */
 export function nameMatches(osmName: string | undefined, names: readonly string[]): boolean {
-  if (!osmName) return false;
+  if (!osmName) {
+    return false;
+  }
   const wanted = new Set(names.map(normaliseName));
   return osmName
     .split(/\s+-\s+|\s*\/\s*|;/)

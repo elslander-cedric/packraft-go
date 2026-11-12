@@ -28,12 +28,20 @@ function geometryProblems(record: AccessRecord): string[] {
   const problems: string[] = [];
   const lines = g.type === "LineString" ? [g.coordinates] : g.type === "MultiLineString" ? g.coordinates : [];
   const rings = g.type === "Polygon" ? g.coordinates : g.type === "MultiPolygon" ? g.coordinates.flat() : [];
-  if (record.scope === "region" && rings.length === 0) problems.push("a region needs an area");
-  if (lines.some((line) => line.length < 2)) problems.push("a line with fewer than 2 positions");
+  if (record.scope === "region" && rings.length === 0) {
+    problems.push("a region needs an area");
+  }
+  if (lines.some((line) => line.length < 2)) {
+    problems.push("a line with fewer than 2 positions");
+  }
   const closed = (ring: (typeof rings)[number]) =>
     ring.length >= 4 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1];
-  if (!rings.every(closed)) problems.push("a ring that isn't closed");
-  if (positions(g).length === 0) problems.push("no positions");
+  if (!rings.every(closed)) {
+    problems.push("a ring that isn't closed");
+  }
+  if (positions(g).length === 0) {
+    problems.push("no positions");
+  }
   if (!positions(g).every(([lng, lat]) => lng > 2.5 && lng < 6.5 && lat > 49.4 && lat < 51.6)) {
     problems.push("positions outside the country");
   }
@@ -79,7 +87,9 @@ describe("built-in access data", () => {
   });
 
   it("lists the Flemish exceptions as forbidden, each with its reason", () => {
-    const forbidden = records.filter((r) => r.region === "flanders" && r.rule.type === "fixed" && r.rule.state === "forbidden").map((r) => r.id);
+    const forbidden = records
+      .filter((r) => r.region === "flanders" && r.rule.type === "fixed" && r.rule.state === "forbidden")
+      .map((r) => r.id);
     expect(forbidden).toEqual([
       "flanders-ghent-terneuzen-canal",
       "flanders-lower-sea-scheldt",
@@ -116,7 +126,9 @@ describe("built-in access data", () => {
       "flanders-vmm-stekene-zuidlede",
     ]);
     for (const { id, rule } of vmm) {
-      if (rule.type !== "fixed") throw new Error(id);
+      if (rule.type !== "fixed") {
+        throw new Error(id);
+      }
       expect(rule.state, id).toBe("open");
       expect(rule.conditions?.length, id).toBeGreaterThan(0);
       expect(rule.link?.url, id).toMatch(/^https:\/\//);
@@ -128,12 +140,19 @@ describe("built-in access data", () => {
     // Every Brussels water has a fixed rule (no season or flow).
     const fixedRule = (id: string) => {
       const { rule } = brussels.find((r) => r.id === id)!;
-      if (rule.type !== "fixed") throw new Error(`${id} has a ${rule.type} rule`);
+      if (rule.type !== "fixed") {
+        throw new Error(`${id} has a ${rule.type} rule`);
+      }
       return rule;
     };
 
     it("has the canal, the ponds, the Senne and the small streams", () => {
-      expect(brussels.map((r) => r.id)).toEqual(["brussels-canal", "brussels-ponds", "brussels-senne", "brussels-streams"]);
+      expect(brussels.map((r) => r.id)).toEqual([
+        "brussels-canal",
+        "brussels-ponds",
+        "brussels-senne",
+        "brussels-streams",
+      ]);
     });
 
     it("gives the canal as open, with the priority, VHF and Capitainerie notes", () => {

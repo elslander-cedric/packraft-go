@@ -39,7 +39,10 @@ describe("time offset", () => {
     const entries = JSON.parse(recorded.values.body);
     const first = entries[0].data[0];
     first[0] = first[0].replace(/[+-]\d\d:\d\d$/, "+00:00");
-    const f = await compareWithFixture({ ...recorded, values: { status: 200, body: JSON.stringify(entries) } }, recorded);
+    const f = await compareWithFixture(
+      { ...recorded, values: { status: 200, body: JSON.stringify(entries) } },
+      recorded,
+    );
     expect(f.some((x) => x.level === "mismatch" && /not Brussels/.test(x.message))).toBe(true);
   });
 });

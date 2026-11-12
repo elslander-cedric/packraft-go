@@ -5,7 +5,13 @@ import { dayWarnings } from "./dayWarnings";
 import { PASSING_TOLERANCE_M } from "./locks";
 import { obstacleGroups, obstaclesOnLine, type Obstacle, type ObstacleKind } from "./obstacle";
 import type { LegRoute } from "./router";
-import { fakeAccessRules, flandersSquare, forbiddenCanal, nearForbiddenCanal, onForbiddenCanal } from "./testing/fakeAccessRules";
+import {
+  fakeAccessRules,
+  flandersSquare,
+  forbiddenCanal,
+  nearForbiddenCanal,
+  onForbiddenCanal,
+} from "./testing/fakeAccessRules";
 import type { LatLng, Trip } from "./trip";
 import { legsAccess, tripAccess } from "./tripAccess";
 

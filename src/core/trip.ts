@@ -86,22 +86,36 @@ export function renameTrip(trip: Trip, name: string): Trip {
  * start date. Text that is not a calendar date is ignored.
  */
 export function setStartDate(trip: Trip, date: CalendarDate | undefined): Trip {
-  if (date === trip.startDate) return trip;
+  if (date === trip.startDate) {
+    return trip;
+  }
   return date === undefined || isCalendarDate(date) ? withStartDate(trip, date) : trip;
 }
 
 /** Returns a new trip with the edit applied; the input trip is not changed. */
 export function applyEdit(trip: Trip, edit: Edit): Trip {
-  if (edit.type === "undo") return undoLastEdit(trip);
+  if (edit.type === "undo") {
+    return undoLastEdit(trip);
+  }
   return withUndoStep(trip, applyStep(trip, edit));
 }
 
 function applyStep(trip: Trip, edit: Exclude<Edit, { type: "undo" }>): Trip {
-  if (edit.type === "movePoint") return movePoint(trip, edit.index, edit.to);
-  if (edit.type === "deletePoint") return deletePoint(trip, edit.index);
-  if (edit.type === "insertPoint") return insertPoint(trip, edit.index, edit.near);
-  if (edit.type === "setLegMode") return setLegMode(trip, edit.index, edit.mode);
-  if (edit.type === "toggleCamp") return toggleCamp(trip, edit.index);
+  if (edit.type === "movePoint") {
+    return movePoint(trip, edit.index, edit.to);
+  }
+  if (edit.type === "deletePoint") {
+    return deletePoint(trip, edit.index);
+  }
+  if (edit.type === "insertPoint") {
+    return insertPoint(trip, edit.index, edit.near);
+  }
+  if (edit.type === "setLegMode") {
+    return setLegMode(trip, edit.index, edit.mode);
+  }
+  if (edit.type === "toggleCamp") {
+    return toggleCamp(trip, edit.index);
+  }
   // A new leg takes the explicit mode, else the last leg's mode (the first leg is a hike leg).
   const mode: LegMode = edit.mode ?? trip.legs[trip.legs.length - 1]?.mode ?? "hike";
   const legs: Leg[] = trip.points.length > 0 ? [...trip.legs, { mode }] : [];
@@ -137,7 +151,9 @@ export function putInsAndTakeOuts(trip: Trip): ModeChange[] {
   const paddleBefore = (point: number) => trip.legs[point - 1]?.mode === "paddle";
   const paddleAfter = (point: number) => trip.legs[point]?.mode === "paddle";
   return trip.points.flatMap((_, point): ModeChange[] => {
-    if (paddleBefore(point) === paddleAfter(point)) return [];
+    if (paddleBefore(point) === paddleAfter(point)) {
+      return [];
+    }
     return [{ kind: paddleAfter(point) ? "put-in" : "take-out", point }];
   });
 }

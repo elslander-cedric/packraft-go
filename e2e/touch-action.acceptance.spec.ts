@@ -14,12 +14,16 @@ const offset = (page: Page) =>
   mapRegion(page)
     .locator(".leaflet-map-pane")
     .evaluate((e) => new DOMMatrix(getComputedStyle(e).transform).m41);
-const touchAction = (page: Page) => page.locator(".leaflet-container").first().evaluate((e) => getComputedStyle(e).touchAction);
+const touchAction = (page: Page) =>
+  page
+    .locator(".leaflet-container")
+    .first()
+    .evaluate((e) => getComputedStyle(e).touchAction);
 
 async function open(page: Page) {
   await serveOffline(page, { brouter: () => ({ status: 200, body: brouterFixture("hiking-success.geojson") }) });
   await openPlanner(page);
-  const b = (await freeMapBox(page));
+  const b = await freeMapBox(page);
   return { cx: b.x + b.width / 2, cy: b.y + b.height / 2 };
 }
 

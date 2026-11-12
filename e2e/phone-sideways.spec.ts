@@ -68,7 +68,9 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
   expect(box.height).toBe(SIDEWAYS.height);
   expect(box.x + box.width).toBe(SIDEWAYS.width);
   expect(box.width).toBe(380);
-  for (const name of [text.tabs.sections, text.tabs.days]) await expect(panelTab(page, name)).toBeAttached();
+  for (const name of [text.tabs.sections, text.tabs.days]) {
+    await expect(panelTab(page, name)).toBeAttached();
+  }
   await panelTab(page, text.tabs.days).click();
   await expect(panelTab(page, text.tabs.days)).toHaveAttribute("aria-selected", "true");
 
@@ -141,8 +143,9 @@ test("rotating keeps the open tab, the tapped leg row and the selected point; th
     [-120, 0],
     [0, 40],
     [120, 0],
-  ])
+  ]) {
     await page.touchscreen.tap(map.x + map.width / 2 + dx, map.y + map.height / 3 + dy);
+  }
   await expect(points(page)).toHaveCount(3);
   const middle = await centreOf(page, 1);
   await page.touchscreen.tap(middle.x, middle.y);
@@ -227,7 +230,9 @@ test("sideways, the floating buttons stay in their corners over the map, beside 
   ];
   await collapse(page).click();
   for (const open of [false, true]) {
-    if (open) await expand(page).click();
+    if (open) {
+      await expand(page).click();
+    }
     await settled(page);
     const covered = (await panel(page).boundingBox())!;
     for (const button of buttons) {
@@ -337,7 +342,9 @@ test("sideways, the arrow keys on the panel's edge resize it, within its limits 
   await page.keyboard.press("ArrowRight");
   await expect(splitter(page)).toHaveAttribute("aria-valuenow", "360");
 
-  for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
+  for (let i = 0; i < 5; i++) {
+    await page.keyboard.press("ArrowRight");
+  }
   await expect(splitter(page)).toHaveAttribute("aria-valuenow", "320");
   await page.keyboard.press("End");
   await expect(splitter(page)).toHaveAttribute("aria-valuenow", String(max));

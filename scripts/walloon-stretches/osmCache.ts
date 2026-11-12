@@ -23,7 +23,9 @@ export async function loadOsmData({ offline = false } = {}): Promise<OsmData> {
   const client = createOverpassClient({
     endpoint: ENDPOINT,
     fetch: async (url, init) => {
-      if (offline) throw new Error("OSM data is not cached and --offline was given");
+      if (offline) {
+        throw new Error("OSM data is not cached and --offline was given");
+      }
       console.log(`  fetching from ${new URL(url).host} ...`);
       return fetch(url, { ...init, signal: AbortSignal.timeout(240_000) });
     },

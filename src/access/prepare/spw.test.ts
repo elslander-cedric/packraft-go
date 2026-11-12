@@ -102,9 +102,9 @@ describe("official stretches", () => {
 
   it("fails on a stretch with no name or a repeated id", () => {
     const stretch = stretchAnswer.features[0];
-    expect(() => buildOfficialStretches({ features: [{ properties: { nomtro: "X", adrtro: null } }] }, SNAPSHOT)).toThrow(
-      /X.*name/i,
-    );
+    expect(() =>
+      buildOfficialStretches({ features: [{ properties: { nomtro: "X", adrtro: null } }] }, SNAPSHOT),
+    ).toThrow(/X.*name/i);
     expect(() => buildOfficialStretches({ features: [stretch, stretch] }, SNAPSHOT)).toThrow(/SEMOIS2-3.*twice/i);
   });
 });

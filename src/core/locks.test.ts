@@ -55,7 +55,10 @@ describe("lock warnings in the trip's access", () => {
     points: [west, east, { lat: 51.2, lng: 4.1 }],
     legs: [
       { mode: "paddle", route: routed(west, east) },
-      { mode: "hike", route: { status: "routed", geometry: [east, { lat: 51.2, lng: 4.1 }].map((p) => ({ ...p, elevation: 0 })) } },
+      {
+        mode: "hike",
+        route: { status: "routed", geometry: [east, { lat: 51.2, lng: 4.1 }].map((p) => ({ ...p, elevation: 0 })) },
+      },
     ],
     startDate: "2026-10-20",
   };

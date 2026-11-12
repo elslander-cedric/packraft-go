@@ -4,7 +4,20 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { serveOffline } from "./support/offline";
-import { closeLegDetails, exportGpxFile, freeMapCentre, legDetailsDialog, legLines, openSectionDetails, openPlanner, saveTripFile, sectionRowButton, showTab, showAllLegs, leafRows } from "./support/planner";
+import {
+  closeLegDetails,
+  exportGpxFile,
+  freeMapCentre,
+  legDetailsDialog,
+  legLines,
+  openSectionDetails,
+  openPlanner,
+  saveTripFile,
+  sectionRowButton,
+  showTab,
+  showAllLegs,
+  leafRows,
+} from "./support/planner";
 
 /** Along the Ghent–Terneuzen canal, from the built-in data's geometry. */
 const canal = [
@@ -37,11 +50,16 @@ function seededTrip(startDate?: string, water = canal) {
 
 /** Seeds the trip before the page's first load only, so reloads keep the app's own saves. */
 async function seed(page: Page, startDate?: string, water = canal) {
-  await page.addInitScript((save) => {
-    if (sessionStorage.getItem("seeded")) return;
-    sessionStorage.setItem("seeded", "1");
-    localStorage.setItem("packraft-go.trip", save);
-  }, JSON.stringify(seededTrip(startDate, water)));
+  await page.addInitScript(
+    (save) => {
+      if (sessionStorage.getItem("seeded")) {
+        return;
+      }
+      sessionStorage.setItem("seeded", "1");
+      localStorage.setItem("packraft-go.trip", save);
+    },
+    JSON.stringify(seededTrip(startDate, water)),
+  );
 }
 
 const legsPanel = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel });
@@ -55,7 +73,9 @@ test.beforeEach(({ page }) => showAllLegs(page));
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
-test("a paddle leg on a forbidden Flemish canal shows a warning with its reason; nothing is blocked", async ({ page }) => {
+test("a paddle leg on a forbidden Flemish canal shows a warning with its reason; nothing is blocked", async ({
+  page,
+}) => {
   const network = await serveOffline(page);
   await seed(page, "2027-07-10");
   await openPlanner(page);
@@ -117,7 +137,9 @@ test("an undated trip shows the rules in general terms", async ({ page }) => {
   await expect(legDetails(page)).toContainText("De Vlaamse Waterweg excludes the Ghent–Terneuzen canal");
 });
 
-test("a paddle leg on the Meuse at Dinant (unlisted Walloon water) shows a Forbidden warning with the AGW reason (#59)", async ({ page }) => {
+test("a paddle leg on the Meuse at Dinant (unlisted Walloon water) shows a Forbidden warning with the AGW reason (#59)", async ({
+  page,
+}) => {
   await serveOffline(page);
   await seed(page, "2027-07-10", [
     { lat: 50.26, lng: 4.91 },

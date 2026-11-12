@@ -73,10 +73,14 @@ export function agwDay(category: AgwCategory, date: CalendarDate): AgwDay {
   const md = monthDay(date);
   const { from, to } = hoursTables[category].find((p) => p.contains(md))!;
   const hours = { from, to };
-  if (category === "1.C" && !inSeason1C(date)) return { closure: "season", hours };
+  if (category === "1.C" && !inSeason1C(date)) {
+    return { closure: "season", hours };
+  }
   if (category !== "1.A") {
     const { trout, general } = fishingOpeningDays(Number(date.slice(0, 4)));
-    if (date === trout || date === general) return { closure: "fishing-day", hours };
+    if (date === trout || date === general) {
+      return { closure: "fishing-day", hours };
+    }
   }
   return { hours };
 }

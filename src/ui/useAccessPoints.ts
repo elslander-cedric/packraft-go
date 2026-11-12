@@ -24,7 +24,9 @@ function defaultNameSource(): Promise<DefaultNameSource> {
 /** A new, unique id for an access point. */
 function newId(): string {
   // randomUUID needs a secure context (https or localhost); fall back elsewhere.
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
@@ -59,7 +61,9 @@ export function useAccessPoints() {
   const [draft, setDraft] = useState<AccessPoint | null>(null);
 
   useEffect(() => {
-    if (!keepStoredSave) storeAccessPoints(points);
+    if (!keepStoredSave) {
+      storeAccessPoints(points);
+    }
   }, [points, keepStoredSave]);
 
   // Default names (ADR 0027): looked up in the background whenever the
@@ -71,7 +75,9 @@ export function useAccessPoints() {
     let cancelled = false;
     const backOnline = () => defaultNames.current?.backOnline();
     void defaultNameSource().then((source) => {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       defaultNames.current = startDefaultNames({
         source,
         points: () => latest.current,
@@ -117,7 +123,9 @@ export function useAccessPoints() {
     },
     /** Stores the draft with the planner's changes and selects it. */
     saveDraft: (changes: AccessPointChanges) => {
-      if (!draft) return;
+      if (!draft) {
+        return;
+      }
       const { id } = draft;
       setPoints((current) => updateAccessPoint([...current, draft], id, changes, now()));
       setDraft(null);

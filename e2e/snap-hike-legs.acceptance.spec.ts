@@ -19,7 +19,9 @@ function watchLiveTraffic(page: Page) {
   const live: string[] = [];
   page.on("requestfinished", async (request) => {
     const url = new URL(request.url());
-    if (["localhost", "127.0.0.1"].includes(url.hostname)) return;
+    if (["localhost", "127.0.0.1"].includes(url.hostname)) {
+      return;
+    }
     const response = await request.response();
     // Stubbed responses carry our own CORS header; anything else came from the network.
     if (response && !response.headers()["access-control-allow-origin"] && !url.hostname.endsWith("opentopomap.org")) {
@@ -92,7 +94,9 @@ test("routed legs are not requested again as more points are added", async ({ pa
   expect(new Set(net.brouter.map((u) => u.searchParams.get("lonlats"))).size).toBe(3);
 });
 
-test("a failed leg stays dashed and straight with a message; retry while still down fails again; retry when up snaps it", async ({ page }) => {
+test("a failed leg stays dashed and straight with a message; retry while still down fails again; retry when up snaps it", async ({
+  page,
+}) => {
   const replies = [NO_ROUTE, DOWN, SNAPPED];
   const net = await serveOffline(page, { brouter: () => replies.shift() ?? SNAPPED });
   const click = await openMap(page);

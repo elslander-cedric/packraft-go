@@ -108,7 +108,9 @@ describe("router interface with a fake for tests", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.geometry.length).toBeGreaterThan(1);
-      for (const p of result.geometry) expect(typeof p.elevation).toBe("number");
+      for (const p of result.geometry) {
+        expect(typeof p.elevation).toBe("number");
+      }
     }
   });
 
@@ -121,7 +123,9 @@ describe("router interface with a fake for tests", () => {
     const noResult = createFakeRouter({});
     const r = await noResult.route("hike", [DURBUY, HOTTON]);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(["no-route", "unavailable"]).toContain(r.failure.kind);
+    if (!r.ok) {
+      expect(["no-route", "unavailable"]).toContain(r.failure.kind);
+    }
   });
 
   it("answers per mode", async () => {
@@ -145,9 +149,10 @@ describe("trip planner core has no React or network dependencies", () => {
       const code = readFileSync(file, "utf8");
       for (const m of code.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)) {
         const spec = m[1];
-        const inside =
-          spec.startsWith(".") && path.resolve(path.dirname(file), spec).startsWith(__dirname + path.sep);
-        if (!inside) offenders.push(`${path.relative(__dirname, file)} -> ${spec}`);
+        const inside = spec.startsWith(".") && path.resolve(path.dirname(file), spec).startsWith(__dirname + path.sep);
+        if (!inside) {
+          offenders.push(`${path.relative(__dirname, file)} -> ${spec}`);
+        }
       }
       if (/\b(fetch|XMLHttpRequest|WebSocket|navigator|window|document)\b/.test(code)) {
         offenders.push(`${path.relative(__dirname, file)} uses a browser/network global`);

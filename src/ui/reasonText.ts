@@ -14,13 +14,17 @@ export function notCheckedText(checks: readonly OfficialCheck[], words: Words = 
 function closedWhy({ cause, reason }: OfficialClosedVerdict): string {
   const text = strings.official;
   // Code 0 is "too low, or the reason given": the SPW's own words replace the default.
-  if (cause === "too-low-or-stated") return reason ?? text.tooLow;
+  if (cause === "too-low-or-stated") {
+    return reason ?? text.tooLow;
+  }
   return reason ? `${text.causes[cause]} ${reason}` : text.causes[cause];
 }
 
 /** What the rules alone say, whether the core words it or it's only the state and the category. */
 function ruleWords({ ruleText, state, category }: RuleReason): string {
-  if (state === "checking") return strings.accessChecking;
+  if (state === "checking") {
+    return strings.accessChecking;
+  }
   return ruleText ?? (category ? strings.accessCalendar[category] : "");
 }
 
@@ -33,7 +37,9 @@ function statusText(reason: RuleReason): string {
       return closedBy === "official" ? closed : `${ruleText} ${closed}`;
     }
     case "open":
-      if (state !== "open") return ruleText;
+      if (state !== "open") {
+        return ruleText;
+      }
       return `${official.soon ? strings.official.openSoon : strings.official.open} ${ruleText}`;
     case "unrecognised":
       return state === "unknown" ? strings.official.unrecognised(official.code) : ruleText;
@@ -60,7 +66,9 @@ export function reasonText(reason: RuleReason): string {
  * checking, where the status says all there is.
  */
 export function statusReasonTexts({ state, reasons }: AccessStatus): string[] {
-  if (state === "checking") return [];
+  if (state === "checking") {
+    return [];
+  }
   const texts = reasons
     .filter((reason) => reason.state === state)
     .map((reason) => (reason.kind === "no-rule" ? strings.accessNoRule : reasonText(reason)));

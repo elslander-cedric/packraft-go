@@ -143,7 +143,9 @@ describe("reviewing a boundary", () => {
   });
 
   it("moves along the river, snapped to it, when moved", () => {
-    const [upper, lower] = split([draft("1X1")], { "1X1-1.to": { action: "move", lat: LAT + 0.0001, lng: 5.08, note: "The bridge" } });
+    const [upper, lower] = split([draft("1X1")], {
+      "1X1-1.to": { action: "move", lat: LAT + 0.0001, lng: 5.08, note: "The bridge" },
+    });
     expect(upper!.line.at(-1)).toEqual([5.08, LAT]);
     expect(lower!.line[0]).toEqual([5.08, LAT]);
     expect(upper!.to).toMatchObject({ status: "reviewed", point: { lat: LAT, lng: 5.08 } });
@@ -157,8 +159,16 @@ describe("re-cutting the shipped lines, with no OSM data", () => {
     expect(rejoinSplits(records, []).map((s) => s.id)).toEqual(["1A3a", "1A3b"]);
   });
 
-  const annex = [{ id: "1X1", annex2Gauge: "Membre" }, { id: "1X2", annex2Gauge: "Gendron" }];
-  const shipped = (stretch: DraftStretch): ShippedStretch => ({ ...stretch, gauge: null, source: "s", researchDate: "2026-10-12" });
+  const annex = [
+    { id: "1X1", annex2Gauge: "Membre" },
+    { id: "1X2", annex2Gauge: "Gendron" },
+  ];
+  const shipped = (stretch: DraftStretch): ShippedStretch => ({
+    ...stretch,
+    gauge: null,
+    source: "s",
+    researchDate: "2026-10-12",
+  });
 
   it("gets the record back as it was before the split", () => {
     const pieces = split([draft("1X1"), draft("1X2")]).map(shipped);

@@ -45,7 +45,13 @@ describe("toggling a camp", () => {
   });
 
   it("keeps every leg's route: a camp changes no leg, so nothing is routed again", () => {
-    const routed: Trip = { ...through(A, B, C), legs: [{ mode: "hike", route: ROUTED }, { mode: "paddle", route: ROUTED }] };
+    const routed: Trip = {
+      ...through(A, B, C),
+      legs: [
+        { mode: "hike", route: ROUTED },
+        { mode: "paddle", route: ROUTED },
+      ],
+    };
     const marked = applyEdit(routed, toggleCamp(1));
     expect(marked.legs).toEqual(routed.legs);
     expect(marked.points).toEqual(routed.points);

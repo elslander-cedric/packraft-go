@@ -20,8 +20,12 @@ describe("built-in official aires", () => {
     expect(builtInOfficialAires).toHaveLength(92);
     const ids = new Set(builtInOfficialAires.map((a) => a.id));
     expect(ids.size).toBe(92);
-    for (const lock of builtInLocks.locks) expect(ids.has(lock.id)).toBe(false);
-    for (const record of builtInAccessRules.records) expect(ids.has(record.id)).toBe(false);
+    for (const lock of builtInLocks.locks) {
+      expect(ids.has(lock.id)).toBe(false);
+    }
+    for (const record of builtInAccessRules.records) {
+      expect(ids.has(record.id)).toBe(false);
+    }
   });
 
   it("every aire has a name, a known use and a last-changed date", () => {
@@ -43,7 +47,9 @@ describe("built-in official aires", () => {
 
   it("every aire's stretch has access rules, so its dialog can give a status", () => {
     const ruled = new Set(
-      builtInAccessRules.records.flatMap(({ rule }) => (rule.type === "agw" && rule.officialStretch ? [rule.officialStretch] : [])),
+      builtInAccessRules.records.flatMap(({ rule }) =>
+        rule.type === "agw" && rule.officialStretch ? [rule.officialStretch] : [],
+      ),
     );
     expect(builtInOfficialAires.filter((a) => !ruled.has(a.officialStretch))).toEqual([]);
   });
@@ -69,9 +75,15 @@ describe("built-in obstacles", () => {
     expect(builtInObstacles).toHaveLength(96);
     const ids = new Set(builtInObstacles.map((o) => o.id));
     expect(ids.size).toBe(96);
-    for (const aire of builtInOfficialAires) expect(ids.has(aire.id)).toBe(false);
-    for (const lock of builtInLocks.locks) expect(ids.has(lock.id)).toBe(false);
-    for (const record of builtInAccessRules.records) expect(ids.has(record.id)).toBe(false);
+    for (const aire of builtInOfficialAires) {
+      expect(ids.has(aire.id)).toBe(false);
+    }
+    for (const lock of builtInLocks.locks) {
+      expect(ids.has(lock.id)).toBe(false);
+    }
+    for (const record of builtInAccessRules.records) {
+      expect(ids.has(record.id)).toBe(false);
+    }
   });
 
   it("every obstacle has a known kind and a last-changed date", () => {

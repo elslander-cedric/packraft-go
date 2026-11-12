@@ -20,8 +20,7 @@ export const SAVE_VERSION = 1;
  * (`unknown-version`), so the planner can be told which.
  */
 export type ParseResult =
-  | { readonly ok: true; readonly trip: Trip }
-  | { readonly ok: false; readonly reason?: "unknown-version" };
+  { readonly ok: true; readonly trip: Trip } | { readonly ok: false; readonly reason?: "unknown-version" };
 
 /**
  * What is saved of a leg's route: routed results (with the router's `climbM`
@@ -68,8 +67,12 @@ export function saveFileName(trip: Trip, untitledName: string): string {
 export function parseTrip(text: string): ParseResult {
   try {
     const file = object(JSON.parse(text));
-    if (file.format !== SAVE_FORMAT || typeof file.version !== "number") throw invalid;
-    if (file.version !== SAVE_VERSION) return { ok: false, reason: "unknown-version" };
+    if (file.format !== SAVE_FORMAT || typeof file.version !== "number") {
+      throw invalid;
+    }
+    if (file.version !== SAVE_VERSION) {
+      return { ok: false, reason: "unknown-version" };
+    }
     return { ok: true, trip: readTrip(object(file.trip)) };
   } catch {
     return { ok: false };
@@ -94,7 +97,9 @@ export type StoredTrip = { readonly trip: Trip; readonly unknownVersion: boolean
 
 export function restoreStoredTrip(stored: string | null): StoredTrip {
   const parsed = stored === null ? null : parseTrip(stored);
-  if (parsed?.ok) return { trip: parsed.trip, unknownVersion: false };
+  if (parsed?.ok) {
+    return { trip: parsed.trip, unknownVersion: false };
+  }
   return { trip: emptyTrip(), unknownVersion: parsed?.reason === "unknown-version" };
 }
 
@@ -104,22 +109,30 @@ const invalid = new Error("invalid save file");
 type Fields = Record<string, unknown>;
 
 function object(value: unknown): Fields {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) throw invalid;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw invalid;
+  }
   return value as Fields;
 }
 
 function list(value: unknown): unknown[] {
-  if (!Array.isArray(value)) throw invalid;
+  if (!Array.isArray(value)) {
+    throw invalid;
+  }
   return value;
 }
 
 function number(value: unknown, min = -Infinity, max = Infinity): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) throw invalid;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
+    throw invalid;
+  }
   return value;
 }
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T {
-  if (!allowed.includes(value as T)) throw invalid;
+  if (!allowed.includes(value as T)) {
+    throw invalid;
+  }
   return value as T;
 }
 
@@ -133,10 +146,14 @@ function readRoutedPoint(value: unknown): RoutedPoint {
 }
 
 function readRoute(value: unknown): LegRoute | undefined {
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
   const route = object(value);
   const status = oneOf(route.status, ["routed", "failed", "pending"] as const);
-  if (status === "pending") return undefined;
+  if (status === "pending") {
+    return undefined;
+  }
   if (status === "failed") {
     return { status, failure: { kind: oneOf(object(route.failure).kind, ["no-route", "unavailable"] as const) } };
   }
@@ -152,15 +169,21 @@ function readLeg(value: unknown): Leg {
 }
 
 function readTrip(trip: Fields): Trip {
-  if (typeof trip.name !== "string") throw invalid;
+  if (typeof trip.name !== "string") {
+    throw invalid;
+  }
   const points = list(trip.points).map(readLatLng);
   const legs = list(trip.legs).map(readLeg);
   // legs[i] runs from points[i] to points[i + 1].
-  if (legs.length !== Math.max(points.length - 1, 0)) throw invalid;
+  if (legs.length !== Math.max(points.length - 1, 0)) {
+    throw invalid;
+  }
   // Without a camps list the trip has no camps.
   const camps = readCamps(trip.camps, points.length);
   // Without a start date the trip is undated.
-  if (trip.startDate !== undefined && !isCalendarDate(trip.startDate)) throw invalid;
+  if (trip.startDate !== undefined && !isCalendarDate(trip.startDate)) {
+    throw invalid;
+  }
   return {
     name: trip.name,
     points,
@@ -172,11 +195,17 @@ function readTrip(trip: Fields): Trip {
 
 /** Camps as distinct indices of existing points, in ascending order; none when the field is absent. */
 function readCamps(value: unknown, pointCount: number): number[] {
-  if (value === undefined) return [];
+  if (value === undefined) {
+    return [];
+  }
   const camps = list(value).map((camp) => {
-    if (!Number.isInteger(camp)) throw invalid;
+    if (!Number.isInteger(camp)) {
+      throw invalid;
+    }
     return number(camp, 0, pointCount - 1);
   });
-  if (new Set(camps).size !== camps.length) throw invalid;
+  if (new Set(camps).size !== camps.length) {
+    throw invalid;
+  }
   return camps.sort((a, b) => a - b);
 }

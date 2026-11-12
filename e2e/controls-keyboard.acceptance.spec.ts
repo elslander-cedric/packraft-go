@@ -21,7 +21,8 @@ const legTime = (page: Page, leg: number) => rows(page).nth(leg).locator(".plann
 const storedSettings = (page: Page) => page.evaluate((key) => window.localStorage.getItem(key), SETTINGS_KEY);
 const storedName = (page: Page) =>
   page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? "null")?.trip.name ?? null, TRIP_KEY);
-const isFocused = (l: Locator) => l.evaluate((el) => el === document.activeElement || el.contains(document.activeElement));
+const isFocused = (l: Locator) =>
+  l.evaluate((el) => el === document.activeElement || el.contains(document.activeElement));
 
 async function openMap(page: Page) {
   await openPlanner(page);
@@ -38,7 +39,9 @@ async function startFromPage(page: Page) {
 async function tabTo(page: Page, target: Locator, max = 40) {
   for (let i = 0; i < max; i++) {
     await page.keyboard.press("Tab");
-    if (await isFocused(target)) return i + 1;
+    if (await isFocused(target)) {
+      return i + 1;
+    }
   }
   throw new Error(`Tab never reached ${target}`);
 }
@@ -48,7 +51,9 @@ async function arrowToMenuItem(page: Page, item: string, key = "Enter") {
   await tabTo(page, button(page, text.menu.button));
   await page.keyboard.press(key);
   await expect(menuItem(page, text.menu.newTrip)).toBeFocused();
-  for (let i = 0; i < 8 && !(await isFocused(menuItem(page, item))); i++) await page.keyboard.press("ArrowDown");
+  for (let i = 0; i < 8 && !(await isFocused(menuItem(page, item))); i++) {
+    await page.keyboard.press("ArrowDown");
+  }
   await expect(menuItem(page, item)).toBeFocused();
 }
 
@@ -216,7 +221,9 @@ test.describe("controls by keyboard alone", () => {
     const hike = modeButton(page, strings.legModeHike);
     const paddle = modeButton(page, strings.legModePaddle);
     await expect(hike).toHaveAttribute("aria-pressed", "true");
-    if (!(await isFocused(paddle))) await page.keyboard.press("ArrowRight");
+    if (!(await isFocused(paddle))) {
+      await page.keyboard.press("ArrowRight");
+    }
     await expect(paddle).toBeFocused();
     await page.keyboard.press("Space");
     await expect(paddle).toHaveAttribute("aria-pressed", "true");
@@ -259,7 +266,9 @@ test.describe("controls by keyboard alone", () => {
     for (const bad of ["-2", "0", ""]) {
       await page.keyboard.press("ControlOrMeta+a");
       await page.keyboard.press("Backspace");
-      if (bad) await page.keyboard.type(bad);
+      if (bad) {
+        await page.keyboard.type(bad);
+      }
       await expect(paceField(page)).toHaveAttribute("aria-invalid", "true");
       await expect(save).toBeDisabled();
     }
@@ -281,7 +290,9 @@ test.describe("controls by keyboard alone", () => {
     await expect(legTime(page, 0)).toHaveText(base);
     await expect(button(page, text.menu.button)).toBeFocused();
     await page.keyboard.press("Enter");
-    for (let i = 0; i < 8 && !(await isFocused(menuItem(page, text.menu.settings))); i++) await page.keyboard.press("ArrowDown");
+    for (let i = 0; i < 8 && !(await isFocused(menuItem(page, text.menu.settings))); i++) {
+      await page.keyboard.press("ArrowDown");
+    }
     await page.keyboard.press("Enter");
     await expect(paceField(page)).toBeFocused();
     await page.keyboard.press("ControlOrMeta+a");
@@ -299,7 +310,9 @@ test.describe("controls by keyboard alone", () => {
     await expect(paceField(page)).toHaveValue("1.5");
   });
 
-  test("disabled controls are reachable by Tab and arrows, say why, and do nothing on Enter/Space", async ({ page }) => {
+  test("disabled controls are reachable by Tab and arrows, say why, and do nothing on Enter/Space", async ({
+    page,
+  }) => {
     await serveOffline(page);
     await openMap(page);
     await startFromPage(page);

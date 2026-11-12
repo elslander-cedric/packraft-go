@@ -16,7 +16,13 @@ const today = { today: "2026-10-14" };
 
 describe("paddle legs in Wallonia (#58 with #59)", () => {
   it("the Meuse at Dinant is not a listed stretch: a Forbidden warning with the AGW reason", () => {
-    const leg = paddle([{ lat: 50.26, lng: 4.91 }, { lat: 50.265, lng: 4.915 }], "2026-07-10");
+    const leg = paddle(
+      [
+        { lat: 50.26, lng: 4.91 },
+        { lat: 50.265, lng: 4.915 },
+      ],
+      "2026-07-10",
+    );
     const result = tripAccess(leg, builtInAccessRules, today);
     expect(result.legs[0]!.status.state).toBe("forbidden");
     const warning = result.legs[0]!.warnings.find((w) => w.kind === "forbidden");

@@ -71,7 +71,9 @@ export function baseMapCheckRequests(): { label: string; url: string }[] {
     ...overlays.map(({ name, source }) => ({ name, source })),
   ];
   for (const { name, source } of named) {
-    if (seen.has(source)) continue;
+    if (seen.has(source)) {
+      continue;
+    }
     seen.add(source);
     const [lat, lng] = source.bounds ? centre(source.bounds) : initialMapView.center;
     const tile = tileAt(lat, lng, source.bounds ? 15 : 12);
@@ -94,7 +96,9 @@ export async function runBaseMapCheck({ fetch, wait }: BaseMapCheckDeps): Promis
   let passed = true;
   const requests = baseMapCheckRequests();
   for (const [i, { label, url }] of requests.entries()) {
-    if (i > 0) await wait(BASE_MAP_CHECK_DELAY_MS);
+    if (i > 0) {
+      await wait(BASE_MAP_CHECK_DELAY_MS);
+    }
     let problem: string | null;
     try {
       const response = await fetch(url, { headers: { "User-Agent": BASE_MAP_CHECK_USER_AGENT } });
@@ -108,7 +112,9 @@ export async function runBaseMapCheck({ fetch, wait }: BaseMapCheckDeps): Promis
     } catch (error) {
       problem = error instanceof Error ? error.message : String(error);
     }
-    if (problem) passed = false;
+    if (problem) {
+      passed = false;
+    }
     lines.push(problem ? `FAILED ${label}: ${problem}\n       ${url}` : `OK     ${label}`);
   }
   return { passed, report: lines.join("\n") };

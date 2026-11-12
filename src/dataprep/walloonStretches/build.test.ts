@@ -29,7 +29,9 @@ function build(river: string, extract: string, ids: string[], review?: ReviewDec
 
 const byId = (stretches: DraftStretch[], id: string) => {
   const found = stretches.find((s) => s.id === id);
-  if (!found) throw new Error(`no stretch ${id}`);
+  if (!found) {
+    throw new Error(`no stretch ${id}`);
+  }
   return found;
 };
 const first = (s: DraftStretch): Pt => ({ lng: s.line[0][0], lat: s.line[0][1] });
@@ -63,7 +65,13 @@ describe("Warche below Robertville dam (1C1a)", () => {
   });
 
   it("keeps the Annex data: category, thresholds and gauge", () => {
-    expect(warche).toMatchObject({ category: "1.C", river: "Warche", annex2Gauge: "Malmedy", minM3s: null, maxM3s: 8.9 });
+    expect(warche).toMatchObject({
+      category: "1.C",
+      river: "Warche",
+      annex2Gauge: "Malmedy",
+      minM3s: null,
+      maxM3s: 8.9,
+    });
   });
 });
 

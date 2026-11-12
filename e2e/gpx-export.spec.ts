@@ -6,7 +6,14 @@ import { parseGpx11 } from "../src/testing/gpx11";
 import { strings } from "../src/ui/strings";
 import { downloadGpx } from "./support/gpx";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { exportGpxDisabled, freeMapBox, openPlanner, pickNextMode, renameTrip, startGpxExport } from "./support/planner";
+import {
+  exportGpxDisabled,
+  freeMapBox,
+  openPlanner,
+  pickNextMode,
+  renameTrip,
+  startGpxExport,
+} from "./support/planner";
 
 const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLabel });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
@@ -30,10 +37,12 @@ const recordedTrack = (geojson: string) =>
  */
 async function drawPoints(page: Page, offsets: number[], paddle: number[] = []) {
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   for (const [i, dx] of offsets.entries()) {
-    if (i > 0) await pickNextMode(page, paddle.includes(i - 1) ? "paddle" : "hike");
+    if (i > 0) {
+      await pickNextMode(page, paddle.includes(i - 1) ? "paddle" : "hike");
+    }
     await page.mouse.click(middle.x + dx, middle.y);
   }
   await expect(legLines(page)).toHaveCount(offsets.length - 1);
@@ -77,7 +86,9 @@ test("exports a hike leg, a paddle leg and a camp as one GPX 1.1 track with a wa
 test("joins consecutive paddle legs into one section without repeating the point where they meet", async ({ page }) => {
   await serveOffline(page, { brouter: byProfile });
   await drawPoints(page, [-200, -70, 70, 200], [1, 2]);
-  for (const leg of [0, 1, 2]) await expect(legLines(page).nth(leg)).toHaveClass(/leg-routed/);
+  for (const leg of [0, 1, 2]) {
+    await expect(legLines(page).nth(leg)).toHaveClass(/leg-routed/);
+  }
 
   const file = await downloadGpx(page, exportButton(page));
 
@@ -109,7 +120,7 @@ test("export is unavailable until the trip has a leg", async ({ page }) => {
   await serveOffline(page);
   await openPlanner(page);
   expect(await exportGpxDisabled(page)).toBe(true);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   expect(await exportGpxDisabled(page)).toBe(true);
   await page.mouse.click(box.x + box.width / 2 + 100, box.y + box.height / 2);

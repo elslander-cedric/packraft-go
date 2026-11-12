@@ -31,7 +31,12 @@ describe("access status in Flanders", () => {
     const status = accessAt(insideFlanders, fakeAccessRules([flandersSquare]), {});
     expect(status.state).toBe("open");
     expect(status.reasons).toEqual([
-      expect.objectContaining({ kind: "rule", state: "open", recordId: "flanders", ruleText: flandersSquare.rule.text }),
+      expect.objectContaining({
+        kind: "rule",
+        state: "open",
+        recordId: "flanders",
+        ruleText: flandersSquare.rule.text,
+      }),
     ]);
   });
 
@@ -122,7 +127,17 @@ describe("access status along a paddle leg", () => {
 describe("combining statuses", () => {
   const status = (state: AccessStatus["state"]): AccessStatus => ({
     state,
-    reasons: [{ kind: "rule", state, recordId: state, name: state, ruleText: state, source: { title: "", url: "" }, researched: "2026-10-12" }],
+    reasons: [
+      {
+        kind: "rule",
+        state,
+        recordId: state,
+        name: state,
+        ruleText: state,
+        source: { title: "", url: "" },
+        researched: "2026-10-12",
+      },
+    ],
   });
 
   it.each([

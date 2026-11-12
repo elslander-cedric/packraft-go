@@ -141,8 +141,12 @@ export type TripAccessOptions = {
 /** The line a leg covers: its routed geometry, or a straight line when routing failed. */
 function legLine(trip: Trip, index: number): readonly LatLng[] | undefined {
   const route = trip.legs[index].route;
-  if (route?.status === "routed") return route.geometry;
-  if (route?.status === "failed") return [trip.points[index], trip.points[index + 1]];
+  if (route?.status === "routed") {
+    return route.geometry;
+  }
+  if (route?.status === "failed") {
+    return [trip.points[index], trip.points[index + 1]];
+  }
   return undefined; // Not routed yet: checked once its line is known.
 }
 
@@ -166,15 +170,30 @@ function legAccess(
     const kind = warningKind[reason.state];
     return kind ? [{ kind, ...when, reason }] : [];
   });
-  const notes = status.reasons.flatMap((reason): AccessNote[] => (reason.state === "unknown" ? [{ ...when, reason }] : []));
+  const notes = status.reasons.flatMap((reason): AccessNote[] =>
+    reason.state === "unknown" ? [{ ...when, reason }] : [],
+  );
   const future = when.date !== undefined && when.date > today;
   const blocked = status.state === "forbidden" || status.state === "closed-today";
-  const flowReasons = future && !blocked
-    ? status.reasons.filter((reason) => reason.kind === "rule" && reason.flowDependent && reason.state === "open")
-    : [];
-  for (const reason of flowReasons) warnings.push({ kind: "check-flow", ...when, reason });
+  const flowReasons =
+    future && !blocked
+      ? status.reasons.filter((reason) => reason.kind === "rule" && reason.flowDependent && reason.state === "open")
+      : [];
+  for (const reason of flowReasons) {
+    warnings.push({ kind: "check-flow", ...when, reason });
+  }
   const notChecked = officialNotChecked(status, incidents);
-  return { ...when, status, notChecked, checkFlowOnTheDay: flowReasons.length > 0, warnings, notes, lockWarnings, obstacleWarnings, incidentWarnings };
+  return {
+    ...when,
+    status,
+    notChecked,
+    checkFlowOnTheDay: flowReasons.length > 0,
+    warnings,
+    notes,
+    lockWarnings,
+    obstacleWarnings,
+    incidentWarnings,
+  };
 }
 
 /** Access status and warnings for every paddle leg, day and the whole trip. */
@@ -188,9 +207,13 @@ export function tripAccess(
     const date = trip.startDate === undefined ? undefined : addDays(trip.startDate, day);
     const dayLegs: LegAccess[] = [];
     for (let leg = first; leg <= last; leg++) {
-      if (trip.legs[leg].mode !== "paddle") continue;
+      if (trip.legs[leg].mode !== "paddle") {
+        continue;
+      }
       const line = legLine(trip, leg);
-      if (!line) continue;
+      if (!line) {
+        continue;
+      }
       const status = accessAlong(line, rules, {
         ...(date !== undefined && { date }),
         today,
@@ -201,10 +224,18 @@ export function tripAccess(
       });
       const when = { leg, day, ...(date !== undefined && { date }) };
       const lockWarnings = locksOnLine(line, locks).map((lock): LockWarning => ({ lock, ...when }));
-      const obstacleWarnings = obstaclesOnLine(line, obstacles).map((obstacle): ObstacleWarning => ({ obstacle, ...when }));
+      const obstacleWarnings = obstaclesOnLine(line, obstacles).map((obstacle): ObstacleWarning => ({
+        obstacle,
+        ...when,
+      }));
       const reported = incidents?.status === "ok" ? incidentsOn(incidents.incidents, date ?? today) : [];
-      const incidentWarnings = incidentsOnLine(line, reported).map((incident): IncidentWarning => ({ incident, ...when }));
-      dayLegs.push((legs[leg] = legAccess(when, status, today, incidents, lockWarnings, obstacleWarnings, incidentWarnings)));
+      const incidentWarnings = incidentsOnLine(line, reported).map((incident): IncidentWarning => ({
+        incident,
+        ...when,
+      }));
+      dayLegs.push(
+        (legs[leg] = legAccess(when, status, today, incidents, lockWarnings, obstacleWarnings, incidentWarnings)),
+      );
     }
     return { day, ...(date !== undefined && { date }), ...summary(dayLegs) };
   });
@@ -220,7 +251,10 @@ export function tripAccess(
  * The access of the legs from `firstLeg` to `lastLeg` together, for a section's row: the
  * legs' own access gathered, adding nothing of its own (ADR 0029). Hike legs have none.
  */
-export function legsAccess(access: TripAccess, { firstLeg, lastLeg }: { firstLeg: number; lastLeg: number }): AccessSummary {
+export function legsAccess(
+  access: TripAccess,
+  { firstLeg, lastLeg }: { firstLeg: number; lastLeg: number },
+): AccessSummary {
   return summary(access.legs.slice(firstLeg, lastLeg + 1).filter((leg) => leg !== undefined));
 }
 
@@ -233,7 +267,9 @@ function summary(legs: readonly LegAccess[]): AccessSummary {
   const incidentWarnings = legs.flatMap((leg) => leg.incidentWarnings);
   const legsWithoutRules = legs.filter((leg) => leg.notes.length > 0).length;
   const gathered = { warnings, notes, lockWarnings, obstacleWarnings, incidentWarnings, legsWithoutRules };
-  if (legs.length === 0) return gathered;
+  if (legs.length === 0) {
+    return gathered;
+  }
   // A leg still checking its flow keeps the summary from reading open; a worse state wins as usual.
   return { state: combineAccess(legs.map((leg) => leg.status)).state, ...gathered };
 }

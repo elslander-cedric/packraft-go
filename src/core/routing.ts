@@ -42,7 +42,9 @@ const isFor = (trip: Trip, i: number, request: Request) =>
   sameLatLng(trip.points[i + 1], request.points[1]);
 
 function setRoutes(trip: Trip, route: LegRoute, applies: (leg: Leg, i: number) => boolean): Trip {
-  if (!trip.legs.some(applies)) return trip;
+  if (!trip.legs.some(applies)) {
+    return trip;
+  }
   return { ...trip, legs: trip.legs.map((leg, i) => (applies(leg, i) ? { ...leg, route } : leg)) };
 }
 
@@ -53,7 +55,9 @@ const routeOf = (result: RouteResult): LegRoute =>
 
 /** Clears a failed leg's route so that the next sync routes it again. Other legs are left alone. */
 export function retryLeg(trip: Trip, legIndex: number): Trip {
-  if (trip.legs[legIndex]?.route?.status !== "failed") return trip;
+  if (trip.legs[legIndex]?.route?.status !== "failed") {
+    return trip;
+  }
   return { ...trip, legs: trip.legs.map((leg, i) => (i === legIndex ? { ...leg, route: undefined } : leg)) };
 }
 
@@ -101,7 +105,9 @@ export function createAutoRouter(router: Router, dispatch: RoutingDispatch): Aut
       }
       inFlight.delete(key);
       const route = routeOf(result);
-      if (route.status === "routed") received.set(key, route);
+      if (route.status === "routed") {
+        received.set(key, route);
+      }
       dispatch({ type: "routeArrived", request, route });
     })();
     inFlight.set(key, running);

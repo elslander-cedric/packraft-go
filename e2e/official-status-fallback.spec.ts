@@ -233,7 +233,9 @@ test.describe("when a chunk won't load, at desktop size", () => {
   // The service worker would answer for the chunks, out of the test's reach.
   test.use({ viewport: { width: 1400, height: 900 }, serviceWorkers: "block" });
 
-  test("a PKAYAK chunk that won't load ends in the note, not Checking, and a later refresh loads it", async ({ page }) => {
+  test("a PKAYAK chunk that won't load ends in the note, not Checking, and a later refresh loads it", async ({
+    page,
+  }) => {
     await page.clock.install({ time: KAYAK_RECORDED_AT });
     const chunk = await holdChunk(page, "PKAYAK didn't answer in time");
     const network = await serveOffline(page, { kayak: KAYAK, kiwis: KIWIS });

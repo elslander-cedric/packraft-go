@@ -131,7 +131,9 @@ function pieces(stretch: DraftStretch, split: OfficialSplit, review: ReviewDecis
 /** An end shared with a record now in pieces points at the piece that has it. */
 function sharedEnd(end: StretchEnd, splits: readonly OfficialSplit[]): StretchEnd {
   const [id, which] = end.sameAs?.split(".") ?? [];
-  if (!splits.some((split) => split.id === id)) return end;
+  if (!splits.some((split) => split.id === id)) {
+    return end;
+  }
   return { ...end, sameAs: `${id}-${which === "from" ? 1 : 2}.${which}` };
 }
 
@@ -143,7 +145,11 @@ export function splitAtOfficialBoundaries(
 ): DraftStretch[] {
   return stretches.flatMap((stretch) => {
     const split = mapping.splits.find((s) => s.id === stretch.id);
-    const within = { ...stretch, from: sharedEnd(stretch.from, mapping.splits), to: sharedEnd(stretch.to, mapping.splits) };
+    const within = {
+      ...stretch,
+      from: sharedEnd(stretch.from, mapping.splits),
+      to: sharedEnd(stretch.to, mapping.splits),
+    };
     return split ? pieces(within, split, review) : [{ ...within, ...onStretch(mapping.whole[stretch.id]) }];
   });
 }
@@ -151,14 +157,22 @@ export function splitAtOfficialBoundaries(
 /** What the split and the shipped format add to a built stretch. */
 const ADDED_FIELDS = ["gauge", "noGaugeNote", "source", "researchDate", "officialStretch", "splitOf"];
 const withoutAddedFields = <T extends object>(stretch: T) =>
-  Object.fromEntries(Object.entries(stretch).filter(([field]) => !ADDED_FIELDS.includes(field))) as Omit<DraftStretch, "annex2Gauge">;
+  Object.fromEntries(Object.entries(stretch).filter(([field]) => !ADDED_FIELDS.includes(field))) as Omit<
+    DraftStretch,
+    "annex2Gauge"
+  >;
 
 /**
  * The records as they were before the cut, from a shipped dataset: what the split
  * needs, so a boundary can be reviewed and cut again with no OSM data.
  */
 export function rejoinSplits(
-  shipped: readonly (Omit<DraftStretch, "annex2Gauge"> & { gauge?: unknown; noGaugeNote?: string; source?: string; researchDate?: string })[],
+  shipped: readonly (Omit<DraftStretch, "annex2Gauge"> & {
+    gauge?: unknown;
+    noGaugeNote?: string;
+    source?: string;
+    researchDate?: string;
+  })[],
   annex: readonly Pick<AnnexRow, "id" | "annex2Gauge">[],
 ): DraftStretch[] {
   const records = new Map<string, DraftStretch>();
@@ -223,10 +237,14 @@ function nearestOfficial(p: Pt, parts: readonly BoxedPart[]): string | null {
   let bestM: number = NEAR_OFFICIAL_LINE_M;
   for (const { id, points, south, north, west, east } of parts) {
     // Skip the far parts cheaply: the rivers here run to thousands of segments.
-    if (p.lat < south || p.lat > north || p.lng < west || p.lng > east) continue;
+    if (p.lat < south || p.lat > north || p.lng < west || p.lng > east) {
+      continue;
+    }
     for (let i = 1; i < points.length; i++) {
       const metres = toSegment(p, points[i - 1]!, points[i]!);
-      if (metres < bestM) [best, bestM] = [id, metres];
+      if (metres < bestM) {
+        [best, bestM] = [id, metres];
+      }
     }
   }
   return best;
@@ -246,21 +264,29 @@ export function officialRuns(line: readonly Pt[], lines: OfficialLines): Officia
       const official = nearestOfficial({ lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) }, parts);
       const metres = along + t * span;
       const last = runs.at(-1);
-      if (last?.official === official) continue;
-      if (last) last.toKm = metres / 1000;
+      if (last?.official === official) {
+        continue;
+      }
+      if (last) {
+        last.toKm = metres / 1000;
+      }
       runs.push({ official, fromKm: metres / 1000, toKm: metres / 1000 });
     }
     along += span;
   }
   const last = runs.at(-1);
-  if (last) last.toKm = along / 1000;
+  if (last) {
+    last.toKm = along / 1000;
+  }
   return runs;
 }
 
 /** The kilometres of a line on each SPW line, and on none (under the key "none"). */
 export function kmByOfficial(runs: readonly OfficialRun[]): Record<string, number> {
   const totals: Record<string, number> = {};
-  for (const { official, fromKm, toKm } of runs) totals[official ?? "none"] = (totals[official ?? "none"] ?? 0) + toKm - fromKm;
+  for (const { official, fromKm, toKm } of runs) {
+    totals[official ?? "none"] = (totals[official ?? "none"] ?? 0) + toKm - fromKm;
+  }
   return totals;
 }
 
@@ -269,16 +295,25 @@ const NOTE_OTHER_KM = 0.2;
 const NOTE_UNLISTED_KM = 2;
 
 /** What a reviewer should weigh: where the mapping and the SPW's lines don't quite agree. */
-export function mappingNotes(stretches: readonly Pick<DraftStretch, "id" | "line" | "officialStretch">[], lines: OfficialLines): string[] {
+export function mappingNotes(
+  stretches: readonly Pick<DraftStretch, "id" | "line" | "officialStretch">[],
+  lines: OfficialLines,
+): string[] {
   return stretches.flatMap(({ id, line, officialStretch }) => {
     const totals = kmByOfficial(officialRuns(toPts(line), lines));
     return Object.entries(totals).flatMap(([official, length]) => {
       const onIt = `${length.toFixed(1)} km`;
-      if (official === officialStretch) return [];
-      if (official === "none") {
-        return officialStretch && length >= NOTE_UNLISTED_KM ? [`${id} (${officialStretch}): ${onIt} on no SPW line`] : [];
+      if (official === officialStretch) {
+        return [];
       }
-      if (length < NOTE_OTHER_KM) return [];
+      if (official === "none") {
+        return officialStretch && length >= NOTE_UNLISTED_KM
+          ? [`${id} (${officialStretch}): ${onIt} on no SPW line`]
+          : [];
+      }
+      if (length < NOTE_OTHER_KM) {
+        return [];
+      }
       return [`${id} (${officialStretch ?? "no official stretch"}): ${onIt} on the SPW's ${official} line`];
     });
   });

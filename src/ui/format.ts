@@ -16,7 +16,9 @@ export function formatDuration(hours: number): string {
   const totalMinutes = Math.round(hours * 60);
   const h = Math.floor(totalMinutes / 60);
   const min = totalMinutes % 60;
-  if (h === 0) return `${min} ${strings.minuteUnit}`;
+  if (h === 0) {
+    return `${min} ${strings.minuteUnit}`;
+  }
   return `${h} ${strings.hourUnit} ${String(min).padStart(2, "0")} ${strings.minuteUnit}`;
 }
 
@@ -59,7 +61,9 @@ export function formatReadingTime(at: string): string {
  * routing, and marked when it counts distance only.
  */
 export function formatTimeEstimate(hours: number, status: TimeStatus): string {
-  if (status === "pending") return strings.timePending;
+  if (status === "pending") {
+    return strings.timePending;
+  }
   const duration = formatDuration(hours);
   return status === "no-climb-data" ? strings.timeWithoutClimb(duration) : duration;
 }

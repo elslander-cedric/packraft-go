@@ -11,12 +11,16 @@ const rows = legRows;
 const km = async (locator: Locator) => {
   const text = (await locator.textContent()) ?? "";
   const m = text.match(/([\d.,]+)\s*km/);
-  if (!m) throw new Error(`no distance in "${text}"`);
+  if (!m) {
+    throw new Error(`no distance in "${text}"`);
+  }
   return Number(m[1].replace(",", ""));
 };
 /** The trip's hike distance in the panel's totals; an empty trip shows no totals. */
 const totalKm = async (page: Page) => {
-  if ((await totals(page).count()) === 0) return 0;
+  if ((await totals(page).count()) === 0) {
+    return 0;
+  }
   return Number((await figure(totals(page), strings.planner.totals.labels.hike)).replace(/\s*km$/, ""));
 };
 
@@ -61,9 +65,7 @@ test("the first click places only a start point; no leg, total stays 0", async (
   expect(network.blocked).toEqual([]);
 });
 
-test("each click adds a point and a straight hike leg; panel lists legs and their total", async ({
-  page,
-}) => {
+test("each click adds a point and a straight hike leg; panel lists legs and their total", async ({ page }) => {
   const { network, cx, cy } = await openMap(page);
   const clicks = [
     { x: cx - 200, y: cy + 80 },
@@ -100,7 +102,9 @@ test("each click adds a point and a straight hike leg; panel lists legs and thei
   // Leg distances scale with on-screen length (same zoom, similar latitude).
   const pxLen = clicks.slice(1).map((c, i) => Math.hypot(c.x - clicks[i].x, c.y - clicks[i].y));
   const kmPerPx = legKm.map((k, i) => k / pxLen[i]);
-  for (const r of kmPerPx) expect(Math.abs(r - kmPerPx[0]) / kmPerPx[0]).toBeLessThan(0.05);
+  for (const r of kmPerPx) {
+    expect(Math.abs(r - kmPerPx[0]) / kmPerPx[0]).toBeLessThan(0.05);
+  }
 
   // Total equals the sum of the legs (each shown rounded to 0.1 km).
   const sum = legKm.reduce((a, b) => a + b, 0);
@@ -128,8 +132,8 @@ test("edge: clicking the same spot again does not break the app", async ({ page 
   const legs = await legLines(page).count();
   await expect(rows(page)).toHaveCount(legs);
   await expect(markers(page)).toHaveCount(legs + 1);
-  const sum = await Promise.all(
-    Array.from({ length: legs }, (_, i) => km(rows(page).nth(i))),
-  ).then((xs) => xs.reduce((a, b) => a + b, 0));
+  const sum = await Promise.all(Array.from({ length: legs }, (_, i) => km(rows(page).nth(i)))).then((xs) =>
+    xs.reduce((a, b) => a + b, 0),
+  );
   expect(Math.abs((await totalKm(page)) - sum)).toBeLessThanOrEqual(0.2);
 });

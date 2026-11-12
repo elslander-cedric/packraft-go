@@ -2,7 +2,13 @@
 // `overpass` answers one Overpass QL query; the script passes a polite, cached
 // fetch, tests pass saved extracts.
 import type { AccessRecord, Geometry } from "@/core/access";
-import { ACCESS_DATA_FORMAT, LOCK_DATA_FORMAT, OSM_ATTRIBUTION, type AccessDataset, type LockDataset } from "../dataset";
+import {
+  ACCESS_DATA_FORMAT,
+  LOCK_DATA_FORMAT,
+  OSM_ATTRIBUTION,
+  type AccessDataset,
+  type LockDataset,
+} from "../dataset";
 import {
   areasOf,
   clipLine,
@@ -54,7 +60,9 @@ function multiPolygon(polygons: Polygon[]): Geometry {
 }
 
 function multiLine(lines: Line[]): Geometry {
-  return lines.length === 1 ? { type: "LineString", coordinates: lines[0] } : { type: "MultiLineString", coordinates: lines };
+  return lines.length === 1
+    ? { type: "LineString", coordinates: lines[0] }
+    : { type: "MultiLineString", coordinates: lines };
 }
 
 export async function regionRecord(spec: RegionSpec, overpass: Overpass): Promise<AccessRecord> {
@@ -63,7 +71,9 @@ export async function regionRecord(spec: RegionSpec, overpass: Overpass): Promis
     .map((polygon) => simplifyPolygon(polygon, REGION_TOLERANCE_M))
     .filter((polygon): polygon is Polygon => polygon !== null)
     .map(roundPolygon);
-  if (area.length === 0) throw new Error(`region ${spec.id}: no area`);
+  if (area.length === 0) {
+    throw new Error(`region ${spec.id}: no area`);
+  }
   return { ...record, scope: "region", region: spec.id, geometry: multiPolygon(area), researched: RESEARCHED };
 }
 
@@ -71,7 +81,11 @@ export async function regionRecord(spec: RegionSpec, overpass: Overpass): Promis
  * One water's record: its ways or areas, kept inside its region (and envelope),
  * cut between its end points, simplified and rounded.
  */
-export async function waterRecord(spec: WaterSpec, regionArea: readonly Polygon[], overpass: Overpass): Promise<AccessRecord> {
+export async function waterRecord(
+  spec: WaterSpec,
+  regionArea: readonly Polygon[],
+  overpass: Overpass,
+): Promise<AccessRecord> {
   const { query, shape, include, envelope, between, toleranceM, ...record } = spec;
   const answer = await overpass(geometryQuery(query));
   const limits = [insideAny(regionArea), ...(envelope ? [insideAny([[envelope]])] : [])];
@@ -86,7 +100,9 @@ export async function waterRecord(spec: WaterSpec, regionArea: readonly Polygon[
       .map((polygon) => simplifyPolygon(polygon, toleranceM))
       .filter((polygon): polygon is Polygon => polygon !== null)
       .map(roundPolygon);
-    if (areas.length === 0) throw new Error(`water ${spec.id}: no areas`);
+    if (areas.length === 0) {
+      throw new Error(`water ${spec.id}: no areas`);
+    }
     geometry = multiPolygon(areas);
   } else {
     let lines = mergeLines(waysOf(answer, include)).flatMap((line) => clipLine(line, inLimits));
@@ -95,10 +111,10 @@ export async function waterRecord(spec: WaterSpec, regionArea: readonly Polygon[
       const longest = lines.reduce((a, b) => (b.length > a.length ? b : a));
       lines = [cutBetween(longest, between.from, between.to)];
     }
-    lines = lines
-      .map((line) => roundLine(simplifyLine(line, toleranceM)))
-      .filter((line) => line.length >= 2);
-    if (lines.length === 0) throw new Error(`water ${spec.id}: no lines`);
+    lines = lines.map((line) => roundLine(simplifyLine(line, toleranceM))).filter((line) => line.length >= 2);
+    if (lines.length === 0) {
+      throw new Error(`water ${spec.id}: no lines`);
+    }
     geometry = multiLine(lines);
   }
   return { ...record, scope: "water", geometry, researched: RESEARCHED };
@@ -122,13 +138,19 @@ export async function buildAccessData(
   options: { skipFlanders?: boolean } = {},
 ): Promise<AccessDataset[]> {
   const regions: AccessRecord[] = [];
-  for (const spec of regionSpecs) regions.push(await regionRecord(spec, overpass));
+  for (const spec of regionSpecs) {
+    regions.push(await regionRecord(spec, overpass));
+  }
   const flandersArea = regionAreaOf(regions.find((r) => r.id === "flanders")!);
   const flanders: AccessRecord[] = [];
-  for (const spec of options.skipFlanders ? [] : flandersWaterSpecs) flanders.push(await waterRecord(spec, flandersArea, overpass));
+  for (const spec of options.skipFlanders ? [] : flandersWaterSpecs) {
+    flanders.push(await waterRecord(spec, flandersArea, overpass));
+  }
   const brusselsArea = regionAreaOf(regions.find((r) => r.id === "brussels")!);
   const brussels: AccessRecord[] = [];
-  for (const spec of brusselsWaterSpecs) brussels.push(await waterRecord(spec, brusselsArea, overpass));
+  for (const spec of brusselsWaterSpecs) {
+    brussels.push(await waterRecord(spec, brusselsArea, overpass));
+  }
   const dataset = (id: string, title: string, records: AccessRecord[]): AccessDataset => ({
     format: ACCESS_DATA_FORMAT,
     version: 1,

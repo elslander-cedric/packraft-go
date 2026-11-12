@@ -95,10 +95,12 @@ async function drawTwoDayTrip(page: Page) {
 test("autosave of a trip with camps is version 1, and a reload brings the camps back", async ({ page }) => {
   const net = await serveOffline(page, { brouter: byProfile });
   await drawTwoDayTrip(page);
-  await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}")).toMatchObject({
-    version: 1,
-    trip: { camps: [1] },
-  });
+  await expect
+    .poll(async () => JSON.parse((await storedText(page)) ?? "{}"))
+    .toMatchObject({
+      version: 1,
+      trip: { camps: [1] },
+    });
   const calls = net.brouter.length;
   await page.reload();
   await waitForMap(page);
@@ -142,7 +144,9 @@ for (const [label, text, unknownVersion] of [
   ["version 1 with camps that are not a list", save(1, { ...threePoints, camps: "1" }), false],
   ["corrupt JSON", '{"format":"packraft-go-trip","version":1,', false],
 ] as const) {
-  test(`an autosave holding ${label} falls back to an empty trip without crashing, and drawing works`, async ({ page }) => {
+  test(`an autosave holding ${label} falls back to an empty trip without crashing, and drawing works`, async ({
+    page,
+  }) => {
     await serveOffline(page, { brouter: byProfile });
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
@@ -175,7 +179,9 @@ for (const [label, text, unknownVersion] of [
 // Updated: v1 dropped (#33): version 1 is refused like the others.
 // Updated: format reset (#52). The old version 2 is refused like the others.
 for (const version of [3, 0, 99, 2]) {
-  test(`opening a version ${version} file shows the unknown-version message and leaves the trip, its camps and storage untouched`, async ({ page }) => {
+  test(`opening a version ${version} file shows the unknown-version message and leaves the trip, its camps and storage untouched`, async ({
+    page,
+  }) => {
     const net = await serveOffline(page, { brouter: byProfile });
     await drawTwoDayTrip(page);
     await expect.poll(async () => JSON.parse((await storedText(page)) ?? "{}").trip?.camps).toEqual([1]);
@@ -219,7 +225,9 @@ test("opening a version 1 file with camps replaces the trip and shows its camps 
 
 // Updated: v1 dropped (#33). Used a version 1 file; the valid file is now version 2.
 // Updated: format reset (#52). The valid file is version 1 again.
-test("after an unknown-version refusal, a valid version 1 file still opens and clears the message", async ({ page }) => {
+test("after an unknown-version refusal, a valid version 1 file still opens and clears the message", async ({
+  page,
+}) => {
   await serveOffline(page, { brouter: byProfile });
   await drawTwoDayTrip(page);
   await openFile(page, save(3, threePoints));

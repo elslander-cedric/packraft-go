@@ -137,7 +137,7 @@ describe("shipped Walloon stretch dataset", () => {
   });
 
   it("gives every stretch a KiWIS gauge", () => {
-    for (const s of stretches) expect(s.gauge?.stationNo, s.id).toMatch(/^L?\d+$/);
+    for (const s of stretches) {expect(s.gauge?.stationNo, s.id).toMatch(/^L?\d+$/);}
   });
 
   it("uses Hérock for the Lesse from Han to Houyet, marked as SPW practice, and only there (#205)", () => {
@@ -217,10 +217,10 @@ describe("the mapping to official stretches (#209)", () => {
   it("puts the most of a mapped record on its official line, and at most a little on another", () => {
     for (const s of stretches) {
       const id = officialOf(s);
-      if (!id) continue;
+      if (!id) {continue;}
       const { none = 0, [id]: own = 0, ...others } = totalsOf(s);
       expect(own, s.id).toBeGreaterThan(Math.max(...Object.values(others), 0));
-      for (const [other, km] of Object.entries(others)) expect(km, `${s.id} on ${other}`).toBeLessThan(MAX_ON_ANOTHER_LINE_KM);
+      for (const [other, km] of Object.entries(others)) {expect(km, `${s.id} on ${other}`).toBeLessThan(MAX_ON_ANOTHER_LINE_KM);}
       expect(none, s.id).toBeLessThan(MAX_UNLISTED_KM);
     }
   });
@@ -228,7 +228,7 @@ describe("the mapping to official stretches (#209)", () => {
   it("keeps a record with no official stretch off the SPW's lines", () => {
     for (const s of stretches.filter((x) => !officialOf(x))) {
       for (const [other, km] of Object.entries(totalsOf(s))) {
-        if (other !== "none") expect(km, `${s.id} on ${other}`).toBeLessThan(MAX_ON_A_LINE_WHEN_UNLISTED_KM);
+        if (other !== "none") {expect(km, `${s.id} on ${other}`).toBeLessThan(MAX_ON_A_LINE_WHEN_UNLISTED_KM);}
       }
     }
   });

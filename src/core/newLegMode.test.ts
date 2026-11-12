@@ -7,7 +7,8 @@ const B = { lat: 50.5, lng: 5.6 };
 const C = { lat: 50.6, lng: 5.7 };
 const D = { lat: 50.7, lng: 5.8 };
 
-const withTwoPoints = (): Trip => applyEdit(applyEdit(emptyTrip(), { type: "addPoint", at: A }), { type: "addPoint", at: B });
+const withTwoPoints = (): Trip =>
+  applyEdit(applyEdit(emptyTrip(), { type: "addPoint", at: A }), { type: "addPoint", at: B });
 const paddling = (): Trip => applyEdit(withTwoPoints(), { type: "setLegMode", index: 0, mode: "paddle" });
 
 describe("a new leg takes the mode of the last leg", () => {

@@ -52,13 +52,19 @@ describe("service worker", () => {
 
   it("leaves map tiles, BRouter and other services to the network", () => {
     expect(answers({ url: "https://a.tile.opentopomap.org/12/2130/1390.png" })).toBe(false);
-    expect(answers({ url: "https://brouter.de/brouter?lonlats=5.4,50.2|5.5,50.3&profile=hiking-mountain" })).toBe(false);
+    expect(answers({ url: "https://brouter.de/brouter?lonlats=5.4,50.2|5.5,50.3&profile=hiking-mountain" })).toBe(
+      false,
+    );
     expect(answers({ url: "https://hydrometrie.wallonie.be/services/KiWIS/KiWIS?request=getTimeseriesValues" })).toBe(
       false,
     );
-    expect(answers({ url: "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=50.268&lon=5.446" })).toBe(false);
+    expect(answers({ url: "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=50.268&lon=5.446" })).toBe(
+      false,
+    );
     expect(
-      answers({ url: "https://geoservices3.wallonie.be/arcgis/rest/services/APP_KAYAK/PKAYAK/MapServer/5/query?f=json" }),
+      answers({
+        url: "https://geoservices3.wallonie.be/arcgis/rest/services/APP_KAYAK/PKAYAK/MapServer/5/query?f=json",
+      }),
     ).toBe(false);
   });
 

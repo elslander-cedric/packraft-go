@@ -189,7 +189,9 @@ describe("place search: the bar", () => {
   });
 
   it("× clears the text, the list and the result", () => {
-    const state = run(withResults(), { type: "pick", result: hotton }, { type: "edit", text: "x" }, submit(), { type: "clear" });
+    const state = run(withResults(), { type: "pick", result: hotton }, { type: "edit", text: "x" }, submit(), {
+      type: "clear",
+    });
     expect(state).toMatchObject({ text: "", outcome: { kind: "idle" }, shown: null });
     expect(searchToSend(state)).toBeNull();
   });

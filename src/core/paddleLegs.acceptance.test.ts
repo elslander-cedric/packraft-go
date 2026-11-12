@@ -75,8 +75,12 @@ const undo: Edit = { type: "undo" };
 async function routedHikeTrip(n = 4) {
   const { router, calls } = manualRouter();
   const p = planner(router);
-  for (const at of P.slice(0, n)) void p.edit({ type: "addPoint", at });
-  for (const c of calls) c.answer(track(c.points[0], c.points[1]));
+  for (const at of P.slice(0, n)) {
+    void p.edit({ type: "addPoint", at });
+  }
+  for (const c of calls) {
+    c.answer(track(c.points[0], c.points[1]));
+  }
   await flush();
   expect(statuses(p.state.trip)).toEqual(Array(n - 1).fill("routed"));
   expect(calls.every((c) => c.mode === "hike")).toBe(true);
@@ -135,7 +139,9 @@ describe("a leg's mode can be switched hike <-> paddle (an edit, undoable)", () 
     const { state, edit, calls } = await routedHikeTrip();
     void edit(setMode(0, "paddle"));
     void edit(setMode(2, "paddle"));
-    for (const c of calls.slice(3)) c.answer(track(c.points[0], c.points[1]));
+    for (const c of calls.slice(3)) {
+      c.answer(track(c.points[0], c.points[1]));
+    }
     await flush();
     expect(modes(state.trip)).toEqual(["paddle", "hike", "paddle"]);
     await edit(undo);

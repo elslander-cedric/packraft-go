@@ -54,7 +54,12 @@ describe("accessPointsByRoute", () => {
     const bend = east(north(start, 0.01), 0.01);
     const routed: Trip = {
       ...trip("paddle"),
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: [start, bend, north(start, 0.02)].map((p) => ({ ...p, elevation: 0 })) } }],
+      legs: [
+        {
+          mode: "paddle",
+          route: { status: "routed", geometry: [start, bend, north(start, 0.02)].map((p) => ({ ...p, elevation: 0 })) },
+        },
+      ],
     };
     const all = points(["on-bend", bend], ["on-straight", north(start, 0.01)]);
     const split = accessPointsByRoute(routed, all, null);
@@ -127,7 +132,11 @@ describe("official aires on the route (#208)", () => {
   });
 
   it("marks the aire the trip's put-in or take-out is at", () => {
-    const aires = [aire("put", north(start, 0.02)), aire("between", north(start, 0.03)), aire("take", north(start, 0.04))];
+    const aires = [
+      aire("put", north(start, 0.02)),
+      aire("between", north(start, 0.03)),
+      aire("take", north(start, 0.04)),
+    ];
     expect(officialAiresOnRoute(trip("hike", "paddle"), aires).map((o) => [o.aire.id, o.role])).toEqual([
       ["put", "put-in"],
       ["between", null],

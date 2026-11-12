@@ -34,7 +34,9 @@ export default function DaysPanel({
   /** A warning chip was tapped: show that leg with its warnings. */
   onShowLeg: (leg: number) => void;
 }) {
-  if (days.length === 0) return null;
+  if (days.length === 0) {
+    return null;
+  }
   // The Days tab names the panel: it needs no heading of its own.
   return (
     <aside className="days-panel" aria-label={strings.daysPanelLabel}>
@@ -58,7 +60,9 @@ type DayFigureKey = "hike" | "paddle" | "climb" | "descent" | "time";
 
 /** One figure after its icon; the icon's meaning is read out before the value. */
 function DayFigure({ figure, value }: { figure: DayFigureKey; value: string | false }) {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
   return (
     <span className={`day-figure day-figure-${figure}`}>
       <Icon icon={icons[figure]} className="day-figure-icon" />

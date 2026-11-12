@@ -24,10 +24,16 @@ type AiresChunk = typeof import("@/access/builtInOfficialAires");
 
 /** Something built in, one for the page, asked for until its chunk has loaded. */
 function builtInFeed<Chunk, T>(chunk: () => Promise<Chunk>, pick: (loaded: Chunk) => T, unavailable: T) {
-  return createLiveFeed(() => chunk().then(pick).catch(() => unavailable), {
-    everyMs: CHUNK_RETRY_MS,
-    settled: (answer) => answer !== unavailable,
-  });
+  return createLiveFeed(
+    () =>
+      chunk()
+        .then(pick)
+        .catch(() => unavailable),
+    {
+      everyMs: CHUNK_RETRY_MS,
+      settled: (answer) => answer !== unavailable,
+    },
+  );
 }
 
 /**
@@ -41,9 +47,21 @@ export type BuiltInOfficialAires = {
   readonly stretches: readonly OfficialStretch[];
 };
 
-const rulesFeed = builtInFeed<RulesChunk, AccessRules>(builtInRulesChunk, ({ builtInAccessRules }) => builtInAccessRules, NO_RULES);
-const locksFeed = builtInFeed<RulesChunk, readonly LockMarker[] | null>(builtInRulesChunk, ({ builtInLocks }) => builtInLocks.locks, null);
-const obstaclesFeed = builtInFeed<RulesChunk, readonly Obstacle[] | null>(builtInRulesChunk, ({ builtInObstacles }) => builtInObstacles, null);
+const rulesFeed = builtInFeed<RulesChunk, AccessRules>(
+  builtInRulesChunk,
+  ({ builtInAccessRules }) => builtInAccessRules,
+  NO_RULES,
+);
+const locksFeed = builtInFeed<RulesChunk, readonly LockMarker[] | null>(
+  builtInRulesChunk,
+  ({ builtInLocks }) => builtInLocks.locks,
+  null,
+);
+const obstaclesFeed = builtInFeed<RulesChunk, readonly Obstacle[] | null>(
+  builtInRulesChunk,
+  ({ builtInObstacles }) => builtInObstacles,
+  null,
+);
 const officialAiresFeed = builtInFeed<AiresChunk, BuiltInOfficialAires | null>(
   officialAiresChunk,
   ({ builtInOfficialAires, builtInOfficialStretches }) => ({

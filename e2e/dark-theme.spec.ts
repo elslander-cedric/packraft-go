@@ -13,14 +13,17 @@ const legsPanel = (page: Page) => page.getByRole("list", { name: strings.section
 async function drawHikeLeg(page: Page) {
   await openPlanner(page);
   await page.evaluate(() => document.fonts.ready);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   await page.mouse.click(box.x + box.width / 2 - 80, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2 + 80, box.y + box.height / 2);
   await expect(mapRegion(page).locator(".leaflet-overlay-pane path.leg")).toHaveCount(1);
 }
 
 const style = (page: Page, selector: string, property: string) =>
-  page.locator(selector).first().evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
+  page
+    .locator(selector)
+    .first()
+    .evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
 
 // Rough brightness of a computed rgb() colour, 0 (black) to 1 (white).
 const brightness = (rgb: string) => {

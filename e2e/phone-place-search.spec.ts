@@ -121,7 +121,10 @@ test("nothing found says so under the field and keeps the map where it is", asyn
 test("with the sheet raised, the results show over it and can be picked", async ({ page }) => {
   await offline(page, { nominatim: bySearchText });
   await openPhone(page);
-  await page.getByRole("dialog", { name: strings.planner.sheetLabel }).getByRole("tab", { name: strings.planner.tabs.days }).click();
+  await page
+    .getByRole("dialog", { name: strings.planner.sheetLabel })
+    .getByRole("tab", { name: strings.planner.tabs.days })
+    .click();
   await settled(page);
   await search(page, "hotton");
   await expect(results(page)).toHaveCount(2);

@@ -5,8 +5,11 @@ import type { LatLng, Trip } from "@/core/trip";
 /** Where a run of legs goes: its points and its legs' routes. */
 function legsArea(trip: Trip, { firstLeg, lastLeg }: { firstLeg: number; lastLeg: number }): LatLng[] {
   const area: LatLng[] = trip.points.slice(firstLeg, lastLeg + 2);
-  for (const leg of trip.legs.slice(firstLeg, lastLeg + 1))
-    if (leg.route?.status === "routed") area.push(...leg.route.geometry);
+  for (const leg of trip.legs.slice(firstLeg, lastLeg + 1)) {
+    if (leg.route?.status === "routed") {
+      area.push(...leg.route.geometry);
+    }
+  }
   return area;
 }
 
@@ -28,7 +31,9 @@ export function useTripRows(trip: Trip, summary: TripSummary, showArea: (area: r
   const stillOpen = openSections.filter((first) =>
     summary.sections.some((section) => section.firstLeg === first && section.lastLeg > first),
   );
-  if (stillOpen.length !== openSections.length) setOpenSections(stillOpen);
+  if (stillOpen.length !== openSections.length) {
+    setOpenSections(stillOpen);
+  }
   const toggleSection = (first: number) =>
     setOpenSections((open) => (open.includes(first) ? open.filter((leg) => leg !== first) : [...open, first]));
 
@@ -42,9 +47,13 @@ export function useTripRows(trip: Trip, summary: TripSummary, showArea: (area: r
   /** A tap on the already selected section opens or closes it, when it has several legs. */
   const selectSection = (index: number) => {
     const section = summary.sections[index];
-    if (!section) return;
+    if (!section) {
+      return;
+    }
     const hasSeveralLegs = section.lastLeg > section.firstLeg;
-    if (index === selectedSection && hasSeveralLegs) toggleSection(section.firstLeg);
+    if (index === selectedSection && hasSeveralLegs) {
+      toggleSection(section.firstLeg);
+    }
     setSelectedSection(index);
     setSelectedLeg(undefined);
     showArea(legsArea(trip, section));
@@ -53,7 +62,9 @@ export function useTripRows(trip: Trip, summary: TripSummary, showArea: (area: r
   /** A tap on the already selected day unselects it. */
   const selectDay = (index: number) => {
     const day = summary.days[index];
-    if (!day) return;
+    if (!day) {
+      return;
+    }
     if (index === selectedDay) {
       setSelectedDay(undefined);
       return;

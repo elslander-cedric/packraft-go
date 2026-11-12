@@ -64,11 +64,15 @@ type Series = { stationNo: string; kind: keyof GaugeReadings };
 
 /** The series list: a table whose first row names the columns. */
 function parseSeriesList(body: unknown): Map<string, Series> | null {
-  if (!Array.isArray(body) || !Array.isArray(body[0])) return null;
+  if (!Array.isArray(body) || !Array.isArray(body[0])) {
+    return null;
+  }
   const [header, ...rows] = body as unknown[][];
   const col = (name: string) => header.indexOf(name);
   const [station, id, name] = [col("station_no"), col("ts_id"), col("ts_name")];
-  if (station < 0 || id < 0 || name < 0) return null;
+  if (station < 0 || id < 0 || name < 0) {
+    return null;
+  }
   const series = new Map<string, Series>();
   for (const row of rows) {
     const kind = row[name] === MEAN_72H_SERIES ? "mean72h" : row[name] === HOURLY_SERIES ? "hourly" : null;
@@ -83,11 +87,15 @@ type ValuesEntry = { ts_id?: unknown; columns?: unknown; data?: unknown };
 
 /** The values: one entry per series, each with rows of [timestamp, value]. Null values are skipped. */
 function parseValues(body: unknown, series: Map<string, Series>): Record<string, GaugeReadings> | null {
-  if (!Array.isArray(body)) return null;
+  if (!Array.isArray(body)) {
+    return null;
+  }
   const gauges: Record<string, { mean72h: FlowReading[]; hourly: FlowReading[] }> = {};
   for (const entry of body as ValuesEntry[]) {
     const which = typeof entry?.ts_id === "string" ? series.get(entry.ts_id) : undefined;
-    if (!which || !Array.isArray(entry.data)) continue;
+    if (!which || !Array.isArray(entry.data)) {
+      continue;
+    }
     const columns = typeof entry.columns === "string" ? entry.columns.split(",") : ["Timestamp", "Value"];
     const [at, value] = [columns.indexOf("Timestamp"), columns.indexOf("Value")];
     const readings = (entry.data as unknown[][]).flatMap((row): FlowReading[] =>
@@ -95,7 +103,9 @@ function parseValues(body: unknown, series: Map<string, Series>): Record<string,
         ? [{ at: row[at], m3s: row[value] }]
         : [],
     );
-    if (readings.length === 0) continue;
+    if (readings.length === 0) {
+      continue;
+    }
     const gauge = (gauges[which.stationNo] ??= { mean72h: [], hourly: [] });
     gauge[which.kind].push(...readings);
   }
@@ -117,7 +127,9 @@ async function getJson(fetchFn: Fetch, setTimer: SetTimer, url: string): Promise
   });
   const answer = async () => {
     const response = await fetchFn(url, { signal: request.signal });
-    if (!response.ok) throw new Error(`KiWIS answered ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`KiWIS answered ${response.status}`);
+    }
     return JSON.parse(await response.text()) as unknown;
   };
   try {
@@ -147,9 +159,13 @@ export function createKiwisFlowSource(options: KiwisOptions = {}): FlowSource {
   async function load(stationNos: readonly string[]): Promise<FlowReadings> {
     try {
       const series = parseSeriesList(await getJson(fetchFn, setTimer, seriesListUrl(stationNos, serviceUrl)));
-      if (!series) return FAILED;
+      if (!series) {
+        return FAILED;
+      }
       // No series at all: every gauge is missing, and there are no values to ask for.
-      if (series.size === 0) return { status: "ok", gauges: {} };
+      if (series.size === 0) {
+        return { status: "ok", gauges: {} };
+      }
       const gauges = parseValues(await getJson(fetchFn, setTimer, valuesUrl([...series.keys()], serviceUrl)), series);
       return gauges ? { status: "ok", gauges } : FAILED;
     } catch {
@@ -159,10 +175,14 @@ export function createKiwisFlowSource(options: KiwisOptions = {}): FlowSource {
 
   return {
     readings(stationNos) {
-      if (stationNos.length === 0) return Promise.resolve({ status: "ok", gauges: {} });
+      if (stationNos.length === 0) {
+        return Promise.resolve({ status: "ok", gauges: {} });
+      }
       const key = [...new Set(stationNos)].sort().join(",");
       const cached = cache.get(key);
-      if (cached && now() - cached.at < CACHE_MS) return cached.answer;
+      if (cached && now() - cached.at < CACHE_MS) {
+        return cached.answer;
+      }
       const answer = load(key.split(","));
       cache.set(key, { at: now(), answer });
       return answer;

@@ -704,7 +704,6 @@
   font-size: 0.9rem;
 }
 
-
 /* The Days tab: a card per day; tapping one zooms the map to that day.
    Scoped to the tab panels, not .planner: the bottom sheet is rendered in a portal outside it.
    Like the leg rows, the cards run edge to edge right under the tab row, touching, with a rule between. */

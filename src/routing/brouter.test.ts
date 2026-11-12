@@ -25,7 +25,9 @@ describe("BRouter adapter: hike legs", () => {
     const result = await createBRouterRouter({ fetch }).route("hike", [START, END]);
 
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) {
+      return;
+    }
     expect(result.geometry).toHaveLength(159);
     expect(result.geometry[0]).toEqual({ lat: 50.352699, lng: 5.456097, elevation: 161.25 });
     expect(result.geometry[158]).toEqual({ lat: 50.343913, lng: 5.470053, elevation: 201 });
@@ -126,7 +128,9 @@ describe("BRouter adapter: paddle legs", () => {
     const result = await createBRouterRouter({ fetch }).route("paddle", [PUT_IN, TAKE_OUT]);
 
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) {
+      return;
+    }
     expect(result.geometry).toHaveLength(135);
     expect(result.geometry[0]).toEqual({ lat: 50.215959, lng: 4.932666, elevation: 99.25 });
     expect(result.geometry[134]).toEqual({ lat: 50.238162, lng: 4.909532, elevation: 92 });

@@ -19,7 +19,7 @@ async function focusNewTrip(page: Page) {
 
 async function drawLeg(page: Page) {
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   const click = (dx: number) => page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2);
   await click(-100);
   await click(100);

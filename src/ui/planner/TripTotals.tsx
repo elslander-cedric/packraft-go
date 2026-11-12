@@ -9,7 +9,9 @@ import { strings } from "../strings";
  * each after its icon. A figure that is zero is left out; an empty trip shows nothing.
  */
 export default function TripTotals({ trip }: { trip: TripSummary["trip"] }) {
-  if (trip.distanceKm === 0) return null;
+  if (trip.distanceKm === 0) {
+    return null;
+  }
   const { labels } = strings.planner.totals;
   const figures = [
     { key: "hike", value: trip.hikeDistanceKm > 0 && formatDistance(trip.hikeDistanceKm) },

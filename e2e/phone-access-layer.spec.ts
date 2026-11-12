@@ -152,7 +152,9 @@ test("the chip's dialog holds the date, legend, note and disclaimer; Today and T
   await chip(page).click();
   await expect(accessDialog(page)).toBeVisible();
   const legend = accessDialog(page).getByRole("region", { name: strings.accessLegendLabel });
-  for (const label of Object.values(strings.accessState)) await expect(legend.getByText(label, { exact: true })).toBeVisible();
+  for (const label of Object.values(strings.accessState)) {
+    await expect(legend.getByText(label, { exact: true })).toBeVisible();
+  }
   await expect(accessDialog(page)).toContainText(strings.accessLegendNote);
   await expect(accessDialog(page)).toContainText(strings.navigationRulesNotice);
 
