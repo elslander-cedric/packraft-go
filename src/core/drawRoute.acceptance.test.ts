@@ -136,33 +136,3 @@ describe("router interface with a fake for tests", () => {
     expect((await router.route("paddle", [DURBUY, HOTTON])).ok).toBe(false);
   });
 });
-
-describe("trip planner core has no React or network dependencies", () => {
-  it("every import in src/core resolves inside src/core (no React, Leaflet, UI or map modules)", async () => {
-    const { readdirSync, readFileSync, statSync } = await import("node:fs");
-    const path = await import("node:path");
-    const walk = (dir: string): string[] =>
-      readdirSync(dir).flatMap((name) => {
-        const file = path.join(dir, name);
-        if (statSync(file).isDirectory()) {
-          return walk(file);
-        }
-        return /\.tsx?$/.test(name) && !/\.test\./.test(name) ? [file] : [];
-      });
-    const offenders: string[] = [];
-    for (const file of walk(__dirname)) {
-      const code = readFileSync(file, "utf8");
-      for (const match of code.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)) {
-        const spec = match[1];
-        const inside = spec.startsWith(".") && path.resolve(path.dirname(file), spec).startsWith(__dirname + path.sep);
-        if (!inside) {
-          offenders.push(`${path.relative(__dirname, file)} -> ${spec}`);
-        }
-      }
-      if (/\b(fetch|XMLHttpRequest|WebSocket|navigator|window|document)\b/.test(code)) {
-        offenders.push(`${path.relative(__dirname, file)} uses a browser/network global`);
-      }
-    }
-    expect(offenders).toEqual([]);
-  });
-});

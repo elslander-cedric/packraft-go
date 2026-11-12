@@ -16,9 +16,10 @@ const testOnly = {
   group: ["@/testing/*", "@/core/testing/*", "**/testing/*", "@/dataprep/*", "**/prepare/*"],
   message: "Test helpers and offline data preparation never ship in the app.",
 };
+// Pure packages (no React, browser or network) are fine in the core.
 const anythingOutsideTheCore = {
-  regex: "^[^.]",
-  message: "The trip planner core imports only other core modules.",
+  regex: "^(?!\\.|zod$|@turf/)",
+  message: "The trip planner core imports only other core modules and pure packages.",
 };
 const restrictImports = (...patterns) => ({ "no-restricted-imports": ["error", { patterns }] });
 
@@ -72,8 +73,11 @@ export default defineConfig([
     // The trip planner core is pure TypeScript: no React, no browser, no network.
     files: ["src/core/**"],
     rules: {
-      ...restrictImports(anythingOutsideTheCore),
-      "no-restricted-globals": ["error", "fetch", "XMLHttpRequest", "WebSocket", "window", "document"],
+      ...restrictImports(anythingOutsideTheCore, {
+        regex: "^\\.\\./",
+        message: "The core doesn't reach outside src/core.",
+      }),
+      "no-restricted-globals": ["error", "fetch", "XMLHttpRequest", "WebSocket", "window", "document", "navigator"],
     },
   },
   { files: TESTS, rules: { ...restrictImports(baseUi, fontAwesome), "no-restricted-globals": "off" } },

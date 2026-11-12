@@ -5,6 +5,7 @@
 // doesn't answer in time counts as a failure. It is the only module that talks
 // to KiWIS. See docs/research/hydrometry.md.
 import type { FlowReading, FlowReadings, FlowSource, GaugeReadings } from "@/core/flow";
+import { seriesColumns, seriesTableSchema } from "./schema";
 
 export const KIWIS_URL = "https://hydrometrie.wallonie.be/services/KiWIS/KiWIS";
 
@@ -66,22 +67,19 @@ const SERIES_KINDS: Record<string, keyof GaugeReadings | undefined> = {
   [HOURLY_SERIES]: "hourly",
 };
 
-/** The series list: a table whose first row names the columns. */
+/** The series list, by series id. Rows that aren't one of the two series are skipped. */
 function parseSeriesList(body: unknown): Map<string, Series> | null {
-  if (!Array.isArray(body) || !Array.isArray(body[0])) {
-    return null;
-  }
-  const [header, ...rows] = body as unknown[][];
-  const col = (name: string) => header.indexOf(name);
-  const [station, id, name] = [col("station_no"), col("ts_id"), col("ts_name")];
-  if (station < 0 || id < 0 || name < 0) {
+  const table = seriesTableSchema.safeParse(body);
+  const columns = table.success ? seriesColumns(table.data[0]) : null;
+  if (!table.success || !columns) {
     return null;
   }
   const series = new Map<string, Series>();
-  for (const row of rows) {
-    const kind = SERIES_KINDS[String(row[name])];
-    if (kind && typeof row[id] === "string" && typeof row[station] === "string") {
-      series.set(row[id], { stationNo: row[station], kind });
+  for (const row of table.data.slice(1) as unknown[][]) {
+    const kind = SERIES_KINDS[String(row[columns.name])];
+    const [id, stationNo] = [row[columns.id], row[columns.station]];
+    if (kind && typeof id === "string" && typeof stationNo === "string") {
+      series.set(id, { stationNo, kind });
     }
   }
   return series;

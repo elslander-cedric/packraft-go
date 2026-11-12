@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /** The base maps the planner can choose from (ADR 0031), the first one the default. */
 export const baseMapIds = ["opentopomap", "aerial-be", "ngi-topo"] as const;
 
@@ -95,27 +97,26 @@ export function serialiseSettings(settings: Settings): string {
  * gives the defaults; each unreadable setting falls back on its own.
  */
 export function restoreSettings(stored: string | null): Settings {
-  let parsed: unknown = null;
   try {
-    parsed = stored === null ? null : JSON.parse(stored);
+    return storedSettingsSchema.parse(JSON.parse(stored ?? "null"));
   } catch {
-    // Unreadable: use the defaults.
-  }
-  if (typeof parsed !== "object" || parsed === null) {
     return defaultSettings;
   }
-  const { paceFactor, paddleSpeedKmh, baseMap, overlays, sidePanelWidth, sidePanelOpen } = parsed as Record<
-    string,
-    unknown
-  >;
-  return {
-    paceFactor: isUsableSetting(paceFactor) ? paceFactor : defaultSettings.paceFactor,
-    paddleSpeedKmh: isUsableSetting(paddleSpeedKmh) ? paddleSpeedKmh : defaultSettings.paddleSpeedKmh,
-    baseMap: isBaseMapId(baseMap) ? baseMap : defaultSettings.baseMap,
-    // Unknown ids are dropped, so an overlay that is gone never comes back as another.
-    overlays: Array.isArray(overlays) ? overlayIds.filter((id) => overlays.includes(id)) : defaultSettings.overlays,
-    // Settings stored before the panel was resizable have neither: it opens at its default width.
-    sidePanelWidth: isUsableSetting(sidePanelWidth) ? Math.round(sidePanelWidth) : defaultSettings.sidePanelWidth,
-    sidePanelOpen: typeof sidePanelOpen === "boolean" ? sidePanelOpen : defaultSettings.sidePanelOpen,
-  };
 }
+
+const usable = z.number().positive();
+
+/** Each setting that can't be read falls back to its default on its own. */
+const storedSettingsSchema = z.object({
+  paceFactor: usable.catch(defaultSettings.paceFactor),
+  paddleSpeedKmh: usable.catch(defaultSettings.paddleSpeedKmh),
+  baseMap: z.enum(baseMapIds).catch(defaultSettings.baseMap),
+  // Unknown ids are dropped, so an overlay that is gone never comes back as another.
+  overlays: z
+    .array(z.unknown())
+    .transform((stored) => overlayIds.filter((id) => stored.includes(id)))
+    .catch([...defaultSettings.overlays]),
+  // Settings stored before the panel was resizable have neither: it opens at its default width.
+  sidePanelWidth: usable.transform(Math.round).catch(defaultSettings.sidePanelWidth),
+  sidePanelOpen: z.boolean().catch(defaultSettings.sidePanelOpen),
+});

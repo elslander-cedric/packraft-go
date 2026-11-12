@@ -7,6 +7,7 @@
 // for the whole app, never in bulk, never as you type; the browser's Referer
 // identifies the app, and the map's "© OpenStreetMap contributors" credit
 // covers attribution.
+import { z } from "zod";
 import type { DefaultNameLookup, DefaultNameSource } from "@/core/accessPoints";
 import type { PlaceKind, PlaceSearchAnswer, PlaceSearchSource, SearchArea, SearchResult } from "@/core/placeSearch";
 import type { LatLng } from "@/core/trip";
@@ -116,62 +117,61 @@ const KINDS_BY_ADDRESS_TYPE: Record<string, PlaceKind> = {
 const ADDRESS_PLACES = ["hamlet", "village", "town", "city"];
 const ADDRESS_AREAS = ["municipality", "county", "state"];
 
-/** A number from one of Nominatim's number strings, or null. */
-function numberIn(value: unknown): number | null {
-  const number = typeof value === "string" && value.trim() !== "" ? Number(value) : NaN;
-  return Number.isFinite(number) ? number : null;
+/** One of Nominatim's number strings, as a number. */
+const numberText = z.string().trim().min(1).transform(Number).pipe(z.number());
+/** Free text, trimmed; "" when the field is missing. */
+const text = z.string().trim().catch("");
+
+const placeSchema = z.object({
+  lat: numberText,
+  lon: numberText,
+  name: text,
+  display_name: text,
+  category: text,
+  type: text,
+  addresstype: text,
+  address: z.record(z.string(), text).catch({}),
+  boundingbox: z.tuple([numberText, numberText, numberText, numberText]).optional().catch(undefined),
+});
+type Place = z.infer<typeof placeSchema>;
+
+/**
+ * A place's own name. Without one, the label is the start of the full address, with the road
+ * after a house number: "12, Rue du Batty".
+ */
+function labelOf(place: Place): string {
+  const parts = place.display_name.split(",").map((part) => part.trim());
+  const startsWithHouseNumber = place.address.house_number && parts[0] === place.address.house_number;
+  return place.name || parts.slice(0, startsWithHouseNumber ? 2 : 1).join(", ");
 }
 
-/** One search result from an entry of Nominatim's list, or null when it has no usable position. */
+/** Where a place is, for its second line: the nearest place and area that aren't its own label. */
+function addressLineOf(place: Place, label: string): string {
+  const local = ADDRESS_PLACES.map((key) => place.address[key]).find((name) => name && name !== label);
+  const area = ADDRESS_AREAS.map((key) => place.address[key]).find((name) => name && name !== label && name !== local);
+  return [local, area].filter(Boolean).join(", ");
+}
+
+const boxOf = ([south, north, west, east]: readonly [number, number, number, number]) => ({ west, south, east, north });
+
+/** One search result from an entry of Nominatim's list, or null when it has no usable position or label. */
 function resultIn(entry: unknown): SearchResult | null {
-  if (typeof entry !== "object" || entry === null) {
+  const parsed = placeSchema.safeParse(entry);
+  const label = parsed.success ? labelOf(parsed.data) : "";
+  if (!parsed.success || !label) {
     return null;
   }
-  const place = entry as Record<string, unknown>;
-  const lat = numberIn(place.lat);
-  const lng = numberIn(place.lon);
-  if (lat === null || lng === null) {
-    return null;
-  }
-  const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
-  const address = (typeof place.address === "object" && place.address !== null ? place.address : {}) as Record<
-    string,
-    unknown
-  >;
-
-  // Without a name of its own, the label is the start of the full address,
-  // with the road after a house number: "12, Rue du Batty".
-  const houseNumber = text(address.house_number);
-  const parts = text(place.display_name)
-    .split(",")
-    .map((part) => part.trim());
-  const start = houseNumber && parts[0] === houseNumber ? parts.slice(0, 2) : parts.slice(0, 1);
-  const label = text(place.name) || start.join(", ");
-  if (!label) {
-    return null;
-  }
-
-  const kind = houseNumber
+  const place = parsed.data;
+  const kind = place.address.house_number
     ? "address"
-    : (KINDS_BY_TAG[`${text(place.category)}/${text(place.type)}`] ?? KINDS_BY_ADDRESS_TYPE[text(place.addresstype)]);
-
-  const local = ADDRESS_PLACES.map((key) => text(address[key])).find((name) => name && name !== label);
-  const area = ADDRESS_AREAS.map((key) => text(address[key])).find((name) => name && name !== label && name !== local);
-  const addressLine = [local, area].filter(Boolean).join(", ");
-
-  const bounds = Array.isArray(place.boundingbox) ? place.boundingbox.map(numberIn) : [];
-  const [south, north, west, east] = bounds;
-  const box =
-    bounds.length === 4 && south !== null && north !== null && west !== null && east !== null
-      ? { west, south, east, north }
-      : undefined;
-
+    : (KINDS_BY_TAG[`${place.category}/${place.type}`] ?? KINDS_BY_ADDRESS_TYPE[place.addresstype]);
+  const addressLine = addressLineOf(place, label);
   return {
     label,
     ...(kind && { kind }),
     ...(addressLine && { addressLine }),
-    at: { lat, lng },
-    ...(box && { box }),
+    at: { lat: place.lat, lng: place.lon },
+    ...(place.boundingbox && { box: boxOf(place.boundingbox) }),
   };
 }
 

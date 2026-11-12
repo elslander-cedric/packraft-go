@@ -4,6 +4,8 @@
 // `npm run check:kiwis`; never part of `npm test`, `npm run e2e` or CI (ADR 0019).
 // Nothing here writes fixtures: re-recording stays a deliberate step.
 import type { Finding, FindingLevel, RecordedResponse } from "@/routing/liveCheck";
+import { z } from "zod";
+import { seriesColumns, seriesTableSchema, valuesSchema, type ValuesAnswer } from "./schema";
 import { HOURLY_SERIES, MEAN_72H_SERIES, createKiwisFlowSource, seriesListUrl, valuesUrl } from "./kiwis";
 
 /** The answers of the two requests the app makes per refresh. */
@@ -54,63 +56,48 @@ export function isBrusselsLocalTimestamp(at: string): boolean {
 
 type Series = { stationNo: string; name: string; id: string };
 
-/** The series list as a table with a header row, or why it is not one. */
-export function readSeriesList(body: string): Series[] | string {
-  let json: unknown;
+function parseJson(body: string): unknown {
   try {
-    json = JSON.parse(body);
+    return JSON.parse(body);
   } catch {
-    return "series list is not JSON";
+    return undefined;
   }
-  if (!Array.isArray(json) || !Array.isArray(json[0])) {
-    return "series list is not a table (array of rows)";
-  }
-  const [header, ...rows] = json as unknown[][];
-  const [station, id, name] = ["station_no", "ts_id", "ts_name"].map((column) => header.indexOf(column));
-  if (station < 0 || id < 0 || name < 0) {
-    return `series list header lacks station_no, ts_id or ts_name (got ${JSON.stringify(header)})`;
-  }
-  const series: Series[] = [];
-  for (const row of rows) {
-    if (Array.isArray(row) && [station, id, name].every((i) => typeof row[i] === "string")) {
-      series.push({ stationNo: row[station] as string, id: row[id] as string, name: row[name] as string });
-    }
-  }
-  return series;
 }
 
-type Entry = { ts_id: string; columns: string; data: [string, number | null][] };
+/** The series list as a table with a header row, or why it is not one. */
+export function readSeriesList(body: string): Series[] | string {
+  const json = parseJson(body);
+  if (json === undefined) {
+    return "series list is not JSON";
+  }
+  const table = seriesTableSchema.safeParse(json);
+  if (!table.success) {
+    return "series list is not a table (array of rows)";
+  }
+  const [header, ...rows] = table.data;
+  const columns = seriesColumns(header);
+  if (!columns) {
+    return `series list header lacks station_no, ts_id or ts_name (got ${JSON.stringify(header)})`;
+  }
+  return (rows as unknown[][])
+    .filter((row) => [columns.station, columns.id, columns.name].every((column) => typeof row[column] === "string"))
+    .map((row) => ({
+      stationNo: row[columns.station] as string,
+      id: row[columns.id] as string,
+      name: row[columns.name] as string,
+    }));
+}
+
+type Entry = ValuesAnswer[number];
 
 /** The values answer as one entry per series, or why it is not. */
 export function readValues(body: string): Entry[] | string {
-  let json: unknown;
-  try {
-    json = JSON.parse(body);
-  } catch {
+  const json = parseJson(body);
+  if (json === undefined) {
     return "values answer is not JSON";
   }
-  if (!Array.isArray(json)) {
-    return "values answer is not an array of series";
-  }
-  for (const entry of json as Record<string, unknown>[]) {
-    if (typeof entry?.ts_id !== "string") {
-      return "a values entry has no ts_id";
-    }
-    if (entry.columns !== "Timestamp,Value") {
-      return `values columns are ${JSON.stringify(entry.columns)}, expected "Timestamp,Value"`;
-    }
-    if (!Array.isArray(entry.data)) {
-      return `values entry ${entry.ts_id} has no data array`;
-    }
-    const bad = entry.data.find(
-      (entry) =>
-        !Array.isArray(entry) || typeof entry[0] !== "string" || !(typeof entry[1] === "number" || entry[1] === null),
-    );
-    if (bad !== undefined) {
-      return `a row of ${entry.ts_id} is not [timestamp, number]: ${JSON.stringify(bad)}`;
-    }
-  }
-  return json as Entry[];
+  const values = valuesSchema.safeParse(json);
+  return values.success ? values.data : `values answer is not as expected: ${z.prettifyError(values.error)}`;
 }
 
 const countBy = (series: Series[], name: string) => series.filter((entry) => entry.name === name).length;
@@ -193,14 +180,14 @@ export async function compareWithFixture(live: KiwisAnswers, recorded: KiwisAnsw
     mismatch: (message) => findings.push({ level: "mismatch", message }),
   };
 
-  for (const [name, recordedResponse, otherRecordedResponse] of [
+  for (const [name, liveAnswer, recordedAnswer] of [
     ["series list", live.list, recorded.list],
     ["values", live.values, recorded.values],
   ] as const) {
-    if (recordedResponse.status === otherRecordedResponse.status) {
-      report.match(`${name}: HTTP status ${recordedResponse.status}`);
+    if (liveAnswer.status === recordedAnswer.status) {
+      report.match(`${name}: HTTP status ${liveAnswer.status}`);
     } else {
-      report.mismatch(`${name}: HTTP status ${recordedResponse.status}, fixture has ${otherRecordedResponse.status}`);
+      report.mismatch(`${name}: HTTP status ${liveAnswer.status}, fixture has ${recordedAnswer.status}`);
     }
   }
 
