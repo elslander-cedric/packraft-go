@@ -1,5 +1,6 @@
 // BRouter adapter: implements the core's Router interface with the public
 // BRouter server (ADR 0014). It is the only module that talks to BRouter.
+import { z } from "zod";
 import type { RouteResult, RoutedPoint, Router } from "@/core/router";
 import type { LatLng, LegMode } from "@/core/trip";
 
@@ -53,26 +54,36 @@ export function createBRouterRouter(options: BRouterOptions = {}): Router {
   };
 }
 
-type Position = [lng: number, lat: number, elevation?: number];
+/** Longitude, latitude and, where BRouter has height data, elevation. */
+const positionSchema = z.tuple([z.number(), z.number()], z.number());
+type Position = z.infer<typeof positionSchema>;
 
-type BRouterFeature = {
-  properties?: Record<string, unknown>;
-  geometry?: { coordinates?: unknown };
-};
+/** The first feature of BRouter's GeoJSON is the route. */
+const routeSchema = z.object({
+  features: z.tuple(
+    [
+      z.object({
+        properties: z.record(z.string(), z.unknown()).optional(),
+        geometry: z.object({ coordinates: z.array(positionSchema) }),
+      }),
+    ],
+    z.unknown(),
+  ),
+});
 
 function toRouteResult(geojson: unknown): RouteResult {
-  const feature = (geojson as { features?: BRouterFeature[] }).features?.[0];
-  const coordinates = feature?.geometry?.coordinates;
-  if (!Array.isArray(coordinates)) {
+  const route = routeSchema.safeParse(geojson);
+  if (!route.success) {
     return UNAVAILABLE;
   }
-  if (coordinates.length < 2) {
+  const [{ geometry, properties }] = route.data.features;
+  if (geometry.coordinates.length < 2) {
     return NO_ROUTE;
   }
-  const geometry = withElevations(coordinates as Position[]);
+  const points = withElevations(geometry.coordinates);
   // BRouter's smoothed climb ("filtered ascend", whole metres, sent as a string).
-  const climbM = Number.parseFloat(String(feature?.properties?.["filtered ascend"]));
-  return Number.isFinite(climbM) ? { ok: true, geometry, climbM } : { ok: true, geometry };
+  const climbM = Number.parseFloat(String(properties?.["filtered ascend"]));
+  return Number.isFinite(climbM) ? { ok: true, geometry: points, climbM } : { ok: true, geometry: points };
 }
 
 /**

@@ -111,7 +111,11 @@ describe("KiWIS contract check: shape changes", () => {
     const live = editedValues((entries) => {
       entries[0].columns = "Value,Timestamp";
     });
-    expect((await mismatches(live)).some((message) => message.includes("values columns"))).toBe(true);
+    expect(
+      (await mismatches(live)).some(
+        (message) => message.includes("values answer is not as expected") && message.includes("columns"),
+      ),
+    ).toBe(true);
   });
 
   it("reports MISMATCH when hourly readings are no longer on the hour", async () => {

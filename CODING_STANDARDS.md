@@ -35,7 +35,7 @@ The goal: **less is better, and less complexity is better.** Code is read far mo
 
 ## Boundaries *(lint: `no-restricted-imports` and friends)*
 
-- `src/core/` imports only other core modules: no React, browser globals or network.
+- `src/core/` imports only other core modules and pure packages (`zod`, `@turf`): no React, browser globals or network.
 - Screens use the wrappers in `src/ui/components/`, never `@base-ui/react` directly (ADR 0020).
 - Icons come from `src/ui/icons/`, the only place that imports Font Awesome (ADR 0028).
 - User-facing text lives in `src/ui/strings.ts`, never in JSX (ADR 0013).

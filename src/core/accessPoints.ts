@@ -2,6 +2,7 @@
 // where you can get onto or off the water. They are your own collection,
 // separate from trips, so every trip can use them. Pure: ids and times are
 // passed in by the caller.
+import { z } from "zod";
 import { isCalendarDate, type CalendarDate } from "./calendarDate";
 import type { LatLng } from "./trip";
 
@@ -184,22 +185,21 @@ export function serialiseAccessPoints(points: AccessPoints): string {
  * name to look up, and a name without its source as one you typed.
  */
 export function parseAccessPoints(text: string): AccessPointsParseResult {
+  let json: unknown;
   try {
-    const file = object(JSON.parse(text));
-    if (file.format !== ACCESS_POINTS_FORMAT || typeof file.version !== "number") {
-      throw invalid;
-    }
-    if (file.version !== ACCESS_POINTS_VERSION) {
-      return { ok: false, reason: "unknown-version" };
-    }
-    const accessPoints = list(file.accessPoints).map(readAccessPoint);
-    if (new Set(accessPoints.map((point) => point.id)).size !== accessPoints.length) {
-      throw invalid;
-    }
-    return { ok: true, accessPoints };
+    json = JSON.parse(text);
   } catch {
     return { ok: false };
   }
+  const file = fileSchema.safeParse(json);
+  if (!file.success) {
+    return { ok: false };
+  }
+  if (file.data.version !== ACCESS_POINTS_VERSION) {
+    return { ok: false, reason: "unknown-version" };
+  }
+  const accessPoints = accessPointsSchema.safeParse(file.data.accessPoints);
+  return accessPoints.success ? { ok: true, accessPoints: accessPoints.data } : { ok: false };
 }
 
 /**
@@ -229,77 +229,34 @@ export function restoreStoredAccessPoints(stored: string | null): StoredAccessPo
   return { accessPoints: [], unknownVersion, damaged: !unknownVersion };
 }
 
-// Readers below throw `invalid` on the first thing that does not fit; parseAccessPoints catches it.
-const invalid = new Error("invalid access points");
+const fileSchema = z.object({
+  format: z.literal(ACCESS_POINTS_FORMAT),
+  version: z.number(),
+  accessPoints: z.unknown(),
+});
 
-type Fields = Record<string, unknown>;
+const timestampSchema = z.string().refine((value) => !Number.isNaN(Date.parse(value)));
 
-function object(value: unknown): Fields {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw invalid;
-  }
-  return value as Fields;
-}
+const accessPointSchema = z
+  .object({
+    id: z.string().min(1),
+    position: z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }),
+    // The name fields are optional in the format.
+    name: z.string().default(""),
+    nameSource: z.enum(nameSources).default("typed"),
+    use: z.enum(accessPointUses),
+    kind: z.enum(accessPointKinds),
+    note: z.string(),
+    checkedOnSite: z.string().refine(isCalendarDate).nullable().default(null),
+    createdAt: timestampSchema,
+    updatedAt: timestampSchema,
+  })
+  .transform((point): AccessPoint => {
+    // A point without a name gets its default name looked up.
+    const unnamed = point.name.trim() === "" && point.nameSource !== "default";
+    return unnamed ? { ...point, name: "", nameSource: "to-look-up" } : point;
+  });
 
-function list(value: unknown): unknown[] {
-  if (!Array.isArray(value)) {
-    throw invalid;
-  }
-  return value;
-}
-
-function number(value: unknown, min: number, max: number): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
-    throw invalid;
-  }
-  return value;
-}
-
-function text(value: unknown): string {
-  if (typeof value !== "string") {
-    throw invalid;
-  }
-  return value;
-}
-
-function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T {
-  if (!allowed.includes(value as T)) {
-    throw invalid;
-  }
-  return value as T;
-}
-
-function timestamp(value: unknown): Timestamp {
-  if (Number.isNaN(Date.parse(text(value)))) {
-    throw invalid;
-  }
-  return value as Timestamp;
-}
-
-function readAccessPoint(value: unknown): AccessPoint {
-  const point = object(value);
-  const position = object(point.position);
-  const id = text(point.id);
-  if (id === "") {
-    throw invalid;
-  }
-  const checkedOnSite = point.checkedOnSite ?? null;
-  if (checkedOnSite !== null && !isCalendarDate(checkedOnSite)) {
-    throw invalid;
-  }
-  const name = text(point.name ?? "");
-  const source = point.nameSource === undefined ? "typed" : oneOf(point.nameSource, nameSources);
-  const unnamed = name.trim() === "" && source !== "default";
-  return {
-    id,
-    position: { lat: number(position.lat, -90, 90), lng: number(position.lng, -180, 180) },
-    name: unnamed ? "" : name,
-    nameSource: unnamed ? "to-look-up" : source,
-    use: oneOf(point.use, accessPointUses),
-    kind: oneOf(point.kind, accessPointKinds),
-    note: text(point.note),
-    checkedOnSite,
-    createdAt: timestamp(point.createdAt),
-    updatedAt: timestamp(point.updatedAt),
-  };
-}
+const accessPointsSchema = z
+  .array(accessPointSchema)
+  .refine((points) => new Set(points.map((point) => point.id)).size === points.length);

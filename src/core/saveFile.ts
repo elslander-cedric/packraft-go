@@ -1,9 +1,10 @@
 // Save format (ADR 0011): the trip as versioned JSON, including
 // routed results, so a restored trip needs no routing requests (ADR 0014).
+import { z } from "zod";
 import { isCalendarDate } from "./calendarDate";
 import { tripFileName } from "./fileName";
-import type { LegRoute, RoutedPoint } from "./router";
-import { emptyTrip, type LatLng, type Leg, type LegMode, type Trip } from "./trip";
+import type { LegRoute } from "./router";
+import { emptyTrip, type Leg, type Trip } from "./trip";
 
 export const SAVE_FORMAT = "packraft-go-trip";
 /**
@@ -65,17 +66,22 @@ export function saveFileName(trip: Trip, untitledName: string): string {
  * does not know are ignored. The restored trip has no undo history.
  */
 export function parseTrip(text: string): ParseResult {
-  try {
-    const file = object(JSON.parse(text));
-    if (file.format !== SAVE_FORMAT || typeof file.version !== "number") {
-      throw invalid;
-    }
-    if (file.version !== SAVE_VERSION) {
-      return { ok: false, reason: "unknown-version" };
-    }
-    return { ok: true, trip: readTrip(object(file.trip)) };
-  } catch {
+  const file = fileSchema.safeParse(parseJson(text));
+  if (!file.success) {
     return { ok: false };
+  }
+  if (file.data.version !== SAVE_VERSION) {
+    return { ok: false, reason: "unknown-version" };
+  }
+  const trip = tripSchema.safeParse(file.data.trip);
+  return trip.success ? { ok: true, trip: trip.data } : { ok: false };
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
   }
 }
 
@@ -103,109 +109,40 @@ export function restoreStoredTrip(stored: string | null): StoredTrip {
   return { trip: emptyTrip(), unknownVersion: parsed?.reason === "unknown-version" };
 }
 
-// Readers below throw `invalid` on the first thing that does not fit; parseTrip catches it.
-const invalid = new Error("invalid save file");
+const fileSchema = z.object({ format: z.literal(SAVE_FORMAT), version: z.number(), trip: z.unknown() });
 
-type Fields = Record<string, unknown>;
+const latLngSchema = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
 
-function object(value: unknown): Fields {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw invalid;
-  }
-  return value as Fields;
-}
+const routeSchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("routed"),
+    geometry: z.array(latLngSchema.extend({ elevation: z.number() })),
+    climbM: z.number().optional(),
+  }),
+  z.object({ status: z.literal("failed"), failure: z.object({ kind: z.enum(["no-route", "unavailable"]) }) }),
+  z.object({ status: z.literal("pending") }),
+]);
 
-function list(value: unknown): unknown[] {
-  if (!Array.isArray(value)) {
-    throw invalid;
-  }
-  return value;
-}
+const legSchema = z
+  .object({ mode: z.enum(["hike", "paddle"]), route: routeSchema.optional() })
+  .transform(({ mode, route }): Leg => savedLeg({ mode, route }));
 
-function number(value: unknown, min = -Infinity, max = Infinity): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
-    throw invalid;
-  }
-  return value;
-}
-
-function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T {
-  if (!allowed.includes(value as T)) {
-    throw invalid;
-  }
-  return value as T;
-}
-
-function readLatLng(value: unknown): LatLng {
-  const point = object(value);
-  return { lat: number(point.lat, -90, 90), lng: number(point.lng, -180, 180) };
-}
-
-function readRoutedPoint(value: unknown): RoutedPoint {
-  return { ...readLatLng(value), elevation: number(object(value).elevation) };
-}
-
-function readRoute(value: unknown): LegRoute | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  const route = object(value);
-  const status = oneOf(route.status, ["routed", "failed", "pending"] as const);
-  if (status === "pending") {
-    return undefined;
-  }
-  if (status === "failed") {
-    return { status, failure: { kind: oneOf(object(route.failure).kind, ["no-route", "unavailable"] as const) } };
-  }
-  const geometry = list(route.geometry).map(readRoutedPoint);
-  return route.climbM === undefined ? { status, geometry } : { status, geometry, climbM: number(route.climbM) };
-}
-
-function readLeg(value: unknown): Leg {
-  const leg = object(value);
-  const mode = oneOf<LegMode>(leg.mode, ["hike", "paddle"]);
-  const route = readRoute(leg.route);
-  return route ? { mode, route } : { mode };
-}
-
-function readTrip(trip: Fields): Trip {
-  if (typeof trip.name !== "string") {
-    throw invalid;
-  }
-  const points = list(trip.points).map(readLatLng);
-  const legs = list(trip.legs).map(readLeg);
+const tripSchema = z
+  .object({
+    name: z.string(),
+    points: z.array(latLngSchema),
+    legs: z.array(legSchema),
+    /** Indices of existing points, each at most once. Absent: no camps. */
+    camps: z.array(z.int().min(0)).default([]),
+    /** Absent: the trip is undated. */
+    startDate: z.string().refine(isCalendarDate).optional(),
+  })
   // legs[i] runs from points[i] to points[i + 1].
-  if (legs.length !== Math.max(points.length - 1, 0)) {
-    throw invalid;
-  }
-  // Without a camps list the trip has no camps.
-  const camps = readCamps(trip.camps, points.length);
-  // Without a start date the trip is undated.
-  if (trip.startDate !== undefined && !isCalendarDate(trip.startDate)) {
-    throw invalid;
-  }
-  return {
-    name: trip.name,
-    points,
-    legs,
-    ...(camps.length > 0 ? { camps } : {}),
-    ...(trip.startDate === undefined ? {} : { startDate: trip.startDate }),
-  };
-}
-
-/** Camps as distinct indices of existing points, in ascending order; none when the field is absent. */
-function readCamps(value: unknown, pointCount: number): number[] {
-  if (value === undefined) {
-    return [];
-  }
-  const camps = list(value).map((camp) => {
-    if (!Number.isInteger(camp)) {
-      throw invalid;
-    }
-    return number(camp, 0, pointCount - 1);
-  });
-  if (new Set(camps).size !== camps.length) {
-    throw invalid;
-  }
-  return camps.sort((left, right) => left - right);
-}
+  .refine((trip) => trip.legs.length === Math.max(trip.points.length - 1, 0))
+  .refine((trip) => trip.camps.every((camp) => camp < trip.points.length))
+  .refine((trip) => new Set(trip.camps).size === trip.camps.length)
+  .transform(({ camps, startDate, ...trip }): Trip => ({
+    ...trip,
+    ...(camps.length > 0 ? { camps: camps.toSorted((left, right) => left - right) } : {}),
+    ...(startDate === undefined ? {} : { startDate }),
+  }));
