@@ -271,74 +271,15 @@ const flowUnknownText: Record<FlowUnknown, string> = {
  */
 function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext): AccessStatus {
   const { category } = rule;
-  const { date, today } = context;
-  const day = date === undefined ? undefined : agwDay(category, date);
-  const hours = day
-    ? [`Permitted hours on ${date}: ${day.hours.from}-${day.hours.to}`]
-    : agwHoursTable(category).map(
-        (agwHoursPeriod) => `Permitted hours ${agwHoursPeriod.period}: ${agwHoursPeriod.from}-${agwHoursPeriod.to}`,
-      );
-  const limits = [
-    rule.minM3s !== null && `minimum ${formatM3s(rule.minM3s)} (72-hour mean)`,
-    `maximum ${formatM3s(rule.maxM3s)}`,
-  ].filter(Boolean);
-  // Flow and official status are only known for today.
-  const isToday = date !== undefined && date === today;
-  const verdict: FlowVerdict = isToday ? flowCheck(rule, context.flows, today) : { kind: "not-checked" };
-  const official = isToday ? officialVerdict(rule.officialStretch, context.official) : undefined;
-  const officialPending = isToday && official === undefined && context.officialPending === true;
-  // YYYY-MM-DD strings order as calendar days, so no time zone can move this.
-  const isFuture = date !== undefined && today !== undefined && date > today;
-  const verdictToday = isFuture ? officialVerdict(rule.officialStretch, context.official) : undefined;
-  const closedToday = verdictToday?.kind === "closed" ? verdictToday : undefined;
-  // With no reading a closure today can't be known, so a future date is marked like today.
-  const unavailableToday = verdictToday?.kind === "unavailable" ? verdictToday : undefined;
-  // With a reading (or one on its way), the official status replaces the flow check; the figures stay on show.
-  const flowDecides = !officialPending && (!official || official.kind === "none" || official.kind === "unavailable");
-  const figures = verdict.kind === "not-checked" ? undefined : verdict.figures;
-  const conditions = [
-    ...hours,
-    figures
-      ? `Flow limits: ${limits.join(", ")}.`
-      : `Flow limits (checked for today only, with live flows): ${limits.join(", ")}.`,
-    "Get in and out only at the designated aires.",
-  ];
+  const day = context.date === undefined ? undefined : agwDay(category, context.date);
+  const live = liveChecks(rule, context);
 
-  let state: AccessState = "open";
-  let closedBy: AccessClosure | undefined;
-  let ruleText: string | undefined;
-  if (day?.closure === "season") {
-    state = "closed-today";
-    closedBy = "season";
-    ruleText = `Closed today: season. ${MONTH_SEASON}`;
-  } else if (day?.closure === "fishing-day") {
-    state = "closed-today";
-    closedBy = "fishing-day";
-    ruleText = `Closed today: fishing opening day. Category ${category} stretches are closed on ${FISHING_DAYS}.`;
-  } else if (official?.kind === "closed") {
-    state = "closed-today";
-    closedBy = "official";
-  } else if (officialPending) {
-    state = "checking";
-  } else if (official?.kind === "unrecognised") {
-    state = "unknown";
-  } else if (flowDecides && verdict.kind === "low") {
-    state = "closed-today";
-    closedBy = "low-flow";
-    ruleText = `Closed today: low flow. The 72-hour mean flow (${formatM3s(verdict.figures.mean72h!.m3s)}) is below the minimum of ${formatM3s(rule.minM3s!)}.`;
-  } else if (flowDecides && verdict.kind === "high") {
-    state = "closed-today";
-    closedBy = "high-flow";
-    ruleText = `Closed today: high flow. The flow at 08:00 (${formatM3s(verdict.figures.at8!.m3s)}) is above the maximum of ${formatM3s(rule.maxM3s)}: based on measured flow; the official status may differ.`;
-  } else if (flowDecides && verdict.kind === "not-checked" && context.flowsPending && isToday) {
-    state = "checking";
-  } else if (flowDecides && verdict.kind === "unknown") {
-    state = "unknown";
-    ruleText = `${flowUnknownText[verdict.why]}; ${KAYAK_PAGE}.`;
-  } else if (category === "1.C" && !day) {
+  const { state, closedBy, ruleText } =
+    calendarDecision(category, day) ??
+    officialDecision(live.official, live.officialPending) ??
+    (live.flowDecides ? flowDecision(rule, live.verdict, live.flowsPending) : null) ??
     // Without a date the 1.C season can't be told.
-    state = "unknown";
-  }
+    ({ state: category === "1.C" && !day ? "unknown" : "open" } satisfies Decision);
 
   const reason: AccessReason = {
     kind: "rule",
@@ -346,7 +287,7 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     recordId: record.id,
     name: record.name,
     ...(ruleText !== undefined && { ruleText }),
-    conditions,
+    conditions: agwConditions(rule, context.date, day, live.figures !== undefined),
     ...(rule.link && { link: rule.link }),
     source: record.source,
     researched: record.researched,
@@ -355,13 +296,114 @@ function evaluateAgw(record: AccessRecord, rule: AgwRule, context: AccessContext
     ...(closedBy && { closedBy }),
     // Every stretch has flow limits: on a later date the flow decides on the day.
     flowDependent: true,
-    ...(figures && { flow: figures }),
-    ...(official && { official }),
-    ...(unavailableToday && { official: unavailableToday }),
-    ...(closedToday && { closedToday }),
+    ...(live.figures && { flow: live.figures }),
+    ...(live.official && { official: live.official }),
+    ...officialToday(rule, context),
     ...(rule.officialStretch && { officialStretch: rule.officialStretch }),
   };
   return { state, reasons: [reason] };
+}
+
+/** What is only known for today: the live flow and the SPW's official status. */
+function liveChecks(rule: AgwRule, context: AccessContext) {
+  const isToday = context.date !== undefined && context.date === context.today;
+  const verdict: FlowVerdict = isToday ? flowCheck(rule, context.flows, context.today) : { kind: "not-checked" };
+  const official = isToday ? officialVerdict(rule.officialStretch, context.official) : undefined;
+  const officialPending = isToday && official === undefined && context.officialPending === true;
+  const hasReading = official !== undefined && official.kind !== "none" && official.kind !== "unavailable";
+  return {
+    verdict,
+    official,
+    officialPending,
+    // With a reading (or one on its way), the official status replaces the flow check; the figures stay on show.
+    flowDecides: !officialPending && !hasReading,
+    flowsPending: isToday && context.flowsPending === true,
+    figures: verdict.kind === "not-checked" ? undefined : verdict.figures,
+  };
+}
+
+type AgwDay = ReturnType<typeof agwDay>;
+type Decision = { state: AccessState; closedBy?: AccessClosure; ruleText?: string };
+
+/** The permitted hours, the flow limits and the aires rule, as the lines shown with the status. */
+function agwConditions(
+  rule: AgwRule,
+  date: AccessContext["date"],
+  day: AgwDay | undefined,
+  flowChecked: boolean,
+): string[] {
+  const hours = day
+    ? [`Permitted hours on ${date}: ${day.hours.from}-${day.hours.to}`]
+    : agwHoursTable(rule.category).map(({ period, from, to }) => `Permitted hours ${period}: ${from}-${to}`);
+  const minimum = rule.minM3s === null ? [] : [`minimum ${formatM3s(rule.minM3s)} (72-hour mean)`];
+  const limits = [...minimum, `maximum ${formatM3s(rule.maxM3s)}`].join(", ");
+  return [
+    ...hours,
+    flowChecked ? `Flow limits: ${limits}.` : `Flow limits (checked for today only, with live flows): ${limits}.`,
+    "Get in and out only at the designated aires.",
+  ];
+}
+
+/** A closure by the calendar: out of season, or a fishing opening day. It always stands. */
+function calendarDecision(category: AgwRule["category"], day: AgwDay | undefined): Decision | null {
+  if (day?.closure === "season") {
+    return { state: "closed-today", closedBy: "season", ruleText: `Closed today: season. ${MONTH_SEASON}` };
+  }
+  if (day?.closure === "fishing-day") {
+    return {
+      state: "closed-today",
+      closedBy: "fishing-day",
+      ruleText: `Closed today: fishing opening day. Category ${category} stretches are closed on ${FISHING_DAYS}.`,
+    };
+  }
+  return null;
+}
+
+/** What the SPW's official status decides today, or null when it leaves the decision to the flow. */
+function officialDecision(official: OfficialVerdict | undefined, pending: boolean): Decision | null {
+  if (official?.kind === "closed") {
+    return { state: "closed-today", closedBy: "official" };
+  }
+  if (pending) {
+    return { state: "checking" };
+  }
+  return official?.kind === "unrecognised" ? { state: "unknown" } : null;
+}
+
+/** What the live flow decides today, or null when it is within the limits. */
+function flowDecision(rule: AgwRule, verdict: FlowVerdict, flowsPending: boolean): Decision | null {
+  if (verdict.kind === "low") {
+    return {
+      state: "closed-today",
+      closedBy: "low-flow",
+      ruleText: `Closed today: low flow. The 72-hour mean flow (${formatM3s(verdict.figures.mean72h!.m3s)}) is below the minimum of ${formatM3s(rule.minM3s!)}.`,
+    };
+  }
+  if (verdict.kind === "high") {
+    return {
+      state: "closed-today",
+      closedBy: "high-flow",
+      ruleText: `Closed today: high flow. The flow at 08:00 (${formatM3s(verdict.figures.at8!.m3s)}) is above the maximum of ${formatM3s(rule.maxM3s)}: based on measured flow; the official status may differ.`,
+    };
+  }
+  if (verdict.kind === "unknown") {
+    return { state: "unknown", ruleText: `${flowUnknownText[verdict.why]}; ${KAYAK_PAGE}.` };
+  }
+  return verdict.kind === "not-checked" && flowsPending ? { state: "checking" } : null;
+}
+
+/**
+ * On a future date, what the SPW says about today: a closure today is a note beside the rules,
+ * and with no reading a closure today can't be known, so the date is marked like today.
+ */
+function officialToday(rule: AgwRule, { date, today, official }: AccessContext) {
+  // YYYY-MM-DD strings order as calendar days, so no time zone can move this.
+  const isFuture = date !== undefined && today !== undefined && date > today;
+  const verdictToday = isFuture ? officialVerdict(rule.officialStretch, official) : undefined;
+  if (verdictToday?.kind === "closed") {
+    return { closedToday: verdictToday };
+  }
+  return verdictToday?.kind === "unavailable" ? { official: verdictToday } : {};
 }
 
 /**

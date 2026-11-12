@@ -194,6 +194,9 @@ const followAccessPoints = (trip: Trip, offers: readonly SnapOffer[], accessPoin
     ];
   });
 
+/** A change to the trip that keeps the selection and the offers. */
+const withTrip = (session: PlannerSession, trip: Trip): PlannerSession => ({ ...session, trip, fileError: null });
+
 const withRoutingApplied = (session: PlannerSession, action: RoutingAction): PlannerSession => {
   const trip = applyRoutingAction(session.trip, action);
   return trip === session.trip ? session : { ...session, trip };
@@ -215,130 +218,125 @@ const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set([
   "declineOffer",
 ]);
 
-export function plannerSession(session: PlannerSession, action: PlannerAction): PlannerSession {
-  if (action.type === "routeRequested" || action.type === "routeArrived") {
-    return withRoutingApplied(session, action);
-  }
-  if (action.type === "confirmReplace") {
-    return session.pendingTrip ? withTripReplaced(session, session.pendingTrip) : session;
-  }
-  if (action.type === "cancelReplace") {
-    return session.pendingTrip ? { ...session, pendingTrip: null } : session;
-  }
-  if (session.pendingTrip) {
-    return session;
-  }
-  if (editingAccessPoints(session) && frozenWhileEditing.has(action.type)) {
-    return session;
-  }
+/** The replace question is open: only its answers and the routing actions apply until it is answered. */
+const appliesWhileAsking: ReadonlySet<PlannerAction["type"]> = new Set([
+  "routeRequested",
+  "routeArrived",
+  "confirmReplace",
+  "cancelReplace",
+]);
 
-  const { trip } = session;
-  switch (action.type) {
-    case "addPoint": {
-      const after = applyEdit(trip, { type: "addPoint", at: action.at, mode: action.mode });
-      return withTripEdited(session, after, snapOffers(trip, after, action.accessPoints, action.officialAires));
-    }
-    case "movePoint": {
-      const after = applyEdit(trip, { type: "movePoint", index: action.index, to: action.to });
-      return withTripEdited(
-        session,
-        after,
-        movedPointOffers(after, action.index, action.accessPoints, action.officialAires),
-      );
-    }
-    case "backToStart":
-      if (!canGoBackToStart(trip)) {
-        return session;
-      }
-      return withTripEdited(session, applyEdit(trip, { type: "addPoint", at: trip.points[0], mode: action.mode }));
-    case "insertPoint": {
-      const after = applyEdit(trip, action);
-      if (after === trip) {
-        return session;
-      }
-      const selected = session.selectedPoint;
-      // The selection follows its point: a point after the insert moves up by one.
-      const follows = selected !== null && selected > action.index ? selected + 1 : selected;
-      return { ...withTripEdited(session, after), selectedPoint: follows };
-    }
-    case "deleteSelectedPoint":
-      return session.selectedPoint === null
-        ? session
-        : withTripEdited(session, applyEdit(trip, { type: "deletePoint", index: session.selectedPoint }));
-    case "setLegMode": {
-      const after = applyEdit(trip, { type: "setLegMode", index: action.index, mode: action.mode });
-      const offers = snapOffers(trip, after, action.accessPoints, action.officialAires);
-      // The legs keep their indices: the selected leg stays selected.
-      return { ...withTripEdited(session, after, offers), selectedLeg: session.selectedLeg };
-    }
-    case "accessPointsChanged":
-      return { ...session, offers: followAccessPoints(trip, session.offers, action.accessPoints), fileError: null };
-    case "toggleCampOnSelectedPoint":
-      return session.selectedPoint === null
-        ? session
-        : { ...session, trip: applyEdit(trip, { type: "toggleCamp", index: session.selectedPoint }), fileError: null };
-    case "undo":
-      return withTripEdited(session, applyEdit(trip, { type: "undo" }));
-    case "rename":
-      return { ...session, trip: renameTrip(trip, action.name), fileError: null };
-    case "setStartDate":
-      return { ...session, trip: setStartDate(trip, action.date), fileError: null };
-    case "retryLeg":
-      return { ...session, trip: retryLeg(trip, action.index), fileError: null };
-    case "pointClicked":
-      return {
-        ...session,
-        selectedPoint: session.selectedPoint === action.index ? null : action.index,
-        selectedLeg: null,
-        fileError: null,
-      };
-    case "legClicked":
-      if (!trip.legs[action.index]) {
-        return session;
-      }
-      return {
-        ...session,
-        selectedLeg: session.selectedLeg === action.index ? null : action.index,
-        selectedPoint: null,
-        fileError: null,
-      };
-    case "deselect":
-      return { ...session, selectedPoint: null, selectedLeg: null, fileError: null };
-    case "acceptOffer":
-      return session.offers.includes(action.offer)
-        ? {
-            ...session,
-            trip: acceptSnap(trip, action.offer),
-            selectedPoint: null,
-            selectedLeg: null,
-            offers: session.offers.filter((offer) => offer !== action.offer),
-            fileError: null,
-          }
-        : session;
-    case "declineOffer":
-      return session.offers.includes(action.offer)
-        ? { ...session, offers: session.offers.filter((offer) => offer !== action.offer), fileError: null }
-        : session;
-    case "newTrip":
-      return replaceTripOrAsk(session, setStartDate(emptyTrip(), action.startDate), "newTrip");
-    case "fileOpened":
-      return replaceTripOrAsk(session, action.trip, "openFile");
-    case "fileRejected":
-      return { ...session, fileError: action.reason };
-    case "fileDownloaded":
-      return session.fileError === null ? session : { ...session, fileError: null };
-    case "enterAccessPointEditing":
-      return editingAccessPoints(session)
-        ? session
-        : {
-            ...session,
-            mode: { kind: "accessPointEditing", returnTo: action.returnTo },
-            selectedPoint: null,
-            selectedLeg: null,
-          };
-    case "leaveAccessPointEditing":
-      return editingAccessPoints(session)
-        ? { ...session, mode: { kind: "normal" }, selectedPoint: null, selectedLeg: null }
-        : session;
+export function plannerSession(session: PlannerSession, action: PlannerAction): PlannerSession {
+  const waitsForAnswer = session.pendingTrip !== null && !appliesWhileAsking.has(action.type);
+  const frozen = editingAccessPoints(session) && frozenWhileEditing.has(action.type);
+  if (waitsForAnswer || frozen) {
+    return session;
   }
+  const handle = handlers[action.type] as (session: PlannerSession, action: PlannerAction) => PlannerSession;
+  return handle(session, action);
 }
+
+type Handlers = {
+  [Type in PlannerAction["type"]]: (
+    session: PlannerSession,
+    action: Extract<PlannerAction, { type: Type }>,
+  ) => PlannerSession;
+};
+
+const withoutSelection = { selectedPoint: null, selectedLeg: null } as const;
+
+/** What each action does to the session. One that can't apply returns the same session. */
+const handlers: Handlers = {
+  routeRequested: withRoutingApplied,
+  routeArrived: withRoutingApplied,
+
+  confirmReplace: (session) => (session.pendingTrip ? withTripReplaced(session, session.pendingTrip) : session),
+  cancelReplace: (session) => (session.pendingTrip ? { ...session, pendingTrip: null } : session),
+
+  addPoint: (session, { at, mode, accessPoints, officialAires }) => {
+    const after = applyEdit(session.trip, { type: "addPoint", at, mode });
+    return withTripEdited(session, after, snapOffers(session.trip, after, accessPoints, officialAires));
+  },
+  movePoint: (session, { index, to, accessPoints, officialAires }) => {
+    const after = applyEdit(session.trip, { type: "movePoint", index, to });
+    return withTripEdited(session, after, movedPointOffers(after, index, accessPoints, officialAires));
+  },
+  backToStart: (session, { mode }) => {
+    const { trip } = session;
+    if (!canGoBackToStart(trip)) {
+      return session;
+    }
+    return withTripEdited(session, applyEdit(trip, { type: "addPoint", at: trip.points[0], mode }));
+  },
+  insertPoint: (session, action) => {
+    const after = applyEdit(session.trip, action);
+    if (after === session.trip) {
+      return session;
+    }
+    const selected = session.selectedPoint;
+    // The selection follows its point: a point after the insert moves up by one.
+    const follows = selected !== null && selected > action.index ? selected + 1 : selected;
+    return { ...withTripEdited(session, after), selectedPoint: follows };
+  },
+  deleteSelectedPoint: (session) =>
+    session.selectedPoint === null
+      ? session
+      : withTripEdited(session, applyEdit(session.trip, { type: "deletePoint", index: session.selectedPoint })),
+  setLegMode: (session, { index, mode, accessPoints, officialAires }) => {
+    const after = applyEdit(session.trip, { type: "setLegMode", index, mode });
+    const offers = snapOffers(session.trip, after, accessPoints, officialAires);
+    // The legs keep their indices: the selected leg stays selected.
+    return { ...withTripEdited(session, after, offers), selectedLeg: session.selectedLeg };
+  },
+  toggleCampOnSelectedPoint: (session) =>
+    session.selectedPoint === null
+      ? session
+      : withTrip(session, applyEdit(session.trip, { type: "toggleCamp", index: session.selectedPoint })),
+  undo: (session) => withTripEdited(session, applyEdit(session.trip, { type: "undo" })),
+  rename: (session, { name }) => withTrip(session, renameTrip(session.trip, name)),
+  setStartDate: (session, { date }) => withTrip(session, setStartDate(session.trip, date)),
+  retryLeg: (session, { index }) => withTrip(session, retryLeg(session.trip, index)),
+
+  accessPointsChanged: (session, { accessPoints }) => ({
+    ...session,
+    offers: followAccessPoints(session.trip, session.offers, accessPoints),
+    fileError: null,
+  }),
+  acceptOffer: (session, { offer }) =>
+    session.offers.includes(offer)
+      ? {
+          ...withTrip(session, acceptSnap(session.trip, offer)),
+          ...withoutSelection,
+          offers: session.offers.filter((other) => other !== offer),
+        }
+      : session,
+  declineOffer: (session, { offer }) =>
+    session.offers.includes(offer)
+      ? { ...session, offers: session.offers.filter((other) => other !== offer), fileError: null }
+      : session,
+
+  // A click on the selected point or leg unselects it.
+  pointClicked: (session, { index }) => ({
+    ...session,
+    selectedPoint: session.selectedPoint === index ? null : index,
+    selectedLeg: null,
+    fileError: null,
+  }),
+  legClicked: (session, { index }) =>
+    session.trip.legs[index]
+      ? { ...session, selectedLeg: session.selectedLeg === index ? null : index, selectedPoint: null, fileError: null }
+      : session,
+  deselect: (session) => ({ ...session, ...withoutSelection, fileError: null }),
+
+  newTrip: (session, { startDate }) => replaceTripOrAsk(session, setStartDate(emptyTrip(), startDate), "newTrip"),
+  fileOpened: (session, { trip }) => replaceTripOrAsk(session, trip, "openFile"),
+  fileRejected: (session, { reason }) => ({ ...session, fileError: reason }),
+  fileDownloaded: (session) => (session.fileError === null ? session : { ...session, fileError: null }),
+
+  enterAccessPointEditing: (session, { returnTo }) =>
+    editingAccessPoints(session)
+      ? session
+      : { ...session, mode: { kind: "accessPointEditing", returnTo }, ...withoutSelection },
+  leaveAccessPointEditing: (session) =>
+    editingAccessPoints(session) ? { ...session, mode: { kind: "normal" }, ...withoutSelection } : session,
+};
