@@ -33,18 +33,22 @@ export async function showAllLegs(page: Page) {
     let opening = 0;
     let patched = false;
     new MutationObserver(() => {
-      const map = (window as unknown as { L?: { Map: { prototype: { fitBounds(...args: unknown[]): unknown } } } }).L?.Map
-        .prototype;
+      const map = (window as unknown as { L?: { Map: { prototype: { fitBounds(...args: unknown[]): unknown } } } }).L
+        ?.Map.prototype;
       if (map && !patched) {
         patched = true;
         const { fitBounds } = map;
         map.fitBounds = function (this: unknown, bounds, options) {
-          if (opening > 0 && (options as { paddingBottomRight?: unknown })?.paddingBottomRight) return this;
+          if (opening > 0 && (options as { paddingBottomRight?: unknown })?.paddingBottomRight) {
+            return this;
+          }
           return fitBounds.call(this, bounds, options);
         };
       }
       const row = document.querySelector<HTMLElement>('.planner-row-toggle[aria-expanded="false"]');
-      if (!row) return;
+      if (!row) {
+        return;
+      }
       opening += 1;
       row.click();
       setTimeout(() => (opening -= 1), 100);
@@ -53,41 +57,45 @@ export async function showAllLegs(page: Page) {
 }
 
 /** Section `n`'s row button (1-based). */
-export const sectionRowButton = (page: Page, n: number) =>
+export const sectionRowButton = (page: Page, number: number) =>
   tripPanel(page)
     .getByRole("list", { name: strings.sectionsPanelLabel })
     .locator("> li")
-    .nth(n - 1)
-    .getByRole("button", { name: strings.sectionLabel(n), exact: false })
+    .nth(number - 1)
+    .getByRole("button", { name: strings.sectionLabel(number), exact: false })
     .first();
 
 /** Taps section `n`'s row so that the next tap acts on the selected row. */
-export async function selectSection(page: Page, n: number) {
-  const row = sectionRowButton(page, n);
-  if ((await row.getAttribute("aria-current")) === null) await row.click();
+export async function selectSection(page: Page, number: number) {
+  const row = sectionRowButton(page, number);
+  if ((await row.getAttribute("aria-current")) === null) {
+    await row.click();
+  }
   await expect(row).toHaveAttribute("aria-current", "true");
 }
 
 /** Opens or closes section `n`, of several legs, by tapping its selected row. */
-export async function toggleSection(page: Page, n: number) {
-  await selectSection(page, n);
-  const row = sectionRowButton(page, n);
+export async function toggleSection(page: Page, number: number) {
+  await selectSection(page, number);
+  const row = sectionRowButton(page, number);
   const expanded = await row.getAttribute("aria-expanded");
   await row.click();
   await expect(row).toHaveAttribute("aria-expanded", expanded === "true" ? "false" : "true");
 }
 
 /** Leg `n`'s row button (1-based), which zooms the map to its leg. */
-export const legRowButton = (page: Page, n: number) =>
+export const legRowButton = (page: Page, number: number) =>
   legRows(page)
-    .nth(n - 1)
-    .getByRole("button", { name: strings.legLabel(n), exact: false })
+    .nth(number - 1)
+    .getByRole("button", { name: strings.legLabel(number), exact: false })
     .first();
 
 /** Shows one of the panel's tabs (only the shown tab's content is in the page). */
 export async function showTab(page: Page, name: string) {
   const tab = panelTab(page, name);
-  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+  if ((await tab.getAttribute("aria-selected")) !== "true") {
+    await tab.click();
+  }
   await expect(tab).toHaveAttribute("aria-selected", "true");
 }
 
@@ -127,16 +135,20 @@ export async function freeMapCentre(page: Page) {
 /** Kilometres in a shown figure such as "12.3 km". */
 export async function km(locator: Locator) {
   const shown = (await locator.textContent()) ?? "";
-  const m = shown.match(/([\d.,]+)\s*km/);
-  if (!m) throw new Error(`no distance in "${shown}"`);
-  return Number(m[1].replace(",", ""));
+  const match = shown.match(/([\d.,]+)\s*km/);
+  if (!match) {
+    throw new Error(`no distance in "${shown}"`);
+  }
+  return Number(match[1].replace(",", ""));
 }
 
 /** The figure named `label` in `within` (e.g. a row's or the totals' "Hike distance"), as shown. */
 export async function figure(within: Locator, label: string) {
   const all = await within.locator(".planner-row-figure, .planner-total, .day-figure").allTextContents();
   const found = all.find((shown) => shown.startsWith(`${label} `));
-  if (found === undefined) throw new Error(`no "${label}" in ${JSON.stringify(all)}`);
+  if (found === undefined) {
+    throw new Error(`no "${label}" in ${JSON.stringify(all)}`);
+  }
   return found.slice(label.length + 1);
 }
 
@@ -163,8 +175,11 @@ export async function renameTrip(page: Page, name: string) {
 export async function setStartDate(page: Page, date: string) {
   await menuItem(page, text.menu.tripDetails);
   const dialog = tripDetailsDialog(page);
-  if (date === "") await dialog.getByRole("button", { name: strings.clearStartDateButton }).click();
-  else await dialog.getByLabel(strings.startDateLabel).fill(date);
+  if (date === "") {
+    await dialog.getByRole("button", { name: strings.clearStartDateButton }).click();
+  } else {
+    await dialog.getByLabel(strings.startDateLabel).fill(date);
+  }
   await dialog.getByRole("button", { name: text.menu.tripDetailsConfirm }).click();
   await expect(dialog).toHaveCount(0);
 }
@@ -173,8 +188,12 @@ export async function setStartDate(page: Page, date: string) {
 export async function changeSettings(page: Page, values: { paceFactor?: string; paddleSpeed?: string }) {
   await menuItem(page, text.menu.settings);
   const dialog = settingsDialog(page);
-  if (values.paceFactor !== undefined) await dialog.getByLabel(strings.paceFactorLabel).fill(values.paceFactor);
-  if (values.paddleSpeed !== undefined) await dialog.getByLabel(strings.paddleSpeedLabel).fill(values.paddleSpeed);
+  if (values.paceFactor !== undefined) {
+    await dialog.getByLabel(strings.paceFactorLabel).fill(values.paceFactor);
+  }
+  if (values.paddleSpeed !== undefined) {
+    await dialog.getByLabel(strings.paddleSpeedLabel).fill(values.paddleSpeed);
+  }
   await dialog.getByRole("button", { name: text.menu.settingsConfirm }).click();
   await expect(dialog).toHaveCount(0);
 }
@@ -198,12 +217,16 @@ export async function mapClicker(page: Page) {
   const centre = await freeMapCentre(page);
   let last: { x: number; y: number; at: number } | null = null;
   return async (dx: number, dy: number, mode?: "hike" | "paddle") => {
-    if (mode) await pickNextMode(page, mode);
+    if (mode) {
+      await pickNextMode(page, mode);
+    }
     const at = { x: centre.x + dx, y: centre.y + dy };
     // A second click on the same spot within 0.4 s is a double tap, which gives one tap.
     if (last && Math.hypot(at.x - last.x, at.y - last.y) < 40) {
       const wait = 450 - (Date.now() - last.at);
-      if (wait > 0) await page.waitForTimeout(wait);
+      if (wait > 0) {
+        await page.waitForTimeout(wait);
+      }
     }
     await page.mouse.click(at.x, at.y);
     last = { ...at, at: Date.now() };
@@ -226,7 +249,9 @@ export async function openTripFile(page: Page, file: ChosenFile) {
 async function downloadFromMenu(page: Page, item: string, title: string, confirm: string, name?: string) {
   await menuItem(page, item);
   const dialog = page.getByRole("dialog", { name: title });
-  if (name !== undefined) await dialog.getByLabel(strings.tripNameLabel).fill(name);
+  if (name !== undefined) {
+    await dialog.getByLabel(strings.tripNameLabel).fill(name);
+  }
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     dialog.getByRole("button", { name: confirm }).click(),
@@ -268,7 +293,9 @@ export async function startGpxExport(page: Page) {
 /** The menu's Export GPX item, disabled while the trip has no leg; the menu is closed again. */
 export async function exportGpxDisabled(page: Page) {
   await menuButton(page).click();
-  const disabled = (await page.getByRole("menuitem", { name: text.menu.exportGpx, exact: true }).getAttribute("aria-disabled")) === "true";
+  const disabled =
+    (await page.getByRole("menuitem", { name: text.menu.exportGpx, exact: true }).getAttribute("aria-disabled")) ===
+    "true";
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
   return disabled;
@@ -291,7 +318,9 @@ export const accessPointDialog = (page: Page) => page.getByRole("dialog", { name
  * (ADR 0036). Leaves the new point's dialog open; Save stores it.
  */
 export async function markAccessPointAt(page: Page, at: { x: number; y: number }) {
-  if (!(await isEditing(page))) await enterAccessPointEditing(page);
+  if (!(await isEditing(page))) {
+    await enterAccessPointEditing(page);
+  }
   await page.mouse.click(at.x, at.y);
   await expect(draftMarker(page)).toHaveCount(1);
   await markAccessPointButton(page).click();
@@ -318,22 +347,31 @@ export async function saveAccessPoint(page: Page) {
  */
 export async function pointOnPath(page: Page, path: Locator) {
   const free = await freeMapBox(page);
-  const area = { minX: free.x + 80, maxX: free.x + free.width - 80, minY: free.y + 140, maxY: free.y + free.height - 140 };
+  const area = {
+    minX: free.x + 80,
+    maxX: free.x + free.width - 80,
+    minY: free.y + 140,
+    maxY: free.y + free.height - 140,
+  };
   const at = await path.first().evaluate((element, { minX, maxX, minY, maxY }) => {
     const svg = element as SVGPathElement;
     const length = svg.getTotalLength();
-    const m = svg.getScreenCTM()!;
+    const matrix = svg.getScreenCTM()!;
     for (let step = 0; step <= 50; step++) {
       // 0.5, 0.51, 0.49, 0.52, …: outwards from the middle.
       const share = 0.5 + (step % 2 === 0 ? 1 : -1) * Math.ceil(step / 2) * 0.01;
-      const p = svg.getPointAtLength(length * share);
-      const x = p.x * m.a + p.y * m.c + m.e;
-      const y = p.x * m.b + p.y * m.d + m.f;
-      if (x > minX && x < maxX && y > minY && y < maxY && document.elementFromPoint(x, y) === svg) return { x, y };
+      const domPoint = svg.getPointAtLength(length * share);
+      const x = domPoint.x * matrix.a + domPoint.y * matrix.c + matrix.e;
+      const y = domPoint.x * matrix.b + domPoint.y * matrix.d + matrix.f;
+      if (x > minX && x < maxX && y > minY && y < maxY && document.elementFromPoint(x, y) === svg) {
+        return { x, y };
+      }
     }
     return null;
   }, area);
-  if (!at) throw new Error("no part of the path is in the free part of the map");
+  if (!at) {
+    throw new Error("no part of the path is in the free part of the map");
+  }
   return at;
 }
 
@@ -359,9 +397,12 @@ export async function dayCardDates(page: Page) {
 export async function panToPath(page: Page, path: Locator) {
   const middle = await path.first().evaluate((element) => {
     const svg = element as SVGPathElement;
-    const p = svg.getPointAtLength(svg.getTotalLength() / 2);
-    const m = svg.getScreenCTM()!;
-    return { x: p.x * m.a + p.y * m.c + m.e, y: p.x * m.b + p.y * m.d + m.f };
+    const domPoint = svg.getPointAtLength(svg.getTotalLength() / 2);
+    const matrix = svg.getScreenCTM()!;
+    return {
+      x: domPoint.x * matrix.a + domPoint.y * matrix.c + matrix.e,
+      y: domPoint.x * matrix.b + domPoint.y * matrix.d + matrix.f,
+    };
   });
   const centre = await freeMapCentre(page);
   // Drag from a spot in the free part, by the distance from the path's middle to the centre.
@@ -391,9 +432,9 @@ export async function holdWater(page: Page, id: string) {
 export const legDetailsDialog = (page: Page) => page.getByRole("dialog", { name: /^(Leg|Section) \d+ · / });
 
 /** Opens section `n`'s details dialog from the button on its row. */
-export async function openSectionDetails(page: Page, n: number) {
+export async function openSectionDetails(page: Page, number: number) {
   await tripPanel(page)
-    .getByRole("button", { name: text.sectionDetailsButton(n) })
+    .getByRole("button", { name: text.sectionDetailsButton(number) })
     .click();
   await expect(legDetailsDialog(page)).toBeVisible();
   return legDetailsDialog(page);
@@ -410,8 +451,8 @@ export const mapOffset = (page: Page) =>
   mapRegion(page)
     .locator(".leaflet-map-pane")
     .evaluate((element) => {
-      const m = new DOMMatrix(getComputedStyle(element).transform);
-      return { x: m.m41, y: m.m42 };
+      const matrix = new DOMMatrix(getComputedStyle(element).transform);
+      return { x: matrix.m41, y: matrix.m42 };
     });
 
 /** Waits until `read` gives the same answer twice in a row, 200 ms apart (e.g. the map has stopped moving). */

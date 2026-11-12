@@ -13,7 +13,11 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 const panel = (page: Page) => tripPanel(page);
 const backups = (page: Page) =>
   page.evaluate(
-    (p) => Object.keys(localStorage).filter((k) => k.startsWith(p)).sort().map((k) => [k, localStorage.getItem(k)]),
+    (prefix) =>
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith(prefix))
+        .sort()
+        .map((key) => [key, localStorage.getItem(key)]),
     PREFIX,
   );
 
@@ -31,9 +35,11 @@ test("backup write fails: damaged save kept byte for byte and warned", async ({ 
         localStorage.setItem(key!, "{corrupt");
       }
       const orig = Storage.prototype.setItem;
-      Storage.prototype.setItem = function (k: string, v: string) {
-        if (k.startsWith(prefix!)) throw new DOMException("full", "QuotaExceededError");
-        return orig.call(this, k, v);
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key.startsWith(prefix!)) {
+          throw new DOMException("full", "QuotaExceededError");
+        }
+        return orig.call(this, key, value);
       };
     },
     [KEY, PREFIX],
@@ -42,11 +48,11 @@ test("backup write fails: damaged save kept byte for byte and warned", async ({ 
   await ready(page);
   await expect(panel(page).getByRole("alert").filter({ hasText: text.damagedNotBackedUp })).toBeVisible();
   expect(await backups(page)).toEqual([]);
-  expect(await page.evaluate((k) => localStorage.getItem(k), KEY)).toBe("{corrupt");
+  expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe("{corrupt");
   // Still damaged and still unwritable after a reload: still kept, still no duplicates.
   await page.reload();
   await ready(page);
-  expect(await page.evaluate((k) => localStorage.getItem(k), KEY)).toBe("{corrupt");
+  expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe("{corrupt");
   expect(await backups(page)).toEqual([]);
 });
 
@@ -54,7 +60,7 @@ test("repeated loads make one backup; a different later damage gets its own, the
   await serveOffline(page);
   await page.goto("/");
   await ready(page);
-  await page.evaluate((k) => localStorage.setItem(k, "{corrupt-one"), KEY);
+  await page.evaluate((key) => localStorage.setItem(key, "{corrupt-one"), KEY);
   for (let i = 0; i < 3; i++) {
     await page.reload();
     await ready(page);
@@ -64,14 +70,14 @@ test("repeated loads make one backup; a different later damage gets its own, the
   expect(found[0][1]).toBe("{corrupt-one");
   await expect(panel(page)).not.toContainText("damaged and couldn't be read"); // notice is for the load that found it
   // The same damaged text again (e.g. pasted back) is not backed up twice.
-  await page.evaluate((k) => localStorage.setItem(k, "{corrupt-one"), KEY);
+  await page.evaluate((key) => localStorage.setItem(key, "{corrupt-one"), KEY);
   await page.reload();
   await ready(page);
   expect(await backups(page)).toHaveLength(1);
   // Different damage: a second backup; the first is untouched.
-  await page.evaluate((k) => localStorage.setItem(k, "{corrupt-two"), KEY);
+  await page.evaluate((key) => localStorage.setItem(key, "{corrupt-two"), KEY);
   await page.reload();
   await ready(page);
   found = await backups(page);
-  expect(found.map((f) => f[1]).sort()).toEqual(["{corrupt-one", "{corrupt-two"]);
+  expect(found.map((entry) => entry[1]).sort()).toEqual(["{corrupt-one", "{corrupt-two"]);
 });

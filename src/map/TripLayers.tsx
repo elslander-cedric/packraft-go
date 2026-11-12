@@ -25,7 +25,7 @@ const hitStyle = { stroke: false, fillColor: "#000", fillOpacity: 0 };
 /** The map's zoom; a zoom redraws the caller. */
 function useZoom(): number {
   const map = useMap();
-  const [, redraw] = useReducer((n: number) => n + 1, 0);
+  const [, redraw] = useReducer((number: number) => number + 1, 0);
   // Attached before any effect runs, so the zoom of MapView's opening fit isn't missed.
   useLayoutEffect(() => {
     map.on("zoomend", redraw);
@@ -136,7 +136,7 @@ function PointDot({ at, selected, numbered }: { at: LatLng; selected: boolean; n
     <CircleMarker
       ref={dot}
       center={at}
-      radius={numbered ? (selected ? 12 : 10) : selected ? 7 : 5}
+      radius={(numbered ? 10 : 5) + (selected ? 2 : 0)}
       className="point"
       interactive={false}
       pathOptions={selected ? selectedPointStyle : pointStyle}
@@ -157,7 +157,10 @@ export function TripLayers({
   onLegHold,
   selectedLeg,
   frozen,
-}: Pick<TripMapProps, "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold" | "selectedLeg" | "frozen">) {
+}: Pick<
+  TripMapProps,
+  "trip" | "selectedPoint" | "onPointTap" | "onPointDrop" | "onLegHold" | "selectedLeg" | "frozen"
+>) {
   const [preview, setPreview] = useState<{ index: number; at: LatLng } | null>(null);
   const zoom = useZoom();
   const points = preview ? trip.points.with(preview.index, preview.at) : trip.points;

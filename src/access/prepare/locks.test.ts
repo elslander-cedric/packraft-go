@@ -33,7 +33,12 @@ const way = (id: number, tags: Record<string, string>, lng: number, lat: number)
 
 const answer: OverpassResponse = {
   elements: [
-    way(1, { lock: "yes", waterway: "canal", lock_name: "Écluse d'Anderlecht - Sluis van Anderlecht" }, 4.3012, 50.8195),
+    way(
+      1,
+      { lock: "yes", waterway: "canal", lock_name: "Écluse d'Anderlecht - Sluis van Anderlecht" },
+      4.3012,
+      50.8195,
+    ),
     way(2, { lock: "yes", waterway: "canal", lock_name: "Sluis Lembeek", name: "Kanaal" }, 4.2, 50.95),
     // A second chamber of the same lock, a few metres away: one marker.
     way(3, { lock: "yes", waterway: "canal", lock_name: "Sluis Lembeek" }, 4.2, 50.95005),
@@ -50,7 +55,11 @@ describe("lock markers", () => {
   const markers = lockMarkers(answer, regions);
 
   it("makes one marker per lock, named from the lock name, then the waterway's name, brussels first", () => {
-    expect(markers.map((m) => m.name)).toEqual(["Écluse d'Anderlecht - Sluis van Anderlecht", "Dijle", "Sluis Lembeek"]);
+    expect(markers.map((marker) => marker.name)).toEqual([
+      "Écluse d'Anderlecht - Sluis van Anderlecht",
+      "Dijle",
+      "Sluis Lembeek",
+    ]);
   });
 
   it("puts the marker in the middle of the lock and tells which region it is in", () => {

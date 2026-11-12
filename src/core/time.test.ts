@@ -103,7 +103,10 @@ describe("paddle time (planner's speed)", () => {
     expect(summarise(trip).legs[0].timeH).toBeCloseTo(2, 6);
     // Paddle time does not depend on climb, so it is an estimate even before routing.
     expect(summarise(trip).legs[0].timeStatus).toBe("estimated");
-    const failed: Trip = { ...trip, legs: [{ mode: "paddle", route: { status: "failed", failure: { kind: "no-route" } } }] };
+    const failed: Trip = {
+      ...trip,
+      legs: [{ mode: "paddle", route: { status: "failed", failure: { kind: "no-route" } } }],
+    };
     expect(summarise(failed).legs[0].timeStatus).toBe("estimated");
   });
 });
@@ -122,19 +125,21 @@ describe("trip time", () => {
 
   it("is pending while any leg is pending, whatever its mode", () => {
     expect(summarise(withSecondLeg({ mode: "hike" })).trip.timeStatus).toBe("pending");
-    expect(summarise(withSecondLeg({ mode: "paddle", route: { status: "pending" } })).trip.timeStatus).toBe(
-      "pending",
-    );
+    expect(summarise(withSecondLeg({ mode: "paddle", route: { status: "pending" } })).trip.timeStatus).toBe("pending");
   });
 
   it("includes a failed hike leg's distance-only time and is marked as having no climb data", () => {
-    const summary = summarise(withSecondLeg({ mode: "hike", route: { status: "failed", failure: { kind: "no-route" } } }));
+    const summary = summarise(
+      withSecondLeg({ mode: "hike", route: { status: "failed", failure: { kind: "no-route" } } }),
+    );
     expect(summary.trip.timeH).toBeCloseTo(5, 6);
     expect(summary.trip.timeStatus).toBe("no-climb-data");
   });
 
   it("a failed paddle leg leaves the trip time an estimate", () => {
-    const summary = summarise(withSecondLeg({ mode: "paddle", route: { status: "failed", failure: { kind: "no-route" } } }));
+    const summary = summarise(
+      withSecondLeg({ mode: "paddle", route: { status: "failed", failure: { kind: "no-route" } } }),
+    );
     expect(summary.trip.timeH).toBeCloseTo(5, 6);
     expect(summary.trip.timeStatus).toBe("estimated");
   });

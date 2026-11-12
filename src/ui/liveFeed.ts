@@ -50,10 +50,16 @@ export function createLiveFeed<T>(ask: () => Promise<T>, options: LiveFeedOption
   function askNow() {
     const thisAsk = ++newestAsk;
     void ask().then((answer) => {
-      if (thisAsk !== newestAsk) return;
+      if (thisAsk !== newestAsk) {
+        return;
+      }
       latest = answer;
-      for (const listener of listeners) listener();
-      if (!settled?.(answer)) cancelTimer = setTimer(askNow, everyMs);
+      for (const listener of listeners) {
+        listener();
+      }
+      if (!settled?.(answer)) {
+        cancelTimer = setTimer(askNow, everyMs);
+      }
     });
   }
 
@@ -62,10 +68,14 @@ export function createLiveFeed<T>(ask: () => Promise<T>, options: LiveFeedOption
     subscribe(listener) {
       listeners.add(listener);
       const alreadySettled = latest !== undefined && settled?.(latest);
-      if (listeners.size === 1 && !alreadySettled) askNow();
+      if (listeners.size === 1 && !alreadySettled) {
+        askNow();
+      }
       return () => {
         listeners.delete(listener);
-        if (listeners.size > 0) return;
+        if (listeners.size > 0) {
+          return;
+        }
         newestAsk++;
         cancelTimer();
       };

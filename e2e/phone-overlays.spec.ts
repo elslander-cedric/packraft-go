@@ -67,8 +67,9 @@ test("switching Hiking trails on draws them under the trip, and they stay on aft
     ".leaflet-overlay-pane path",
     ".leaflet-trip-leg-hits-pane > *",
     ".leaflet-trip-points-pane > *",
-  ])
+  ]) {
     expect(trails).toBeLessThan(await paneZIndex(page, drawn));
+  }
   expect(network.tiles.some((tile) => tile.source === "hiking-trails")).toBe(true);
   await expect(mapRegion(page).locator(".leaflet-control-attribution")).toContainText("Waymarked Trails");
 

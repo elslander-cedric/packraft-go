@@ -97,9 +97,15 @@ export function officialVerdict(
   officialStretch: string | undefined,
   readings: OfficialReadings | undefined,
 ): OfficialVerdict | undefined {
-  if (officialStretch === undefined) return { kind: "none" };
-  if (!readings) return undefined;
-  if (readings.status === "failed") return { kind: "unavailable" };
+  if (officialStretch === undefined) {
+    return { kind: "none" };
+  }
+  if (!readings) {
+    return undefined;
+  }
+  if (readings.status === "failed") {
+    return { kind: "unavailable" };
+  }
   const reading = readings.stretches[officialStretch];
   return reading ? verdictOf(reading) : { kind: "unavailable" };
 }

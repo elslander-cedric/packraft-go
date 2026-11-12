@@ -110,7 +110,9 @@ function Note({ note }: { note: AccessNote }) {
  * access layer is on, with a link to the SPW. Only the link takes taps; the map works through the rest.
  */
 export function MapNotCheckedNote({ checks }: { checks: readonly OfficialCheck[] }) {
-  if (checks.length === 0) return null;
+  if (checks.length === 0) {
+    return null;
+  }
   const { title, url } = strings.official.notCheckedLink;
   return (
     <p role="status" className="planner-map-not-checked">
@@ -124,7 +126,9 @@ export function MapNotCheckedNote({ checks }: { checks: readonly OfficialCheck[]
 
 /** How far to trust a status with no official reading behind it, with a link to the SPW. */
 export function OfficialNotCheckedNote({ checks }: { checks: readonly OfficialCheck[] }) {
-  if (checks.length === 0) return null;
+  if (checks.length === 0) {
+    return null;
+  }
   const { title, url } = strings.official.notCheckedLink;
   return (
     <p className="access-not-checked">
@@ -138,7 +142,9 @@ export function OfficialNotCheckedNote({ checks }: { checks: readonly OfficialCh
 
 /** Lock warnings: "lock at X: portage required", with the region's rule source. Never blocks. */
 function LockWarnings({ warnings }: { warnings: readonly LockWarning[] }) {
-  if (warnings.length === 0) return null;
+  if (warnings.length === 0) {
+    return null;
+  }
   return (
     <div className="access-warnings lock-warnings">
       {warnings.map(({ lock, ...when }) => (
@@ -157,7 +163,9 @@ function LockWarnings({ warnings }: { warnings: readonly LockWarning[] }) {
 /** Obstacle warnings: one line per kind, however many the leg passes. Never blocks. */
 function ObstacleWarnings({ warnings }: { warnings: readonly ObstacleWarning[] }) {
   const groups = obstacleGroups(warnings);
-  if (groups.length === 0) return null;
+  if (groups.length === 0) {
+    return null;
+  }
   return (
     <div className="access-warnings obstacle-warnings">
       {groups.map(({ kind, obstacles }) => (
@@ -179,7 +187,9 @@ function ObstacleWarnings({ warnings }: { warnings: readonly ObstacleWarning[] }
  * The date always shows, as an incident can be years old (ADR 0035). Never blocks.
  */
 function IncidentWarnings({ warnings }: { warnings: readonly IncidentWarning[] }) {
-  if (warnings.length === 0) return null;
+  if (warnings.length === 0) {
+    return null;
+  }
   const text = strings.incidents;
   const { title, url } = strings.official.notCheckedLink;
   return (
@@ -211,7 +221,9 @@ function SpwCredit() {
 }
 
 function WarningList({ warnings }: { warnings: readonly AccessWarning[] }) {
-  if (warnings.length === 0) return null;
+  if (warnings.length === 0) {
+    return null;
+  }
   return (
     <div className="access-warnings">
       {warnings.map((warning, i) => (
@@ -233,7 +245,9 @@ export function LegAccessView({ access }: { access: LegAccess }) {
   const generalRules = status.reasons.flatMap((reason) =>
     reason.kind === "rule" &&
     reason.state === "open" &&
-    (date === undefined || reason.official?.kind === "none" || (reason.official?.kind === "open" && reason.official.soon))
+    (date === undefined ||
+      reason.official?.kind === "none" ||
+      (reason.official?.kind === "open" && reason.official.soon))
       ? [reason]
       : [],
   );
@@ -263,7 +277,9 @@ export function LegAccessView({ access }: { access: LegAccess }) {
         <Note key={i} note={note} />
       ))}
       {status.reasons.map((reason) =>
-        reason.kind === "rule" && reason.flow ? <FlowFiguresView key={`flow:${reason.recordId}`} figures={reason.flow} /> : null,
+        reason.kind === "rule" && reason.flow ? (
+          <FlowFiguresView key={`flow:${reason.recordId}`} figures={reason.flow} />
+        ) : null,
       )}
       {extraRules.map((reason) => (
         <div key={reason.recordId} className="leg-access-extra">
@@ -288,8 +304,16 @@ export function LegAccessView({ access }: { access: LegAccess }) {
  * A day card's warnings: one chip per leg with any, naming its most serious kind and
  * how many more it has. The warnings' text is on the leg; a chip shows that leg.
  */
-export function DayWarningChips({ legs, onShowLeg }: { legs: readonly LegWarnings[]; onShowLeg: (leg: number) => void }) {
-  if (legs.length === 0) return null;
+export function DayWarningChips({
+  legs,
+  onShowLeg,
+}: {
+  legs: readonly LegWarnings[];
+  onShowLeg: (leg: number) => void;
+}) {
+  if (legs.length === 0) {
+    return null;
+  }
   return (
     <div className="day-warning-chips" role="group" aria-label={strings.tripAccess.dayWarningsLabel}>
       {legs.map(({ leg, kind, count }) => {
@@ -339,11 +363,19 @@ export function LegAccessIcons({
     ...aire.map(() => "aire" as const),
   ];
   const all = [
-    ...(state ? [{ icon: statusIcon[state], colour: state, label: strings.tripAccess.statusLine(accessStateLabel(state)) }] : []),
-    ...kinds.map((kind) => ({ icon: warningIcon[kind], colour: warningColour[kind], label: strings.tripAccess.chipKind[kind] })),
+    ...(state
+      ? [{ icon: statusIcon[state], colour: state, label: strings.tripAccess.statusLine(accessStateLabel(state)) }]
+      : []),
+    ...kinds.map((kind) => ({
+      icon: warningIcon[kind],
+      colour: warningColour[kind],
+      label: strings.tripAccess.chipKind[kind],
+    })),
   ];
   const shown = all.filter((item, i) => all.findIndex((other) => other.icon === item.icon) === i);
-  if (shown.length === 0) return null;
+  if (shown.length === 0) {
+    return null;
+  }
   return (
     <span className={`leg-access-icons${className ? ` ${className}` : ""}`}>
       {shown.map(({ icon, colour, label }) => (
@@ -358,7 +390,9 @@ export function LegAccessIcons({
 
 /** Walloon aire warnings: a put-in or take-out in Wallonia without an official aire of yours nearby. */
 export function AireWarnings({ warnings }: { warnings: readonly AireWarning[] }) {
-  if (warnings.length === 0) return null;
+  if (warnings.length === 0) {
+    return null;
+  }
   return (
     <div className="access-warnings aire-warnings">
       {warnings.map((warning) => (

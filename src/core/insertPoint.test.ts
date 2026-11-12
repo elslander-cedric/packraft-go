@@ -6,9 +6,9 @@ import type { LegRoute } from "./router";
 import { applyEdit, emptyTrip, isCamp, type LatLng, type Trip } from "./trip";
 
 // A due-north leg A→B and an eastward leg B→C, about 1.1 km and 0.7 km long.
-const A: LatLng = { lat: 50.35, lng: 5.45 };
-const B: LatLng = { lat: 50.36, lng: 5.45 };
-const C: LatLng = { lat: 50.36, lng: 5.46 };
+const pointA: LatLng = { lat: 50.35, lng: 5.45 };
+const pointB: LatLng = { lat: 50.36, lng: 5.45 };
+const pointC: LatLng = { lat: 50.36, lng: 5.46 };
 // The routed leg A→B bends east through this corner: A → BEND → B.
 const BEND: LatLng = { lat: 50.355, lng: 5.46 };
 
@@ -17,7 +17,7 @@ const through = (...points: LatLng[]): Trip =>
 
 const routedVia = (...points: LatLng[]): LegRoute => ({
   status: "routed",
-  geometry: points.map((p) => ({ ...p, elevation: 100 })),
+  geometry: points.map((point) => ({ ...point, elevation: 100 })),
 });
 
 /** The trip with every leg's route set as given (not an edit: no undo step). */
@@ -36,25 +36,25 @@ const expectClose = (actual: LatLng, expected: LatLng) => {
 
 describe("inserting a point on a leg", () => {
   it("on an unrouted leg, puts the point on the straight line, nearest to where it was held", () => {
-    const session = firstSession({ trip: through(A, B, C) });
+    const session = firstSession({ trip: through(pointA, pointB, pointC) });
     // Held a little west of the middle of A→B.
     const after = plannerSession(session, insert(0, { lat: 50.353, lng: 5.449 }));
     expect(after.trip.points).toHaveLength(4);
     expectClose(after.trip.points[1], { lat: 50.353, lng: 5.45 });
-    expect(after.trip.points[0]).toEqual(A);
-    expect(after.trip.points[2]).toEqual(B);
-    expect(after.trip.points[3]).toEqual(C);
+    expect(after.trip.points[0]).toEqual(pointA);
+    expect(after.trip.points[2]).toEqual(pointB);
+    expect(after.trip.points[3]).toEqual(pointC);
   });
 
   it("on a routed leg, puts the point on the route, not on the straight line", () => {
-    const trip = withRoutes(through(A, B), routedVia(A, BEND, B));
+    const trip = withRoutes(through(pointA, pointB), routedVia(pointA, BEND, pointB));
     // Held just east of the bend: the straight line A→B is about 700 m west.
     const after = plannerSession(firstSession({ trip }), insert(0, { lat: 50.355, lng: 5.4605 }));
     expectClose(after.trip.points[1], BEND);
   });
 
   it("on a routed leg, lands between the route's vertices", () => {
-    const trip = withRoutes(through(A, B), routedVia(A, BEND, B));
+    const trip = withRoutes(through(pointA, pointB), routedVia(pointA, BEND, pointB));
     // Half way along A→BEND, held a little off the route.
     const after = plannerSession(firstSession({ trip }), insert(0, { lat: 50.3525, lng: 5.4553 }));
     const inserted = after.trip.points[1];
@@ -63,31 +63,38 @@ describe("inserting a point on a leg", () => {
   });
 
   it("splits the leg into two unrouted legs of its mode; the other legs keep their routes", () => {
-    const paddled = applyEdit(through(A, B, C), { type: "setLegMode", index: 0, mode: "paddle" });
-    const trip = withRoutes(paddled, routedVia(A, BEND, B), routedVia(B, C));
+    const paddled = applyEdit(through(pointA, pointB, pointC), { type: "setLegMode", index: 0, mode: "paddle" });
+    const trip = withRoutes(paddled, routedVia(pointA, BEND, pointB), routedVia(pointB, pointC));
     const after = plannerSession(firstSession({ trip }), insert(0, BEND));
     expect(after.trip.legs).toEqual([{ mode: "paddle" }, { mode: "paddle" }, trip.legs[1]]);
   });
 
   it("camps stay on their points: later camps shift by one", () => {
-    const camped = [0, 1, 2].reduce((t, index) => applyEdit(t, { type: "toggleCamp", index }), through(A, B, C));
+    const camped = [0, 1, 2].reduce(
+      (result, index) => applyEdit(result, { type: "toggleCamp", index }),
+      through(pointA, pointB, pointC),
+    );
     const after = plannerSession(firstSession({ trip: camped }), insert(0, BEND));
     const camps = after.trip.points.map((_, i) => i).filter((i) => isCamp(after.trip, i));
     expect(camps).toEqual([0, 2, 3]);
   });
 
   it("the selection follows the selected point when its index shifts", () => {
-    const session = { ...firstSession({ trip: through(A, B, C) }), selectedPoint: 2 };
+    const session = { ...firstSession({ trip: through(pointA, pointB, pointC) }), selectedPoint: 2 };
     expect(plannerSession(session, insert(0, BEND)).selectedPoint).toBe(3);
   });
 
   it("a selected point before the insert stays selected", () => {
-    const session = { ...firstSession({ trip: through(A, B, C) }), selectedPoint: 1 };
+    const session = { ...firstSession({ trip: through(pointA, pointB, pointC) }), selectedPoint: 1 };
     expect(plannerSession(session, insert(1, { lat: 50.36, lng: 5.455 })).selectedPoint).toBe(1);
   });
 
   it("is one undo step: undo removes the point and brings back the routed leg", () => {
-    const trip = withRoutes(through(A, B, C), routedVia(A, BEND, B), routedVia(B, C));
+    const trip = withRoutes(
+      through(pointA, pointB, pointC),
+      routedVia(pointA, BEND, pointB),
+      routedVia(pointB, pointC),
+    );
     const before = firstSession({ trip });
     const undone = run(before, insert(0, BEND), { type: "undo" });
     expect(undone.trip.points).toEqual(trip.points);
@@ -95,7 +102,7 @@ describe("inserting a point on a leg", () => {
   });
 
   it("does nothing on a leg that doesn't exist", () => {
-    const session = firstSession({ trip: through(A, B) });
+    const session = firstSession({ trip: through(pointA, pointB) });
     expect(plannerSession(session, insert(1, BEND))).toBe(session);
     expect(plannerSession(session, insert(-1, BEND))).toBe(session);
   });

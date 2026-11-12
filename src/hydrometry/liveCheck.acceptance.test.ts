@@ -22,7 +22,7 @@ describe("time offset", () => {
     expect(isBrusselsLocalTimestamp("2026-10-25T03:00:00+02:00")).toBe(false);
   });
   it("rejects no offset, Z, +00:00, wrong season, other zones", () => {
-    for (const t of [
+    for (const timestamp of [
       "2026-07-01T08:00:00",
       "2026-07-01T08:00:00Z",
       "2026-07-01T08:00:00+00:00",
@@ -31,7 +31,7 @@ describe("time offset", () => {
       "2026-01-15T08:00:00+05:30",
       "garbage",
     ]) {
-      expect(isBrusselsLocalTimestamp(t), t).toBe(false);
+      expect(isBrusselsLocalTimestamp(timestamp), timestamp).toBe(false);
     }
     expect(isBrusselsLocalTimestamp("2026-07-01T08:00:00.000+02:00")).toBe(true);
   });
@@ -39,8 +39,11 @@ describe("time offset", () => {
     const entries = JSON.parse(recorded.values.body);
     const first = entries[0].data[0];
     first[0] = first[0].replace(/[+-]\d\d:\d\d$/, "+00:00");
-    const f = await compareWithFixture({ ...recorded, values: { status: 200, body: JSON.stringify(entries) } }, recorded);
-    expect(f.some((x) => x.level === "mismatch" && /not Brussels/.test(x.message))).toBe(true);
+    const findings = await compareWithFixture(
+      { ...recorded, values: { status: 200, body: JSON.stringify(entries) } },
+      recorded,
+    );
+    expect(findings.some((x) => x.level === "mismatch" && /not Brussels/.test(x.message))).toBe(true);
   });
 });
 
@@ -50,8 +53,8 @@ describe("no live services", () => {
       throw new Error("network!");
     });
     vi.stubGlobal("fetch", spy);
-    const f = await compareWithFixture(recorded, recorded);
-    expect(f.filter((x) => x.level !== "match")).toEqual([]);
+    const findings = await compareWithFixture(recorded, recorded);
+    expect(findings.filter((x) => x.level !== "match")).toEqual([]);
     expect(spy).not.toHaveBeenCalled();
   });
   it("runKiwisCheck uses only the injected fetch, 2 requests", async () => {
@@ -59,16 +62,16 @@ describe("no live services", () => {
       throw new Error("network!");
     });
     vi.stubGlobal("fetch", spy);
-    let n = 0;
+    let number = 0;
     await runKiwisCheck({
       fetch: async (url) => {
-        n++;
+        number++;
         return new Response(url.includes("getTimeseriesList") ? recorded.list.body : recorded.values.body);
       },
       wait: async () => {},
       readFixture: fixture,
     });
-    expect(n).toBe(2);
+    expect(number).toBe(2);
     expect(spy).not.toHaveBeenCalled();
   });
 });

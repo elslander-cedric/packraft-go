@@ -30,7 +30,8 @@ const point: AccessPoint = {
   updatedAt: T1,
 };
 
-const file = (points: unknown) => JSON.stringify({ format: "packraft-go-access-points", version: 1, accessPoints: points });
+const file = (points: unknown) =>
+  JSON.stringify({ format: "packraft-go-access-points", version: 1, accessPoints: points });
 
 /** A point as stored by an earlier build, before names (#136). */
 function withoutName(stored: AccessPoint) {
@@ -97,7 +98,10 @@ describe("a name you type", () => {
     expect(edited.nameSource).toBe("typed");
   });
 
-  it.each([["empty", ""], ["only spaces", "   "]])("cleared (%s) becomes a default name to look up again", (_, cleared) => {
+  it.each([
+    ["empty", ""],
+    ["only spaces", "   "],
+  ])("cleared (%s) becomes a default name to look up again", (_, cleared) => {
     const typed = updateAccessPoint(named, "a", { name: "Hotton bridge" }, T2);
     const [again] = updateAccessPoint(typed, "a", { name: cleared }, T2);
     expect(again).toMatchObject({ name: "", nameSource: "to-look-up" });

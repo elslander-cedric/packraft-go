@@ -6,10 +6,10 @@ import { dateInBrussels } from "./calendarDate";
 import { firstSession, plannerSession } from "./plannerSession";
 import { applyEdit, emptyTrip, setStartDate, type Trip } from "./trip";
 
-const A = { lat: 50.3527, lng: 5.4563 };
-const B = { lat: 50.3627, lng: 5.4563 };
+const pointA = { lat: 50.3527, lng: 5.4563 };
+const pointB = { lat: 50.3627, lng: 5.4563 };
 const withPoints: Trip = setStartDate(
-  [A, B].reduce((trip, at) => applyEdit(trip, { type: "addPoint", at }), emptyTrip()),
+  [pointA, pointB].reduce((trip, at) => applyEdit(trip, { type: "addPoint", at }), emptyTrip()),
   "2026-05-01",
 );
 const blank = firstSession({ trip: { name: "Named but empty", points: [], legs: [] } });

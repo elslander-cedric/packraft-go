@@ -64,7 +64,9 @@ export default function ObstacleLayer({ obstacles, onSelect }: ObstacleLayerProp
   const map = useMap();
   const [zoom, setZoom] = useState(() => map.getZoom());
   useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
-  if (zoom < lockMarkersMinZoom) return null;
+  if (zoom < lockMarkersMinZoom) {
+    return null;
+  }
   const small = zoom < obstacleFullMarkersMinZoom;
   return obstacles.map((obstacle) => (
     <ObstacleMarker key={obstacle.id} obstacle={obstacle} small={small} onSelect={() => onSelect(obstacle.id)} />

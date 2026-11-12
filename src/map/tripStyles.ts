@@ -47,15 +47,15 @@ export const campIcon = divIcon({
 // screen reader gets it from the point card, so it is hidden here. One icon per number and
 // state, so a redraw doesn't replace the marker's element.
 const pointNumberIcons = new Map<string, DivIcon>();
-export function pointNumberIcon(n: number, selected: boolean): DivIcon {
-  const key = `${n}-${selected}`;
+export function pointNumberIcon(number: number, selected: boolean): DivIcon {
+  const key = `${number}-${selected}`;
   let icon = pointNumberIcons.get(key);
   if (!icon) {
     icon = divIcon({
-      className: ["point-number", selected && "point-number-selected", n >= 100 && "point-number-long"]
+      className: ["point-number", selected && "point-number-selected", number >= 100 && "point-number-long"]
         .filter(Boolean)
         .join(" "),
-      html: `<span aria-hidden="true">${n}</span>`,
+      html: `<span aria-hidden="true">${number}</span>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12],
     });

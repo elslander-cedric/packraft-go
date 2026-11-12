@@ -33,28 +33,32 @@ function trip(modes: LegMode[], camps: number[] = [], name = "Ourthe"): Trip {
 function routedTrip(modes: LegMode[], camps: number[] = [], perLeg = 4): Trip {
   const base = trip(modes, camps);
   const legs = base.legs.map((leg, i) => {
-    const a = base.points[i];
-    const b = base.points[i + 1];
-    const geometry = Array.from({ length: perLeg }, (_, k) => ({
-      lat: a.lat + ((b.lat - a.lat) * k) / (perLeg - 1),
-      lng: a.lng + ((b.lng - a.lng) * k) / (perLeg - 1),
-      elevation: 100 + i * 10 + k,
+    const pointA = base.points[i];
+    const pointB = base.points[i + 1];
+    const geometry = Array.from({ length: perLeg }, (_, index) => ({
+      lat: pointA.lat + ((pointB.lat - pointA.lat) * index) / (perLeg - 1),
+      lng: pointA.lng + ((pointB.lng - pointA.lng) * index) / (perLeg - 1),
+      elevation: 100 + i * 10 + index,
     }));
     return { ...leg, route: { status: "routed", geometry } };
   });
   return { ...base, legs } as unknown as Trip;
 }
 
-const compact = (t: Trip) =>
-  tripSections(t).map((s) => `${s.mode}:${s.firstLeg}-${s.lastLeg}:d${s.day}`);
+const compact = (trip: Trip) =>
+  tripSections(trip).map(
+    (tripSection) => `${tripSection.mode}:${tripSection.firstLeg}-${tripSection.lastLeg}:d${tripSection.day}`,
+  );
 /** The export's text (the trip has legs). */
-function gpxOf(t: Trip): string {
-  const file = tripToGpx(t, names);
-  if (!file) throw new Error("no GPX for this trip");
+function gpxOf(trip: Trip): string {
+  const file = tripToGpx(trip, names);
+  if (!file) {
+    throw new Error("no GPX for this trip");
+  }
   return file.text;
 }
 /** The names of the export's waypoints: one per section, then the end. */
-const waypointNames = (t: Trip) => parseGpx11(gpxOf(t)).waypoints.map((w) => w.name);
+const waypointNames = (trip: Trip) => parseGpx11(gpxOf(trip)).waypoints.map((waypoint) => waypoint.name);
 
 function strictXml(text: string) {
   return new DOMParser({
@@ -80,39 +84,24 @@ describe("sections split per ADR 0021", () => {
   });
 
   it("consecutive same-mode legs: one section", () => {
-    expect(
-      compact(trip(["hike", "hike", "paddle", "paddle", "paddle"])),
-    ).toEqual(["hike:0-1:d1", "paddle:2-4:d1"]);
+    expect(compact(trip(["hike", "hike", "paddle", "paddle", "paddle"]))).toEqual(["hike:0-1:d1", "paddle:2-4:d1"]);
   });
 
   it("camp in the middle of a same-mode run: splits it, next day", () => {
-    expect(compact(trip(["paddle", "paddle", "paddle"], [2]))).toEqual([
-      "paddle:0-1:d1",
-      "paddle:2-2:d2",
-    ]);
+    expect(compact(trip(["paddle", "paddle", "paddle"], [2]))).toEqual(["paddle:0-1:d1", "paddle:2-2:d2"]);
   });
 
   it("camp at a mode change: one split only, no empty section", () => {
-    expect(compact(trip(["hike", "hike", "paddle", "paddle"], [2]))).toEqual([
-      "hike:0-1:d1",
-      "paddle:2-3:d2",
-    ]);
+    expect(compact(trip(["hike", "hike", "paddle", "paddle"], [2]))).toEqual(["hike:0-1:d1", "paddle:2-3:d2"]);
   });
 
   it("portage: paddle → hike → paddle gives three sections (three section waypoints)", () => {
-    expect(compact(trip(["paddle", "hike", "paddle"]))).toEqual([
-      "paddle:0-0:d1",
-      "hike:1-1:d1",
-      "paddle:2-2:d1",
-    ]);
+    expect(compact(trip(["paddle", "hike", "paddle"]))).toEqual(["paddle:0-0:d1", "hike:1-1:d1", "paddle:2-2:d1"]);
     expect(waypointNames(trip(["paddle", "hike", "paddle"]))).toHaveLength(3 + 1);
   });
 
   it("trip ending on a camp point: no extra section, no extra day", () => {
-    expect(compact(trip(["hike", "paddle"], [2]))).toEqual([
-      "hike:0-0:d1",
-      "paddle:1-1:d1",
-    ]);
+    expect(compact(trip(["hike", "paddle"], [2]))).toEqual(["hike:0-0:d1", "paddle:1-1:d1"]);
   });
 
   it("camp at the start point: splits nothing", () => {
@@ -120,9 +109,11 @@ describe("sections split per ADR 0021", () => {
   });
 
   it("a camp on every point of a three-leg same-mode trip: three sections on days 1-3", () => {
-    expect(compact(trip(["paddle", "paddle", "paddle"], [0, 1, 2, 3]))).toEqual(
-      ["paddle:0-0:d1", "paddle:1-1:d2", "paddle:2-2:d3"],
-    );
+    expect(compact(trip(["paddle", "paddle", "paddle"], [0, 1, 2, 3]))).toEqual([
+      "paddle:0-0:d1",
+      "paddle:1-1:d2",
+      "paddle:2-2:d3",
+    ]);
   });
 
   it("no legs: no sections, no file", () => {
@@ -134,56 +125,52 @@ describe("sections split per ADR 0021", () => {
 describe("day numbers in section names match the app's day totals", () => {
   // Every mode sequence of up to 5 legs and every camp set on its points.
   const cases: Trip[] = [];
-  for (let n = 1; n <= 5; n += 1) {
-    for (let modeBits = 0; modeBits < 1 << n; modeBits += 1) {
-      const modes = Array.from(
-        { length: n },
-        (_, i) => ((modeBits >> i) & 1 ? "paddle" : "hike") as LegMode,
-      );
-      for (let campBits = 0; campBits < 1 << (n + 1); campBits += 1) {
-        const camps = Array.from({ length: n + 1 }, (_, i) => i).filter(
-          (i) => (campBits >> i) & 1,
-        );
+  for (let number = 1; number <= 5; number += 1) {
+    for (let modeBits = 0; modeBits < 1 << number; modeBits += 1) {
+      const modes = Array.from({ length: number }, (_, i) => ((modeBits >> i) & 1 ? "paddle" : "hike") as LegMode);
+      for (let campBits = 0; campBits < 1 << (number + 1); campBits += 1) {
+        const camps = Array.from({ length: number + 1 }, (_, i) => i).filter((i) => (campBits >> i) & 1);
         cases.push(trip(modes, camps));
       }
     }
   }
 
   it(`each section lies within exactly one day, with that day's number (${cases.length} trips)`, () => {
-    for (const t of cases) {
-      const days = summarise(t).days;
-      for (const section of tripSections(t)) {
+    for (const tripCase of cases) {
+      const days = summarise(tripCase).days;
+      for (const section of tripSections(tripCase)) {
         const day = days[section.day - 1];
-        expect(day, JSON.stringify({ t: t.camps, section })).toBeDefined();
+        expect(day, JSON.stringify({ t: tripCase.camps, section })).toBeDefined();
         expect(section.firstLeg).toBeGreaterThanOrEqual(day.firstLeg);
         expect(section.lastLeg).toBeLessThanOrEqual(day.lastLeg);
       }
       // The last section is on the trip's last day: no day number past the totals.
-      expect(tripSections(t).at(-1)!.day).toBe(days.length);
+      expect(tripSections(tripCase).at(-1)!.day).toBe(days.length);
     }
   });
 
   it("sections cover every leg exactly once, in order, and never mix modes", () => {
-    for (const t of cases) {
-      const sections = tripSections(t);
+    for (const tripCase of cases) {
+      const sections = tripSections(tripCase);
       let next = 0;
-      for (const s of sections) {
-        expect(s.firstLeg).toBe(next);
-        for (let i = s.firstLeg; i <= s.lastLeg; i += 1)
-          expect(t.legs[i].mode).toBe(s.mode);
-        next = s.lastLeg + 1;
+      for (const section of sections) {
+        expect(section.firstLeg).toBe(next);
+        for (let i = section.firstLeg; i <= section.lastLeg; i += 1) {
+          expect(tripCase.legs[i].mode).toBe(section.mode);
+        }
+        next = section.lastLeg + 1;
       }
-      expect(next).toBe(t.legs.length);
+      expect(next).toBe(tripCase.legs.length);
     }
   });
 
   it("a section ends only at a mode change or an inner camp (no needless splits)", () => {
-    for (const t of cases) {
-      const sections = tripSections(t);
-      for (let k = 1; k < sections.length; k += 1) {
-        const boundary = sections[k].firstLeg;
-        const modeChange = t.legs[boundary - 1].mode !== t.legs[boundary].mode;
-        const camp = (t.camps ?? []).includes(boundary);
+    for (const tripCase of cases) {
+      const sections = tripSections(tripCase);
+      for (let index = 1; index < sections.length; index += 1) {
+        const boundary = sections[index].firstLeg;
+        const modeChange = tripCase.legs[boundary - 1].mode !== tripCase.legs[boundary].mode;
+        const camp = (tripCase.camps ?? []).includes(boundary);
         expect(modeChange || camp).toBe(true);
       }
     }
@@ -239,41 +226,36 @@ describe("naming", () => {
 
 describe("the GPX file", () => {
   const samples: [string, Trip][] = [
-    [
-      "routed mixed with camps",
-      routedTrip(["hike", "paddle", "paddle", "hike", "paddle"], [3]),
-    ],
+    ["routed mixed with camps", routedTrip(["hike", "paddle", "paddle", "hike", "paddle"], [3])],
     ["routed single leg", routedTrip(["paddle"])],
     ["unrouted", trip(["hike", "hike", "paddle"])],
   ];
 
-  for (const [label, t] of samples) {
+  for (const [label, trip] of samples) {
     it(`${label}: passes the strict GPX 1.1 checker with exactly one trk and one trkseg, a waypoint per section and the end`, () => {
-      const text = gpxOf(t);
+      const text = gpxOf(trip);
       const gpx = parseGpx11(text);
       expect(gpx.tracks).toHaveLength(1);
-      expect(gpx.waypoints).toHaveLength(tripSections(t).length + 1);
+      expect(gpx.waypoints).toHaveLength(tripSections(trip).length + 1);
       const doc = strictXml(text);
       expect(doc.getElementsByTagName("trk")).toHaveLength(1);
       expect(doc.getElementsByTagName("trkseg")).toHaveLength(1);
     });
 
     it(`${label}: points are continuous, with no point repeated where legs meet`, () => {
-      const pts = parseGpx11(gpxOf(t)).tracks[0].points;
+      const pts = parseGpx11(gpxOf(trip)).tracks[0].points;
       for (let i = 1; i < pts.length; i += 1) {
-        expect(
-          pts[i].lat === pts[i - 1].lat && pts[i].lon === pts[i - 1].lon,
-        ).toBe(false);
+        expect(pts[i].lat === pts[i - 1].lat && pts[i].lon === pts[i - 1].lon).toBe(false);
       }
     });
 
     it(`${label}: every waypoint lies on the track, in track order, the last at its end`, () => {
-      const gpx = parseGpx11(gpxOf(t));
+      const gpx = parseGpx11(gpxOf(trip));
       const pts = gpx.tracks[0].points;
       let from = 0;
-      for (const w of gpx.waypoints) {
-        const at = pts.findIndex((p, i) => i >= from && p.lat === w.lat && p.lon === w.lon);
-        expect(at, w.name).toBeGreaterThanOrEqual(from);
+      for (const waypoint of gpx.waypoints) {
+        const at = pts.findIndex((pt, i) => i >= from && pt.lat === waypoint.lat && pt.lon === waypoint.lon);
+        expect(at, waypoint.name).toBeGreaterThanOrEqual(from);
         from = at;
       }
       expect(from).toBe(pts.length - 1);
@@ -281,25 +263,25 @@ describe("the GPX file", () => {
   }
 
   it("the track holds every leg's geometry, joined once, with elevations", () => {
-    const t = routedTrip(["paddle", "hike", "paddle"], [], 4);
-    const pts = parseGpx11(gpxOf(t)).tracks[0].points;
+    const trip = routedTrip(["paddle", "hike", "paddle"], [], 4);
+    const pts = parseGpx11(gpxOf(trip)).tracks[0].points;
     expect(pts).toHaveLength(4 + 3 + 3);
     expect(pts[0]).toMatchObject({
-      lat: t.points[0].lat,
-      lon: t.points[0].lng,
+      lat: trip.points[0].lat,
+      lon: trip.points[0].lng,
     });
     expect(pts.at(-1)).toMatchObject({
-      lat: t.points[3].lat,
-      lon: t.points[3].lng,
+      lat: trip.points[3].lat,
+      lon: trip.points[3].lng,
     });
-    expect(pts.every((p) => typeof p.ele === "number")).toBe(true);
+    expect(pts.every((pt) => typeof pt.ele === "number")).toBe(true);
   });
 
   it("a section's waypoint is the point where the section before it ends", () => {
-    const t = routedTrip(["hike", "paddle", "paddle"], [2]);
-    const gpx = parseGpx11(gpxOf(t));
-    expect(gpx.waypoints.map((w) => ({ lat: w.lat, lon: w.lon }))).toEqual(
-      [0, 1, 2, 3].map((i) => ({ lat: t.points[i].lat, lon: t.points[i].lng })),
+    const trip = routedTrip(["hike", "paddle", "paddle"], [2]);
+    const gpx = parseGpx11(gpxOf(trip));
+    expect(gpx.waypoints.map((waypoint) => ({ lat: waypoint.lat, lon: waypoint.lon }))).toEqual(
+      [0, 1, 2, 3].map((i) => ({ lat: trip.points[i].lat, lon: trip.points[i].lng })),
     );
   });
 
@@ -312,7 +294,7 @@ describe("the GPX file", () => {
   });
 
   it("keeps coordinate bounds: lon 180 written as -180, latitudes clamped", () => {
-    const t: Trip = {
+    const trip: Trip = {
       name: "Edge",
       points: [
         { lat: 90.00000004, lng: 179.99999999 },
@@ -320,12 +302,12 @@ describe("the GPX file", () => {
       ],
       legs: [{ mode: "hike" }],
     };
-    const gpx = parseGpx11(gpxOf(t));
-    for (const p of [...gpx.tracks[0].points, ...gpx.waypoints]) {
-      expect(p.lat).toBeGreaterThanOrEqual(-90);
-      expect(p.lat).toBeLessThanOrEqual(90);
-      expect(p.lon).toBeGreaterThanOrEqual(-180);
-      expect(p.lon).toBeLessThan(180);
+    const gpx = parseGpx11(gpxOf(trip));
+    for (const gpxPoint of [...gpx.tracks[0].points, ...gpx.waypoints]) {
+      expect(gpxPoint.lat).toBeGreaterThanOrEqual(-90);
+      expect(gpxPoint.lat).toBeLessThanOrEqual(90);
+      expect(gpxPoint.lon).toBeGreaterThanOrEqual(-180);
+      expect(gpxPoint.lon).toBeLessThan(180);
     }
   });
 });

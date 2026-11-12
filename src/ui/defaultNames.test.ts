@@ -11,13 +11,19 @@ import {
 import type { LatLng } from "@/core/trip";
 import { RETRY_MS, startDefaultNames } from "./defaultNames";
 
-const T = "2026-10-26T08:00:00.000Z";
+const TIMESTAMP = "2026-10-26T08:00:00.000Z";
 const hotton = { lat: 50.268, lng: 5.446 };
 const durbuy = { lat: 50.3527, lng: 5.4563 };
-const names: Record<string, string> = { "50.268,5.446": "Rue du Batty, Melreux", "50.3527,5.4563": "Rue de la Gare, Durbuy" };
+const names: Record<string, string> = {
+  "50.268,5.446": "Rue du Batty, Melreux",
+  "50.3527,5.4563": "Rue de la Gare, Durbuy",
+};
 
 /** A planner with points, a fake default name source, and the queue working on them. */
-function setUp(start: AccessPoints, { online = true, answer }: { online?: boolean; answer?: () => DefaultNameLookup } = {}) {
+function setUp(
+  start: AccessPoints,
+  { online = true, answer }: { online?: boolean; answer?: () => DefaultNameLookup } = {},
+) {
   const world = { points: start, online, asked: [] as LatLng[] };
   const queue = startDefaultNames({
     source: {
@@ -33,7 +39,11 @@ function setUp(start: AccessPoints, { online = true, answer }: { online?: boolea
   return { world, queue };
 }
 
-const twoPoints = addAccessPoint(addAccessPoint([], { id: "a", at: hotton, now: T }), { id: "b", at: durbuy, now: T });
+const twoPoints = addAccessPoint(addAccessPoint([], { id: "a", at: hotton, now: TIMESTAMP }), {
+  id: "b",
+  at: durbuy,
+  now: TIMESTAMP,
+});
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -50,14 +60,14 @@ describe("default names", () => {
     queue.wake();
     await vi.runAllTimersAsync();
     expect(world.asked).toEqual([hotton, durbuy]);
-    expect(world.points.map((p) => [p.name, p.nameSource])).toEqual([
+    expect(world.points.map((point) => [point.name, point.nameSource])).toEqual([
       ["Rue du Batty, Melreux", "default"],
       ["Rue de la Gare, Durbuy", "default"],
     ]);
   });
 
   it("are not looked up for a name you typed or a default name already found", async () => {
-    const typed = updateAccessPoint(twoPoints, "a", { name: "Hotton bridge" }, T);
+    const typed = updateAccessPoint(twoPoints, "a", { name: "Hotton bridge" }, TIMESTAMP);
     const { world, queue } = setUp(applyDefaultName(typed, "b", { at: durbuy, name: "" }));
     queue.wake();
     await vi.runAllTimersAsync();
@@ -95,7 +105,9 @@ describe("default names", () => {
 
   it("after a failure, are not asked again on every edit, but as soon as the app comes back online", async () => {
     let failing = true;
-    const { world, queue } = setUp(twoPoints, { answer: () => (failing ? { status: "failed" } : { status: "found", name: "X" }) });
+    const { world, queue } = setUp(twoPoints, {
+      answer: () => (failing ? { status: "failed" } : { status: "found", name: "X" }),
+    });
     queue.wake();
     await vi.advanceTimersByTimeAsync(0);
     queue.wake();
@@ -106,7 +118,7 @@ describe("default names", () => {
     queue.backOnline();
     await vi.advanceTimersByTimeAsync(0);
     expect(world.asked).toHaveLength(3);
-    expect(world.points.map((p) => p.name)).toEqual(["X", "X"]);
+    expect(world.points.map((point) => point.name)).toEqual(["X", "X"]);
   });
 
   it("are not asked twice for the same position while the answer is on its way to the points", async () => {
@@ -128,7 +140,7 @@ describe("default names", () => {
     const { world, queue } = setUp(twoPoints.slice(0, 1));
     queue.wake();
     await vi.runAllTimersAsync();
-    world.points = updateAccessPoint(world.points, "a", { position: durbuy }, T);
+    world.points = updateAccessPoint(world.points, "a", { position: durbuy }, TIMESTAMP);
     queue.wake();
     await vi.runAllTimersAsync();
     expect(world.asked).toEqual([hotton, durbuy]);
@@ -139,9 +151,9 @@ describe("default names", () => {
     const { world, queue } = setUp(twoPoints.slice(0, 1));
     queue.wake();
     await vi.runAllTimersAsync();
-    world.points = updateAccessPoint(world.points, "a", { name: "Hotton bridge" }, T);
+    world.points = updateAccessPoint(world.points, "a", { name: "Hotton bridge" }, TIMESTAMP);
     queue.wake();
-    world.points = updateAccessPoint(world.points, "a", { name: "" }, T);
+    world.points = updateAccessPoint(world.points, "a", { name: "" }, TIMESTAMP);
     queue.wake();
     await vi.runAllTimersAsync();
     expect(world.asked).toEqual([hotton, hotton]);

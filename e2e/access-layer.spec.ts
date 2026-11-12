@@ -9,7 +9,6 @@ import { accessLayerItem, mapMenuButton, toggleAccessLayer } from "./support/map
 
 const water = accessWater;
 
-
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
 });
@@ -41,7 +40,9 @@ test("the access layer colours Flemish exceptions and shows why on click", async
   await chip.click();
   const accessDialog = page.getByRole("dialog", { name: strings.planner.accessDialogTitle });
   const legend = accessDialog.getByRole("region", { name: strings.accessLegendLabel });
-  for (const label of Object.values(strings.accessState)) await expect(legend.getByText(label, { exact: true })).toBeVisible();
+  for (const label of Object.values(strings.accessState)) {
+    await expect(legend.getByText(label, { exact: true })).toBeVisible();
+  }
   await accessDialog.getByRole("button", { name: strings.planner.accessDialogClose }).click();
   await expect(accessDialog).toHaveCount(0);
 

@@ -122,7 +122,9 @@ test("on aerial photos at zoom 19 the trails stay drawn, enlarged from their zoo
   // The wheel zooms (no zoom buttons, ADR 0034); wait for each step and for the animation to end.
   const centre = await freeMapCentre(page);
   for (let step = 0; step < 30; step++) {
-    if (network.tiles.some((tile) => tile.source === "wallonia" && tile.z === 19)) break;
+    if (network.tiles.some((tile) => tile.source === "wallonia" && tile.z === 19)) {
+      break;
+    }
     await page.mouse.move(centre.x, centre.y);
     await page.mouse.wheel(0, -60);
     await expect(mapRegion(page).locator(".leaflet-map-pane")).not.toHaveClass(/leaflet-zoom-anim/);
@@ -132,12 +134,13 @@ test("on aerial photos at zoom 19 the trails stay drawn, enlarged from their zoo
   await expect(trailTiles(page).first()).toBeVisible();
   // Measured once the last zoom has settled: right after it a tile can still be mid-scale (484 px).
   await expect
-    .poll(async () =>
-      new Set(
-        await trailTiles(page).evaluateAll((images) =>
-          images.map((image) => Math.round(image.getBoundingClientRect().width)),
+    .poll(
+      async () =>
+        new Set(
+          await trailTiles(page).evaluateAll((images) =>
+            images.map((image) => Math.round(image.getBoundingClientRect().width)),
+          ),
         ),
-      ),
     )
     .toEqual(new Set([512]));
   const trailZooms = network.tiles.filter((tile) => tile.source === "hiking-trails").map((tile) => tile.z);

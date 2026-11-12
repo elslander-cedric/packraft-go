@@ -53,9 +53,13 @@ const PLACES = ["village", "town", "city", "hamlet", "municipality"];
  * isn't one, or is another error.
  */
 function defaultNameIn(body: unknown): string | null {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) return null;
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return null;
+  }
   const answer = body as { address?: unknown; error?: unknown };
-  if (typeof answer.address !== "object" || answer.address === null) return answer.error === NOTHING_FOUND ? "" : null;
+  if (typeof answer.address !== "object" || answer.address === null) {
+    return answer.error === NOTHING_FOUND ? "" : null;
+  }
   const address = answer.address as Record<string, unknown>;
   const field = (key: string) => (typeof address[key] === "string" ? address[key].trim() : "");
   const place = PLACES.map(field).find(Boolean) ?? "";
@@ -120,11 +124,15 @@ function numberIn(value: unknown): number | null {
 
 /** One search result from an entry of Nominatim's list, or null when it has no usable position. */
 function resultIn(entry: unknown): SearchResult | null {
-  if (typeof entry !== "object" || entry === null) return null;
+  if (typeof entry !== "object" || entry === null) {
+    return null;
+  }
   const place = entry as Record<string, unknown>;
   const lat = numberIn(place.lat);
   const lng = numberIn(place.lon);
-  if (lat === null || lng === null) return null;
+  if (lat === null || lng === null) {
+    return null;
+  }
   const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
   const address = (typeof place.address === "object" && place.address !== null ? place.address : {}) as Record<
     string,
@@ -134,10 +142,14 @@ function resultIn(entry: unknown): SearchResult | null {
   // Without a name of its own, the label is the start of the full address,
   // with the road after a house number: "12, Rue du Batty".
   const houseNumber = text(address.house_number);
-  const parts = text(place.display_name).split(",").map((part) => part.trim());
+  const parts = text(place.display_name)
+    .split(",")
+    .map((part) => part.trim());
   const start = houseNumber && parts[0] === houseNumber ? parts.slice(0, 2) : parts.slice(0, 1);
   const label = text(place.name) || start.join(", ");
-  if (!label) return null;
+  if (!label) {
+    return null;
+  }
 
   const kind = houseNumber
     ? "address"
@@ -165,7 +177,9 @@ function resultIn(entry: unknown): SearchResult | null {
 
 /** The results in a search answer (`[]` is nothing found), or null when the answer isn't a list. */
 function resultsIn(body: unknown): PlaceSearchAnswer | null {
-  if (!Array.isArray(body)) return null;
+  if (!Array.isArray(body)) {
+    return null;
+  }
   return { status: "found", results: body.map(resultIn).filter((result) => result !== null) };
 }
 
@@ -193,11 +207,15 @@ export function createNominatim(options: NominatimOptions = {}): Nominatim {
   const answers = new Map<string, Promise<PlaceSearchAnswer>>();
 
   async function work() {
-    if (running) return;
+    if (running) {
+      return;
+    }
     running = true;
     while (searches.length > 0 || lookups.length > 0) {
       const wait = lastRequestAt + MIN_INTERVAL_MS - Date.now();
-      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      if (wait > 0) {
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      }
       // Chosen after the wait, so a search asked for meanwhile still goes first.
       const next = searches.shift() ?? lookups.shift();
       lastRequestAt = Date.now();
@@ -224,17 +242,24 @@ export function createNominatim(options: NominatimOptions = {}): Nominatim {
   return {
     names: {
       defaultNameAt(at) {
-        return request(lookups, reverseUrl(at), (body) => {
-          const name = defaultNameIn(body);
-          return name === null ? null : { status: "found", name };
-        }, NAME_FAILED);
+        return request(
+          lookups,
+          reverseUrl(at),
+          (body) => {
+            const name = defaultNameIn(body);
+            return name === null ? null : { status: "found", name };
+          },
+          NAME_FAILED,
+        );
       },
     },
     search: {
       search(text, area) {
         const key = searchKey(text, area);
         const kept = answers.get(key);
-        if (kept) return kept;
+        if (kept) {
+          return kept;
+        }
         const answer = request(searches, searchUrl(text.trim(), area), resultsIn, SEARCH_FAILED);
         answers.set(key, answer);
         // Failures are not kept, so Retry really asks again.

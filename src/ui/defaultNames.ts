@@ -37,7 +37,11 @@ export function startDefaultNames({ source, points, found, online }: DefaultName
   function next() {
     const waiting = toLookUp(points());
     const ids = new Set(waiting.map((point) => point.id));
-    for (const id of answered.keys()) if (!ids.has(id)) answered.delete(id);
+    for (const id of answered.keys()) {
+      if (!ids.has(id)) {
+        answered.delete(id);
+      }
+    }
     return waiting.find((point) => answered.get(point.id) !== positionKey(point.position));
   }
 
@@ -47,7 +51,9 @@ export function startDefaultNames({ source, points, found, online }: DefaultName
       for (let point = next(); point && !stopped && online(); point = next()) {
         const at = point.position;
         const lookup = await source.defaultNameAt(at);
-        if (stopped) return;
+        if (stopped) {
+          return;
+        }
         if (lookup.status === "failed") {
           retry = setTimeout(backOnline, RETRY_MS);
           return;
@@ -61,12 +67,16 @@ export function startDefaultNames({ source, points, found, online }: DefaultName
   }
 
   function wake() {
-    if (busy || stopped || retry !== null) return;
+    if (busy || stopped || retry !== null) {
+      return;
+    }
     void work();
   }
 
   function backOnline() {
-    if (retry !== null) clearTimeout(retry);
+    if (retry !== null) {
+      clearTimeout(retry);
+    }
     retry = null;
     wake();
   }
@@ -76,7 +86,9 @@ export function startDefaultNames({ source, points, found, online }: DefaultName
     backOnline,
     stop: () => {
       stopped = true;
-      if (retry !== null) clearTimeout(retry);
+      if (retry !== null) {
+        clearTimeout(retry);
+      }
     },
   };
 }

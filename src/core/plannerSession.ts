@@ -73,8 +73,7 @@ export type PanelView = {
 
 /** The planner's mode (GLOSSARY "Access point editing", ADR 0036): always normal on load. */
 export type PlannerMode =
-  | { readonly kind: "normal" }
-  | { readonly kind: "accessPointEditing"; readonly returnTo: PanelView };
+  { readonly kind: "normal" } | { readonly kind: "accessPointEditing"; readonly returnTo: PanelView };
 
 /** Whether the planner is editing access points, so the trip is frozen. */
 export const editingAccessPoints = (session: PlannerSession): boolean => session.mode.kind === "accessPointEditing";
@@ -178,13 +177,21 @@ const edited = (session: PlannerSession, trip: Trip, offers: readonly SnapOffer[
 /** Offers after your access points changed: deleted ones drop, moved ones follow; official aires never change. */
 const followAccessPoints = (trip: Trip, offers: readonly SnapOffer[], accessPoints: AccessPoints): SnapOffer[] =>
   offers.flatMap((offer) => {
-    if (offer.target.kind !== "access-point") return [offer];
+    if (offer.target.kind !== "access-point") {
+      return [offer];
+    }
     const { id } = offer.target.accessPoint;
-    const accessPoint = accessPoints.find((a) => a.id === id);
+    const accessPoint = accessPoints.find((accessPoint) => accessPoint.id === id);
     const at = trip.points[offer.change.point];
-    if (!accessPoint || !at) return [];
-    if (accessPoint === offer.target.accessPoint) return [offer];
-    return [{ ...offer, target: { kind: "access-point", accessPoint }, distanceM: distanceM(at, accessPoint.position) }];
+    if (!accessPoint || !at) {
+      return [];
+    }
+    if (accessPoint === offer.target.accessPoint) {
+      return [offer];
+    }
+    return [
+      { ...offer, target: { kind: "access-point", accessPoint }, distanceM: distanceM(at, accessPoint.position) },
+    ];
   });
 
 const routing = (session: PlannerSession, action: RoutingAction): PlannerSession => {
@@ -209,11 +216,21 @@ const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set([
 ]);
 
 export function plannerSession(session: PlannerSession, action: PlannerAction): PlannerSession {
-  if (action.type === "routeRequested" || action.type === "routeArrived") return routing(session, action);
-  if (action.type === "confirmReplace") return session.pendingTrip ? replaced(session, session.pendingTrip) : session;
-  if (action.type === "cancelReplace") return session.pendingTrip ? { ...session, pendingTrip: null } : session;
-  if (session.pendingTrip) return session;
-  if (editingAccessPoints(session) && frozenWhileEditing.has(action.type)) return session;
+  if (action.type === "routeRequested" || action.type === "routeArrived") {
+    return routing(session, action);
+  }
+  if (action.type === "confirmReplace") {
+    return session.pendingTrip ? replaced(session, session.pendingTrip) : session;
+  }
+  if (action.type === "cancelReplace") {
+    return session.pendingTrip ? { ...session, pendingTrip: null } : session;
+  }
+  if (session.pendingTrip) {
+    return session;
+  }
+  if (editingAccessPoints(session) && frozenWhileEditing.has(action.type)) {
+    return session;
+  }
 
   const { trip } = session;
   switch (action.type) {
@@ -226,11 +243,15 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
       return edited(session, after, movedPointOffers(after, action.index, action.accessPoints, action.officialAires));
     }
     case "backToStart":
-      if (!canGoBackToStart(trip)) return session;
+      if (!canGoBackToStart(trip)) {
+        return session;
+      }
       return edited(session, applyEdit(trip, { type: "addPoint", at: trip.points[0], mode: action.mode }));
     case "insertPoint": {
       const after = applyEdit(trip, action);
-      if (after === trip) return session;
+      if (after === trip) {
+        return session;
+      }
       const selected = session.selectedPoint;
       // The selection follows its point: a point after the insert moves up by one.
       const follows = selected !== null && selected > action.index ? selected + 1 : selected;
@@ -268,7 +289,9 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
         fileError: null,
       };
     case "legClicked":
-      if (!trip.legs[action.index]) return session;
+      if (!trip.legs[action.index]) {
+        return session;
+      }
       return {
         ...session,
         selectedLeg: session.selectedLeg === action.index ? null : action.index,
@@ -284,13 +307,13 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
             trip: acceptSnap(trip, action.offer),
             selectedPoint: null,
             selectedLeg: null,
-            offers: session.offers.filter((o) => o !== action.offer),
+            offers: session.offers.filter((offer) => offer !== action.offer),
             fileError: null,
           }
         : session;
     case "declineOffer":
       return session.offers.includes(action.offer)
-        ? { ...session, offers: session.offers.filter((o) => o !== action.offer), fileError: null }
+        ? { ...session, offers: session.offers.filter((offer) => offer !== action.offer), fileError: null }
         : session;
     case "newTrip":
       return replace(session, setStartDate(emptyTrip(), action.startDate), "newTrip");

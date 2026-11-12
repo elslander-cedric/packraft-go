@@ -67,7 +67,7 @@ describe("official aires", () => {
 
   it("records the snapshot's source and date once, and sorts by number so a refresh diffs well", () => {
     const dataset = aires(aire({ numemb: 9 }), aire({ numemb: 2 }));
-    expect(dataset.aires.map((a) => a.number)).toEqual([2, 9]);
+    expect(dataset.aires.map((aire) => aire.number)).toEqual([2, 9]);
     expect(dataset.snapshot).toBe(SNAPSHOT);
     expect(dataset.source.url).toMatch(/^https:\/\/.*PKAYAK\/MapServer\/3$/);
   });
@@ -102,9 +102,9 @@ describe("official stretches", () => {
 
   it("fails on a stretch with no name or a repeated id", () => {
     const stretch = stretchAnswer.features[0];
-    expect(() => buildOfficialStretches({ features: [{ properties: { nomtro: "X", adrtro: null } }] }, SNAPSHOT)).toThrow(
-      /X.*name/i,
-    );
+    expect(() =>
+      buildOfficialStretches({ features: [{ properties: { nomtro: "X", adrtro: null } }] }, SNAPSHOT),
+    ).toThrow(/X.*name/i);
     expect(() => buildOfficialStretches({ features: [stretch, stretch] }, SNAPSHOT)).toThrow(/SEMOIS2-3.*twice/i);
   });
 });
@@ -149,7 +149,7 @@ describe("obstacles", () => {
 
   it("records the snapshot's source and date once, and sorts by id so a refresh diffs well", () => {
     const dataset = obstacles(obstacle({ id: 150 }), obstacle({ id: 53 }));
-    expect(dataset.obstacles.map((o) => o.spwId)).toEqual([53, 150]);
+    expect(dataset.obstacles.map((obstacle) => obstacle.spwId)).toEqual([53, 150]);
     expect(dataset.snapshot).toBe(SNAPSHOT);
     expect(dataset.source.title).toMatch(/SPW/);
     expect(dataset.source.url).toMatch(/^https:\/\/.*PKAYAK\/MapServer\/1$/);

@@ -93,7 +93,9 @@ test.describe("on a desktop", () => {
 
     await page.getByRole("button", { name: /^Access · / }).click();
     const legend = page.getByRole("region", { name: strings.accessLegendLabel });
-    for (const use of ["put-in", "take-out", "both"] as const) await expect(legend).toContainText(text.legend[use]);
+    for (const use of ["put-in", "take-out", "both"] as const) {
+      await expect(legend).toContainText(text.legend[use]);
+    }
   });
 
   test("a click on an aire opens its details and adds nothing to the trip", async ({ page }) => {

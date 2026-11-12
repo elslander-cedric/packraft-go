@@ -58,7 +58,7 @@ async function openFile(page: Page, file: string | { name: string; mimeType: str
   await openTripFile(page, file);
 }
 
-const linePaths = (page: Page) => legLines(page).evaluateAll((paths) => paths.map((p) => p.getAttribute("d")));
+const linePaths = (page: Page) => legLines(page).evaluateAll((paths) => paths.map((path) => path.getAttribute("d")));
 
 test.beforeEach(({ page }) => showAllLegs(page));
 

@@ -22,18 +22,25 @@ async function seed(page: Page) {
     trip: {
       name: "Ourthe",
       points: [start, putIn],
-      legs: [{ mode: "hike", route: { status: "routed", geometry: [start, putIn].map((p) => ({ ...p, elevation: 5 })) } }],
+      legs: [
+        {
+          mode: "hike",
+          route: { status: "routed", geometry: [start, putIn].map((point) => ({ ...point, elevation: 5 })) },
+        },
+      ],
     },
   });
   const now = "2026-10-14T08:00:00.000Z";
   const added = addAccessPoint([], { id: "ap1", at: nearby, now });
   const points = serialiseAccessPoints(updateAccessPoint(added, "ap1", { kind: "slipway", use: "put-in" }, now));
   await page.addInitScript(
-    ([t, p]) => {
-      if (sessionStorage.getItem("seeded")) return;
+    ([tripJson, pointsJson]) => {
+      if (sessionStorage.getItem("seeded")) {
+        return;
+      }
       sessionStorage.setItem("seeded", "1");
-      localStorage.setItem("packraft-go.trip", t);
-      localStorage.setItem("packraft-go.access-points", p);
+      localStorage.setItem("packraft-go.trip", tripJson);
+      localStorage.setItem("packraft-go.access-points", pointsJson);
     },
     [trip, points],
   );

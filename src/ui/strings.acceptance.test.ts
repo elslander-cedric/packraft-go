@@ -9,7 +9,9 @@ const SRC = path.resolve(__dirname, "..");
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const full = path.join(dir, name);
-    if (statSync(full).isDirectory()) return sourceFiles(full);
+    if (statSync(full).isDirectory()) {
+      return sourceFiles(full);
+    }
     return /\.(ts|tsx)$/.test(name) && !/\.test\.tsx?$/.test(name) ? [full] : [];
   });
 }
@@ -26,9 +28,9 @@ describe("strings module", () => {
 describe("no Belgium hard-coding outside the map config", () => {
   it("only mapConfig mentions Belgium", () => {
     const hits = sourceFiles(SRC)
-      .filter((f) => !f.endsWith(path.join("map", "mapConfig.ts")))
-      .filter((f) => !f.endsWith(path.join("ui", "strings.ts")))
-      .filter((f) => /belgi/i.test(readFileSync(f, "utf8")));
+      .filter((sourceFile) => !sourceFile.endsWith(path.join("map", "mapConfig.ts")))
+      .filter((file) => !file.endsWith(path.join("ui", "strings.ts")))
+      .filter((file) => /belgi/i.test(readFileSync(file, "utf8")));
     expect(hits).toEqual([]);
   });
 });

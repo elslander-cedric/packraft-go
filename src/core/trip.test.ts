@@ -11,10 +11,7 @@ describe("adding points", () => {
   });
 
   it("each further point adds a hike leg from the previous point", () => {
-    const trip = [addPoint(50, 4), addPoint(50.1, 4.1), addPoint(50.2, 4.1)].reduce(
-      applyEdit,
-      emptyTrip(),
-    );
+    const trip = [addPoint(50, 4), addPoint(50.1, 4.1), addPoint(50.2, 4.1)].reduce(applyEdit, emptyTrip());
     expect(trip.points).toEqual([
       { lat: 50, lng: 4 },
       { lat: 50.1, lng: 4.1 },

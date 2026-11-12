@@ -32,13 +32,17 @@ export function listenForHold(element: Element, map: LeafletMap, onHold: (at: La
     return { lat, lng };
   };
   const release = () => {
-    if (pressed) clearTimeout(pressed.timer);
+    if (pressed) {
+      clearTimeout(pressed.timer);
+    }
     pressed = null;
   };
 
   const down = (event: PointerEvent) => {
     lastPointerType = event.pointerType;
-    if (!isPrimaryPress(event) || pressed) return;
+    if (!isPrimaryPress(event) || pressed) {
+      return;
+    }
     const where = at(event);
     pressed = {
       id: event.pointerId,
@@ -51,18 +55,26 @@ export function listenForHold(element: Element, map: LeafletMap, onHold: (at: La
     };
   };
   const move = (event: PointerEvent) => {
-    if (pressed?.id !== event.pointerId) return;
-    if (Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > HOLD_SLOP_PX) release();
+    if (pressed?.id !== event.pointerId) {
+      return;
+    }
+    if (Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > HOLD_SLOP_PX) {
+      release();
+    }
   };
   const up = (event: PointerEvent) => {
-    if (pressed?.id === event.pointerId) release();
+    if (pressed?.id === event.pointerId) {
+      release();
+    }
   };
   const contextMenu = (event: Event) => {
     event.preventDefault();
     event.stopPropagation();
     const mouse = event as PointerEvent;
     const pointerType = mouse.pointerType || lastPointerType;
-    if (pointerType === "mouse") onHold(at(mouse));
+    if (pointerType === "mouse") {
+      onHold(at(mouse));
+    }
   };
 
   // Moves, lifts and cancels are watched on the document: Leaflet may capture the pointer to pan.
@@ -73,10 +85,14 @@ export function listenForHold(element: Element, map: LeafletMap, onHold: (at: La
     [document, "pointercancel", up as EventListener],
     [element, "contextmenu", contextMenu],
   ];
-  for (const [target, type, listener] of listeners) target.addEventListener(type, listener);
+  for (const [target, type, listener] of listeners) {
+    target.addEventListener(type, listener);
+  }
   return () => {
     release();
-    for (const [target, type, listener] of listeners) target.removeEventListener(type, listener);
+    for (const [target, type, listener] of listeners) {
+      target.removeEventListener(type, listener);
+    }
   };
 }
 
@@ -86,7 +102,7 @@ export function listenForHold(element: Element, map: LeafletMap, onHold: (at: La
  * when it mounts: then it starts listening once the layer is added to the map.
  */
 export function useHold(
-  layer: { readonly current: Pick<Layer, "on" | "off"> & { getElement(): Element | undefined } | null },
+  layer: { readonly current: (Pick<Layer, "on" | "off"> & { getElement(): Element | undefined }) | null },
   onHold: (at: LatLng) => void,
 ) {
   const map = useMap();
@@ -96,11 +112,15 @@ export function useHold(
   });
   useEffect(() => {
     const current = layer.current;
-    if (!current) return;
+    if (!current) {
+      return;
+    }
     let stop: (() => void) | undefined;
     const listen = () => {
       const element = current.getElement();
-      if (!element || stop) return;
+      if (!element || stop) {
+        return;
+      }
       stop = listenForHold(element, map, (at) => latest.current(at));
     };
     listen();

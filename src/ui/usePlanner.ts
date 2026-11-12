@@ -14,7 +14,13 @@ import { loadStoredTrip, storeTrip } from "@/persistence/tripStorage";
 import { createBRouterRouter } from "@/routing/brouter";
 import { strings } from "./strings";
 import { useAccessPoints } from "./useAccessPoints";
-import { localToday, useAccessRules, useBuiltInLocks, useBuiltInObstacles, useBuiltInOfficialAires } from "./useAccessRules";
+import {
+  localToday,
+  useAccessRules,
+  useBuiltInLocks,
+  useBuiltInObstacles,
+  useBuiltInOfficialAires,
+} from "./useAccessRules";
 import { useSettings } from "./useSettings";
 import { useOfficialIncidents, useOfficialStatus } from "./useOfficialStatus";
 import { useWalloonFlows } from "./useWalloonFlows";
@@ -42,7 +48,9 @@ export function usePlanner(router?: Router) {
 
   // Every change is saved. Restored legs keep their routed results, so syncing routes nothing new.
   useEffect(() => {
-    if (!keepStoredSave) storeTrip(trip);
+    if (!keepStoredSave) {
+      storeTrip(trip);
+    }
     void autoRouter.sync(trip);
   }, [autoRouter, trip, keepStoredSave]);
 
@@ -51,9 +59,13 @@ export function usePlanner(router?: Router) {
   const [settings, setSettings] = useSettings();
   // An empty field (null), like any unusable value, changes nothing.
   const changeSetting = (name: PaceSetting, value: number | null) => {
-    if (settings === null || value === null) return;
+    if (settings === null || value === null) {
+      return;
+    }
     const changed = withSetting(settings, name, value);
-    if (changed !== settings) setSettings(changed);
+    if (changed !== settings) {
+      setSettings(changed);
+    }
   };
 
   // Your access points: their own collection, apart from the trip.
@@ -66,7 +78,9 @@ export function usePlanner(router?: Router) {
   // With a `name` (the planner asks for it first), the trip is renamed, then saved or exported
   // under that name.
   const toDownload = (name?: string) => {
-    if (name === undefined) return trip;
+    if (name === undefined) {
+      return trip;
+    }
     dispatch({ type: "rename", name });
     return renameTrip(trip, name);
   };
@@ -78,12 +92,19 @@ export function usePlanner(router?: Router) {
   const exportGpx = (name?: string) => {
     const exported = toDownload(name);
     dispatch({ type: "fileDownloaded" });
-    downloadGpx(exported, { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName, end: strings.gpxEnd });
+    downloadGpx(exported, {
+      untitledTrip: strings.tripNamePlaceholder,
+      section: strings.gpxSectionName,
+      end: strings.gpxEnd,
+    });
   };
   const openFile = async (file: File) => {
     const opened = await readTripFile(file);
-    if (opened.ok) dispatch({ type: "fileOpened", trip: opened.trip });
-    else dispatch({ type: "fileRejected", reason: opened.reason === "unknown-version" ? "unknown-version" : "invalid" });
+    if (opened.ok) {
+      dispatch({ type: "fileOpened", trip: opened.trip });
+    } else {
+      dispatch({ type: "fileRejected", reason: opened.reason === "unknown-version" ? "unknown-version" : "invalid" });
+    }
   };
   const undo = () => dispatch({ type: "undo" });
   const deleteSelectedPoint = () => dispatch({ type: "deleteSelectedPoint" });
@@ -91,9 +112,13 @@ export function usePlanner(router?: Router) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       // While a confirmation is open, keys belong to it (Escape cancels it).
-      if (pendingTrip || typingInField(event)) return;
+      if (pendingTrip || typingInField(event)) {
+        return;
+      }
       // While editing access points the trip is frozen: undo and delete are off.
-      if (frozen) return;
+      if (frozen) {
+        return;
+      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
         undo();
@@ -115,7 +140,10 @@ export function usePlanner(router?: Router) {
   const locks = useBuiltInLocks(hasPaddle) ?? undefined; // Lock warnings.
   const obstacles = useBuiltInObstacles(hasPaddle) ?? undefined; // Obstacle warnings.
   const today = localToday();
-  const rulesAccess = useMemo(() => (rules ? tripAccess(trip, rules, { today, locks, obstacles }) : null), [trip, rules, today, locks, obstacles]);
+  const rulesAccess = useMemo(
+    () => (rules ? tripAccess(trip, rules, { today, locks, obstacles }) : null),
+    [trip, rules, today, locks, obstacles],
+  );
   // Paddle legs dated today use the live Walloon flows and the official status, asked for only when there are some.
   const legToday = rulesAccess?.legs.some((leg) => leg?.date === today) ?? false;
   const flows = useWalloonFlows(rules, legToday);
@@ -140,7 +168,20 @@ export function usePlanner(router?: Router) {
             obstacles,
           })
         : rulesAccess,
-    [trip, rules, today, flows, flowsPending, official, officialPending, incidents, locks, obstacles, rulesAccess, hasPaddle],
+    [
+      trip,
+      rules,
+      today,
+      flows,
+      flowsPending,
+      official,
+      officialPending,
+      incidents,
+      locks,
+      obstacles,
+      rulesAccess,
+      hasPaddle,
+    ],
   );
   // Wanted from the first point, not the first paddle leg: that leg's own put-in may be offered one.
   const officialAires = useBuiltInOfficialAires(trip.points.length > 0)?.aires;

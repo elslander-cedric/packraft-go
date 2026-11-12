@@ -14,7 +14,9 @@ function unrouted(leg: Leg): Leg {
 }
 
 export function movePoint(trip: Trip, index: number, to: LatLng): Trip {
-  if (!(index in trip.points)) return trip;
+  if (!(index in trip.points)) {
+    return trip;
+  }
   const points = trip.points.map((point, i) => (i === index ? to : point));
   // legs[index - 1] ends at the point and legs[index] starts at it.
   const legs = trip.legs.map((leg, i) => (i === index - 1 || i === index ? unrouted(leg) : leg));
@@ -27,7 +29,9 @@ export function movePoint(trip: Trip, index: number, to: LatLng): Trip {
  */
 export function setLegMode(trip: Trip, index: number, mode: LegMode): Trip {
   const leg = trip.legs[index];
-  if (!leg || leg.mode === mode) return trip;
+  if (!leg || leg.mode === mode) {
+    return trip;
+  }
   const legs = trip.legs.map((other, i) => (i === index ? unrouted({ ...other, mode }) : other));
   return { ...trip, legs };
 }
@@ -37,11 +41,13 @@ export function setLegMode(trip: Trip, index: number, mode: LegMode): Trip {
  * leg keeps its route and nothing is routed again.
  */
 export function toggleCamp(trip: Trip, index: number): Trip {
-  if (!(index in trip.points)) return trip;
+  if (!(index in trip.points)) {
+    return trip;
+  }
   const camps = trip.camps ?? [];
   const toggled = camps.includes(index)
     ? camps.filter((camp) => camp !== index)
-    : [...camps, index].sort((a, b) => a - b);
+    : [...camps, index].sort((left, right) => left - right);
   return { ...trip, camps: toggled };
 }
 
@@ -55,7 +61,9 @@ export function toggleCamp(trip: Trip, index: number): Trip {
  * wait for an answer that already came.
  */
 export function withUndoStep(before: Trip, after: Trip): Trip {
-  if (after === before) return before;
+  if (after === before) {
+    return before;
+  }
   const { undoSteps = [], ...state } = before;
   const recorded = state.legs.some((leg) => leg.route?.status === "pending")
     ? { ...state, legs: state.legs.map((leg) => (leg.route?.status === "pending" ? unrouted(leg) : leg)) }
@@ -74,7 +82,9 @@ export function canUndo(trip: Trip): boolean {
  */
 export function undoLastEdit(trip: Trip): Trip {
   const steps = trip.undoSteps ?? [];
-  if (steps.length === 0) return trip;
+  if (steps.length === 0) {
+    return trip;
+  }
   const previous = { ...steps[steps.length - 1], name: trip.name, undoSteps: steps.slice(0, -1) };
   return withStartDate(previous, trip.startDate);
 }
@@ -82,7 +92,9 @@ export function undoLastEdit(trip: Trip): Trip {
 /** The trip with the given start date, or without one for `undefined` (no `startDate` key is left). */
 export function withStartDate(trip: Trip, startDate: string | undefined): Trip {
   const dated: { -readonly [K in keyof Trip]: Trip[K] } = { ...trip, startDate };
-  if (startDate === undefined) delete dated.startDate;
+  if (startDate === undefined) {
+    delete dated.startDate;
+  }
   return dated;
 }
 
@@ -92,17 +104,23 @@ export function withStartDate(trip: Trip, startDate: string | undefined): Trip {
  * A camp on the point goes with it; camps on later points stay on their points.
  */
 export function deletePoint(trip: Trip, index: number): Trip {
-  if (!(index in trip.points)) return trip;
+  if (!(index in trip.points)) {
+    return trip;
+  }
   const points = trip.points.filter((_, i) => i !== index);
   const last = trip.points.length - 1;
   let legs: readonly Leg[];
-  if (index === 0) legs = trip.legs.slice(1);
-  else if (index === last) legs = trip.legs.slice(0, -1);
-  else {
+  if (index === 0) {
+    legs = trip.legs.slice(1);
+  } else if (index === last) {
+    legs = trip.legs.slice(0, -1);
+  } else {
     const merged = unrouted(trip.legs[index - 1]);
     legs = [...trip.legs.slice(0, index - 1), merged, ...trip.legs.slice(index + 1)];
   }
-  if (!trip.camps) return { ...trip, points, legs };
+  if (!trip.camps) {
+    return { ...trip, points, legs };
+  }
   const camps = trip.camps.filter((camp) => camp !== index).map((camp) => (camp > index ? camp - 1 : camp));
   return { ...trip, points, legs, camps };
 }
@@ -114,7 +132,9 @@ export function deletePoint(trip: Trip, index: number): Trip {
  * stay on their points, so later camps shift by one.
  */
 export function insertPoint(trip: Trip, index: number, near: LatLng): Trip {
-  if (!(index in trip.legs)) return trip;
+  if (!(index in trip.legs)) {
+    return trip;
+  }
   const leg = trip.legs[index];
   const line =
     leg.route?.status === "routed" && leg.route.geometry.length > 0
@@ -123,7 +143,9 @@ export function insertPoint(trip: Trip, index: number, near: LatLng): Trip {
   const at = nearestOnLine(near, line);
   const points = [...trip.points.slice(0, index + 1), at, ...trip.points.slice(index + 1)];
   const legs = [...trip.legs.slice(0, index), unrouted(leg), unrouted(leg), ...trip.legs.slice(index + 1)];
-  if (!trip.camps) return { ...trip, points, legs };
+  if (!trip.camps) {
+    return { ...trip, points, legs };
+  }
   const camps = trip.camps.map((camp) => (camp > index ? camp + 1 : camp));
   return { ...trip, points, legs, camps };
 }

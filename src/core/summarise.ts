@@ -95,19 +95,21 @@ export type TripSummary = {
 const EARTH_MEAN_RADIUS_KM = 6371.0088;
 
 /** Great-circle distance between two points (haversine formula). */
-export function distanceKm(a: LatLng, b: LatLng): number {
+export function distanceKm(pointA: LatLng, pointB: LatLng): number {
   const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad;
-  const dLng = (b.lng - a.lng) * rad;
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
-  return 2 * EARTH_MEAN_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
+  const dLat = (pointB.lat - pointA.lat) * rad;
+  const dLng = (pointB.lng - pointA.lng) * rad;
+  const haversine =
+    Math.sin(dLat / 2) ** 2 + Math.cos(pointA.lat * rad) * Math.cos(pointB.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_MEAN_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(haversine)));
 }
 
 /** Length of a path through the points, in kilometres. */
 function pathKm(points: readonly LatLng[]): number {
   let km = 0;
-  for (let i = 1; i < points.length; i++) km += distanceKm(points[i - 1], points[i]);
+  for (let i = 1; i < points.length; i++) {
+    km += distanceKm(points[i - 1], points[i]);
+  }
   return km;
 }
 
@@ -162,7 +164,9 @@ function legDrop(route: Extract<LegRoute, { status: "routed" }>): { dropM: numbe
 /** Drop from a put-in to a take-out; a small rise counts as no drop, a larger one is a rise. */
 function dropBetween(putIn: RoutedPoint, takeOut: RoutedPoint): { dropM: number } | { riseM: number } {
   const dropM = putIn.elevation - takeOut.elevation;
-  if (dropM >= 0) return { dropM };
+  if (dropM >= 0) {
+    return { dropM };
+  }
   // Rounded to whole metres first, as it is shown, so a rise shown as 2 m is noise too.
   return Math.round(-dropM) > RISE_NOISE_M ? { riseM: -dropM } : { dropM: 0 };
 }
@@ -232,11 +236,15 @@ export function summarise(trip: Trip, settings: Pace = defaultSettings): TripSum
  * leg i - 1; camps at the start or end point split nothing.
  */
 export function dayRanges(trip: Trip): [number, number][] {
-  if (trip.legs.length === 0) return [];
+  if (trip.legs.length === 0) {
+    return [];
+  }
   const ranges: [number, number][] = [];
   let first = 0;
   for (const camp of trip.camps ?? []) {
-    if (camp <= first || camp >= trip.legs.length) continue;
+    if (camp <= first || camp >= trip.legs.length) {
+      continue;
+    }
     ranges.push([first, camp - 1]);
     first = camp;
   }
@@ -270,11 +278,15 @@ function summariseSection(trip: Trip, legs: readonly LegSummary[], section: Sect
     timeStatus: timeStatusOf(trip.legs.slice(section.firstLeg, section.lastLeg + 1), sectionLegs),
   };
   if (section.mode === "hike") {
-    if (sectionLegs.every((leg) => leg.climbM === undefined)) return totals;
+    if (sectionLegs.every((leg) => leg.climbM === undefined)) {
+      return totals;
+    }
     return { ...totals, climbM: sum((leg) => leg.climbM ?? 0), descentM: sum((leg) => leg.descentM ?? 0) };
   }
   const geometries = routes.flatMap((route) => (route?.status === "routed" ? [route.geometry] : []));
-  if (geometries.length < routes.length) return totals;
+  if (geometries.length < routes.length) {
+    return totals;
+  }
   return { ...totals, ...dropBetween(geometries[0][0], geometries[geometries.length - 1].at(-1)!) };
 }
 
@@ -283,6 +295,8 @@ function summariseSection(trip: Trip, legs: readonly LegSummary[], section: Sect
  * being routed, and lacks climb data when any of its legs' times does.
  */
 function timeStatusOf(legs: readonly Leg[], summaries: readonly LegSummary[]): TimeStatus {
-  if (legs.some((leg) => leg.route === undefined || leg.route.status === "pending")) return "pending";
+  if (legs.some((leg) => leg.route === undefined || leg.route.status === "pending")) {
+    return "pending";
+  }
   return summaries.some((leg) => leg.timeStatus === "no-climb-data") ? "no-climb-data" : "estimated";
 }

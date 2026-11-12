@@ -10,7 +10,9 @@ function loadedBuildFiles(): string[] {
     ...Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'), (link) => link.href),
   ];
   return [...new Set(urls)].filter((url) => {
-    if (!url) return false;
+    if (!url) {
+      return false;
+    }
     const { origin, pathname } = new URL(url, location.href);
     return origin === location.origin && pathname.startsWith("/_next/static/");
   });
@@ -23,7 +25,9 @@ function loadedBuildFiles(): string[] {
  */
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) {
+      return;
+    }
     navigator.serviceWorker
       .register("/sw.js")
       .then(() => navigator.serviceWorker.ready)

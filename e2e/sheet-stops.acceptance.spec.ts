@@ -41,23 +41,27 @@ test("a narrow desktop window in portrait gets the sheet; widened, the side pane
 test("touch screens: a phone in portrait gets the sheet; held sideways and tablets either way up, the side panel", async ({
   browser,
 }) => {
-  for (const [w, h, withSheet] of [
+  for (const [width, height, withSheet] of [
     [412, 915, true],
     [915, 412, false],
     [1280, 600, false],
     [1024, 768, false],
     [768, 1024, false],
   ] as const) {
-    const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
-    const p = await ctx.newPage();
-    await serveOffline(p);
-    await p.goto("/");
+    const ctx = await browser.newContext({
+      viewport: { width: width, height: height },
+      hasTouch: true,
+      isMobile: true,
+    });
+    const page = await ctx.newPage();
+    await serveOffline(page);
+    await page.goto("/");
     if (withSheet) {
-      await expect(sheet(p)).toBeVisible();
-      await expect(panel(p)).toHaveCount(0);
+      await expect(sheet(page)).toBeVisible();
+      await expect(panel(page)).toHaveCount(0);
     } else {
-      await expect(panel(p)).toBeVisible();
-      await expect(sheet(p)).toHaveCount(0);
+      await expect(panel(page)).toBeVisible();
+      await expect(sheet(page)).toHaveCount(0);
     }
     await ctx.close();
   }
@@ -93,7 +97,9 @@ test.describe("sheet stops by drag distance", () => {
     await drag(page, screen * 0.3);
     await expect.poll(async () => Math.abs((await height(page)) - screen * 0.5)).toBeLessThan(screen * 0.05);
 
-    for (let i = 0; i < 3; i++) await drag(page, screen);
+    for (let i = 0; i < 3; i++) {
+      await drag(page, screen);
+    }
     await expect.poll(() => height(page)).toBeLessThan(132);
     await expect(sheet(page)).toBeVisible();
     await page.keyboard.press("Escape");

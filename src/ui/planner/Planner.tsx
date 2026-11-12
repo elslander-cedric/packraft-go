@@ -101,13 +101,15 @@ export default function Planner({ router }: { router?: Router }) {
   // (the draft), which Save stores.
   const [editedId, setEditedId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState(false);
-  const editedPoint = editingDraft ? access.draft : (access.points.find((p) => p.id === editedId) ?? null);
+  const editedPoint = editingDraft ? access.draft : (access.points.find((point) => point.id === editedId) ?? null);
   const marking = useMarkAccessPoint(access, position, showPosition, () => setEditingDraft(true));
 
   const onMapTap = (at: LatLng) => {
-    if (editingAccessPoints) access.placeDraft(at);
-    else if (selectedPoint !== null || selectedLeg !== null) dispatch({ type: "deselect" });
-    else {
+    if (editingAccessPoints) {
+      access.placeDraft(at);
+    } else if (selectedPoint !== null || selectedLeg !== null) {
+      dispatch({ type: "deselect" });
+    } else {
       keepOverFirstPoint();
       dispatch({ type: "addPoint", at, mode: nextMode, ...snapTargets });
     }
@@ -121,7 +123,9 @@ export default function Planner({ router }: { router?: Router }) {
     panel.openForEditing();
   };
   const leaveAccessPointEditing = () => {
-    if (session.mode.kind === "normal") return;
+    if (session.mode.kind === "normal") {
+      return;
+    }
     const { returnTo } = session.mode;
     dispatch({ type: "leaveAccessPointEditing" });
     access.select(null);
@@ -134,12 +138,16 @@ export default function Planner({ router }: { router?: Router }) {
   // A marker tap selects the access point; while editing it also brings its row into view.
   const selectAccessPoint = (id: string) => {
     access.select(id);
-    if (editingAccessPoints) panel.raiseFromPeek();
+    if (editingAccessPoints) {
+      panel.raiseFromPeek();
+    }
   };
   // A row tap selects it and shows it on the map.
   const showAccessPoint = (id: string) => {
-    const point = access.points.find((p) => p.id === id);
-    if (!point) return;
+    const point = access.points.find((point) => point.id === id);
+    if (!point) {
+      return;
+    }
     access.select(id);
     showOnMap({ at: point.position });
   };
@@ -374,7 +382,9 @@ export default function Planner({ router }: { router?: Router }) {
         point={editedPoint}
         unsaved={editingDraft}
         onSave={(id, changes) => {
-          if (!editingDraft) return access.update(id, changes);
+          if (!editingDraft) {
+            return access.update(id, changes);
+          }
           // The new point is now stored and selected: bring its row into view.
           access.saveDraft(changes);
           panel.raiseFromPeek();

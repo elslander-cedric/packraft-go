@@ -12,7 +12,9 @@ export function baseMapChoice(value: BaseMapId, onChange: (id: BaseMapId) => voi
     })),
     value,
     onChange: (chosen) => {
-      if (isBaseMapId(chosen)) onChange(chosen);
+      if (isBaseMapId(chosen)) {
+        onChange(chosen);
+      }
     },
   };
 }

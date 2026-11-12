@@ -17,7 +17,13 @@ const statusSource = keepOnSuccess(() =>
  * can fail to load when offline: that is no answer either.
  */
 function officialFeed<T>(ask: (source: OfficialStatusSource) => Promise<T>) {
-  return createLiveFeed<T | typeof FAILED>(() => statusSource().then(ask).catch(() => FAILED), { everyMs: REFRESH_MS });
+  return createLiveFeed<T | typeof FAILED>(
+    () =>
+      statusSource()
+        .then(ask)
+        .catch(() => FAILED),
+    { everyMs: REFRESH_MS },
+  );
 }
 
 const readingsFeed = officialFeed((source) => source.readings());

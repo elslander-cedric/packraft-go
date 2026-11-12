@@ -16,8 +16,22 @@ const SAMPLES = [
   { kind: "dam", spwId: 85, lng: 5.11601, lat: 50.15888, lastChanged: "2023-01-23", says: /check it.*portage/i },
   { kind: "impassable", spwId: 149, lng: 5.69328, lat: 50.12747, lastChanged: "2023-01-30", says: /portage required/i },
   { kind: "rocks", spwId: 68, lng: 5.78176, lat: 49.87391, lastChanged: "2023-01-23", says: /take care/i },
-  { kind: "drossage", spwId: 127, lng: 6.13221, lat: 50.15541, lastChanged: "2023-01-23", says: /take care.*sharply.*bank/i },
-  { kind: "low-bridge", spwId: 152, lng: 5.89924, lat: 50.37774, lastChanged: "2023-01-30", says: /take care.*portage.*high water/i },
+  {
+    kind: "drossage",
+    spwId: 127,
+    lng: 6.13221,
+    lat: 50.15541,
+    lastChanged: "2023-01-23",
+    says: /take care.*sharply.*bank/i,
+  },
+  {
+    kind: "low-bridge",
+    spwId: 152,
+    lng: 5.89924,
+    lat: 50.37774,
+    lastChanged: "2023-01-30",
+    says: /take care.*portage.*high water/i,
+  },
 ] as const;
 const [DAM] = SAMPLES;
 

@@ -24,7 +24,12 @@ const boundary: OverpassResponse = {
       members: [
         { type: "way", ref: 10, role: "outer", geometry: [pt(0, 0), pt(1, 0), pt(1, 1)] },
         { type: "way", ref: 11, role: "outer", geometry: [pt(0, 0), pt(0, 1), pt(1, 1)] },
-        { type: "way", ref: 12, role: "inner", geometry: [pt(0.4, 0.4), pt(0.6, 0.4), pt(0.6, 0.6), pt(0.4, 0.6), pt(0.4, 0.4)] },
+        {
+          type: "way",
+          ref: 12,
+          role: "inner",
+          geometry: [pt(0.4, 0.4), pt(0.6, 0.4), pt(0.6, 0.6), pt(0.4, 0.6), pt(0.4, 0.4)],
+        },
         { type: "node", ref: 99, role: "admin_centre" },
       ],
     },
@@ -61,7 +66,7 @@ describe("OSM preparation", () => {
       ],
     ]);
     expect(merged).toHaveLength(1);
-    expect(merged[0].map((p) => p[0]).sort()).toEqual([0, 1, 2, 3]);
+    expect(merged[0].map((position) => position[0]).sort()).toEqual([0, 1, 2, 3]);
   });
 
   it("takes ways from top-level ways and relation members, filtering top-level ways by tags", () => {
@@ -69,7 +74,11 @@ describe("OSM preparation", () => {
       elements: [
         { type: "way", id: 1, tags: { name: "Groenerei" }, geometry: [pt(3.2, 51.2), pt(3.21, 51.2)] },
         { type: "way", id: 2, tags: { name: "Smedenvest" }, geometry: [pt(3.3, 51.2), pt(3.31, 51.2)] },
-        { type: "relation", id: 3, members: [{ type: "way", ref: 4, role: "", geometry: [pt(4, 51), null, pt(4.1, 51)] }] },
+        {
+          type: "relation",
+          id: 3,
+          members: [{ type: "way", ref: 4, role: "", geometry: [pt(4, 51), null, pt(4.1, 51)] }],
+        },
       ],
     };
     const lines = waysOf(answer, (tags) => /rei$/.test(tags.name ?? ""));

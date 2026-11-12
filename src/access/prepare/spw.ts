@@ -49,7 +49,9 @@ export type PkayakAnswer = {
 
 const featuresOf = (answer: PkayakAnswer, what: string) => {
   // The service caps an answer at 2000 records: a partial list must never ship.
-  if (answer.exceededTransferLimit) throw new Error(`The ${what} answer was cut off by the service's record limit`);
+  if (answer.exceededTransferLimit) {
+    throw new Error(`The ${what} answer was cut off by the service's record limit`);
+  }
   return answer.features;
 };
 
@@ -85,14 +87,22 @@ export type OfficialLineDataset = {
   readonly attribution: string;
   readonly source: AccessSource;
   readonly snapshot: CalendarDate;
-  readonly stretches: readonly { readonly id: string; readonly parts: readonly (readonly (readonly [number, number])[])[] }[];
+  readonly stretches: readonly {
+    readonly id: string;
+    readonly parts: readonly (readonly (readonly [number, number])[])[];
+  }[];
 };
 
 /** Well below the 100 m that decides whether a river point is on a line. */
 const LINE_TOLERANCE_M = 3;
 
 const partsOf = (geometry: PkayakAnswer["features"][number]["geometry"]) => {
-  const parts = geometry?.type === "LineString" ? [geometry.coordinates] : geometry?.type === "MultiLineString" ? geometry.coordinates : [];
+  let parts: unknown = [];
+  if (geometry?.type === "LineString") {
+    parts = [geometry.coordinates];
+  } else if (geometry?.type === "MultiLineString") {
+    parts = geometry.coordinates;
+  }
   return (parts ?? []) as readonly (readonly (readonly [number, number])[])[];
 };
 
@@ -100,21 +110,25 @@ const partsOf = (geometry: PkayakAnswer["features"][number]["geometry"]) => {
 export function buildOfficialLines(answer: PkayakAnswer, snapshot: CalendarDate): OfficialLineDataset {
   const stretches = featuresOf(answer, "stretch line").map(({ geometry, properties }) => {
     const id = text(properties.nomtro);
-    if (id === null) throw new Error("A stretch has no id");
+    if (id === null) {
+      throw new Error("A stretch has no id");
+    }
     const parts = partsOf(geometry).map((part) =>
       simplify(
         part.map(([lng, lat]) => ({ lat, lng })),
         LINE_TOLERANCE_M,
       ).map(({ lat, lng }): [number, number] => [round(lng), round(lat)]),
     );
-    if (parts.length === 0) throw new Error(`Stretch ${id} has no line`);
+    if (parts.length === 0) {
+      throw new Error(`Stretch ${id} has no line`);
+    }
     return { id, parts };
   });
   return {
     attribution: SPW_ATTRIBUTION,
     source: { title: "SPW, PKAYAK map service, stretches", url: `${PKAYAK}/${PKAYAK_LAYERS.stretches}` },
     snapshot,
-    stretches: stretches.toSorted((a, b) => a.id.localeCompare(b.id)),
+    stretches: stretches.toSorted((left, right) => left.id.localeCompare(right.id)),
   };
 }
 
@@ -122,13 +136,19 @@ export function buildOfficialLines(answer: PkayakAnswer, snapshot: CalendarDate)
 export function buildOfficialStretches(answer: PkayakAnswer, snapshot: CalendarDate): OfficialStretchDataset {
   const stretches = featuresOf(answer, "stretch").map(({ properties }) => {
     const id = text(properties.nomtro);
-    if (id === null) throw new Error("A stretch has no id");
+    if (id === null) {
+      throw new Error("A stretch has no id");
+    }
     const name = text(properties.adrtro);
-    if (name === null) throw new Error(`Stretch ${id} has no name`);
+    if (name === null) {
+      throw new Error(`Stretch ${id} has no name`);
+    }
     return { id, name };
   });
   stretches.forEach(({ id }, i) => {
-    if (stretches.findIndex((s) => s.id === id) !== i) throw new Error(`Stretch ${id} appears twice`);
+    if (stretches.findIndex((stretch) => stretch.id === id) !== i) {
+      throw new Error(`Stretch ${id} appears twice`);
+    }
   });
   return {
     format: OFFICIAL_STRETCH_DATA_FORMAT,
@@ -138,7 +158,7 @@ export function buildOfficialStretches(answer: PkayakAnswer, snapshot: CalendarD
     attribution: SPW_ATTRIBUTION,
     source: { title: "SPW, PKAYAK map service, stretches", url: `${PKAYAK}/${PKAYAK_LAYERS.stretches}` },
     snapshot,
-    stretches: stretches.toSorted((a, b) => a.id.localeCompare(b.id)),
+    stretches: stretches.toSorted((left, right) => left.id.localeCompare(right.id)),
   };
 }
 
@@ -148,26 +168,38 @@ export function buildOfficialAires(
   { stretches }: Pick<OfficialStretchDataset, "stretches">,
   snapshot: CalendarDate,
 ): OfficialAireDataset {
-  const known = new Set(stretches.map((s) => s.id));
+  const known = new Set(stretches.map((stretch) => stretch.id));
   const aires = featuresOf(answer, "aire").map(({ geometry, properties }): StoredOfficialAire => {
     const number = properties.numemb;
-    if (typeof number !== "number") throw new Error(`An aire has no number: ${JSON.stringify(properties)}`);
+    if (typeof number !== "number") {
+      throw new Error(`An aire has no number: ${JSON.stringify(properties)}`);
+    }
     const fail = (problem: string) => new Error(`Aire ${number}: ${problem}`);
     const use = AIRE_USES[String(properties.typemb)];
-    if (use === undefined) throw fail(`unknown type ${JSON.stringify(properties.typemb)}`);
+    if (use === undefined) {
+      throw fail(`unknown type ${JSON.stringify(properties.typemb)}`);
+    }
     const officialStretch = text(properties.nomtro);
     if (officialStretch === null || !known.has(officialStretch)) {
       throw fail(`unknown official stretch ${JSON.stringify(properties.nomtro)}`);
     }
     const name = text(properties.nomair);
-    if (name === null) throw fail("no name");
-    if (typeof properties.datmod !== "number") throw fail("no last-changed date");
+    if (name === null) {
+      throw fail("no name");
+    }
+    if (typeof properties.datmod !== "number") {
+      throw fail("no last-changed date");
+    }
     const position = positionOf(geometry);
-    if (position === null) throw fail("no position");
+    if (position === null) {
+      throw fail("no position");
+    }
     return { number, name, use, officialStretch, position, lastChanged: dateInBrussels(properties.datmod) };
   });
   aires.forEach(({ number }, i) => {
-    if (aires.findIndex((a) => a.number === number) !== i) throw new Error(`Aire ${number} appears twice`);
+    if (aires.findIndex((aire) => aire.number === number) !== i) {
+      throw new Error(`Aire ${number} appears twice`);
+    }
   });
   return {
     format: OFFICIAL_AIRE_DATA_FORMAT,
@@ -177,7 +209,7 @@ export function buildOfficialAires(
     attribution: SPW_ATTRIBUTION,
     source: { title: "SPW, PKAYAK map service, aires", url: `${PKAYAK}/${PKAYAK_LAYERS.aires}` },
     snapshot,
-    aires: aires.toSorted((a, b) => a.number - b.number),
+    aires: aires.toSorted((left, right) => left.number - right.number),
   };
 }
 
@@ -188,17 +220,27 @@ export function buildOfficialAires(
 export function buildObstacles(answer: PkayakAnswer, snapshot: CalendarDate): ObstacleDataset {
   const obstacles = featuresOf(answer, "obstacle").map(({ geometry, properties }): StoredObstacle => {
     const spwId = properties.id;
-    if (typeof spwId !== "number") throw new Error(`An obstacle has no id: ${JSON.stringify(properties)}`);
+    if (typeof spwId !== "number") {
+      throw new Error(`An obstacle has no id: ${JSON.stringify(properties)}`);
+    }
     const fail = (problem: string) => new Error(`Obstacle ${spwId}: ${problem}`);
     const kind = OBSTACLE_KINDS[String(properties.codico)];
-    if (kind === undefined) throw fail(`unknown code ${JSON.stringify(properties.codico)}`);
-    if (typeof properties.datmod !== "number") throw fail("no last-changed date");
+    if (kind === undefined) {
+      throw fail(`unknown code ${JSON.stringify(properties.codico)}`);
+    }
+    if (typeof properties.datmod !== "number") {
+      throw fail("no last-changed date");
+    }
     const position = positionOf(geometry);
-    if (position === null) throw fail("no position");
+    if (position === null) {
+      throw fail("no position");
+    }
     return { spwId, kind, position, lastChanged: dateInBrussels(properties.datmod) };
   });
   obstacles.forEach(({ spwId }, i) => {
-    if (obstacles.findIndex((o) => o.spwId === spwId) !== i) throw new Error(`Obstacle ${spwId} appears twice`);
+    if (obstacles.findIndex((obstacle) => obstacle.spwId === spwId) !== i) {
+      throw new Error(`Obstacle ${spwId} appears twice`);
+    }
   });
   return {
     format: OBSTACLE_DATA_FORMAT,
@@ -208,6 +250,6 @@ export function buildObstacles(answer: PkayakAnswer, snapshot: CalendarDate): Ob
     attribution: SPW_ATTRIBUTION,
     source: { title: "SPW, PKAYAK map service, obstacles", url: `${PKAYAK}/${PKAYAK_LAYERS.obstacles}` },
     snapshot,
-    obstacles: obstacles.toSorted((a, b) => a.spwId - b.spwId),
+    obstacles: obstacles.toSorted((left, right) => left.spwId - right.spwId),
   };
 }

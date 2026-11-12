@@ -43,7 +43,9 @@ async function openMap(page: Page) {
 
 /** Opens the field from the pill (unless it is open) and searches `what`. */
 async function search(page: Page, what: string) {
-  if ((await field(page).count()) === 0) await pill(page).click();
+  if ((await field(page).count()) === 0) {
+    await pill(page).click();
+  }
   await field(page).fill(what);
   await field(page).press("Enter");
 }
@@ -142,7 +144,7 @@ test("a failed search offers Retry, which asks the same text and area again", as
   const firstArea = network.nominatim[0].searchParams.get("viewbox");
 
   // The map moves before Retry; the search doesn't.
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.wheel(0, -300);
   await expect.poll(() => lastZoom(network.tiles)).toBeGreaterThan(8);
@@ -179,7 +181,9 @@ test("coordinates jump there with no request, even offline", async ({ page, cont
   await expect.poll(() => lastZoom(network.tiles)).toBe(15);
   // The pin's point is centred across the part of the map the panel leaves free, and between
   // the pill's row and the map's bottom.
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))),
+  );
   const free = await freeMapBox(page);
   const pillBox = (await pill(page).boundingBox())!;
   const marker = (await pin(page).boundingBox())!;
@@ -200,7 +204,9 @@ test("bad coordinates say so and send nothing", async ({ page }) => {
   await expect(pin(page)).toHaveCount(0);
 });
 
-test("a click on the pin reaches the map and adds a point; trip actions leave the result alone", async ({ page }, testInfo) => {
+test("a click on the pin reaches the map and adds a point; trip actions leave the result alone", async ({
+  page,
+}, testInfo) => {
   await offline(page);
   await openMap(page);
   await search(page, "50.27, 5.44");
@@ -230,7 +236,7 @@ test("a click on the pin reaches the map and adds a point; trip actions leave th
 test("Escape closes the dropdown only: the planner's Escape doesn't fire", async ({ page }) => {
   await offline(page, { nominatim: bySearchText });
   await openMap(page);
-  const map = (await freeMapBox(page));
+  const map = await freeMapBox(page);
   await page.mouse.click(map.x + map.width / 2, map.y + map.height / 2);
   const point = mapRegion(page).locator("path.point");
   // Select it with a second click on it (later than a double tap).
@@ -258,17 +264,22 @@ test.describe("the pill never covers the access chip", () => {
       await toggleAccessLayer(page);
       const chip = page.getByRole("button", { name: /^Access · / });
       await expect(chip).toBeVisible();
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+      await page.evaluate(() =>
+        Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))),
+      );
 
       const bar = (await pill(page).boundingBox())!;
       const chipBox = (await chip.boundingBox())!;
-      const separate = (a: typeof bar, b: typeof bar) =>
-        a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+      const separate = (boxA: typeof bar, boxB: typeof bar) =>
+        boxA.x + boxA.width <= boxB.x ||
+        boxB.x + boxB.width <= boxA.x ||
+        boxA.y + boxA.height <= boxB.y ||
+        boxB.y + boxB.height <= boxA.y;
       expect(separate(bar, chipBox)).toBe(true);
       // The pill is still usable: wide enough for a place name.
       expect(bar.width).toBeGreaterThan(150);
       // Both stay inside the part of the map the panel leaves free.
-      const map = (await freeMapBox(page));
+      const map = await freeMapBox(page);
       expect(bar.x + bar.width).toBeLessThanOrEqual(map.x + map.width);
       expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(map.x + map.width);
       expect(chipBox.x).toBeGreaterThanOrEqual(map.x);

@@ -24,19 +24,22 @@ async function seed(page: Page, water: { lat: number; lng: number }[]) {
     trip: {
       name: "Canal",
       points: [water[0], water[water.length - 1]],
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: water.map((p) => ({ ...p, elevation: 5 })) } }],
+      legs: [
+        { mode: "paddle", route: { status: "routed", geometry: water.map((point) => ({ ...point, elevation: 5 })) } },
+      ],
       startDate: "2027-07-10",
     },
   };
   await page.addInitScript((save) => {
-    if (sessionStorage.getItem("seeded")) return;
+    if (sessionStorage.getItem("seeded")) {
+      return;
+    }
     sessionStorage.setItem("seeded", "1");
     localStorage.setItem("packraft-go.trip", save);
   }, JSON.stringify(trip));
 }
 
-const legRow = (page: Page) =>
-  page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
+const legRow = (page: Page) => page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
 const legDetails = legDetailsDialog;
 const dayRow = (page: Page) =>
   page.getByRole("complementary", { name: strings.daysPanelLabel }).getByRole("listitem").first();
@@ -48,9 +51,7 @@ test.beforeEach(({ page }) => showAllLegs(page));
 
 test.use({ viewport: { width: 1400, height: 900 } });
 
-test("a paddle leg through a lock shows the warning on the leg, and a Lock chip on its day", async ({
-  page,
-}) => {
+test("a paddle leg through a lock shows the warning on the leg, and a Lock chip on its day", async ({ page }) => {
   await serveOffline(page);
   await seed(page, throughLock);
   await openPlanner(page);
@@ -59,7 +60,11 @@ test("a paddle leg through a lock shows the warning on the leg, and a Lock chip 
   const text = strings.tripAccess.lockWarning("Écluse d'Anderlecht - Sluis van Anderlecht");
   await openSectionDetails(page, 1);
   await expect(legDetails(page).locator(".access-warning-lock")).toContainText(text);
-  await expect(legDetails(page).locator(".access-warning-lock").getByRole("link", { name: /Brussels police regulation/ })).toBeVisible();
+  await expect(
+    legDetails(page)
+      .locator(".access-warning-lock")
+      .getByRole("link", { name: /Brussels police regulation/ }),
+  ).toBeVisible();
   await legDetails(page).getByRole("button", { name: strings.planner.legDetailsClose }).click();
   // The day only points at the leg (ADR 0029).
   await showDays(page);
@@ -92,7 +97,11 @@ test.describe("on the phone", () => {
     await page.goto("/");
     const sheet = page.getByRole("dialog", { name: strings.planner.sheetLabel });
     await sheet.getByRole("tab", { name: strings.planner.tabs.sections }).click();
-    const icons = sheet.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first().locator(".leg-access-icons");
+    const icons = sheet
+      .getByRole("list", { name: strings.sectionsPanelLabel })
+      .locator(leafRows)
+      .first()
+      .locator(".leg-access-icons");
     await expect(icons.locator('svg[data-icon="stairs"]')).toHaveCount(1);
     await expect(icons).toContainText(strings.tripAccess.chipKind.lock);
   });

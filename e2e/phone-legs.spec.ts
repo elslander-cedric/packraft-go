@@ -27,19 +27,19 @@ const mapRegion = (page: Page) => page.getByRole("region", { name: strings.mapLa
 const sheet = (page: Page) => page.getByRole("dialog", { name: text.sheetLabel });
 const tab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
 const legRows = (page: Page) => sheet(page).getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows);
-const detailsButton = (page: Page, n: number) =>
-  page.getByRole("button", { name: text.sectionDetailsButton(n) });
-const rowButton = (page: Page, n: number) =>
+const detailsButton = (page: Page, number: number) =>
+  page.getByRole("button", { name: text.sectionDetailsButton(number) });
+const rowButton = (page: Page, number: number) =>
   legRows(page)
-    .nth(n - 1)
-    .getByRole("button", { name: strings.legLabel(n), exact: false })
+    .nth(number - 1)
+    .getByRole("button", { name: strings.legLabel(number), exact: false })
     .first();
 const detailsDialog = (page: Page) => page.getByRole("dialog", { name: /^Section \d+ · / });
 const legLines = (page: Page) => mapRegion(page).locator(".leaflet-overlay-pane path.leg");
-const modeSwitch = (page: Page, n: number) =>
+const modeSwitch = (page: Page, number: number) =>
   legRows(page)
-    .nth(n - 1)
-    .getByRole("group", { name: strings.legModeLabel(n) });
+    .nth(number - 1)
+    .getByRole("group", { name: strings.legModeLabel(number) });
 const nextMode = (page: Page, mode: string) =>
   page.getByRole("group", { name: text.nextLegModeLabel }).getByRole("button", { name: mode });
 const offer = (page: Page) => page.getByRole("region", { name: strings.snap.label });
@@ -50,7 +50,7 @@ type SeedLeg = { mode: "hike" | "paddle"; geometry?: readonly Point[] };
 
 const routed = (geometry: readonly Point[]) => ({
   status: "routed",
-  geometry: geometry.map((p) => ({ ...p, elevation: 200 })),
+  geometry: geometry.map((point) => ({ ...point, elevation: 200 })),
 });
 
 /** Seeds the stored trip (and optionally your access points) before the page loads. */
@@ -71,10 +71,14 @@ async function seed(
   });
   await page.addInitScript(
     ([tripSave, pointsSave]) => {
-      if (sessionStorage.getItem("seeded")) return;
+      if (sessionStorage.getItem("seeded")) {
+        return;
+      }
       sessionStorage.setItem("seeded", "1");
       localStorage.setItem("packraft-go.trip", tripSave);
-      if (pointsSave) localStorage.setItem("packraft-go.access-points", pointsSave);
+      if (pointsSave) {
+        localStorage.setItem("packraft-go.access-points", pointsSave);
+      }
     },
     [save, accessPoints ?? ""] as const,
   );
@@ -92,16 +96,19 @@ async function openLegsTab(page: Page) {
 
 /** True when `inner` lies wholly inside `outer` (allowing half a pixel for rounding). */
 async function isInside(inner: Locator, outer: Locator | { x: number; y: number; width: number; height: number }) {
-  const a = (await inner.boundingBox())!;
-  const b = "boundingBox" in outer ? (await outer.boundingBox())! : outer;
+  const boxA = (await inner.boundingBox())!;
+  const boxB = "boundingBox" in outer ? (await outer.boundingBox())! : outer;
   return (
-    a.x >= b.x - 0.5 && a.y >= b.y - 0.5 && a.x + a.width <= b.x + b.width + 0.5 && a.y + a.height <= b.y + b.height + 0.5
+    boxA.x >= boxB.x - 0.5 &&
+    boxA.y >= boxB.y - 0.5 &&
+    boxA.x + boxA.width <= boxB.x + boxB.width + 0.5 &&
+    boxA.y + boxA.height <= boxB.y + boxB.height + 0.5
   );
 }
 
 /** Waits for the sheet to finish sliding to its stop, so boxes measured next stay put. */
 async function sheetSettled(page: Page) {
-  await sheet(page).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await sheet(page).evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
 }
 
 /** The part of the map the sheet leaves free. */
@@ -118,7 +125,13 @@ const P2 = { lat: 50.45, lng: 5.65 };
 
 test("tapping a leg's row zooms the map to it and doesn't open the row", async ({ page }) => {
   await serveOffline(page);
-  await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "hike", geometry: [P1, P2] }] });
+  await seed(page, {
+    points: [P0, P1, P2],
+    legs: [
+      { mode: "hike", geometry: [P0, P1] },
+      { mode: "hike", geometry: [P1, P2] },
+    ],
+  });
   await openPhone(page);
   await openLegsTab(page);
 
@@ -141,10 +154,19 @@ test("the tapped row is marked by the accent bar on its left; no other row has a
   page,
 }) => {
   await serveOffline(page);
-  await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "paddle", geometry: [P1, P2] }] });
+  await seed(page, {
+    points: [P0, P1, P2],
+    legs: [
+      { mode: "hike", geometry: [P0, P1] },
+      { mode: "paddle", geometry: [P1, P2] },
+    ],
+  });
   await openPhone(page);
   await openLegsTab(page);
-  const bar = (n: number) => legRows(page).nth(n).evaluate((el) => getComputedStyle(el).borderLeftColor);
+  const bar = (number: number) =>
+    legRows(page)
+      .nth(number)
+      .evaluate((el) => getComputedStyle(el).borderLeftColor);
   const accent = await page.evaluate(() => {
     const probe = document.createElement("div");
     probe.style.color = "var(--color-focus)";
@@ -166,10 +188,19 @@ test("the tapped row is marked by the accent bar on its left; no other row has a
 
 test("rows have no tint of their own and keep their background when tapped", async ({ page }) => {
   await serveOffline(page);
-  await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "paddle", geometry: [P1, P2] }] });
+  await seed(page, {
+    points: [P0, P1, P2],
+    legs: [
+      { mode: "hike", geometry: [P0, P1] },
+      { mode: "paddle", geometry: [P1, P2] },
+    ],
+  });
   await openPhone(page);
   await openLegsTab(page);
-  const background = (n: number) => legRows(page).nth(n).evaluate((el) => getComputedStyle(el).backgroundColor);
+  const background = (number: number) =>
+    legRows(page)
+      .nth(number)
+      .evaluate((el) => getComputedStyle(el).backgroundColor);
 
   const plain = await background(0);
   expect(await background(1)).toBe(plain);
@@ -178,9 +209,17 @@ test("rows have no tint of their own and keep their background when tapped", asy
   expect(await background(1)).toBe(plain);
 });
 
-test("a row is one button, with a second for its details when it has them, and a second tap opens no dialog (#200)", async ({ page }) => {
+test("a row is one button, with a second for its details when it has them, and a second tap opens no dialog (#200)", async ({
+  page,
+}) => {
   await serveOffline(page);
-  await seed(page, { points: [start, putIn, end], legs: [{ mode: "hike", geometry: [start, putIn] }, { mode: "paddle", geometry: [putIn, end] }] });
+  await seed(page, {
+    points: [start, putIn, end],
+    legs: [
+      { mode: "hike", geometry: [start, putIn] },
+      { mode: "paddle", geometry: [putIn, end] },
+    ],
+  });
   await openPhone(page);
   await openLegsTab(page);
   await expect(legRows(page).nth(1).locator(".leg-access-icons")).toBeVisible();
@@ -199,7 +238,13 @@ test("a row shows its figures after their icons, without a visible section numbe
   page,
 }) => {
   await serveOffline(page);
-  await seed(page, { points: [P0, P1, P2], legs: [{ mode: "hike", geometry: [P0, P1] }, { mode: "paddle", geometry: [P1, P2] }] });
+  await seed(page, {
+    points: [P0, P1, P2],
+    legs: [
+      { mode: "hike", geometry: [P0, P1] },
+      { mode: "paddle", geometry: [P1, P2] },
+    ],
+  });
   await openPhone(page);
   await openLegsTab(page);
   const labels = text.legFigures;
@@ -207,7 +252,9 @@ test("a row shows its figures after their icons, without a visible section numbe
   const hike = rowButton(page, 1);
   // The section's number names the row for screen readers only.
   await expect(hike.getByText(strings.sectionLabel(1))).toHaveClass("visually-hidden");
-  for (const icon of [icons.hike, icons.time, icons.climb, icons.descent]) await expect(iconIn(hike, icon)).toBeVisible();
+  for (const icon of [icons.hike, icons.time, icons.climb, icons.descent]) {
+    await expect(iconIn(hike, icon)).toBeVisible();
+  }
   await expect(hike).toContainText(`${labels.climb} 0 m`);
   await expect(hike).toContainText(`${labels.descent} 0 m`);
   await expect(hike).toContainText(labels.time);
@@ -334,7 +381,9 @@ test("the sheet lets Escape through to the page, so it reaches a dialog opened f
   await rowButton(page, 1).focus();
   await page.evaluate(() => {
     window.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") document.body.dataset.escapeReached = String(!event.defaultPrevented);
+      if (event.key === "Escape") {
+        document.body.dataset.escapeReached = String(!event.defaultPrevented);
+      }
     });
   });
   await page.keyboard.press("Escape");
@@ -342,7 +391,9 @@ test("the sheet lets Escape through to the page, so it reaches a dialog opened f
   await expect(sheet(page)).toBeVisible();
 });
 
-test("a paddle row shows its access as icons on a line of their own under the figures, each icon once", async ({ page }) => {
+test("a paddle row shows its access as icons on a line of their own under the figures, each icon once", async ({
+  page,
+}) => {
   await serveOffline(page);
   await seed(page, { points: [putIn, end], legs: [{ mode: "paddle", geometry: [putIn, end] }] });
   await openPhone(page);
@@ -404,7 +455,9 @@ test("a failed leg shows its failure with Retry, and Retry routes it again", asy
   expect(network.brouter.length).toBe(2);
 });
 
-test("the next leg's mode starts at the last leg's mode; switching it makes the next leg that mode", async ({ page }) => {
+test("the next leg's mode starts at the last leg's mode; switching it makes the next leg that mode", async ({
+  page,
+}) => {
   await serveOffline(page, { brouter: byProfile });
   await seed(page, { points: [P0, P1], legs: [{ mode: "paddle", geometry: [P0, P1] }] });
   await openPhone(page);
@@ -506,7 +559,7 @@ test("a picked next leg's mode doesn't outlive New trip or Open trip", async ({ 
 
 /** Number of lines an element's text is laid out on. */
 const lineCount = (el: Locator) =>
-  el.evaluate((node) => new Set([...node.getClientRects()].map((r) => Math.round(r.top))).size);
+  el.evaluate((node) => new Set([...node.getClientRects()].map((rect) => Math.round(rect.top))).size);
 
 test.describe("at a narrow phone width", () => {
   test.use({ viewport: { width: 320, height: 640 } });

@@ -31,7 +31,9 @@ const dayRows = async (page: Page) => {
 };
 const dayDates = dayCardDates;
 const dayDateTimes = async (page: Page) =>
-  (await dayRows(page)).locator(".day-tile time").evaluateAll((times) => times.map((t) => t.getAttribute("datetime")));
+  (await dayRows(page))
+    .locator(".day-tile time")
+    .evaluateAll((times) => times.map((time) => time.getAttribute("datetime")));
 const startDate = (page: Page) => tripDetailsDialog(page).getByLabel(strings.startDateLabel);
 const clearDate = (page: Page) => tripDetailsDialog(page).getByRole("button", { name: strings.clearStartDateButton });
 const saveDetails = (page: Page) =>
@@ -53,9 +55,11 @@ async function waitForMap(page: Page) {
 /** Draws four points with camps on the two inner ones: a three-day trip. */
 async function drawThreeDays(page: Page) {
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   const at = (dx: number) => ({ x: box.x + box.width / 2 + dx, y: box.y + box.height / 2 });
-  for (const dx of [-180, -60, 60, 180]) await page.mouse.click(at(dx).x, at(dx).y);
+  for (const dx of [-180, -60, 60, 180]) {
+    await page.mouse.click(at(dx).x, at(dx).y);
+  }
   for (const dx of [-60, 60]) {
     await page.mouse.click(at(dx).x, at(dx).y);
     await campButton(page).click();
@@ -96,7 +100,9 @@ for (const timezoneId of ["Europe/Brussels", "Pacific/Kiritimati", "America/Los_
   test.describe(`in ${timezoneId}`, () => {
     test.use({ timezoneId, locale: "en-US" });
 
-    test("a date typed into the field shows on the day cards unshifted, across DST and month ends", async ({ page }) => {
+    test("a date typed into the field shows on the day cards unshifted, across DST and month ends", async ({
+      page,
+    }) => {
       await serveOffline(page);
       await drawThreeDays(page);
       // Type it like a user, segment by segment, in the field's own order.
@@ -122,7 +128,9 @@ for (const timezoneId of ["Europe/Brussels", "Pacific/Kiritimati", "America/Los_
   });
 }
 
-test("clearing by emptying the field removes the dates and the saved start date, and survives reload", async ({ page }) => {
+test("clearing by emptying the field removes the dates and the saved start date, and survives reload", async ({
+  page,
+}) => {
   await serveOffline(page);
   await drawThreeDays(page);
   await setStartDate(page, "2026-12-30");
@@ -170,7 +178,7 @@ test("camps and dates stay in line when camps change and on undo", async ({ page
   await expect((await dayRows(page)).nth(1)).toContainText(strings.legRange(2, 2));
 
   // Select the second point and remove its camp.
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   await page.mouse.click(box.x + box.width / 2 - 60, box.y + box.height / 2);
   await campButton(page).click();
   await expect(await dayRows(page)).toHaveCount(2);

@@ -35,7 +35,9 @@ export function ToggleGroup<T extends string>({ label, value, options, onChange,
       onValueChange={(pressed) => {
         // Pressing the pressed option again would leave none pressed: keep it.
         const next = options.find((option) => option.value === pressed[0]);
-        if (next && next.value !== value) onChange(next.value);
+        if (next && next.value !== value) {
+          onChange(next.value);
+        }
       }}
       className={className ? `toggle-group ${className}` : "toggle-group"}
     >

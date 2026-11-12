@@ -44,17 +44,25 @@ async function state() {
 
 async function body(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
+  for await (const chunk of req) {
+    chunks.push(chunk as Buffer);
+  }
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
 type Decision = { id: string; action: "confirm" | "move" | "clear"; lat?: number; lng?: number; note?: string };
 
-const isDecision = (d: unknown): d is Decision => {
-  if (!d || typeof d !== "object") return false;
-  const x = d as Record<string, unknown>;
-  if (typeof x.id !== "string" || !/^[0-9][A-C][0-9][a-c]?(-[12])?\.(from|to)$/.test(x.id)) return false;
-  if (x.action === "clear") return true;
+const isDecision = (value: unknown): value is Decision => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const x = value as Record<string, unknown>;
+  if (typeof x.id !== "string" || !/^[0-9][A-C][0-9][a-c]?(-[12])?\.(from|to)$/.test(x.id)) {
+    return false;
+  }
+  if (x.action === "clear") {
+    return true;
+  }
   return (x.action === "confirm" || x.action === "move") && Number.isFinite(x.lat) && Number.isFinite(x.lng);
 };
 
@@ -68,24 +76,30 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "GET" && /^\/leaflet\/(leaflet\.(js|css)|images\/[a-z0-9-]+\.png)$/.test(url.pathname)) {
       const file = path.join(LEAFLET, url.pathname.slice("/leaflet/".length));
-      const type = file.endsWith(".js") ? "text/javascript" : file.endsWith(".css") ? "text/css" : "image/png";
-      res.writeHead(200, { "Content-Type": type });
+      const types: Record<string, string> = { ".js": "text/javascript", ".css": "text/css", ".png": "image/png" };
+      res.writeHead(200, { "Content-Type": types[path.extname(file)] });
       createReadStream(file).pipe(res);
       return;
     }
-    if (req.method === "GET" && url.pathname === "/api/state") return json(res, 200, await state());
+    if (req.method === "GET" && url.pathname === "/api/state") {
+      return json(res, 200, await state());
+    }
     if (req.method === "POST" && url.pathname === "/api/decision") {
       const decision = await body(req);
-      if (!isDecision(decision)) return json(res, 400, { error: "invalid decision" });
+      if (!isDecision(decision)) {
+        return json(res, 400, { error: "invalid decision" });
+      }
       const review = await readReview();
-      if (decision.action === "clear") delete review.decisions[decision.id];
-      else
+      if (decision.action === "clear") {
+        delete review.decisions[decision.id];
+      } else {
         review.decisions[decision.id] = {
           action: decision.action,
           lat: Math.round(decision.lat! * 1e6) / 1e6,
           lng: Math.round(decision.lng! * 1e6) / 1e6,
           ...(decision.note ? { note: decision.note } : {}),
         };
+      }
       review.reviewedAt = new Date().toISOString().slice(0, 10);
       await writeReview(review);
       return json(res, 200, await state());
@@ -98,6 +112,10 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`Walloon stretch review page: http://localhost:${PORT}`);
-  if (!osmCached) console.log("No OSM cache: using the shipped lines. Official boundaries work as usual; moving any other end needs `npm run data:walloon-stretches` first.");
+  if (!osmCached) {
+    console.log(
+      "No OSM cache: using the shipped lines. Official boundaries work as usual; moving any other end needs `npm run data:walloon-stretches` first.",
+    );
+  }
   console.log("Stop with Ctrl+C.");
 });

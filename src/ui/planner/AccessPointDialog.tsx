@@ -40,7 +40,9 @@ export default function AccessPointDialog({ point, unsaved = false, onSave, onCl
       confirmLabel={strings.planner.accessPointSave}
       cancelLabel={strings.confirmCancel}
       onConfirm={() => {
-        if (point && (unsaved || Object.keys(draft).length > 0)) onSave(point.id, draft);
+        if (point && (unsaved || Object.keys(draft).length > 0)) {
+          onSave(point.id, draft);
+        }
         onClose();
       }}
       onCancel={onClose}

@@ -38,9 +38,7 @@ describe("summarise", () => {
   });
 
   it("gives each straight leg's distance and the trip total", () => {
-    const summary = summarise(
-      tripThrough({ lat: 0, lng: 0 }, { lat: 0, lng: 1 }, { lat: 1, lng: 1 }),
-    );
+    const summary = summarise(tripThrough({ lat: 0, lng: 0 }, { lat: 0, lng: 1 }, { lat: 1, lng: 1 }));
     expect(summary.legs.map((leg) => leg.mode)).toEqual(["hike", "hike"]);
     expect(summary.legs[0].distanceKm).toBeCloseTo(ONE_DEGREE_KM, 1);
     expect(summary.legs[1].distanceKm).toBeCloseTo(ONE_DEGREE_KM, 1);
@@ -130,7 +128,9 @@ describe("summarise routed hike legs", () => {
   it("gives the recorded BRouter track's length, BRouter's smoothed climb and a matching descent", async () => {
     const fetch = async () => new Response(readFileSync(FIXTURE, "utf8"));
     const result = await createBRouterRouter({ fetch }).route("hike", []);
-    if (!result.ok) throw new Error("fixture should route");
+    if (!result.ok) {
+      throw new Error("fixture should route");
+    }
     const trip: Trip = {
       ...routed([...result.geometry]),
       legs: [{ mode: "hike", route: { status: "routed", geometry: result.geometry, climbM: result.climbM } }],
@@ -231,7 +231,9 @@ describe("summarise paddle legs", () => {
   it("gives the recorded river track (Lesse, Walzin to Anseremme) its length and drop", async () => {
     const body = readFileSync(path.join(__dirname, "../routing/fixtures/river-success.geojson"), "utf8");
     const result = await createBRouterRouter({ fetch: async () => new Response(body) }).route("paddle", []);
-    if (!result.ok) throw new Error("fixture should route");
+    if (!result.ok) {
+      throw new Error("fixture should route");
+    }
     const trip: Trip = {
       ...tripThrough(result.geometry[0], result.geometry[result.geometry.length - 1]),
       legs: [{ mode: "paddle", route: { status: "routed", geometry: result.geometry, climbM: result.climbM } }],

@@ -37,8 +37,17 @@ describe("access point collection edits", () => {
   });
 
   it("editing a point changes its fields and its updated time, not its id or created time", () => {
-    const points = addAccessPoint(addAccessPoint([], { id: "a", at: durbuy, now: T1 }), { id: "b", at: barvaux, now: T1 });
-    const edited = updateAccessPoint(points, "b", { use: "take-out", kind: "official-aire", note: "Steps by the bridge", checkedOnSite: "2026-10-14" }, T2);
+    const points = addAccessPoint(addAccessPoint([], { id: "a", at: durbuy, now: T1 }), {
+      id: "b",
+      at: barvaux,
+      now: T1,
+    });
+    const edited = updateAccessPoint(
+      points,
+      "b",
+      { use: "take-out", kind: "official-aire", note: "Steps by the bridge", checkedOnSite: "2026-10-14" },
+      T2,
+    );
     expect(edited[0]).toBe(points[0]);
     expect(edited[1]).toEqual({
       ...points[1],
@@ -52,11 +61,19 @@ describe("access point collection edits", () => {
 
   it("moving a point changes its position", () => {
     const points = addAccessPoint([], { id: "a", at: durbuy, now: T1 });
-    expect(updateAccessPoint(points, "a", { position: barvaux }, T2)[0]).toMatchObject({ position: barvaux, updatedAt: T2 });
+    expect(updateAccessPoint(points, "a", { position: barvaux }, T2)[0]).toMatchObject({
+      position: barvaux,
+      updatedAt: T2,
+    });
   });
 
   it("a point can be marked as not checked on site again", () => {
-    const checked = updateAccessPoint(addAccessPoint([], { id: "a", at: durbuy, now: T1 }), "a", { checkedOnSite: "2026-10-13" }, T1);
+    const checked = updateAccessPoint(
+      addAccessPoint([], { id: "a", at: durbuy, now: T1 }),
+      "a",
+      { checkedOnSite: "2026-10-13" },
+      T1,
+    );
     expect(updateAccessPoint(checked, "a", { checkedOnSite: null }, T2)[0].checkedOnSite).toBeNull();
   });
 
@@ -67,7 +84,11 @@ describe("access point collection edits", () => {
   });
 
   it("deleting a point removes only that point", () => {
-    const points = addAccessPoint(addAccessPoint([], { id: "a", at: durbuy, now: T1 }), { id: "b", at: barvaux, now: T1 });
+    const points = addAccessPoint(addAccessPoint([], { id: "a", at: durbuy, now: T1 }), {
+      id: "b",
+      at: barvaux,
+      now: T1,
+    });
     expect(deleteAccessPoint(points, "a")).toEqual([points[1]]);
     expect(deleteAccessPoint(points, "zzz")).toBe(points);
   });
@@ -85,7 +106,15 @@ const marked: AccessPoint = {
   createdAt: T1,
   updatedAt: T2,
 };
-const unchecked: AccessPoint = { ...marked, id: "b", position: barvaux, use: "both", kind: "jetty", note: "", checkedOnSite: null };
+const unchecked: AccessPoint = {
+  ...marked,
+  id: "b",
+  position: barvaux,
+  use: "both",
+  kind: "jetty",
+  note: "",
+  checkedOnSite: null,
+};
 
 const file = (points: unknown, version: unknown = 1) =>
   JSON.stringify({ format: "packraft-go-access-points", version, accessPoints: points });
@@ -146,7 +175,11 @@ describe("access points autosave", () => {
   });
 
   it("flags a save from an unknown version, so it is kept rather than overwritten", () => {
-    expect(restoreStoredAccessPoints(file([marked], 2))).toEqual({ accessPoints: [], unknownVersion: true, damaged: false });
+    expect(restoreStoredAccessPoints(file([marked], 2))).toEqual({
+      accessPoints: [],
+      unknownVersion: true,
+      damaged: false,
+    });
   });
 
   it.each([

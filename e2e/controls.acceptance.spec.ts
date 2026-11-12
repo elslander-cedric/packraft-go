@@ -51,9 +51,9 @@ test.describe("confirmations are in-page Alert Dialogs", () => {
     page,
   }) => {
     const native: string[] = [];
-    page.on("dialog", (d) => {
-      native.push(d.message());
-      void d.dismiss();
+    page.on("dialog", (dialog) => {
+      native.push(dialog.message());
+      void dialog.dismiss();
     });
     await serveOffline(page);
     const click = await openMap(page);
@@ -114,9 +114,9 @@ test.describe("confirmations are in-page Alert Dialogs", () => {
     page,
   }) => {
     const native: string[] = [];
-    page.on("dialog", (d) => {
-      native.push(d.message());
-      void d.dismiss();
+    page.on("dialog", (dialog) => {
+      native.push(dialog.message());
+      void dialog.dismiss();
     });
     await serveOffline(page);
     const click = await openMap(page);
@@ -294,7 +294,10 @@ test.describe("disabled controls say why", () => {
     await expect(undo).toBeEnabled();
     await expect(undo).not.toHaveAccessibleDescription(strings.undoDisabledReason);
     await menuButton(page).click();
-    await expect(page.getByRole("menuitem", { name: text.menu.exportGpx })).not.toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByRole("menuitem", { name: text.menu.exportGpx })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     await page.keyboard.press("Escape");
 
     // A disabled button does nothing when clicked: undo everything, then click Undo again.

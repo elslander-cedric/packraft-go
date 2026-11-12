@@ -6,12 +6,18 @@ import { serveOffline } from "./support/offline";
 test("no external font requests, font file served from own origin", async ({ page }) => {
   const net = await serveOffline(page);
   const fonts: string[] = [];
-  page.on("response", (r) => { if (/\.(woff2?|ttf|otf)(\?|$)/.test(r.url())) fonts.push(`${r.status()} ${r.url()}`); });
+  page.on("response", (response) => {
+    if (/\.(woff2?|ttf|otf)(\?|$)/.test(response.url())) {
+      fonts.push(`${response.status()} ${response.url()}`);
+    }
+  });
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
-  expect(net.blocked.filter((u) => /font|woff|gstatic/i.test(u))).toEqual([]);
+  expect(net.blocked.filter((url) => /font|woff|gstatic/i.test(url))).toEqual([]);
   expect(fonts.length).toBeGreaterThan(0);
-  for (const f of fonts) expect(f).toMatch(/^200 http:\/\/localhost/);
+  for (const font of fonts) {
+    expect(font).toMatch(/^200 http:\/\/localhost/);
+  }
   const lic = await page.request.get("/fonts/Inter-OFL.txt");
   expect(lic.status()).toBe(200);
 });
@@ -26,6 +32,12 @@ test("phone viewport: font applied, no horizontal overflow", async ({ page }) =>
   await page.mouse.click(box.x + box.width / 2 - 60, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2 + 60, box.y + box.height / 2);
   await page.evaluate(() => document.fonts.ready);
-  const fam = await page.evaluate(() => [...new Set([...document.querySelectorAll("body, button, input, select, textarea, li")].map((e) => e.tagName + ":" + getComputedStyle(e).fontFamily))]);
+  const fam = await page.evaluate(() => [
+    ...new Set(
+      [...document.querySelectorAll("body, button, input, select, textarea, li")].map(
+        (element) => element.tagName + ":" + getComputedStyle(element).fontFamily,
+      ),
+    ),
+  ]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

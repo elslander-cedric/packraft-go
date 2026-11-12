@@ -26,8 +26,7 @@ export type GaugeReadings = {
  * be reached or answered with an error.
  */
 export type FlowReadings =
-  | { readonly status: "ok"; readonly gauges: Readonly<Record<string, GaugeReadings>> }
-  | { readonly status: "failed" };
+  { readonly status: "ok"; readonly gauges: Readonly<Record<string, GaugeReadings>> } | { readonly status: "failed" };
 
 /**
  * Gives the latest readings of these gauges (station numbers). The real
@@ -78,18 +77,27 @@ export type FlowVerdict =
 const dateOf = (reading: FlowReading) => reading.at.slice(0, 10);
 const hourOf = (reading: FlowReading) => reading.at.slice(11, 16);
 const latestOf = (readings: readonly FlowReading[]) =>
-  readings.reduce<FlowReading | undefined>((latest, r) => (!latest || r.at > latest.at ? r : latest), undefined);
+  readings.reduce<FlowReading | undefined>(
+    (latest, reading) => (!latest || reading.at > latest.at ? reading : latest),
+    undefined,
+  );
 
 /** The flow verdict of a Walloon stretch for today, from its gauge's readings (absent when not asked for). */
 export function flowCheck(rule: AgwRule, readings: FlowReadings | undefined, today: CalendarDate): FlowVerdict {
   const { gauge, minM3s, maxM3s } = rule;
-  if (!gauge) return { kind: "unknown", why: "no-gauge" };
-  if (!readings) return { kind: "not-checked" };
-  if (readings.status === "failed") return { kind: "unknown", why: "failed" };
+  if (!gauge) {
+    return { kind: "unknown", why: "no-gauge" };
+  }
+  if (!readings) {
+    return { kind: "not-checked" };
+  }
+  if (readings.status === "failed") {
+    return { kind: "unknown", why: "failed" };
+  }
   const series = readings.gauges[gauge.stationNo];
   const mean72h = series && latestOf(series.mean72h);
   const latest = series && latestOf(series.hourly);
-  const at8 = series?.hourly.find((r) => dateOf(r) === today && hourOf(r) === "08:00");
+  const at8 = series?.hourly.find((flowReading) => dateOf(flowReading) === today && hourOf(flowReading) === "08:00");
   const figures: FlowFigures = {
     gauge,
     minM3s,
@@ -98,11 +106,21 @@ export function flowCheck(rule: AgwRule, readings: FlowReadings | undefined, tod
     ...(at8 && { at8 }),
     ...(latest && { latest }),
   };
-  if (!mean72h) return { kind: "unknown", why: "missing", figures };
-  if (dateOf(mean72h) !== today) return { kind: "unknown", why: "stale", figures };
-  if (minM3s !== null && mean72h.m3s < minM3s) return { kind: "low", figures };
-  if (!at8) return { kind: "unknown", why: "not-measured-yet", figures };
-  if (at8.m3s > maxM3s) return { kind: "high", figures };
+  if (!mean72h) {
+    return { kind: "unknown", why: "missing", figures };
+  }
+  if (dateOf(mean72h) !== today) {
+    return { kind: "unknown", why: "stale", figures };
+  }
+  if (minM3s !== null && mean72h.m3s < minM3s) {
+    return { kind: "low", figures };
+  }
+  if (!at8) {
+    return { kind: "unknown", why: "not-measured-yet", figures };
+  }
+  if (at8.m3s > maxM3s) {
+    return { kind: "high", figures };
+  }
   return { kind: "ok", figures };
 }
 

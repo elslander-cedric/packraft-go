@@ -76,9 +76,13 @@ function accessPointIcon(point: AccessPoint, selected: boolean, editable: boolea
   const label = draft ? strings.accessPoints.draftMarker : strings.accessPoints.marker(heading, detail);
   const key = `${use}|${kind}|${selected}|${editable}|${draft}|${label}`;
   const known = markerIcons.get(key);
-  if (known) return known;
+  if (known) {
+    return known;
+  }
   // Labels follow names and notes as you type: don't keep every one.
-  if (markerIcons.size > 200) markerIcons.clear();
+  if (markerIcons.size > 200) {
+    markerIcons.clear();
+  }
   const icon = divIcon({
     className:
       `access-point-marker use-${use} kind-${kind}` +
@@ -125,7 +129,9 @@ const groupIcons = new Map<number, ReturnType<typeof divIcon>>();
 /** Access points whose markers would overlap, shown as one grey circle with their count. */
 function groupIcon(count: number) {
   const known = groupIcons.get(count);
-  if (known) return known;
+  if (known) {
+    return known;
+  }
   const label = strings.accessPoints.groupMarker(count);
   const icon = divIcon({
     className: "access-point-marker access-point-group",
@@ -143,8 +149,8 @@ function groupIcon(count: number) {
 
 /** Inert like the single markers, at the middle of its members. */
 function GroupMarker({ members }: { members: AccessPoint[] }) {
-  const lat = members.reduce((sum, p) => sum + p.position.lat, 0) / members.length;
-  const lng = members.reduce((sum, p) => sum + p.position.lng, 0) / members.length;
+  const lat = members.reduce((sum, member) => sum + member.position.lat, 0) / members.length;
+  const lng = members.reduce((sum, member) => sum + member.position.lng, 0) / members.length;
   return <Marker position={{ lat, lng }} icon={groupIcon(members.length)} interactive={false} keyboard={false} />;
 }
 

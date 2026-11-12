@@ -70,7 +70,9 @@ export function addAccessPoint(
 }
 
 /** What an edit can change about an access point. */
-export type AccessPointChanges = Partial<Pick<AccessPoint, "position" | "name" | "use" | "kind" | "note" | "checkedOnSite">>;
+export type AccessPointChanges = Partial<
+  Pick<AccessPoint, "position" | "name" | "use" | "kind" | "note" | "checkedOnSite">
+>;
 
 /**
  * The collection with one point edited and its updated time set to `now`.
@@ -86,9 +88,13 @@ export function updateAccessPoint(
   now: Timestamp,
 ): AccessPoints {
   const index = points.findIndex((point) => point.id === id);
-  if (index < 0) return points;
+  if (index < 0) {
+    return points;
+  }
   const { checkedOnSite } = changes;
-  if (checkedOnSite !== undefined && checkedOnSite !== null && !isCalendarDate(checkedOnSite)) return points;
+  if (checkedOnSite !== undefined && checkedOnSite !== null && !isCalendarDate(checkedOnSite)) {
+    return points;
+  }
   const point = points[index];
   let { name, nameSource } = point;
   if (changes.name !== undefined) {
@@ -136,9 +142,13 @@ export function applyDefaultName(
   { at, name }: { at: LatLng; name: string },
 ): AccessPoints {
   const index = points.findIndex((point) => point.id === id);
-  if (index < 0) return points;
+  if (index < 0) {
+    return points;
+  }
   const point = points[index];
-  if (point.nameSource !== "to-look-up" || point.position.lat !== at.lat || point.position.lng !== at.lng) return points;
+  if (point.nameSource !== "to-look-up" || point.position.lat !== at.lat || point.position.lng !== at.lng) {
+    return points;
+  }
   return points.with(index, { ...point, name, nameSource: "default" });
 }
 
@@ -176,10 +186,16 @@ export function serialiseAccessPoints(points: AccessPoints): string {
 export function parseAccessPoints(text: string): AccessPointsParseResult {
   try {
     const file = object(JSON.parse(text));
-    if (file.format !== ACCESS_POINTS_FORMAT || typeof file.version !== "number") throw invalid;
-    if (file.version !== ACCESS_POINTS_VERSION) return { ok: false, reason: "unknown-version" };
+    if (file.format !== ACCESS_POINTS_FORMAT || typeof file.version !== "number") {
+      throw invalid;
+    }
+    if (file.version !== ACCESS_POINTS_VERSION) {
+      return { ok: false, reason: "unknown-version" };
+    }
     const accessPoints = list(file.accessPoints).map(readAccessPoint);
-    if (new Set(accessPoints.map((point) => point.id)).size !== accessPoints.length) throw invalid;
+    if (new Set(accessPoints.map((point) => point.id)).size !== accessPoints.length) {
+      throw invalid;
+    }
     return { ok: true, accessPoints };
   } catch {
     return { ok: false };
@@ -203,8 +219,12 @@ export type StoredAccessPoints = {
 
 export function restoreStoredAccessPoints(stored: string | null): StoredAccessPoints {
   const parsed = stored === null ? null : parseAccessPoints(stored);
-  if (parsed === null) return { accessPoints: [], unknownVersion: false, damaged: false };
-  if (parsed.ok) return { accessPoints: parsed.accessPoints, unknownVersion: false, damaged: false };
+  if (parsed === null) {
+    return { accessPoints: [], unknownVersion: false, damaged: false };
+  }
+  if (parsed.ok) {
+    return { accessPoints: parsed.accessPoints, unknownVersion: false, damaged: false };
+  }
   const unknownVersion = parsed.reason === "unknown-version";
   return { accessPoints: [], unknownVersion, damaged: !unknownVersion };
 }
@@ -215,32 +235,44 @@ const invalid = new Error("invalid access points");
 type Fields = Record<string, unknown>;
 
 function object(value: unknown): Fields {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) throw invalid;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw invalid;
+  }
   return value as Fields;
 }
 
 function list(value: unknown): unknown[] {
-  if (!Array.isArray(value)) throw invalid;
+  if (!Array.isArray(value)) {
+    throw invalid;
+  }
   return value;
 }
 
 function number(value: unknown, min: number, max: number): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) throw invalid;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
+    throw invalid;
+  }
   return value;
 }
 
 function text(value: unknown): string {
-  if (typeof value !== "string") throw invalid;
+  if (typeof value !== "string") {
+    throw invalid;
+  }
   return value;
 }
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T {
-  if (!allowed.includes(value as T)) throw invalid;
+  if (!allowed.includes(value as T)) {
+    throw invalid;
+  }
   return value as T;
 }
 
 function timestamp(value: unknown): Timestamp {
-  if (Number.isNaN(Date.parse(text(value)))) throw invalid;
+  if (Number.isNaN(Date.parse(text(value)))) {
+    throw invalid;
+  }
   return value as Timestamp;
 }
 
@@ -248,9 +280,13 @@ function readAccessPoint(value: unknown): AccessPoint {
   const point = object(value);
   const position = object(point.position);
   const id = text(point.id);
-  if (id === "") throw invalid;
+  if (id === "") {
+    throw invalid;
+  }
   const checkedOnSite = point.checkedOnSite ?? null;
-  if (checkedOnSite !== null && !isCalendarDate(checkedOnSite)) throw invalid;
+  if (checkedOnSite !== null && !isCalendarDate(checkedOnSite)) {
+    throw invalid;
+  }
   const name = text(point.name ?? "");
   const source = point.nameSource === undefined ? "typed" : oneOf(point.nameSource, nameSources);
   const unnamed = name.trim() === "" && source !== "default";

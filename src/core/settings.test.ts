@@ -97,7 +97,13 @@ describe("settings", () => {
     ["negative and null", -300, null],
     ["not finite", null, undefined],
   ])("an unreadable side panel width or state (%s) falls back to its default, keeping the rest", (_, width, open) => {
-    const stored = { paceFactor: 1.2, paddleSpeedKmh: 4, baseMap: "ngi-topo", sidePanelWidth: width, sidePanelOpen: open };
+    const stored = {
+      paceFactor: 1.2,
+      paddleSpeedKmh: 4,
+      baseMap: "ngi-topo",
+      sidePanelWidth: width,
+      sidePanelOpen: open,
+    };
     expect(restoreSettings(JSON.stringify(stored))).toEqual({
       ...defaultSettings,
       paceFactor: 1.2,

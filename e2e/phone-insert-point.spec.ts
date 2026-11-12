@@ -39,8 +39,8 @@ const mapOffset = (page: Page) =>
   mapRegion(page)
     .locator(".leaflet-map-pane")
     .evaluate((element) => {
-      const m = new DOMMatrix(getComputedStyle(element).transform);
-      return { x: m.m41, y: m.m42 };
+      const matrix = new DOMMatrix(getComputedStyle(element).transform);
+      return { x: matrix.m41, y: matrix.m42 };
     });
 
 /** The point half way along the first drawn leg, in viewport pixels. */

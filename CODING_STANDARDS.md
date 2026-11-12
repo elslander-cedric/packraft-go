@@ -2,7 +2,7 @@
 
 The goal: **less is better, and less complexity is better.** Code is read far more often than it is written, so write it for the reader who has never seen it.
 
-`npm run lint` enforces the rules marked *(lint)*. `npm run format` applies the formatting.
+`npm run lint` enforces the rules marked *(lint)*. `npm run format` applies the formatting; CI checks both.
 
 ## Less code
 

@@ -25,7 +25,9 @@ export const draftMarker = (page: Page) => page.locator(".leaflet-container .acc
  * the Access points tab.
  */
 export async function enterAccessPointEditing(page: Page) {
-  if (!(await isEditing(page))) await editAccessPointsButton(page).click();
+  if (!(await isEditing(page))) {
+    await editAccessPointsButton(page).click();
+  }
   await expect(editAccessPointsButton(page)).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("tab", { name: text.tabs.accessPoints })).toHaveAttribute("aria-selected", "true");
 }

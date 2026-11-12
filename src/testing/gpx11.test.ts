@@ -16,7 +16,15 @@ describe("GPX 1.1 structure check", () => {
     expect(parsed).toEqual({
       metadataName: "T & U",
       waypoints: [{ lat: 50, lon: 4, ele: 12.5, name: "Camp 1" }],
-      tracks: [{ name: "Leg 1", points: [{ lat: 50, lon: 4 }, { lat: 50.1, lon: -4.1, ele: 3 }] }],
+      tracks: [
+        {
+          name: "Leg 1",
+          points: [
+            { lat: 50, lon: 4 },
+            { lat: 50.1, lon: -4.1, ele: 3 },
+          ],
+        },
+      ],
     });
   });
 
@@ -33,7 +41,10 @@ describe("GPX 1.1 structure check", () => {
     ["a track point without lon", gpx('<trk><trkseg><trkpt lat="1"/></trkseg></trk>')],
     ["a latitude out of range", gpx('<wpt lat="91" lon="1"/>')],
     ["longitude 180", gpx('<wpt lat="1" lon="180"/>')],
-    ["an elevation that is not a number", gpx('<trk><trkseg><trkpt lat="1" lon="1"><ele>NaN</ele></trkpt></trkseg></trk>')],
+    [
+      "an elevation that is not a number",
+      gpx('<trk><trkseg><trkpt lat="1" lon="1"><ele>NaN</ele></trkpt></trkseg></trk>'),
+    ],
     ["track name after a segment", gpx("<trk><trkseg/><name>x</name></trk>")],
     // XML 1.0 forbids these characters even escaped; xmldom lets them through, so the check must not.
     ["a control character in a name", gpx("<metadata><name>Bell\u0007 trip</name></metadata>")],

@@ -18,7 +18,9 @@ const shipped = process.argv.includes("--shipped");
 const { draft, finalPath, needingReview, problems } = await buildDataset({ offline, shipped });
 
 console.log(`\n${draft.stretches.length} stretches built.`);
-for (const p of problems) console.log(`  problem: ${p}`);
+for (const problem of problems) {
+  console.log(`  problem: ${problem}`);
+}
 const draftPath = path.join(import.meta.dirname, "..", "..", ".cache", "walloon-stretches.draft.json");
 await mkdir(path.dirname(draftPath), { recursive: true });
 await writeFile(draftPath, JSON.stringify(draft, null, 1) + "\n");
@@ -27,4 +29,8 @@ if (needingReview.length > 0) {
   console.log(`${needingReview.length} end points need review: ${needingReview.join(", ")}`);
   console.log("Open the review page with `npm run review:walloon-stretches`.");
 }
-console.log(finalPath ? `Shipped dataset written to ${path.relative(process.cwd(), finalPath)}` : "The shipped dataset was not written.");
+console.log(
+  finalPath
+    ? `Shipped dataset written to ${path.relative(process.cwd(), finalPath)}`
+    : "The shipped dataset was not written.",
+);

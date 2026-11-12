@@ -19,7 +19,7 @@ const start = { lat: 51.085, lng: 3.715 };
 
 const routed = (points: { lat: number; lng: number }[]) => ({
   status: "routed",
-  geometry: points.map((p) => ({ ...p, elevation: 5 })),
+  geometry: points.map((point) => ({ ...point, elevation: 5 })),
 });
 const save = {
   format: "packraft-go-trip",
@@ -80,7 +80,9 @@ const topPathAt = (page: Page, at: Pixel): Promise<string | null> =>
   page.evaluate(({ x, y }) => {
     const paths = [...document.querySelectorAll<SVGPathElement>(".leaflet-container path")];
     const before = paths.map((path) => path.style.pointerEvents);
-    for (const path of paths) path.style.pointerEvents = "visibleStroke";
+    for (const path of paths) {
+      path.style.pointerEvents = "visibleStroke";
+    }
     const top = document
       .elementsFromPoint(x, y)
       .find((element) => element instanceof SVGPathElement && element.getAttribute("stroke-opacity") !== "0");

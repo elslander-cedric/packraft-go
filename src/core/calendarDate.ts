@@ -8,7 +8,9 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** True when `value` is "YYYY-MM-DD" text naming a real day (no 30 February). */
 export function isCalendarDate(value: unknown): value is CalendarDate {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
   const day = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(day.getTime()) && day.toISOString().slice(0, 10) === value;
 }

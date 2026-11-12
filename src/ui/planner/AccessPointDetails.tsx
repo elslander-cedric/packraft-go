@@ -13,7 +13,7 @@ const kindOptions = accessPointKinds.map((kind) => ({ value: kind, label: text.k
 /** Today's date in the browser's time zone, as "YYYY-MM-DD". */
 function today(): string {
   const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const pad = (number: number) => String(number).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 

@@ -75,7 +75,5 @@ export default function OfficialAireLayer({ aires, onSelect }: OfficialAireLayer
   const [zoom, setZoom] = useState(() => map.getZoom());
   useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
   const small = zoom < aireFullMarkersMinZoom;
-  return aires.map((aire) => (
-    <AireMarker key={aire.id} aire={aire} small={small} onSelect={() => onSelect(aire.id)} />
-  ));
+  return aires.map((aire) => <AireMarker key={aire.id} aire={aire} small={small} onSelect={() => onSelect(aire.id)} />);
 }

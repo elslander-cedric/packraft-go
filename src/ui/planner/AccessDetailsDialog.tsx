@@ -41,20 +41,16 @@ export default function AccessDetailsDialog({
 }: AccessDetailsDialogProps) {
   const obstacleName = obstacle && strings.obstacles.names[obstacle.kind];
   const incidentTitle = incident && strings.incidents.title;
-  return (
-    <InfoDialog
-      open={
-        water !== undefined || lock !== undefined || aire !== undefined || obstacle !== undefined || incident !== undefined
-      }
-      title={water?.record.name ?? lock?.name ?? aire?.name ?? obstacleName ?? incidentTitle ?? ""}
-      closeLabel={strings.accessDetailClose}
-      onClose={onClose}
-    >
-      {water ? (
-        <AccessDetail feature={water} date={date} {...(incidents && { incidents })} />
-      ) : lock ? (
-        <LockDetail lock={lock} />
-      ) : aire ? (
+  // Only one of them is open at a time.
+  const detail = () => {
+    if (water) {
+      return <AccessDetail feature={water} date={date} {...(incidents && { incidents })} />;
+    }
+    if (lock) {
+      return <LockDetail lock={lock} />;
+    }
+    if (aire) {
+      return (
         <OfficialAireDetail
           aire={aire}
           stretch={aireStretch}
@@ -62,11 +58,27 @@ export default function AccessDetailsDialog({
           date={date}
           {...(incidents && { incidents })}
         />
-      ) : obstacle ? (
-        <ObstacleDetail obstacle={obstacle} />
-      ) : (
-        incident && <IncidentDetail incident={incident} />
-      )}
+      );
+    }
+    if (obstacle) {
+      return <ObstacleDetail obstacle={obstacle} />;
+    }
+    return incident && <IncidentDetail incident={incident} />;
+  };
+  return (
+    <InfoDialog
+      open={
+        water !== undefined ||
+        lock !== undefined ||
+        aire !== undefined ||
+        obstacle !== undefined ||
+        incident !== undefined
+      }
+      title={water?.record.name ?? lock?.name ?? aire?.name ?? obstacleName ?? incidentTitle ?? ""}
+      closeLabel={strings.accessDetailClose}
+      onClose={onClose}
+    >
+      {detail()}
     </InfoDialog>
   );
 }

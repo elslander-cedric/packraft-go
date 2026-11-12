@@ -38,7 +38,7 @@ async function openPhone(page: Page) {
 async function settled(page: Page) {
   await page.evaluate(async () => {
     await document.fonts.ready;
-    await Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined)));
+    await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
   });
 }
 
@@ -68,7 +68,9 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
   expect(box.height).toBe(SIDEWAYS.height);
   expect(box.x + box.width).toBe(SIDEWAYS.width);
   expect(box.width).toBe(380);
-  for (const name of [text.tabs.sections, text.tabs.days]) await expect(panelTab(page, name)).toBeAttached();
+  for (const name of [text.tabs.sections, text.tabs.days]) {
+    await expect(panelTab(page, name)).toBeAttached();
+  }
   await panelTab(page, text.tabs.days).click();
   await expect(panelTab(page, text.tabs.days)).toHaveAttribute("aria-selected", "true");
 
@@ -87,7 +89,7 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
   // Every total fits inside the strip.
   const fits = await panel(page)
     .locator(".planner-totals > span")
-    .evaluateAll((spans) => spans.every((s) => s.scrollWidth <= s.parentElement!.parentElement!.clientWidth));
+    .evaluateAll((spans) => spans.every((span) => span.scrollWidth <= span.parentElement!.parentElement!.clientWidth));
   expect(fits).toBe(true);
 
   // With the strip the map takes taps nearly to the right edge.
@@ -97,12 +99,12 @@ test("sideways, a side panel on the right shows the tabs; collapsed, a strip wit
 
 const sheetTab = (page: Page, name: string) => sheet(page).getByRole("tab", { name });
 /** The open leg row's button, in whichever of the sheet or the panel shows the trip. */
-const rowButton = (page: Page, n: number) =>
+const rowButton = (page: Page, number: number) =>
   page
     .getByRole("list", { name: strings.sectionsPanelLabel })
     .locator(leafRows)
-    .nth(n - 1)
-    .getByRole("button", { name: strings.legLabel(n), exact: false })
+    .nth(number - 1)
+    .getByRole("button", { name: strings.legLabel(number), exact: false })
     .first();
 
 /** How much of the screen the sheet covers, in pixels. */
@@ -123,8 +125,8 @@ async function dragSheet(page: Page, dy: number) {
   await page.mouse.up();
 }
 
-async function centreOf(page: Page, n: number) {
-  const box = (await points(page).nth(n).boundingBox())!;
+async function centreOf(page: Page, number: number) {
+  const box = (await points(page).nth(number).boundingBox())!;
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
@@ -141,8 +143,9 @@ test("rotating keeps the open tab, the tapped leg row and the selected point; th
     [-120, 0],
     [0, 40],
     [120, 0],
-  ])
+  ]) {
     await page.touchscreen.tap(map.x + map.width / 2 + dx, map.y + map.height / 3 + dy);
+  }
   await expect(points(page)).toHaveCount(3);
   const middle = await centreOf(page, 1);
   await page.touchscreen.tap(middle.x, middle.y);
@@ -227,7 +230,9 @@ test("sideways, the floating buttons stay in their corners over the map, beside 
   ];
   await collapse(page).click();
   for (const open of [false, true]) {
-    if (open) await expand(page).click();
+    if (open) {
+      await expand(page).click();
+    }
     await settled(page);
     const covered = (await panel(page).boundingBox())!;
     for (const button of buttons) {
@@ -239,14 +244,14 @@ test("sideways, the floating buttons stay in their corners over the map, beside 
       expect(box.x + box.width, label).toBeLessThanOrEqual(covered.x);
       // Nothing lies over it: its centre and four spots near its edge (inside a round button) hit it.
       const hit = await button.evaluate((el) => {
-        const r = el.getBoundingClientRect();
-        const [dx, dy] = [r.width * 0.2, r.height * 0.2];
+        const rect = el.getBoundingClientRect();
+        const [dx, dy] = [rect.width * 0.2, rect.height * 0.2];
         const spots = [
-          [r.left + dx, r.top + dy],
-          [r.right - dx, r.top + dy],
-          [r.left + dx, r.bottom - dy],
-          [r.right - dx, r.bottom - dy],
-          [r.left + r.width / 2, r.top + r.height / 2],
+          [rect.left + dx, rect.top + dy],
+          [rect.right - dx, rect.top + dy],
+          [rect.left + dx, rect.bottom - dy],
+          [rect.right - dx, rect.bottom - dy],
+          [rect.left + rect.width / 2, rect.top + rect.height / 2],
         ];
         return spots.every(([x, y]) => el.contains(document.elementFromPoint(x, y)));
       });
@@ -337,7 +342,9 @@ test("sideways, the arrow keys on the panel's edge resize it, within its limits 
   await page.keyboard.press("ArrowRight");
   await expect(splitter(page)).toHaveAttribute("aria-valuenow", "360");
 
-  for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
+  for (let i = 0; i < 5; i++) {
+    await page.keyboard.press("ArrowRight");
+  }
   await expect(splitter(page)).toHaveAttribute("aria-valuenow", "320");
   await page.keyboard.press("End");
   await expect(splitter(page)).toHaveAttribute("aria-valuenow", String(max));

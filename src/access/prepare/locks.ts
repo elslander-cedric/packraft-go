@@ -23,12 +23,16 @@ export function lockMarkers(
   regions: readonly LockRegion[],
 ): Omit<LockMarker, "source" | "researched">[] {
   const candidates: Candidate[] = [];
-  for (const element of [...response.elements].sort((a, b) => a.id - b.id)) {
-    if (element.type !== "way" || element.tags?.lock !== "yes" || !element.tags.waterway) continue;
-    const points = (element.geometry ?? []).filter((p): p is { lat: number; lon: number } => p !== null);
-    if (points.length === 0) continue;
-    const lat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
-    const lng = points.reduce((sum, p) => sum + p.lon, 0) / points.length;
+  for (const element of [...response.elements].sort((left, right) => left.id - right.id)) {
+    if (element.type !== "way" || element.tags?.lock !== "yes" || !element.tags.waterway) {
+      continue;
+    }
+    const points = (element.geometry ?? []).filter((point): point is { lat: number; lon: number } => point !== null);
+    if (points.length === 0) {
+      continue;
+    }
+    const lat = points.reduce((sum, point) => sum + point.lat, 0) / points.length;
+    const lng = points.reduce((sum, point) => sum + point.lon, 0) / points.length;
     const tags = element.tags;
     candidates.push({
       id: `lock-way-${element.id}`,
@@ -39,19 +43,30 @@ export function lockMarkers(
 
   const kept: (Candidate & { region: string })[] = [];
   for (const candidate of candidates) {
-    const region = regions.find((r) => insideAny(r.area)(candidate.position));
-    if (!region) continue;
+    const region = regions.find((region) => insideAny(region.area)(candidate.position));
+    if (!region) {
+      continue;
+    }
     const twin = kept.find(
-      (k) =>
-        k.region === region.id &&
-        distanceM({ lng: k.position[0], lat: k.position[1] }, { lng: candidate.position[0], lat: candidate.position[1] }) <
-          SAME_LOCK_M,
+      (keptLock) =>
+        keptLock.region === region.id &&
+        distanceM(
+          { lng: keptLock.position[0], lat: keptLock.position[1] },
+          { lng: candidate.position[0], lat: candidate.position[1] },
+        ) < SAME_LOCK_M,
     );
-    if (!twin) kept.push({ ...candidate, region: region.id });
+    if (!twin) {
+      kept.push({ ...candidate, region: region.id });
+    }
   }
 
-  const regionOrder = (id: string) => regions.findIndex((r) => r.id === id);
+  const regionOrder = (id: string) => regions.findIndex((region) => region.id === id);
   return kept
-    .sort((a, b) => regionOrder(a.region) - regionOrder(b.region) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+    .sort(
+      (left, right) =>
+        regionOrder(left.region) - regionOrder(right.region) ||
+        left.name.localeCompare(right.name) ||
+        left.id.localeCompare(right.id),
+    )
     .map(({ id, name, region, position }) => ({ id, name, region, position }));
 }

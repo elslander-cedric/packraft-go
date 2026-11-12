@@ -85,7 +85,10 @@ export function AccessDateSelector({ date, isToday, onDate, onToday, tripDays }:
       {tripDays.length > 0 && (
         <label>
           <span>{strings.accessTripDayLabel}</span>
-          <select value={tripDays.some((d) => d.date === date) ? date : ""} onChange={(e) => e.target.value && onDate(e.target.value)}>
+          <select
+            value={tripDays.some((tripDay) => tripDay.date === date) ? date : ""}
+            onChange={(event) => event.target.value && onDate(event.target.value)}
+          >
             <option value="">{strings.accessTripDayChoose}</option>
             {tripDays.map(({ day, date: dayDate }) => (
               <option key={day} value={dayDate}>
@@ -139,7 +142,9 @@ export function AccessLegend() {
 }
 
 function Reason({ reason }: { reason: AccessReason }) {
-  if (reason.kind === "no-rule") return <li>{strings.accessNoRule}</li>;
+  if (reason.kind === "no-rule") {
+    return <li>{strings.accessNoRule}</li>;
+  }
   return (
     <li>
       {reason.category && <p className="access-category">{strings.accessCategory(reason.category)}</p>}

@@ -95,9 +95,9 @@ const MAX_ON_A_LINE_WHEN_UNLISTED_KM = 0.5;
 
 const pending: string[] = (data.review as { pending?: string[] }).pending ?? [];
 const review = JSON.parse(readFileSync(path.join(__dirname, "../../docs/research/data/walloon-stretches-review.json"), "utf8"));
-const officialOf = (s: Stretch): string | undefined => (s as { officialStretch?: string }).officialStretch;
+const officialOf = (stretch: Stretch): string | undefined => (stretch as { officialStretch?: string }).officialStretch;
 /** The Annex row a record comes from: its own id, or the id of the record it is a piece of. */
-const annexIdOf = (s: Stretch): string => (s as { splitOf?: string }).splitOf ?? s.id;
+const annexIdOf = (stretch: Stretch): string => (stretch as { splitOf?: string }).splitOf ?? stretch.id;
 
 /** Wallonia lies within this box; every stretch must too. */
 const WALLONIA = { south: 49.45, west: 2.8, north: 50.85, east: 6.45 };
@@ -111,66 +111,66 @@ describe("shipped Walloon stretch dataset", () => {
   });
 
   it("has each record once", () => {
-    expect(new Set(stretches.map((s) => s.id)).size).toBe(stretches.length);
+    expect(new Set(stretches.map((stretch) => stretch.id)).size).toBe(stretches.length);
   });
 
   it("gives every stretch a valid line along the river, from its start to its end", () => {
-    for (const s of stretches) {
-      expect(s.line.length, s.id).toBeGreaterThanOrEqual(2);
-      for (const [lng, lat] of s.line) {
-        expect(Number.isFinite(lat) && Number.isFinite(lng), s.id).toBe(true);
-        expect(lat >= WALLONIA.south && lat <= WALLONIA.north && lng >= WALLONIA.west && lng <= WALLONIA.east, s.id).toBe(true);
+    for (const stretch of stretches) {
+      expect(stretch.line.length, stretch.id).toBeGreaterThanOrEqual(2);
+      for (const [lng, lat] of stretch.line) {
+        expect(Number.isFinite(lat) && Number.isFinite(lng), stretch.id).toBe(true);
+        expect(lat >= WALLONIA.south && lat <= WALLONIA.north && lng >= WALLONIA.west && lng <= WALLONIA.east, stretch.id).toBe(true);
       }
-      const length = s.line.slice(1).reduce((sum, p, i) => sum + metres(s.line[i], p), 0);
-      expect(length, s.id).toBeGreaterThan(200);
-      expect(metres(s.line[0], [s.from.point.lng, s.from.point.lat]), s.id).toBeLessThan(5);
-      expect(metres(s.line[s.line.length - 1], [s.to.point.lng, s.to.point.lat]), s.id).toBeLessThan(5);
+      const length = stretch.line.slice(1).reduce((sum, position, i) => sum + metres(stretch.line[i], position), 0);
+      expect(length, stretch.id).toBeGreaterThan(200);
+      expect(metres(stretch.line[0], [stretch.from.point.lng, stretch.from.point.lat]), stretch.id).toBeLessThan(5);
+      expect(metres(stretch.line[stretch.line.length - 1], [stretch.to.point.lng, stretch.to.point.lat]), stretch.id).toBeLessThan(5);
     }
   });
 
   it("has thresholds and gauges matching Annex 2", () => {
-    for (const s of stretches) {
-      const [gauge, min, max] = ANNEX_2[annexIdOf(s)];
-      expect({ min: s.minM3s, max: s.maxM3s }, s.id).toEqual({ min, max });
-      expect(s.gauge?.name, s.id).toBe(SPW_PRACTICE[annexIdOf(s)]?.name ?? gauge);
+    for (const stretch of stretches) {
+      const [gauge, min, max] = ANNEX_2[annexIdOf(stretch)];
+      expect({ min: stretch.minM3s, max: stretch.maxM3s }, stretch.id).toEqual({ min, max });
+      expect(stretch.gauge?.name, stretch.id).toBe(SPW_PRACTICE[annexIdOf(stretch)]?.name ?? gauge);
     }
   });
 
   it("gives every stretch a KiWIS gauge", () => {
-    for (const s of stretches) expect(s.gauge?.stationNo, s.id).toMatch(/^L?\d+$/);
+    for (const stretch of stretches) {expect(stretch.gauge?.stationNo, stretch.id).toMatch(/^L?\d+$/);}
   });
 
   it("uses Hérock for the Lesse from Han to Houyet, marked as SPW practice, and only there (#205)", () => {
-    const practice = stretches.filter((s) => s.gauge?.spwPractice);
+    const practice = stretches.filter((stretch) => stretch.gauge?.spwPractice);
     expect([...new Set(practice.map(annexIdOf))]).toEqual(Object.keys(SPW_PRACTICE));
     expect(practice[0].gauge).toEqual({ name: "Hérock", stationNo: "L6610", assumed: false, spwPractice: true });
     expect(practice[0].note).toMatch(/Hérock/);
   });
 
   it("leaves the Salm and Our on their Annex 2 gauges until KiWIS shows the SPW's have the series (#205)", () => {
-    const stationOf = (id: string) => stretches.find((s) => s.id === id)?.gauge?.stationNo;
+    const stationOf = (id: string) => stretches.find((stretch) => stretch.id === id)?.gauge?.stationNo;
     expect(stationOf("1C1b")).toBe("6832");
     expect(stationOf("1C4b")).toBe("9914");
   });
 
   it("flags exactly the Martelange, Membre, Martinrive and Gendron gauges as assumed (ADR 0024)", () => {
-    const assumed = new Set(stretches.filter((s) => s.gauge?.assumed).map((s) => s.gauge!.name));
+    const assumed = new Set(stretches.filter((stretch) => stretch.gauge?.assumed).map((assumed) => assumed.gauge!.name));
     expect([...assumed].sort()).toEqual(["Gendron", "Martelange", "Martinrive", "Membre"]);
   });
 
   it("leaves no end point needing review, but the split boundaries waiting for Cedric (#209)", () => {
-    const needingReview = stretches.flatMap((s) =>
-      (["from", "to"] as const).filter((e) => s[e].status === "needsReview" && !("sameAs" in s[e])).map((e) => `${s.id}.${e}`),
+    const needingReview = stretches.flatMap((stretch) =>
+      (["from", "to"] as const).filter((end) => stretch[end].status === "needsReview" && !("sameAs" in stretch[end])).map((end) => `${stretch.id}.${end}`),
     );
     expect(needingReview.filter((end) => !splitBoundaryEnds().includes(end))).toEqual([]);
     expect(pending).toEqual(needingReview);
   });
 
   it("records source and research date on every record, and who reviewed it and when", () => {
-    for (const s of stretches) {
-      expect(s.source, s.id).toMatch(/Annex 1/);
-      expect(s.source, s.id).toMatch(/OpenStreetMap/);
-      expect(s.researchDate, s.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    for (const stretch of stretches) {
+      expect(stretch.source, stretch.id).toMatch(/Annex 1/);
+      expect(stretch.source, stretch.id).toMatch(/OpenStreetMap/);
+      expect(stretch.researchDate, stretch.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
     expect(data.researchDate).toBe("2026-10-12");
     expect(data.review).toMatchObject({
@@ -186,9 +186,9 @@ describe("shipped Walloon stretch dataset", () => {
       const [stretchId, end] = id.split(".") as [string, "from" | "to"];
       // A decision taken on a whole record holds for the piece that kept that end.
       const pieces = stretches.filter((x) => annexIdOf(x) === stretchId);
-      const s = stretches.find((x) => x.id === stretchId) ?? pieces.at(end === "from" ? 0 : -1)!;
-      expect(s[end].status, id).toBe("reviewed");
-      expect(metres([s[end].point.lng, s[end].point.lat], [decision.lng, decision.lat]), id).toBeLessThan(30);
+      const found = stretches.find((x) => x.id === stretchId) ?? pieces.at(end === "from" ? 0 : -1)!;
+      expect(found[end].status, id).toBe("reviewed");
+      expect(metres([found[end].point.lng, found[end].point.lat], [decision.lng, decision.lat]), id).toBeLessThan(30);
     }
   });
 });
@@ -197,48 +197,48 @@ describe("the mapping to official stretches (#209)", () => {
   const lines = Object.fromEntries(
     spwLines.stretches.map(({ id, parts }) => [id, parts.map((part) => part.map(([lng, lat]) => ({ lat: lat!, lng: lng! })))]),
   );
-  const lengthOf = (line: number[][]) => line.slice(1).reduce((sum, p, i) => sum + metres(line[i]!, p), 0) / 1000;
-  const totalsOf = (s: Stretch) => kmByOfficial(officialRuns(s.line.map(([lng, lat]) => ({ lat: lat!, lng: lng! })), lines));
-  const piecesOf = (annexId: string) => stretches.filter((s) => annexIdOf(s) === annexId);
+  const lengthOf = (line: number[][]) => line.slice(1).reduce((sum, position, i) => sum + metres(line[i]!, position), 0) / 1000;
+  const totalsOf = (stretch: Stretch) => kmByOfficial(officialRuns(stretch.line.map(([lng, lat]) => ({ lat: lat!, lng: lng! })), lines));
+  const piecesOf = (annexId: string) => stretches.filter((stretch) => annexIdOf(stretch) === annexId);
 
   it("gives each record the expected official stretch, or none", () => {
-    expect(Object.fromEntries(stretches.map((s) => [s.id, officialOf(s) ?? null]))).toEqual(OFFICIAL);
+    expect(Object.fromEntries(stretches.map((stretch) => [stretch.id, officialOf(stretch) ?? null]))).toEqual(OFFICIAL);
   });
 
   it("gives every official stretch at least one record, and no record an unknown one", () => {
-    const mapped = new Set(stretches.flatMap((s) => officialOf(s) ?? []));
-    expect([...mapped].sort()).toEqual(official.stretches.map((s) => s.id).sort());
+    const mapped = new Set(stretches.flatMap((stretch) => officialOf(stretch) ?? []));
+    expect([...mapped].sort()).toEqual(official.stretches.map((stretch) => stretch.id).sort());
   });
 
   it("is checked against a line for every official stretch", () => {
-    expect(spwLines.stretches.map((s) => s.id).sort()).toEqual(official.stretches.map((s) => s.id).sort());
+    expect(spwLines.stretches.map((stretch) => stretch.id).sort()).toEqual(official.stretches.map((stretch) => stretch.id).sort());
   });
 
   it("puts the most of a mapped record on its official line, and at most a little on another", () => {
-    for (const s of stretches) {
-      const id = officialOf(s);
-      if (!id) continue;
-      const { none = 0, [id]: own = 0, ...others } = totalsOf(s);
-      expect(own, s.id).toBeGreaterThan(Math.max(...Object.values(others), 0));
-      for (const [other, km] of Object.entries(others)) expect(km, `${s.id} on ${other}`).toBeLessThan(MAX_ON_ANOTHER_LINE_KM);
-      expect(none, s.id).toBeLessThan(MAX_UNLISTED_KM);
+    for (const stretch of stretches) {
+      const id = officialOf(stretch);
+      if (!id) {continue;}
+      const { none = 0, [id]: own = 0, ...others } = totalsOf(stretch);
+      expect(own, stretch.id).toBeGreaterThan(Math.max(...Object.values(others), 0));
+      for (const [other, km] of Object.entries(others)) {expect(km, `${stretch.id} on ${other}`).toBeLessThan(MAX_ON_ANOTHER_LINE_KM);}
+      expect(none, stretch.id).toBeLessThan(MAX_UNLISTED_KM);
     }
   });
 
   it("keeps a record with no official stretch off the SPW's lines", () => {
-    for (const s of stretches.filter((x) => !officialOf(x))) {
-      for (const [other, km] of Object.entries(totalsOf(s))) {
-        if (other !== "none") expect(km, `${s.id} on ${other}`).toBeLessThan(MAX_ON_A_LINE_WHEN_UNLISTED_KM);
+    for (const unofficial of stretches.filter((x) => !officialOf(x))) {
+      for (const [other, km] of Object.entries(totalsOf(unofficial))) {
+        if (other !== "none") {expect(km, `${unofficial.id} on ${other}`).toBeLessThan(MAX_ON_A_LINE_WHEN_UNLISTED_KM);}
       }
     }
   });
 
   it("splits only where the SPW's lines call for it, into two pieces that meet exactly", () => {
-    const split = [...new Set(stretches.filter((s) => s.id !== annexIdOf(s)).map(annexIdOf))];
+    const split = [...new Set(stretches.filter((stretch) => stretch.id !== annexIdOf(stretch)).map(annexIdOf))];
     expect(split).toEqual(["1A3c", "1A4", "1B2b", "1C2b"]);
     for (const id of split) {
       const [upper, lower] = piecesOf(id);
-      expect(piecesOf(id).map((s) => s.id)).toEqual([`${id}-1`, `${id}-2`]);
+      expect(piecesOf(id).map((piece) => piece.id)).toEqual([`${id}-1`, `${id}-2`]);
       expect(lower!.line[0]).toEqual(upper!.line.at(-1));
       expect(lower!.from.point).toEqual(upper!.to.point);
       expect(lower!.from).toMatchObject({ sameAs: `${id}-1.to` });

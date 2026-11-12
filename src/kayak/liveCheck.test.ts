@@ -18,11 +18,11 @@ const recorded: KayakAnswers = {
 
 const findings = (live: Partial<KayakAnswers>) => compareWithFixture({ ...recorded, ...live }, recorded);
 const atLevel = async (level: string, live: Partial<KayakAnswers>) =>
-  (await findings(live)).filter((f) => f.level === level).map((f) => f.message);
+  (await findings(live)).filter((finding) => finding.level === level).map((finding) => finding.message);
 
 describe("PKAYAK contract check: the answers themselves", () => {
   it("finds nothing wrong with the recorded answers", async () => {
-    expect(new Set((await findings({})).map((f) => f.level))).toEqual(new Set(["match"]));
+    expect(new Set((await findings({})).map((finding) => finding.level))).toEqual(new Set(["match"]));
   });
 
   it("reports a layer that answers with another HTTP status", async () => {
@@ -67,53 +67,57 @@ const editedObstacles = (edit: (layer: Rows) => void) => edited("layer1-obstacle
 
 describe("PKAYAK contract check: fields", () => {
   it("calls a field the app reads from layer 5 or 0 and no longer gets a mismatch", async () => {
-    const stretches = editedStretches((l) => {
-      l.fields = l.fields?.filter((f) => f.name !== "justif");
+    const stretches = editedStretches((rows) => {
+      rows.fields = rows.fields?.filter((field) => field.name !== "justif");
     });
     expect(await atLevel("mismatch", { stretches })).toContainEqual(expect.stringMatching(/layer 5.*justif/));
-    const incidents = editedIncidents((l) => {
-      l.fields = l.fields?.filter((f) => f.name !== "datexp");
+    const incidents = editedIncidents((rows) => {
+      rows.fields = rows.fields?.filter((field) => field.name !== "datexp");
     });
     expect(await atLevel("mismatch", { incidents })).toContainEqual(expect.stringMatching(/layer 0.*datexp/));
   });
 
   it("calls a field missing from the records of a geojson layer a mismatch", async () => {
-    const aires = editedAires((l) => l.features.forEach((f) => delete f.properties?.typemb));
+    const aires = editedAires((rows) => rows.features.forEach((feature) => delete feature.properties?.typemb));
     expect(await atLevel("mismatch", { aires })).toContainEqual(expect.stringMatching(/layer 3.*typemb/));
-    const obstacles = editedObstacles((l) => l.features.forEach((f) => delete f.properties?.codico));
+    const obstacles = editedObstacles((rows) => rows.features.forEach((feature) => delete feature.properties?.codico));
     expect(await atLevel("mismatch", { obstacles })).toContainEqual(expect.stringMatching(/layer 1.*codico/));
   });
 
   it("calls a field of another type drift", async () => {
-    const stretches = editedStretches((l) => {
-      l.fields = l.fields?.map((f) => (f.name === "stapub" ? { ...f, type: "esriFieldTypeInteger" } : f));
+    const stretches = editedStretches((rows) => {
+      rows.fields = rows.fields?.map((field) =>
+        field.name === "stapub" ? { ...field, type: "esriFieldTypeInteger" } : field,
+      );
     });
     expect(await atLevel("drift", { stretches })).toContainEqual(
       expect.stringMatching(/layer 5.*stapub.*esriFieldTypeInteger/),
     );
-    const aires = editedAires((l) => l.features.forEach((f) => (f.properties!.datmod = "2026-01-01")));
+    const aires = editedAires((rows) =>
+      rows.features.forEach((feature) => (feature.properties!.datmod = "2026-01-01")),
+    );
     expect(await atLevel("drift", { aires })).toContainEqual(expect.stringMatching(/layer 3.*datmod.*string/));
   });
 
   it("doesn't take a field that is empty on every record for a change", async () => {
-    const aires = editedAires((l) => l.features.forEach((f) => (f.properties!.datmod = null)));
-    expect((await atLevel("drift", { aires })).filter((m) => /datmod.*type/.test(m))).toEqual([]);
+    const aires = editedAires((rows) => rows.features.forEach((feature) => (feature.properties!.datmod = null)));
+    expect((await atLevel("drift", { aires })).filter((message) => /datmod.*type/.test(message))).toEqual([]);
   });
 
   it("calls a field the app didn't ask for drift", async () => {
-    const stretches = editedStretches((l) => {
-      l.fields = [...(l.fields ?? []), { name: "nouveau", type: "esriFieldTypeString" }];
+    const stretches = editedStretches((rows) => {
+      rows.fields = [...(rows.fields ?? []), { name: "nouveau", type: "esriFieldTypeString" }];
     });
     expect(await atLevel("drift", { stretches })).toContainEqual(expect.stringMatching(/layer 5.*nouveau/));
   });
 
   it("calls an empty layer a mismatch, except incidents, which come and go", async () => {
-    const aires = editedAires((l) => {
-      l.features = [];
+    const aires = editedAires((rows) => {
+      rows.features = [];
     });
     expect(await atLevel("mismatch", { aires })).toContainEqual(expect.stringMatching(/layer 3.*no records/));
-    const incidents = editedIncidents((l) => {
-      l.features = [];
+    const incidents = editedIncidents((rows) => {
+      rows.features = [];
     });
     expect(await atLevel("mismatch", { incidents })).toEqual([]);
   });
@@ -121,39 +125,43 @@ describe("PKAYAK contract check: fields", () => {
 
 describe("PKAYAK contract check: codes", () => {
   it("accepts every status code the app knows, not only the recorded ones", async () => {
-    const stretches = editedStretches((l) => {
-      ["0", "1", "2", "3", "4", "5"].forEach((code, i) => (l.features[i].attributes!.stapub = code));
+    const stretches = editedStretches((rows) => {
+      ["0", "1", "2", "3", "4", "5"].forEach((code, i) => (rows.features[i].attributes!.stapub = code));
     });
     expect(await atLevel("mismatch", { stretches })).toEqual([]);
   });
 
   it("calls a status code the app doesn't know a mismatch and names its stretch", async () => {
-    const stretches = editedStretches((l) => {
-      l.features[0].attributes!.stapub = "7";
+    const stretches = editedStretches((rows) => {
+      rows.features[0].attributes!.stapub = "7";
     });
     expect(await atLevel("mismatch", { stretches })).toContainEqual(expect.stringMatching(/status code 7.*SEMOIS2-3/));
   });
 
   it("calls an obstacle code the app doesn't show drift: the shipped snapshot still stands", async () => {
-    const obstacles = editedObstacles((l) => {
-      l.features[0].properties!.codico = "9";
-      l.features[1].properties!.codico = "12";
+    const obstacles = editedObstacles((rows) => {
+      rows.features[0].properties!.codico = "9";
+      rows.features[1].properties!.codico = "12";
     });
     expect(await atLevel("mismatch", { obstacles })).toEqual([]);
-    expect(await atLevel("drift", { obstacles })).toEqual([expect.stringMatching(/obstacle codes? 9, 12.*prepare:spw-data/)]);
+    expect(await atLevel("drift", { obstacles })).toEqual([
+      expect.stringMatching(/obstacle codes? 9, 12.*prepare:spw-data/),
+    ]);
   });
 
   it("calls an aire type the snapshot can't take drift", async () => {
-    const aires = editedAires((l) => {
-      l.features[0].properties!.typemb = "X";
+    const aires = editedAires((rows) => {
+      rows.features[0].properties!.typemb = "X";
     });
     expect(await atLevel("mismatch", { aires })).toEqual([]);
-    expect(await atLevel("drift", { aires })).toContainEqual(expect.stringMatching(/prepare:spw-data.*unknown type "X"/));
+    expect(await atLevel("drift", { aires })).toContainEqual(
+      expect.stringMatching(/prepare:spw-data.*unknown type "X"/),
+    );
   });
 
   it("calls an aire on a stretch layer 5 doesn't list drift", async () => {
-    const aires = editedAires((l) => {
-      l.features[0].properties!.nomtro = "NOUVEAU";
+    const aires = editedAires((rows) => {
+      rows.features[0].properties!.nomtro = "NOUVEAU";
     });
     expect(await atLevel("drift", { aires })).toContainEqual(expect.stringMatching(/prepare:spw-data.*NOUVEAU/));
   });
@@ -161,8 +169,8 @@ describe("PKAYAK contract check: codes", () => {
 
 describe("PKAYAK contract check: records", () => {
   it("calls a stretch that came or went drift and names it", async () => {
-    const stretches = editedStretches((l) => {
-      l.features[0].attributes!.nomtro = "NOUVEAU";
+    const stretches = editedStretches((rows) => {
+      rows.features[0].attributes!.nomtro = "NOUVEAU";
     });
     expect(await atLevel("mismatch", { stretches })).toEqual([]);
     const drift = await atLevel("drift", { stretches });
@@ -171,44 +179,53 @@ describe("PKAYAK contract check: records", () => {
   });
 
   it("calls another number of aires or obstacles drift: time to refresh the snapshot", async () => {
-    const aires = editedAires((l) => {
-      l.features.pop();
+    const aires = editedAires((rows) => {
+      rows.features.pop();
     });
-    expect(await atLevel("drift", { aires })).toContainEqual(expect.stringMatching(/layer 3.*91 records, fixture has 92/));
+    expect(await atLevel("drift", { aires })).toContainEqual(
+      expect.stringMatching(/layer 3.*91 records, fixture has 92/),
+    );
   });
 
   it("takes incidents coming and going as normal", async () => {
-    const incidents = editedIncidents((l) => {
-      l.features.pop();
+    const incidents = editedIncidents((rows) => {
+      rows.features.pop();
     });
     expect(await atLevel("drift", { incidents })).toEqual([]);
   });
 
   it("calls an answer cut off by the record limit drift on a snapshot layer", async () => {
-    const aires = { status: 200, body: JSON.stringify({ ...JSON.parse(fixture("layer3-aires.json")), exceededTransferLimit: true }) };
+    const aires = {
+      status: 200,
+      body: JSON.stringify({ ...JSON.parse(fixture("layer3-aires.json")), exceededTransferLimit: true }),
+    };
     expect(await atLevel("drift", { aires })).toContainEqual(expect.stringMatching(/cut off/));
   });
 });
 
 describe("PKAYAK contract check: the app's adapter", () => {
   it("reports what it reads from today's answers", async () => {
-    const messages = (await findings({})).map((f) => f.message);
+    const messages = (await findings({})).map((finding) => finding.message);
     expect(messages).toContainEqual(expect.stringMatching(/adapter reads 21 of 21 stretches/));
     expect(messages).toContainEqual(expect.stringMatching(/adapter reads 3 of 3 incidents/));
   });
 
   it("calls incidents the adapter silently drops a mismatch", async () => {
-    const incidents = editedIncidents((l) => {
-      l.features.forEach((f) => (f.attributes!.id = `incident-${String(f.attributes!.id)}`));
+    const incidents = editedIncidents((rows) => {
+      rows.features.forEach((feature) => (feature.attributes!.id = `incident-${String(feature.attributes!.id)}`));
     });
-    expect(await atLevel("mismatch", { incidents })).toContainEqual(expect.stringMatching(/adapter reads 0 of 3 incidents/));
+    expect(await atLevel("mismatch", { incidents })).toContainEqual(
+      expect.stringMatching(/adapter reads 0 of 3 incidents/),
+    );
   });
 
   it("calls stretches the adapter silently drops a mismatch", async () => {
-    const stretches = editedStretches((l) => {
-      l.features[0].attributes!.nomtro = null;
+    const stretches = editedStretches((rows) => {
+      rows.features[0].attributes!.nomtro = null;
     });
-    expect(await atLevel("mismatch", { stretches })).toContainEqual(expect.stringMatching(/adapter reads 20 of 21 stretches/));
+    expect(await atLevel("mismatch", { stretches })).toContainEqual(
+      expect.stringMatching(/adapter reads 20 of 21 stretches/),
+    );
   });
 });
 
@@ -219,7 +236,9 @@ describe("the PKAYAK check run", () => {
       fetch: async (url: string, init: { headers: Record<string, string> }) => {
         calls.push({ url, userAgent: init.headers["User-Agent"] });
         const layer = /MapServer\/(\d)\/query/.exec(url)?.[1];
-        const name = { "0": "layer0-incidents", "1": "layer1-obstacles", "3": "layer3-aires", "5": "layer5-stretches" }[layer ?? ""];
+        const name = { "0": "layer0-incidents", "1": "layer1-obstacles", "3": "layer3-aires", "5": "layer5-stretches" }[
+          layer ?? ""
+        ];
         return new Response(fixture(`${name}.json`), { status: 200 });
       },
       wait: vi.fn(async () => {}),
@@ -237,7 +256,7 @@ describe("the PKAYAK check run", () => {
   it("asks the app's own queries, one per layer, with a pause between them", async () => {
     const { calls, deps } = replay();
     await runKayakCheck(deps);
-    expect(calls.map((c) => c.url)).toEqual([
+    expect(calls.map((call) => call.url)).toEqual([
       stretchesUrl(),
       incidentsUrl(),
       pkayakQuery(PKAYAK_LAYERS.aires, AIRE_FIELDS),
@@ -257,7 +276,9 @@ describe("the PKAYAK check run", () => {
     const result = await runKayakCheck({
       ...deps,
       fetch: async (url, init) =>
-        url === stretchesUrl() ? new Response(JSON.stringify({ error: { message: "Failed to execute query." } })) : deps.fetch(url, init),
+        url === stretchesUrl()
+          ? new Response(JSON.stringify({ error: { message: "Failed to execute query." } }))
+          : deps.fetch(url, init),
     });
     expect(result.passed).toBe(false);
     expect(result.report).toMatch(/MISMATCH.*Failed to execute query/);
@@ -269,7 +290,9 @@ describe("the PKAYAK check run", () => {
     const result = await runKayakCheck({
       ...deps,
       fetch: async (url, init) =>
-        url.includes("/1/query") ? new Response(editedObstacles((l) => void l.features.pop()).body) : deps.fetch(url, init),
+        url.includes("/1/query")
+          ? new Response(editedObstacles((rows) => void rows.features.pop()).body)
+          : deps.fetch(url, init),
     });
     expect(result.passed).toBe(true);
     expect(result.report).toMatch(/DRIFT.*95 records, fixture has 96/);
@@ -281,7 +304,9 @@ describe("the PKAYAK check run", () => {
     const result = await runKayakCheck({
       ...deps,
       fetch: async (url, init) => {
-        if (url === incidentsUrl()) throw new Error("connection reset");
+        if (url === incidentsUrl()) {
+          throw new Error("connection reset");
+        }
         return deps.fetch(url, init);
       },
     });

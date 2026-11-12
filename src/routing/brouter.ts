@@ -23,7 +23,7 @@ const NO_ROUTE: RouteResult = { ok: false, failure: { kind: "no-route" } };
 const UNAVAILABLE: RouteResult = { ok: false, failure: { kind: "unavailable" } };
 
 export function brouterUrl(mode: LegMode, points: readonly LatLng[], serverUrl = PUBLIC_SERVER): string {
-  const lonlats = points.map((p) => `${p.lng},${p.lat}`).join("|");
+  const lonlats = points.map((point) => `${point.lng},${point.lat}`).join("|");
   return `${serverUrl}?lonlats=${lonlats}&profile=${profiles[mode]}&alternativeidx=0&format=geojson`;
 }
 
@@ -38,8 +38,12 @@ export function createBRouterRouter(options: BRouterOptions = {}): Router {
         return UNAVAILABLE;
       }
       // BRouter reports routing problems (unmapped points, islands) as 400 with a text message.
-      if (response.status === 400) return NO_ROUTE;
-      if (!response.ok) return UNAVAILABLE;
+      if (response.status === 400) {
+        return NO_ROUTE;
+      }
+      if (!response.ok) {
+        return UNAVAILABLE;
+      }
       try {
         return toRouteResult(JSON.parse(await response.text()));
       } catch {
@@ -59,8 +63,12 @@ type BRouterFeature = {
 function toRouteResult(geojson: unknown): RouteResult {
   const feature = (geojson as { features?: BRouterFeature[] }).features?.[0];
   const coordinates = feature?.geometry?.coordinates;
-  if (!Array.isArray(coordinates)) return UNAVAILABLE;
-  if (coordinates.length < 2) return NO_ROUTE;
+  if (!Array.isArray(coordinates)) {
+    return UNAVAILABLE;
+  }
+  if (coordinates.length < 2) {
+    return NO_ROUTE;
+  }
   const geometry = withElevations(coordinates as Position[]);
   // BRouter's smoothed climb ("filtered ascend", whole metres, sent as a string).
   const climbM = Number.parseFloat(String(feature?.properties?.["filtered ascend"]));
@@ -73,11 +81,13 @@ function toRouteResult(geojson: unknown): RouteResult {
  * or failing that the nearest later one, or 0 if no point has any.
  */
 function withElevations(positions: readonly Position[]): RoutedPoint[] {
-  const known = (p: Position) => typeof p[2] === "number";
+  const known = (position: Position) => typeof position[2] === "number";
   const firstKnown = positions.find(known)?.[2] ?? 0;
   let last = firstKnown;
   return positions.map(([lng, lat, elevation]) => {
-    if (typeof elevation === "number") last = elevation;
+    if (typeof elevation === "number") {
+      last = elevation;
+    }
     return { lat, lng, elevation: last };
   });
 }

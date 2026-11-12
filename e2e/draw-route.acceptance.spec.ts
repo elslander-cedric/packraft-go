@@ -10,13 +10,17 @@ const rows = legRows;
 
 const km = async (locator: Locator) => {
   const text = (await locator.textContent()) ?? "";
-  const m = text.match(/([\d.,]+)\s*km/);
-  if (!m) throw new Error(`no distance in "${text}"`);
-  return Number(m[1].replace(",", ""));
+  const match = text.match(/([\d.,]+)\s*km/);
+  if (!match) {
+    throw new Error(`no distance in "${text}"`);
+  }
+  return Number(match[1].replace(",", ""));
 };
 /** The trip's hike distance in the panel's totals; an empty trip shows no totals. */
 const totalKm = async (page: Page) => {
-  if ((await totals(page).count()) === 0) return 0;
+  if ((await totals(page).count()) === 0) {
+    return 0;
+  }
   return Number((await figure(totals(page), strings.planner.totals.labels.hike)).replace(/\s*km$/, ""));
 };
 
@@ -29,19 +33,19 @@ async function openMap(page: Page) {
 
 /** Both ends of a straight SVG path ("M x y L x y"), in page pixels. */
 async function lineEnds(path: Locator) {
-  const d = (await path.getAttribute("d")) ?? "";
-  const nums = (d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
-  const commands = d.match(/[A-Za-z]/g) ?? [];
+  const pathData = (await path.getAttribute("d")) ?? "";
+  const nums = (pathData.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+  const commands = pathData.match(/[A-Za-z]/g) ?? [];
   const svg = (await path.evaluate((el) => {
-    const m = (el as SVGGraphicsElement).getScreenCTM()!;
-    return { a: m.a, d: m.d, e: m.e, f: m.f };
+    const matrix = (el as SVGGraphicsElement).getScreenCTM()!;
+    return { a: matrix.a, d: matrix.d, e: matrix.e, f: matrix.f };
   })) as { a: number; d: number; e: number; f: number };
   const toPage = (x: number, y: number) => ({ x: svg.a * x + svg.e, y: svg.d * y + svg.f });
   return { commands, start: toPage(nums[0], nums[1]), end: toPage(nums[2], nums[3]) };
 }
 
-const near = (p: { x: number; y: number }, q: { x: number; y: number }, tol = 2) =>
-  Math.hypot(p.x - q.x, p.y - q.y) < tol;
+const near = (point: { x: number; y: number }, otherPoint: { x: number; y: number }, tol = 2) =>
+  Math.hypot(point.x - otherPoint.x, point.y - otherPoint.y) < tol;
 
 test.beforeEach(({ page }) => showAllLegs(page));
 
@@ -61,9 +65,7 @@ test("the first click places only a start point; no leg, total stays 0", async (
   expect(network.blocked).toEqual([]);
 });
 
-test("each click adds a point and a straight hike leg; panel lists legs and their total", async ({
-  page,
-}) => {
+test("each click adds a point and a straight hike leg; panel lists legs and their total", async ({ page }) => {
   const { network, cx, cy } = await openMap(page);
   const clicks = [
     { x: cx - 200, y: cy + 80 },
@@ -72,8 +74,8 @@ test("each click adds a point and a straight hike leg; panel lists legs and thei
     { x: cx + 220, y: cy - 90 },
   ];
 
-  for (const [i, c] of clicks.entries()) {
-    await page.mouse.click(c.x, c.y);
+  for (const [i, point] of clicks.entries()) {
+    await page.mouse.click(point.x, point.y);
     await expect(markers(page)).toHaveCount(i + 1);
     await expect(legLines(page)).toHaveCount(i);
     await expect(rows(page)).toHaveCount(i);
@@ -98,12 +100,14 @@ test("each click adds a point and a straight hike leg; panel lists legs and thei
   }
 
   // Leg distances scale with on-screen length (same zoom, similar latitude).
-  const pxLen = clicks.slice(1).map((c, i) => Math.hypot(c.x - clicks[i].x, c.y - clicks[i].y));
-  const kmPerPx = legKm.map((k, i) => k / pxLen[i]);
-  for (const r of kmPerPx) expect(Math.abs(r - kmPerPx[0]) / kmPerPx[0]).toBeLessThan(0.05);
+  const pxLen = clicks.slice(1).map((point, i) => Math.hypot(point.x - clicks[i].x, point.y - clicks[i].y));
+  const kmPerPx = legKm.map((km, i) => km / pxLen[i]);
+  for (const ratio of kmPerPx) {
+    expect(Math.abs(ratio - kmPerPx[0]) / kmPerPx[0]).toBeLessThan(0.05);
+  }
 
   // Total equals the sum of the legs (each shown rounded to 0.1 km).
-  const sum = legKm.reduce((a, b) => a + b, 0);
+  const sum = legKm.reduce((total, value) => total + value, 0);
   expect(Math.abs((await totalKm(page)) - sum)).toBeLessThanOrEqual(0.05 * legKm.length + 0.051);
 
   expect(network.blocked).toEqual([]);
@@ -128,8 +132,8 @@ test("edge: clicking the same spot again does not break the app", async ({ page 
   const legs = await legLines(page).count();
   await expect(rows(page)).toHaveCount(legs);
   await expect(markers(page)).toHaveCount(legs + 1);
-  const sum = await Promise.all(
-    Array.from({ length: legs }, (_, i) => km(rows(page).nth(i))),
-  ).then((xs) => xs.reduce((a, b) => a + b, 0));
+  const sum = await Promise.all(Array.from({ length: legs }, (_, i) => km(rows(page).nth(i)))).then((xs) =>
+    xs.reduce((total, value) => total + value, 0),
+  );
   expect(Math.abs((await totalKm(page)) - sum)).toBeLessThanOrEqual(0.2);
 });

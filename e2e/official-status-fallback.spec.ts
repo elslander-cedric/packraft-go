@@ -37,11 +37,13 @@ async function seedSalmOn(page: Page, startDate: string) {
     trip: {
       name: "Salm",
       points: salm,
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: salm.map((p) => ({ ...p, elevation: 300 })) } }],
+      legs: [
+        { mode: "paddle", route: { status: "routed", geometry: salm.map((point) => ({ ...point, elevation: 300 })) } },
+      ],
       startDate,
     },
   };
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
 }
 
 const seedSalmToday = (page: Page) => seedSalmOn(page, "2026-11-02");
@@ -233,7 +235,9 @@ test.describe("when a chunk won't load, at desktop size", () => {
   // The service worker would answer for the chunks, out of the test's reach.
   test.use({ viewport: { width: 1400, height: 900 }, serviceWorkers: "block" });
 
-  test("a PKAYAK chunk that won't load ends in the note, not Checking, and a later refresh loads it", async ({ page }) => {
+  test("a PKAYAK chunk that won't load ends in the note, not Checking, and a later refresh loads it", async ({
+    page,
+  }) => {
     await page.clock.install({ time: KAYAK_RECORDED_AT });
     const chunk = await holdChunk(page, "PKAYAK didn't answer in time");
     const network = await serveOffline(page, { kayak: KAYAK, kiwis: KIWIS });

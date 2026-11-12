@@ -45,7 +45,9 @@ export function FormDialog({
     <Dialog.Root
       open={open}
       onOpenChange={(next) => {
-        if (!next) onCancel();
+        if (!next) {
+          onCancel();
+        }
       }}
     >
       <Dialog.Portal>
@@ -61,7 +63,9 @@ export function FormDialog({
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              if (!confirmDisabled) onConfirm();
+              if (!confirmDisabled) {
+                onConfirm();
+              }
             }}
           >
             <div className="form-dialog-fields">{children}</div>

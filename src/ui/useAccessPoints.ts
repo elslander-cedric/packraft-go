@@ -24,7 +24,9 @@ function defaultNameSource(): Promise<DefaultNameSource> {
 /** A new, unique id for an access point. */
 function newId(): string {
   // randomUUID needs a secure context (https or localhost); fall back elsewhere.
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
@@ -48,18 +50,21 @@ export function useAccessPoints() {
   const [points, setPoints] = useState<AccessPoints>(stored.accessPoints);
   // Saving is paused, so the stored save is kept rather than overwritten, while
   // it is from an unknown version, or damaged and could not be backed up.
-  const savingPaused: SavingPaused | null = stored.unknownVersion
-    ? "unknown-version"
-    : stored.damaged && stored.backupKey === null
-      ? "damaged"
-      : null;
+  let savingPaused: SavingPaused | null = null;
+  if (stored.unknownVersion) {
+    savingPaused = "unknown-version";
+  } else if (stored.damaged && stored.backupKey === null) {
+    savingPaused = "damaged";
+  }
   const keepStoredSave = savingPaused !== null;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // A new point placed on the map and not saved yet: it can be dragged, and the flag opens its details.
   const [draft, setDraft] = useState<AccessPoint | null>(null);
 
   useEffect(() => {
-    if (!keepStoredSave) storeAccessPoints(points);
+    if (!keepStoredSave) {
+      storeAccessPoints(points);
+    }
   }, [points, keepStoredSave]);
 
   // Default names (ADR 0027): looked up in the background whenever the
@@ -71,7 +76,9 @@ export function useAccessPoints() {
     let cancelled = false;
     const backOnline = () => defaultNames.current?.backOnline();
     void defaultNameSource().then((source) => {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       defaultNames.current = startDefaultNames({
         source,
         points: () => latest.current,
@@ -117,7 +124,9 @@ export function useAccessPoints() {
     },
     /** Stores the draft with the planner's changes and selects it. */
     saveDraft: (changes: AccessPointChanges) => {
-      if (!draft) return;
+      if (!draft) {
+        return;
+      }
       const { id } = draft;
       setPoints((current) => updateAccessPoint([...current, draft], id, changes, now()));
       setDraft(null);

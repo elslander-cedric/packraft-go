@@ -20,8 +20,8 @@ export function Icon({ icon, className }: { icon: IconDefinition; className?: st
       fill="currentColor"
       className={className ? `icon ${className}` : "icon"}
     >
-      {paths.map((d) => (
-        <path key={d} d={d} />
+      {paths.map((otherPath) => (
+        <path key={otherPath} d={otherPath} />
       ))}
     </svg>
   );

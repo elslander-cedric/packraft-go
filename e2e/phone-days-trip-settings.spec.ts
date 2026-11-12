@@ -61,7 +61,7 @@ const DINANT = [
 
 const routed = (points: { lat: number; lng: number }[], from: number) => ({
   status: "routed",
-  geometry: points.map((p, i) => ({ ...p, elevation: from + 20 * i })),
+  geometry: points.map((point, i) => ({ ...point, elevation: from + 20 * i })),
 });
 
 const TWO_DAYS = {
@@ -82,7 +82,9 @@ const TWO_DAYS = {
 async function openWithTrip(page: Page) {
   await page.addInitScript(
     ([key, save]) => {
-      if (sessionStorage.getItem("seeded")) return;
+      if (sessionStorage.getItem("seeded")) {
+        return;
+      }
       sessionStorage.setItem("seeded", "1");
       localStorage.setItem(key, save);
     },
@@ -101,7 +103,9 @@ const storedTrip = (page: Page) => page.evaluate((key) => JSON.parse(localStorag
  */
 async function inView(page: Page, shape: Locator) {
   const box = await shape.boundingBox();
-  if (!box) return false;
+  if (!box) {
+    return false;
+  }
   const map = (await mapRegion(page).boundingBox())!;
   const top = (await sheet(page).boundingBox())!.y;
   return box.x > map.x && box.x + box.width < map.x + map.width && box.y > map.y && box.y + box.height < top;
@@ -109,12 +113,16 @@ async function inView(page: Page, shape: Locator) {
 
 /** Minutes in a shown time such as "1 h 13 min" or "49 min". */
 function minutes(shown: string): number {
-  const m = shown.match(/(?:(\d+) h )?(\d+) min/);
-  if (!m) throw new Error(`no time in "${shown}"`);
-  return Number(m[1] ?? 0) * 60 + Number(m[2]);
+  const match = shown.match(/(?:(\d+) h )?(\d+) min/);
+  if (!match) {
+    throw new Error(`no time in "${shown}"`);
+  }
+  return Number(match[1] ?? 0) * 60 + Number(match[2]);
 }
 
-test("a two-day trip shows two day cards with their figures; tapping a card zooms the map to that day", async ({ page }) => {
+test("a two-day trip shows two day cards with their figures; tapping a card zooms the map to that day", async ({
+  page,
+}) => {
   await serveOffline(page);
   await openWithTrip(page);
   await tab(page, text.tabs.days).click();
@@ -130,7 +138,9 @@ test("a two-day trip shows two day cards with their figures; tapping a card zoom
   await expect(dayCards(page).nth(0)).not.toContainText(names.paddle);
   await expect(dayCards(page).nth(1)).toContainText(names.paddle);
   // The figures start level with the top of the calendar tile (measured once the sheet has stopped).
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))),
+  );
   const [body, tile] = await Promise.all([
     dayCards(page).nth(1).locator(".day-card-body").boundingBox(),
     dayTile(dayCards(page).nth(1)).boundingBox(),
@@ -140,7 +150,10 @@ test("a two-day trip shows two day cards with their figures; tapping a card zoom
   await expect(dayChips(page, 1)).toContainText(strings.tripAccess.chip(2, strings.tripAccess.chipKind.forbidden));
 
   // The tapped card is marked by the accent bar on its left, the other has none.
-  const bar = (n: number) => dayCards(page).nth(n).evaluate((el) => getComputedStyle(el).borderLeftColor);
+  const bar = (number: number) =>
+    dayCards(page)
+      .nth(number)
+      .evaluate((el) => getComputedStyle(el).borderLeftColor);
   const transparent = "rgba(0, 0, 0, 0)";
   expect(await bar(1)).toBe(transparent);
   await dayCards(page).nth(1).tap();
@@ -209,9 +222,9 @@ test("the Days tab has no heading or rule of its own; the cards run edge to edge
   const gap = await dayCards(page)
     .nth(0)
     .evaluate((first) => {
-      const a = first.getBoundingClientRect();
-      const b = first.nextElementSibling!.getBoundingClientRect();
-      return Math.round(b.top - a.bottom);
+      const rectA = first.getBoundingClientRect();
+      const rectB = first.nextElementSibling!.getBoundingClientRect();
+      return Math.round(rectB.top - rectA.bottom);
     });
   expect(gap).toBe(0);
   await expect(dayCards(page).nth(0)).toHaveCSS("border-bottom-width", "1px");
@@ -333,7 +346,9 @@ test("the Days tab carries the access: a day card's chip opens its leg's details
   // The chip opens its leg's details dialog over the Days tab (#158), with the warning, and
   // doesn't touch the card's selection; Close goes back to the chip.
   await dayChips(page, 1).tap();
-  const dialog = page.getByRole("dialog", { name: new RegExp(`^${strings.legLabel(2)} · ${strings.legModePaddle} · `) });
+  const dialog = page.getByRole("dialog", {
+    name: new RegExp(`^${strings.legLabel(2)} · ${strings.legModePaddle} · `),
+  });
   await expect(dialog).toBeVisible();
   await expect(dialog.locator(".access-warning-forbidden")).toContainText(strings.tripAccess.warningKind.forbidden);
   await expect(dialog.locator(".access-warning-aire").first()).toBeVisible();
@@ -416,7 +431,9 @@ test("Save waits for usable values; Enter in a field saves", async ({ page }) =>
   await expect(saveSettings(page)).toBeEnabled();
   await paceFactor(page).press("Enter");
   await expect(settingsDialog(page)).toHaveCount(0);
-  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY)).toContain('"paceFactor":1.5');
+  await expect
+    .poll(() => page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY))
+    .toContain('"paceFactor":1.5');
 });
 
 test.describe("on a narrow phone", () => {
@@ -434,12 +451,14 @@ test.describe("on a narrow phone", () => {
       // The icon and the visible text share one line: every box overlaps the first one vertically.
       const oneLine = await figure.evaluate((el) => {
         const boxes = [...el.childNodes].flatMap((node) => {
-          if (node instanceof Element && node.classList.contains("visually-hidden")) return [];
+          if (node instanceof Element && node.classList.contains("visually-hidden")) {
+            return [];
+          }
           const range = document.createRange();
           range.selectNode(node);
-          return [...range.getClientRects()].filter((r) => r.width > 0);
+          return [...range.getClientRects()].filter((rect) => rect.width > 0);
         });
-        return boxes.length > 0 && boxes.every((b) => b.top < boxes[0].bottom && b.bottom > boxes[0].top);
+        return boxes.length > 0 && boxes.every((box) => box.top < boxes[0].bottom && box.bottom > boxes[0].top);
       });
       expect(oneLine, (await figure.textContent()) ?? "").toBe(true);
     }

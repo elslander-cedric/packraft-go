@@ -44,28 +44,32 @@ describe("recorded BRouter fixtures are committed", () => {
     expect(success.type).toBe("FeatureCollection");
     expect(success.features[0].geometry.type).toBe("LineString");
     expect(success.features[0].geometry.coordinates.length).toBeGreaterThan(2);
-    expect(files.some((f) => /no-route|error|fail/.test(f))).toBe(true);
+    expect(files.some((file) => /no-route|error|fail/.test(file))).toBe(true);
   });
 });
 
 describe("adapter converts recorded BRouter GeoJSON", () => {
   it("asks for the hiking profile with lng,lat pairs and returns lat/lng/elevation points", async () => {
-    const r = recorded(fixture("hiking-success.geojson"));
-    const result = await createBRouterRouter({ fetch: r.fetch }).route("hike", [FROM, TO]);
+    const recording = recorded(fixture("hiking-success.geojson"));
+    const result = await createBRouterRouter({ fetch: recording.fetch }).route("hike", [FROM, TO]);
 
-    expect(r.urls).toHaveLength(1);
-    expect(r.urls[0].searchParams.get("profile")).toMatch(/hiking/);
-    expect(r.urls[0].searchParams.get("format")).toBe("geojson");
-    const [a, b] = (r.urls[0].searchParams.get("lonlats") ?? "").split("|").map((p) => p.split(",").map(Number));
-    expect(a).toEqual([FROM.lng, FROM.lat]);
-    expect(b).toEqual([TO.lng, TO.lat]);
+    expect(recording.urls).toHaveLength(1);
+    expect(recording.urls[0].searchParams.get("profile")).toMatch(/hiking/);
+    expect(recording.urls[0].searchParams.get("format")).toBe("geojson");
+    const [from, to] = (recording.urls[0].searchParams.get("lonlats") ?? "")
+      .split("|")
+      .map((pair) => pair.split(",").map(Number));
+    expect(from).toEqual([FROM.lng, FROM.lat]);
+    expect(to).toEqual([TO.lng, TO.lat]);
 
     expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) {
+      return;
+    }
     const raw = JSON.parse(fixture("hiking-success.geojson")).features[0].geometry.coordinates as number[][];
     expect(result.geometry).toHaveLength(raw.length);
-    result.geometry.forEach((p, i) => {
-      expect(p).toEqual({ lng: raw[i][0], lat: raw[i][1], elevation: raw[i][2] });
+    result.geometry.forEach((point, i) => {
+      expect(point).toEqual({ lng: raw[i][0], lat: raw[i][1], elevation: raw[i][2] });
     });
     // Starts and ends near the requested points (Belgium, lat ~50, lng ~5).
     expect(result.geometry[0].lat).toBeCloseTo(FROM.lat, 2);
@@ -73,10 +77,12 @@ describe("adapter converts recorded BRouter GeoJSON", () => {
   });
 
   it("the recorded track's figures roughly match BRouter's own track length", async () => {
-    const r = recorded(fixture("hiking-success.geojson"));
-    const result = await createBRouterRouter({ fetch: r.fetch }).route("hike", [FROM, TO]);
-    if (!result.ok) throw new Error("expected a route");
-    const base = [FROM, TO].reduce((t, at) => applyEdit(t, { type: "addPoint", at }), emptyTrip());
+    const recording = recorded(fixture("hiking-success.geojson"));
+    const result = await createBRouterRouter({ fetch: recording.fetch }).route("hike", [FROM, TO]);
+    if (!result.ok) {
+      throw new Error("expected a route");
+    }
+    const base = [FROM, TO].reduce((result, at) => applyEdit(result, { type: "addPoint", at }), emptyTrip());
     const trip: Trip = { ...base, legs: [{ mode: "hike", route: { status: "routed", geometry: result.geometry } }] };
     const props = JSON.parse(fixture("hiking-success.geojson")).features[0].properties;
     const leg = summarise(trip).legs[0];
@@ -87,8 +93,8 @@ describe("adapter converts recorded BRouter GeoJSON", () => {
   });
 
   it("maps the recorded 400 routing error to no-route", async () => {
-    const r = recorded(fixture("hiking-no-route-400.txt"), 400);
-    expect(await createBRouterRouter({ fetch: r.fetch }).route("hike", [FROM, TO])).toEqual({
+    const recording = recorded(fixture("hiking-no-route-400.txt"), 400);
+    expect(await createBRouterRouter({ fetch: recording.fetch }).route("hike", [FROM, TO])).toEqual({
       ok: false,
       failure: { kind: "no-route" },
     });
@@ -101,10 +107,12 @@ describe("adapter converts recorded BRouter GeoJSON", () => {
     ["JSON that is not a route", '{"hello":"world"}', 200],
     ["FeatureCollection with no features", '{"type":"FeatureCollection","features":[]}', 200],
   ])("never throws and gives a typed failure for %s", async (_name, body, status) => {
-    const r = recorded(body, status);
-    const result = await createBRouterRouter({ fetch: r.fetch }).route("hike", [FROM, TO]);
+    const recording = recorded(body, status);
+    const result = await createBRouterRouter({ fetch: recording.fetch }).route("hike", [FROM, TO]);
     expect(result.ok).toBe(false);
-    if (result.ok) return;
+    if (result.ok) {
+      return;
+    }
     expect(["no-route", "unavailable"]).toContain(result.failure.kind);
   });
 
@@ -126,7 +134,9 @@ describe("adapter converts recorded BRouter GeoJSON", () => {
       ],
     });
     const result = await createBRouterRouter({ fetch: recorded(body).fetch }).route("hike", [FROM, TO]);
-    if (!result.ok) throw new Error("expected a route");
+    if (!result.ok) {
+      throw new Error("expected a route");
+    }
     expect(result.geometry).toHaveLength(3);
     expect(result.geometry[1].elevation).toBe(100);
   });

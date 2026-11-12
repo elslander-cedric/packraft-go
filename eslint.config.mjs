@@ -24,7 +24,13 @@ const restrictImports = (...patterns) => ({ "no-restricted-imports": ["error", {
 
 const TESTS = ["**/*.test.ts", "**/*.test.tsx", "src/testing/**", "src/core/testing/**", "e2e/**"];
 // Run by hand or by scripts, never bundled: data preparation and the live service checks.
-const OFFLINE = ["src/dataprep/**", "src/access/prepare/**", "src/**/liveCheck.ts", "src/map/baseMapCheck.ts", "scripts/**"];
+const OFFLINE = [
+  "src/dataprep/**",
+  "src/access/prepare/**",
+  "src/**/liveCheck.ts",
+  "src/map/baseMapCheck.ts",
+  "scripts/**",
+];
 
 // Attributes whose value is shown to the user or read out by a screen reader.
 const VISIBLE_ATTRIBUTES =
@@ -39,8 +45,13 @@ const TEMPLATE = `TemplateLiteral > TemplateElement[value.raw=${HAS_WORDS}]`;
 const ATTRIBUTE = `JSXAttribute[name.name=${VISIBLE_ATTRIBUTES}]`;
 const hardCodedText = [
   `JSXText[value=${HAS_WORDS}]`,
-  ...[RENDERED, `${RENDERED} > ${BRANCH}`, ATTRIBUTE, `${ATTRIBUTE} > JSXExpressionContainer`, `${ATTRIBUTE} > JSXExpressionContainer > ${BRANCH}`]
-    .flatMap((where) => [`${where} > ${LITERAL}`, `${where} > ${TEMPLATE}`]),
+  ...[
+    RENDERED,
+    `${RENDERED} > ${BRANCH}`,
+    ATTRIBUTE,
+    `${ATTRIBUTE} > JSXExpressionContainer`,
+    `${ATTRIBUTE} > JSXExpressionContainer > ${BRANCH}`,
+  ].flatMap((where) => [`${where} > ${LITERAL}`, `${where} > ${TEMPLATE}`]),
 ].map((selector) => ({ selector, message: useStrings }));
 
 export default defineConfig([
@@ -68,6 +79,20 @@ export default defineConfig([
   { files: TESTS, rules: { ...restrictImports(baseUi, fontAwesome), "no-restricted-globals": "off" } },
   { files: ["src/ui/components/**"], rules: restrictImports(fontAwesome) },
   { files: ["src/ui/icons/**"], rules: restrictImports(baseUi) },
+  {
+    // Readability (CODING_STANDARDS.md "Readable code").
+    files: ["**/*.{ts,tsx,mts,mjs}"],
+    rules: {
+      curly: ["error", "all"],
+      "id-length": ["error", { min: 2, exceptions: ["_", "i", "x", "y"], properties: "never" }],
+      "no-nested-ternary": "error",
+      // Warnings until the existing code is brought under them (ADR 0038).
+      complexity: ["warn", 10],
+      "max-lines-per-function": ["warn", { max: 60, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  // A `describe` block is a list of tests, not a function to keep short.
+  { files: TESTS, rules: { "max-lines-per-function": "off" } },
   globalIgnores([
     ".next/**",
     "node_modules/**",

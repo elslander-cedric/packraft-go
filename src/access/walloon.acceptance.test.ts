@@ -5,10 +5,10 @@ import { agwDay, fishingOpeningDays, inSeason1C } from "@/core/agw";
 import { builtInAccessRules } from "./builtInRules";
 
 const agw = (category: string) =>
-  builtInAccessRules.records.find((r) => r.rule.type === "agw" && r.rule.category === category)!;
-const mid = (r: AccessRecord) => {
-  const c = (r.geometry as unknown as { coordinates: number[][] }).coordinates;
-  const [lng, lat] = c[Math.floor(c.length / 2)]!;
+  builtInAccessRules.records.find((record) => record.rule.type === "agw" && record.rule.category === category)!;
+const mid = (record: AccessRecord) => {
+  const coordinates = (record.geometry as unknown as { coordinates: number[][] }).coordinates;
+  const [lng, lat] = coordinates[Math.floor(coordinates.length / 2)]!;
   return { lat: lat!, lng: lng! };
 };
 
@@ -43,21 +43,22 @@ describe("fishing opening days (3rd Sat of March, 1st Sat of June)", () => {
 });
 
 describe("opening hours at period boundaries", () => {
-  const h = (c: "1.A" | "1.B" | "1.C", d: string) => `${agwDay(c, d).hours.from}-${agwDay(c, d).hours.to}`;
+  const hoursOn = (category: "1.A" | "1.B" | "1.C", date: string) =>
+    `${agwDay(category, date).hours.from}-${agwDay(category, date).hours.to}`;
   it("1.A", () => {
-    expect(h("1.A", "2026-03-15")).toBe("09:30-17:00");
-    expect(h("1.A", "2026-03-16")).toBe("09:30-19:00");
-    expect(h("1.A", "2026-06-15")).toBe("09:30-19:00");
-    expect(h("1.A", "2026-06-16")).toBe("09:30-20:00");
-    expect(h("1.A", "2026-10-15")).toBe("09:30-20:00");
-    expect(h("1.A", "2026-10-16")).toBe("09:30-17:00");
+    expect(hoursOn("1.A", "2026-03-15")).toBe("09:30-17:00");
+    expect(hoursOn("1.A", "2026-03-16")).toBe("09:30-19:00");
+    expect(hoursOn("1.A", "2026-06-15")).toBe("09:30-19:00");
+    expect(hoursOn("1.A", "2026-06-16")).toBe("09:30-20:00");
+    expect(hoursOn("1.A", "2026-10-15")).toBe("09:30-20:00");
+    expect(hoursOn("1.A", "2026-10-16")).toBe("09:30-17:00");
   });
   it("1.B and 1.C", () => {
-    for (const c of ["1.B", "1.C"] as const) {
-      expect(h(c, "2026-06-15")).toBe("10:00-17:00");
-      expect(h(c, "2026-06-16")).toBe("09:30-18:00");
-      expect(h(c, "2026-09-30")).toBe("09:30-18:00");
-      expect(h(c, "2026-10-01")).toBe("10:00-17:00");
+    for (const category of ["1.B", "1.C"] as const) {
+      expect(hoursOn(category, "2026-06-15")).toBe("10:00-17:00");
+      expect(hoursOn(category, "2026-06-16")).toBe("09:30-18:00");
+      expect(hoursOn(category, "2026-09-30")).toBe("09:30-18:00");
+      expect(hoursOn(category, "2026-10-01")).toBe("10:00-17:00");
     }
   });
 });
@@ -65,30 +66,41 @@ describe("opening hours at period boundaries", () => {
 describe("through the access evaluation (built-in data)", () => {
   const today = "2026-10-14";
   it("a 1.C stretch: closed today (season) in July, open in January, unknown without a date", () => {
-    const p = mid(agw("1.C"));
-    const july = accessAt(p, builtInAccessRules, { date: "2026-07-15", today });
+    const point = mid(agw("1.C"));
+    const july = accessAt(point, builtInAccessRules, { date: "2026-07-15", today });
     expect(july.state).toBe("closed-today");
     expect(JSON.stringify(july.reasons)).toMatch(/season/i);
-    expect(accessAt(p, builtInAccessRules, { date: "2027-01-15", today }).state).toBe("open");
-    expect(accessAt(p, builtInAccessRules, { today }).state).toBe("unknown");
+    expect(accessAt(point, builtInAccessRules, { date: "2027-01-15", today }).state).toBe("open");
+    expect(accessAt(point, builtInAccessRules, { today }).state).toBe("unknown");
   });
   it("a 1.B stretch is closed on the 2026 June opening day only", () => {
-    const p = mid(agw("1.B"));
-    expect(accessAt(p, builtInAccessRules, { date: "2026-06-06", today }).state).toBe("closed-today");
-    expect(accessAt(p, builtInAccessRules, { date: "2026-06-07", today }).state).toBe("open");
+    const point = mid(agw("1.B"));
+    expect(accessAt(point, builtInAccessRules, { date: "2026-06-06", today }).state).toBe("closed-today");
+    expect(accessAt(point, builtInAccessRules, { date: "2026-06-07", today }).state).toBe("open");
   });
   it("unlisted Walloon water (Meuse at Dinant) is forbidden, with a reason, on any date", () => {
     for (const date of [undefined, "2026-07-15", "2027-01-15"]) {
-      const s = accessAlong([{ lat: 50.26, lng: 4.91 }, { lat: 50.265, lng: 4.915 }], builtInAccessRules, { date, today });
-      expect(s.state).toBe("forbidden");
-      expect(JSON.stringify(s.reasons)).toMatch(/AGW/);
+      const accessStatus = accessAlong(
+        [
+          { lat: 50.26, lng: 4.91 },
+          { lat: 50.265, lng: 4.915 },
+        ],
+        builtInAccessRules,
+        { date, today },
+      );
+      expect(accessStatus.state).toBe("forbidden");
+      expect(JSON.stringify(accessStatus.reasons)).toMatch(/AGW/);
     }
   });
   it("assumed gauges are kept and flagged", () => {
-    const assumed = builtInAccessRules.records.filter((r) => r.rule.type === "agw" && r.rule.gauge?.assumed);
-    expect(new Set(assumed.map((r) => (r.rule.type === "agw" ? r.rule.gauge!.name : "")))).toEqual(
+    const assumed = builtInAccessRules.records.filter(
+      (record) => record.rule.type === "agw" && record.rule.gauge?.assumed,
+    );
+    expect(new Set(assumed.map((record) => (record.rule.type === "agw" ? record.rule.gauge!.name : "")))).toEqual(
       new Set(["Martinrive", "Gendron", "Martelange", "Membre"]),
     );
-    for (const r of assumed) expect(r.unverified).toMatch(/assumed/i);
+    for (const record of assumed) {
+      expect(record.unverified).toMatch(/assumed/i);
+    }
   });
 });

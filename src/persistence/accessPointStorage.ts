@@ -28,7 +28,9 @@ export type LoadedAccessPoints = StoredAccessPoints & { readonly backupKey: stri
 function existingBackup(storage: AccessPointStorage, text: string): string | null {
   for (let i = 0; i < storage.length; i++) {
     const key = storage.key(i);
-    if (key?.startsWith(ACCESS_POINTS_BACKUP_PREFIX) && storage.getItem(key) === text) return key;
+    if (key?.startsWith(ACCESS_POINTS_BACKUP_PREFIX) && storage.getItem(key) === text) {
+      return key;
+    }
   }
   return null;
 }
@@ -40,10 +42,14 @@ function existingBackup(storage: AccessPointStorage, text: string): string | nul
 function backUp(storage: AccessPointStorage, text: string, now: () => string): string | null {
   try {
     const known = existingBackup(storage, text);
-    if (known) return known;
+    if (known) {
+      return known;
+    }
     const base = `${ACCESS_POINTS_BACKUP_PREFIX}${now()}`;
     let key = base;
-    for (let n = 2; storage.getItem(key) !== null; n++) key = `${base}-${n}`;
+    for (let number = 2; storage.getItem(key) !== null; number++) {
+      key = `${base}-${number}`;
+    }
     storage.setItem(key, text);
     return key;
   } catch {

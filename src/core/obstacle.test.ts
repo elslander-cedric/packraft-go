@@ -5,7 +5,13 @@ import { dayWarnings } from "./dayWarnings";
 import { PASSING_TOLERANCE_M } from "./locks";
 import { obstacleGroups, obstaclesOnLine, type Obstacle, type ObstacleKind } from "./obstacle";
 import type { LegRoute } from "./router";
-import { fakeAccessRules, flandersSquare, forbiddenCanal, nearForbiddenCanal, onForbiddenCanal } from "./testing/fakeAccessRules";
+import {
+  fakeAccessRules,
+  flandersSquare,
+  forbiddenCanal,
+  nearForbiddenCanal,
+  onForbiddenCanal,
+} from "./testing/fakeAccessRules";
 import type { LatLng, Trip } from "./trip";
 import { legsAccess, tripAccess } from "./tripAccess";
 
@@ -18,7 +24,7 @@ const obstacle = (spwId: number, lng: number, lat: number, kind: ObstacleKind = 
   source: { title: "SPW", url: "https://example.org/spw" },
   snapshot: "2026-11-02",
 });
-const ids = (found: readonly Obstacle[]) => found.map((o) => o.spwId);
+const ids = (found: readonly Obstacle[]) => found.map((obstacle) => obstacle.spwId);
 
 // 0.001 degrees of latitude is about 111 m.
 const west: LatLng = { lat: 51.1, lng: 4.0 };
@@ -31,7 +37,7 @@ describe("obstacles on a leg's line", () => {
   });
 
   it("uses the passing tolerance: an obstacle just inside it counts and one just outside doesn't", () => {
-    const degrees = (m: number) => m / 111_195;
+    const degrees = (metres: number) => metres / 111_195;
     const inside = obstacle(1, 4.05, 51.1 + degrees(PASSING_TOLERANCE_M - 5));
     const outside = obstacle(2, 4.06, 51.1 + degrees(PASSING_TOLERANCE_M + 5));
     expect(ids(obstaclesOnLine([west, east], [inside, outside]))).toEqual([1]);
@@ -49,9 +55,9 @@ describe("obstacles on a leg's line", () => {
 });
 
 describe("obstacle warnings in the trip's access", () => {
-  const routed = (a: LatLng, b: LatLng): LegRoute => ({
+  const routed = (pointA: LatLng, pointB: LatLng): LegRoute => ({
     status: "routed",
-    geometry: [a, b].map((p) => ({ ...p, elevation: 0 })),
+    geometry: [pointA, pointB].map((point) => ({ ...point, elevation: 0 })),
   });
   const rules = fakeAccessRules([flandersSquare, forbiddenCanal]);
   const today = "2026-10-14";
@@ -80,7 +86,11 @@ describe("obstacle warnings in the trip's access", () => {
 
   it("gives a section the warnings of its own legs only", () => {
     const access = tripAccess(paddled, rules, { today, obstacles });
-    expect(legsAccess(access, { firstLeg: 1, lastLeg: 1 }).obstacleWarnings.map((w) => w.obstacle)).toEqual([onSecond]);
+    expect(
+      legsAccess(access, { firstLeg: 1, lastLeg: 1 }).obstacleWarnings.map(
+        (obstacleWarning) => obstacleWarning.obstacle,
+      ),
+    ).toEqual([onSecond]);
   });
 
   it("gives no warning on a hike leg, or on a paddle leg still being routed", () => {
@@ -101,7 +111,9 @@ describe("obstacle warnings in the trip's access", () => {
 
   it("doesn't depend on the date or the flow", () => {
     const shown = (trip: Trip, options = {}) =>
-      tripAccess(trip, rules, { today, obstacles, ...options }).trip.obstacleWarnings.map((w) => w.obstacle);
+      tripAccess(trip, rules, { today, obstacles, ...options }).trip.obstacleWarnings.map(
+        (obstacleWarning) => obstacleWarning.obstacle,
+      );
     const expected = [onFirst, onSecond];
     expect(shown({ ...paddled, startDate: undefined })).toEqual(expected);
     expect(shown(paddled)).toEqual(expected);
@@ -122,7 +134,7 @@ describe("several obstacles on one leg", () => {
 
   it("gathers them by kind, in the order the leg first meets each kind", () => {
     const groups = obstacleGroups([at(1, "rocks"), at(2, "impassable"), at(3, "rocks"), at(4, "dam"), at(5, "rocks")]);
-    expect(groups.map((g) => [g.kind, g.obstacles.map((o) => o.spwId)])).toEqual([
+    expect(groups.map((group) => [group.kind, group.obstacles.map((obstacle) => obstacle.spwId)])).toEqual([
       ["rocks", [1, 3, 5]],
       ["impassable", [2]],
       ["dam", [4]],

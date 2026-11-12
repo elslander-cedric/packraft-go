@@ -27,7 +27,6 @@ test.use({ viewport: { width: 1400, height: 900 }, timezoneId: "Europe/Brussels"
 
 const water = accessWater;
 
-
 async function openAccessLayer(page: Page) {
   await openPlanner(page);
   await toggleAccessLayer(page);
@@ -43,7 +42,6 @@ async function setLayerDate(page: Page, date: string) {
   await dialog.getByRole("button", { name: strings.planner.accessDialogClose }).click();
   await expect(dialog).toHaveCount(0);
 }
-
 
 test("a stretch closes on low flow today, with flow figures, freshness, the assumed gauge and the SPW credit", async ({
   page,
@@ -82,7 +80,9 @@ test("a stretch closes on low flow today, with flow figures, freshness, the assu
   expect(network.blocked).toEqual([]);
 });
 
-test("a flow-dependent stretch shows unknown today when the service fails, with the SPW kayak link", async ({ page }) => {
+test("a flow-dependent stretch shows unknown today when the service fails, with the SPW kayak link", async ({
+  page,
+}) => {
   await page.clock.setFixedTime(RECORDED_AT);
   const network = await serveOffline(page, { kiwis: FAILING });
   await openAccessLayer(page);
@@ -148,11 +148,16 @@ test("a paddle leg dated today uses the live flow: closed on low flow, with the 
     trip: {
       name: "Semois today",
       points: [semois[0], semois[semois.length - 1]],
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: semois.map((p) => ({ ...p, elevation: 200 })) } }],
+      legs: [
+        {
+          mode: "paddle",
+          route: { status: "routed", geometry: semois.map((semoi) => ({ ...semoi, elevation: 200 })) },
+        },
+      ],
       startDate: "2026-10-14",
     },
   };
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
   await openPlanner(page);
 
   const leg = await openSectionDetails(page, 1);
@@ -172,11 +177,16 @@ async function seedSemoisToday(page: Page) {
     trip: {
       name: "Semois today",
       points: [semois[0], semois[semois.length - 1]],
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: semois.map((p) => ({ ...p, elevation: 200 })) } }],
+      legs: [
+        {
+          mode: "paddle",
+          route: { status: "routed", geometry: semois.map((semoi) => ({ ...semoi, elevation: 200 })) },
+        },
+      ],
       startDate: "2026-10-14",
     },
   };
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
 }
 
 test("a leg dated today shows Checking flow first, then closed; never open in between (#85)", async ({ page }) => {
@@ -189,9 +199,7 @@ test("a leg dated today shows Checking flow first, then closed; never open in be
   const leg = await openSectionDetails(page, 1);
   const status = leg.locator(".leg-access-status");
   // The answer is held: the leg must be checking, and the request must really be in flight.
-  await expect(status).toHaveText(
-    strings.tripAccess.legStatusOn("Wed 14 Oct 2026", strings.accessChecking),
-  );
+  await expect(status).toHaveText(strings.tripAccess.legStatusOn("Wed 14 Oct 2026", strings.accessChecking));
   await expect.poll(() => network.kiwis.length).toBeGreaterThan(0);
   await expect(status).not.toContainText(strings.accessState.open);
 
@@ -233,7 +241,9 @@ test("a failing flow service still ends in unknown after checking (#85)", async 
   );
 });
 
-test("a day with one held flow-dependent leg and one open leg claims nothing about the flow while held (#85)", async ({ page }) => {
+test("a day with one held flow-dependent leg and one open leg claims nothing about the flow while held (#85)", async ({
+  page,
+}) => {
   await page.clock.setFixedTime(RECORDED_AT);
   const held = delayedKiwis(RECORDED);
   await serveOffline(page, { kiwis: held.kiwis });
@@ -244,7 +254,7 @@ test("a day with one held flow-dependent leg and one open leg claims nothing abo
   ];
   const line = (pts: { lat: number; lng: number }[]) => ({
     status: "routed",
-    geometry: pts.map((p) => ({ ...p, elevation: 10 })),
+    geometry: pts.map((pt) => ({ ...pt, elevation: 10 })),
   });
   const save = {
     format: "packraft-go-trip",
@@ -259,13 +269,16 @@ test("a day with one held flow-dependent leg and one open leg claims nothing abo
       startDate: "2026-10-14",
     },
   };
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
   await openPlanner(page);
 
   // The open leg settles at once; the Semois leg still reads checking.
   const details = await openSectionDetails(page, 1);
-  const legStatus = (n: number) =>
-    details.locator("section").filter({ hasText: strings.legLabel(n) }).locator(".leg-access-status");
+  const legStatus = (number: number) =>
+    details
+      .locator("section")
+      .filter({ hasText: strings.legLabel(number) })
+      .locator(".leg-access-status");
   await expect(legStatus(2)).toContainText(strings.accessState.open);
   await expect(legStatus(1)).toContainText(strings.accessChecking);
   await closeLegDetails(page);

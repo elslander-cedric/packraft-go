@@ -9,12 +9,14 @@ const add = (trip: Trip, at: LatLng) => applyEdit(trip, { type: "addPoint", at }
 const through = (...points: LatLng[]) => points.reduce(add, emptyTrip());
 
 // Independent reference: spherical law of cosines on a 6371 km sphere.
-function referenceKm(a: LatLng, b: LatLng) {
-  const r = Math.PI / 180;
-  const c =
-    Math.sin(a.lat * r) * Math.sin(b.lat * r) +
-    Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.cos((b.lng - a.lng) * r);
-  return 6371 * Math.acos(Math.min(1, Math.max(-1, c)));
+function referenceKm(pointA: LatLng, pointB: LatLng) {
+  const radiansPerDegree = Math.PI / 180;
+  const cosine =
+    Math.sin(pointA.lat * radiansPerDegree) * Math.sin(pointB.lat * radiansPerDegree) +
+    Math.cos(pointA.lat * radiansPerDegree) *
+      Math.cos(pointB.lat * radiansPerDegree) *
+      Math.cos((pointB.lng - pointA.lng) * radiansPerDegree);
+  return 6371 * Math.acos(Math.min(1, Math.max(-1, cosine)));
 }
 
 // Real places in Belgium (Ardennes, around the Ourthe).
@@ -31,8 +33,8 @@ describe("first click places the start; each further click adds a point and a hi
   it("n points give n - 1 legs, all hike, connecting consecutive points", () => {
     let trip = emptyTrip();
     const pts = [DURBUY, HOTTON, LA_ROCHE, DURBUY, HOTTON];
-    pts.forEach((p, i) => {
-      trip = add(trip, p);
+    pts.forEach((pt, i) => {
+      trip = add(trip, pt);
       expect(trip.points).toHaveLength(i + 1);
       expect(trip.legs).toHaveLength(i);
       expect(trip.legs.every((leg) => leg.mode === "hike")).toBe(true);
@@ -68,7 +70,7 @@ describe("figures give each leg's distance and the trip total", () => {
 
   it("the trip total is the sum of the leg distances", () => {
     const summary = summarise(through(DURBUY, HOTTON, LA_ROCHE, DURBUY));
-    const sum = summary.legs.reduce((s, leg) => s + leg.distanceKm, 0);
+    const sum = summary.legs.reduce((total, leg) => total + leg.distanceKm, 0);
     expect(summary.trip.distanceKm).toBeCloseTo(sum, 9);
   });
 
@@ -108,7 +110,9 @@ describe("router interface with a fake for tests", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.geometry.length).toBeGreaterThan(1);
-      for (const p of result.geometry) expect(typeof p.elevation).toBe("number");
+      for (const point of result.geometry) {
+        expect(typeof point.elevation).toBe("number");
+      }
     }
   });
 
@@ -119,9 +123,11 @@ describe("router interface with a fake for tests", () => {
       failure: { kind: "unavailable" },
     });
     const noResult = createFakeRouter({});
-    const r = await noResult.route("hike", [DURBUY, HOTTON]);
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(["no-route", "unavailable"]).toContain(r.failure.kind);
+    const routeResult = await noResult.route("hike", [DURBUY, HOTTON]);
+    expect(routeResult.ok).toBe(false);
+    if (!routeResult.ok) {
+      expect(["no-route", "unavailable"]).toContain(routeResult.failure.kind);
+    }
   });
 
   it("answers per mode", async () => {
@@ -136,18 +142,22 @@ describe("trip planner core has no React or network dependencies", () => {
     const { readdirSync, readFileSync, statSync } = await import("node:fs");
     const path = await import("node:path");
     const walk = (dir: string): string[] =>
-      readdirSync(dir).flatMap((n) => {
-        const f = path.join(dir, n);
-        return statSync(f).isDirectory() ? walk(f) : /\.tsx?$/.test(n) && !/\.test\./.test(n) ? [f] : [];
+      readdirSync(dir).flatMap((name) => {
+        const file = path.join(dir, name);
+        if (statSync(file).isDirectory()) {
+          return walk(file);
+        }
+        return /\.tsx?$/.test(name) && !/\.test\./.test(name) ? [file] : [];
       });
     const offenders: string[] = [];
     for (const file of walk(__dirname)) {
       const code = readFileSync(file, "utf8");
-      for (const m of code.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)) {
-        const spec = m[1];
-        const inside =
-          spec.startsWith(".") && path.resolve(path.dirname(file), spec).startsWith(__dirname + path.sep);
-        if (!inside) offenders.push(`${path.relative(__dirname, file)} -> ${spec}`);
+      for (const match of code.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)) {
+        const spec = match[1];
+        const inside = spec.startsWith(".") && path.resolve(path.dirname(file), spec).startsWith(__dirname + path.sep);
+        if (!inside) {
+          offenders.push(`${path.relative(__dirname, file)} -> ${spec}`);
+        }
       }
       if (/\b(fetch|XMLHttpRequest|WebSocket|navigator|window|document)\b/.test(code)) {
         offenders.push(`${path.relative(__dirname, file)} uses a browser/network global`);

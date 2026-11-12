@@ -17,7 +17,8 @@ import {
 
 const paceField = (page: Page) => settingsDialog(page).getByLabel(strings.paceFactorLabel);
 const speedField = (page: Page) => settingsDialog(page).getByLabel(strings.paddleSpeedLabel);
-const saveSettings = (page: Page) => settingsDialog(page).getByRole("button", { name: strings.planner.menu.settingsConfirm });
+const saveSettings = (page: Page) =>
+  settingsDialog(page).getByRole("button", { name: strings.planner.menu.settingsConfirm });
 /** Menu → Settings, left open. */
 const openSettings = (page: Page) => menuItem(page, strings.planner.menu.settings);
 const closeSettings = async (page: Page) => {
@@ -33,14 +34,18 @@ const byProfile = (url: URL) => (url.searchParams.get("profile") === "river" ? R
 
 /** Total minutes of the first "X h YY min" / "YY min" in some text. */
 function minutesIn(text: string | null): number {
-  const m = (text ?? "").match(/(?:(\d+) h )?(\d+) min/);
-  if (!m) throw new Error(`no time in "${text}"`);
-  return Number(m[1] ?? 0) * 60 + Number(m[2]);
+  const match = (text ?? "").match(/(?:(\d+) h )?(\d+) min/);
+  if (!match) {
+    throw new Error(`no time in "${text}"`);
+  }
+  return Number(match[1] ?? 0) * 60 + Number(match[2]);
 }
 const legMinutes = async (page: Page, leg: number) => minutesIn(await rows(page).nth(leg).textContent());
 /** The trip's total time in the panel's header. */
 const tripLine = (page: Page) =>
-  legsPanel(page).locator(".planner-total").filter({ hasText: new RegExp(`^${tripTimeLabel}`) });
+  legsPanel(page)
+    .locator(".planner-total")
+    .filter({ hasText: new RegExp(`^${tripTimeLabel}`) });
 
 async function openMap(page: Page) {
   await openPlanner(page);
@@ -81,9 +86,7 @@ test("legs that could not be routed still show an estimated time; an empty trip 
   await expect(legsPanel(page)).not.toContainText(/NaN|Infinity|undefined/);
 });
 
-test("pace factor scales only hike legs, speed only paddle legs, and figures change at once", async ({
-  page,
-}) => {
+test("pace factor scales only hike legs, speed only paddle legs, and figures change at once", async ({ page }) => {
   const network = await serveOffline(page, { brouter: byProfile });
   await drawHikeThenPaddle(page);
   await openSettings(page);
@@ -135,9 +138,7 @@ test("settings persist across a reload and the times use them", async ({ page })
   await serveOffline(page, { brouter: byProfile });
   await openMap(page);
   await changeSettings(page, { paceFactor: "2", paddleSpeed: "2.5" });
-  await expect
-    .poll(() => page.evaluate((key) => window.localStorage.getItem(key), SETTINGS_KEY))
-    .toContain("2.5");
+  await expect.poll(() => page.evaluate((key) => window.localStorage.getItem(key), SETTINGS_KEY)).toContain("2.5");
 
   await page.reload();
   await expect(legsPanel(page)).toBeVisible();
@@ -173,7 +174,7 @@ for (const [name, stored, pace, speed] of [
 ] as const) {
   test(`unreadable stored settings (${name}) fall back to defaults without crashing`, async ({ page }) => {
     const errors: string[] = [];
-    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("pageerror", (error) => errors.push(error.message));
     await serveOffline(page, { brouter: byProfile });
     await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [SETTINGS_KEY, stored]);
     await openMap(page);
@@ -192,7 +193,7 @@ test("R2: a pending hike leg shows … for its time, and so does the trip total;
   page,
 }) => {
   let release: () => void = () => {};
-  const gate = new Promise<void>((r) => (release = r));
+  const gate = new Promise<void>((resolve) => (release = resolve));
   await serveOffline(page, { brouter: async (url) => (await gate, byProfile(url)) });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
@@ -209,10 +210,12 @@ test("R2: a pending hike leg shows … for its time, and so does the trip total;
 
 test("R2: while a paddle leg is pending its section and the trip total show … until it is routed", async ({ page }) => {
   let release: () => void = () => {};
-  const gate = new Promise<void>((r) => (release = r));
+  const gate = new Promise<void>((resolve) => (release = resolve));
   await serveOffline(page, {
     brouter: async (url) => {
-      if (url.searchParams.get("profile") === "river") await gate;
+      if (url.searchParams.get("profile") === "river") {
+        await gate;
+      }
       return byProfile(url);
     },
   });
@@ -283,10 +286,12 @@ test("R2: a failed paddle leg is unchanged: plain time, no marker on the leg or 
 test("R2: retrying a failed hike leg goes … while pending, then a plain time without the marker", async ({ page }) => {
   let mode: "fail" | "hold" = "fail";
   let release: () => void = () => {};
-  const gate = new Promise<void>((r) => (release = r));
+  const gate = new Promise<void>((resolve) => (release = resolve));
   await serveOffline(page, {
     brouter: async (url) => {
-      if (mode === "fail") return { status: 503, body: "" };
+      if (mode === "fail") {
+        return { status: 503, body: "" };
+      }
       await gate;
       return byProfile(url);
     },
@@ -308,7 +313,7 @@ test("R2: retrying a failed hike leg goes … while pending, then a plain time w
 
 test("R2: a routed trip restored from autosave shows real times, not a stuck …", async ({ page }) => {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", (error) => errors.push(error.message));
   await serveOffline(page, { brouter: byProfile });
   await drawHikeThenPaddle(page);
   const before = await tripLine(page).textContent();

@@ -32,9 +32,11 @@ const byProfile = (url: URL) => (url.searchParams.get("profile") === "river" ? R
 
 /** Minutes in a shown time such as "1 h 13 min" or "49 min". */
 function minutes(text: string): number {
-  const m = text.match(/(?:(\d+) h )?(\d+) min/);
-  if (!m) throw new Error(`no time in "${text}"`);
-  return Number(m[1] ?? 0) * 60 + Number(m[2]);
+  const match = text.match(/(?:(\d+) h )?(\d+) min/);
+  if (!match) {
+    throw new Error(`no time in "${text}"`);
+  }
+  return Number(match[1] ?? 0) * 60 + Number(match[2]);
 }
 
 async function openMap(page: Page) {

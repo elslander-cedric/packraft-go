@@ -35,7 +35,9 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function overpass(query: string): Promise<OverpassResponse> {
   const file = path.join(CACHE, `${createHash("sha256").update(query).digest("hex").slice(0, 16)}.json`);
-  if (!fresh && existsSync(file)) return JSON.parse(readFileSync(file, "utf8")) as OverpassResponse;
+  if (!fresh && existsSync(file)) {
+    return JSON.parse(readFileSync(file, "utf8")) as OverpassResponse;
+  }
   for (let attempt = 0; attempt < 6; attempt++) {
     const endpoint = ENDPOINTS[attempt % ENDPOINTS.length];
     await sleep(PAUSE_MS * (1 + attempt));
@@ -49,7 +51,9 @@ async function overpass(query: string): Promise<OverpassResponse> {
       console.log(`  ${String(error)}; trying again after a pause`);
       return null;
     });
-    if (!response) continue;
+    if (!response) {
+      continue;
+    }
     if (response.ok) {
       const text = await response.text();
       mkdirSync(CACHE, { recursive: true });
@@ -68,7 +72,7 @@ for (const dataset of datasets) {
   writeFileSync(file, serialiseDataset(dataset));
   console.log(`Wrote ${path.relative(ROOT, file)}: ${dataset.records.length} records`);
 }
-const locks = await buildLockData(overpass, datasets.find((d) => d.id === "regions")!.records, today);
+const locks = await buildLockData(overpass, datasets.find((dataset) => dataset.id === "regions")!.records, today);
 const locksFile = path.join(OUT, "locks.json");
 writeFileSync(locksFile, serialiseLocks(locks));
 console.log(`Wrote ${path.relative(ROOT, locksFile)}: ${locks.locks.length} locks`);

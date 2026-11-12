@@ -39,8 +39,12 @@ function unverifiedOf(stretch: WalloonStretchData["stretches"][number]): string 
   if (stretch.gauge?.assumed) {
     parts.push(`The gauge ${stretch.gauge.name} is an assumed match to the Annex 2 row.`);
   }
-  if (stretch.note?.includes("[UNVERIFIED]")) parts.push(stretch.note.replace("[UNVERIFIED]", "").trim());
-  if (!stretch.gauge && stretch.noGaugeNote) parts.push(stretch.noGaugeNote);
+  if (stretch.note?.includes("[UNVERIFIED]")) {
+    parts.push(stretch.note.replace("[UNVERIFIED]", "").trim());
+  }
+  if (!stretch.gauge && stretch.noGaugeNote) {
+    parts.push(stretch.noGaugeNote);
+  }
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
 

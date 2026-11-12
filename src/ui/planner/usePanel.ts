@@ -46,8 +46,11 @@ export function usePanel(editingAccessPoints: boolean) {
     raise: () => (sideways ? setOpen(true) : setStop("half")),
     /** The same, but a sheet already above the peek stays where it is. */
     raiseFromPeek: () => {
-      if (sideways) setOpen(true);
-      else if (stop === "peek") setStop("half");
+      if (sideways) {
+        setOpen(true);
+      } else if (stop === "peek") {
+        setStop("half");
+      }
     },
     /** The share of the map the raised sheet or the open panel covers, for a map focus. */
     covered: () =>

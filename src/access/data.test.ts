@@ -3,6 +3,7 @@
 // put the known waters where they are.
 import { describe, expect, it } from "vitest";
 import { accessAt, type AccessRecord, type Geometry } from "@/core/access";
+import { linesOf } from "@/core/geo";
 import { builtInAccessRules, builtInDatasets, builtInLocks } from "./builtInRules";
 import { ACCESS_DATA_FORMAT } from "./dataset";
 
@@ -24,28 +25,43 @@ function positions(geometry: Geometry): (readonly [number, number])[] {
 }
 
 function geometryProblems(record: AccessRecord): string[] {
-  const g = record.geometry;
+  const geometry = record.geometry;
   const problems: string[] = [];
-  const lines = g.type === "LineString" ? [g.coordinates] : g.type === "MultiLineString" ? g.coordinates : [];
-  const rings = g.type === "Polygon" ? g.coordinates : g.type === "MultiPolygon" ? g.coordinates.flat() : [];
-  if (record.scope === "region" && rings.length === 0) problems.push("a region needs an area");
-  if (lines.some((line) => line.length < 2)) problems.push("a line with fewer than 2 positions");
+  const isArea = geometry.type === "Polygon" || geometry.type === "MultiPolygon";
+  const lines = isArea ? [] : linesOf(geometry);
+  const rings = isArea ? linesOf(geometry) : [];
+  if (record.scope === "region" && rings.length === 0) {
+    problems.push("a region needs an area");
+  }
+  if (lines.some((line) => line.length < 2)) {
+    problems.push("a line with fewer than 2 positions");
+  }
   const closed = (ring: (typeof rings)[number]) =>
     ring.length >= 4 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1];
-  if (!rings.every(closed)) problems.push("a ring that isn't closed");
-  if (positions(g).length === 0) problems.push("no positions");
-  if (!positions(g).every(([lng, lat]) => lng > 2.5 && lng < 6.5 && lat > 49.4 && lat < 51.6)) {
+  if (!rings.every(closed)) {
+    problems.push("a ring that isn't closed");
+  }
+  if (positions(geometry).length === 0) {
+    problems.push("no positions");
+  }
+  if (!positions(geometry).every(([lng, lat]) => lng > 2.5 && lng < 6.5 && lat > 49.4 && lat < 51.6)) {
     problems.push("positions outside the country");
   }
-  return problems.map((p) => `${record.id}: ${p}`);
+  return problems.map((problem) => `${record.id}: ${problem}`);
 }
 
 const at = (lat: number, lng: number) => accessAt({ lat, lng }, builtInAccessRules, { date: "2026-10-12" });
-const ruleIds = (status: ReturnType<typeof at>) => status.reasons.map((r) => (r.kind === "rule" ? r.recordId : r.kind));
+const ruleIds = (status: ReturnType<typeof at>) =>
+  status.reasons.map((reason) => (reason.kind === "rule" ? reason.recordId : reason.kind));
 
 describe("built-in access data", () => {
   it("every dataset is format version 1 and credits OpenStreetMap", () => {
-    expect(builtInDatasets.map((d) => d.id)).toEqual(["regions", "flanders", "brussels", "wallonia"]);
+    expect(builtInDatasets.map((builtInDataset) => builtInDataset.id)).toEqual([
+      "regions",
+      "flanders",
+      "brussels",
+      "wallonia",
+    ]);
     for (const dataset of builtInDatasets) {
       expect(dataset.format).toBe(ACCESS_DATA_FORMAT);
       expect(dataset.version).toBe(1);
@@ -56,13 +72,14 @@ describe("built-in access data", () => {
 
   it("every record has a source and a research date", () => {
     const missing = records.filter(
-      (r) => !r.source?.title || !/^https:\/\//.test(r.source?.url ?? "") || !DATE.test(r.researched ?? ""),
+      (record) =>
+        !record.source?.title || !/^https:\/\//.test(record.source?.url ?? "") || !DATE.test(record.researched ?? ""),
     );
-    expect(missing.map((r) => r.id)).toEqual([]);
+    expect(missing.map((record) => record.id)).toEqual([]);
   });
 
   it("every record has a unique id, a name, a rule with a reason, and a valid geometry", () => {
-    expect(new Set(records.map((r) => r.id)).size).toBe(records.length);
+    expect(new Set(records.map((record) => record.id)).size).toBe(records.length);
     for (const record of records) {
       expect(record.name, record.id).not.toBe("");
       expect(["region", "water"], record.id).toContain(record.scope);
@@ -72,14 +89,22 @@ describe("built-in access data", () => {
   });
 
   it("has the three regions, with Brussels cut out of Flanders", () => {
-    expect(records.filter((r) => r.scope === "region").map((r) => r.id)).toEqual(["flanders", "wallonia", "brussels"]);
+    expect(records.filter((record) => record.scope === "region").map((record) => record.id)).toEqual([
+      "flanders",
+      "wallonia",
+      "brussels",
+    ]);
     expect(ruleIds(at(51.054, 3.722))).toEqual(["flanders"]); // Ghent
     expect(ruleIds(at(50.466, 4.867))).toEqual(["wallonia"]); // Namur
     expect(ruleIds(at(50.846, 4.352))).toEqual(["brussels"]); // Brussels, Grand-Place
   });
 
   it("lists the Flemish exceptions as forbidden, each with its reason", () => {
-    const forbidden = records.filter((r) => r.region === "flanders" && r.rule.type === "fixed" && r.rule.state === "forbidden").map((r) => r.id);
+    const forbidden = records
+      .filter(
+        (record) => record.region === "flanders" && record.rule.type === "fixed" && record.rule.state === "forbidden",
+      )
+      .map((record) => record.id);
     expect(forbidden).toEqual([
       "flanders-ghent-terneuzen-canal",
       "flanders-lower-sea-scheldt",
@@ -108,15 +133,17 @@ describe("built-in access data", () => {
   });
 
   it("VMM agreement stretches are open with their text rules and a link", () => {
-    const vmm = records.filter((r) => r.id.startsWith("flanders-vmm-"));
-    expect(vmm.map((r) => r.id)).toEqual([
+    const vmm = records.filter((record) => record.id.startsWith("flanders-vmm-"));
+    expect(vmm.map((record) => record.id)).toEqual([
       "flanders-vmm-kleine-nete",
       "flanders-vmm-dijle",
       "flanders-vmm-zenne",
       "flanders-vmm-stekene-zuidlede",
     ]);
     for (const { id, rule } of vmm) {
-      if (rule.type !== "fixed") throw new Error(id);
+      if (rule.type !== "fixed") {
+        throw new Error(id);
+      }
       expect(rule.state, id).toBe("open");
       expect(rule.conditions?.length, id).toBeGreaterThan(0);
       expect(rule.link?.url, id).toMatch(/^https:\/\//);
@@ -124,20 +151,27 @@ describe("built-in access data", () => {
   });
 
   describe("Brussels (#57)", () => {
-    const brussels = records.filter((r) => r.region === "brussels" && r.scope === "water");
+    const brussels = records.filter((record) => record.region === "brussels" && record.scope === "water");
     // Every Brussels water has a fixed rule (no season or flow).
     const fixedRule = (id: string) => {
-      const { rule } = brussels.find((r) => r.id === id)!;
-      if (rule.type !== "fixed") throw new Error(`${id} has a ${rule.type} rule`);
+      const { rule } = brussels.find((brussel) => brussel.id === id)!;
+      if (rule.type !== "fixed") {
+        throw new Error(`${id} has a ${rule.type} rule`);
+      }
       return rule;
     };
 
     it("has the canal, the ponds, the Senne and the small streams", () => {
-      expect(brussels.map((r) => r.id)).toEqual(["brussels-canal", "brussels-ponds", "brussels-senne", "brussels-streams"]);
+      expect(brussels.map((brussel) => brussel.id)).toEqual([
+        "brussels-canal",
+        "brussels-ponds",
+        "brussels-senne",
+        "brussels-streams",
+      ]);
     });
 
     it("gives the canal as open, with the priority, VHF and Capitainerie notes", () => {
-      const canal = brussels.find((r) => r.id === "brussels-canal")!;
+      const canal = brussels.find((brussel) => brussel.id === "brussels-canal")!;
       expect(fixedRule("brussels-canal").state).toBe("open");
       const notes = (fixedRule("brussels-canal").conditions ?? []).join(" ");
       expect(notes).toMatch(/commercial/i);
@@ -170,12 +204,13 @@ describe("built-in access data", () => {
   describe("lock markers (#57)", () => {
     it("have a source and a research date, a unique id and a position in their region", () => {
       const missing = builtInLocks.locks.filter(
-        (l) => !l.source?.title || !/^https:\/\//.test(l.source?.url ?? "") || !DATE.test(l.researched ?? ""),
+        (lock) =>
+          !lock.source?.title || !/^https:\/\//.test(lock.source?.url ?? "") || !DATE.test(lock.researched ?? ""),
       );
-      expect(missing.map((l) => l.id)).toEqual([]);
-      expect(new Set(builtInLocks.locks.map((l) => l.id)).size).toBe(builtInLocks.locks.length);
+      expect(missing.map((lock) => lock.id)).toEqual([]);
+      expect(new Set(builtInLocks.locks.map((lock) => lock.id)).size).toBe(builtInLocks.locks.length);
       // Against the region records alone: on a canal, the canal's own rule would hide the region.
-      const regionsOnly = { records: records.filter((r) => r.scope === "region") };
+      const regionsOnly = { records: records.filter((record) => record.scope === "region") };
       for (const lock of builtInLocks.locks) {
         const [lng, lat] = lock.position;
         const status = accessAt({ lat, lng }, regionsOnly, { date: "2026-10-12" });
@@ -185,10 +220,10 @@ describe("built-in access data", () => {
     });
 
     it("include the Anderlecht and Molenbeek locks in Brussels, and many in Flanders", () => {
-      const brusselsLocks = builtInLocks.locks.filter((l) => l.region === "brussels").map((l) => l.name);
-      expect(brusselsLocks.some((n) => /Anderlecht/.test(n))).toBe(true);
-      expect(brusselsLocks.some((n) => /Molenbeek/.test(n))).toBe(true);
-      expect(builtInLocks.locks.filter((l) => l.region === "flanders").length).toBeGreaterThan(30);
+      const brusselsLocks = builtInLocks.locks.filter((lock) => lock.region === "brussels").map((lock) => lock.name);
+      expect(brusselsLocks.some((brusselsLock) => /Anderlecht/.test(brusselsLock))).toBe(true);
+      expect(brusselsLocks.some((brusselsLock) => /Molenbeek/.test(brusselsLock))).toBe(true);
+      expect(builtInLocks.locks.filter((lock) => lock.region === "flanders").length).toBeGreaterThan(30);
     });
   });
 });

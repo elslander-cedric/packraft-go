@@ -165,7 +165,10 @@ describe("parsing invalid input", () => {
       "a routed point without elevation",
       withLeg({ mode: "hike", route: { status: "routed", geometry: [{ lat: 50, lng: 4 }] } }),
     ],
-    ["a climb that is not a number", withLeg({ mode: "hike", route: { status: "routed", geometry: [], climbM: "100" } })],
+    [
+      "a climb that is not a number",
+      withLeg({ mode: "hike", route: { status: "routed", geometry: [], climbM: "100" } }),
+    ],
     ["an unknown failure kind", withLeg({ mode: "hike", route: { status: "failed", failure: { kind: "boom" } } })],
   ])("rejects %s", (_, text) => {
     expect(parseTrip(text)).toEqual({ ok: false });
@@ -178,7 +181,11 @@ describe("parsing invalid input", () => {
   });
 
   it("ignores fields it does not know, so they do not leak into the trip", () => {
-    const text = withTrip({ undoSteps: [], extra: true, points: [{ lat: 50.3, lng: 5.6, x: 1 }, ...valid.trip.points.slice(1)] });
+    const text = withTrip({
+      undoSteps: [],
+      extra: true,
+      points: [{ lat: 50.3, lng: 5.6, x: 1 }, ...valid.trip.points.slice(1)],
+    });
     expect(parseTrip(text)).toEqual({ ok: true, trip: routedTrip });
   });
 });
@@ -215,7 +222,9 @@ describe("camps in the save format", () => {
 
   it("restores the same days", () => {
     const parsed = parseTrip(serialiseTrip(withCamps));
-    if (!parsed.ok) throw new Error("not parsed");
+    if (!parsed.ok) {
+      throw new Error("not parsed");
+    }
     expect(summarise(parsed.trip).days).toHaveLength(2);
     expect(summarise(parsed.trip).days).toEqual(summarise(withCamps).days);
   });

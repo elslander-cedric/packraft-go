@@ -25,7 +25,12 @@ const save = (startDate: string) =>
     trip: {
       name: "Semois",
       points: [semois[0], semois[semois.length - 1]],
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: semois.map((p) => ({ ...p, elevation: 200 })) } }],
+      legs: [
+        {
+          mode: "paddle",
+          route: { status: "routed", geometry: semois.map((semoi) => ({ ...semoi, elevation: 200 })) },
+        },
+      ],
       startDate,
     },
   });
@@ -41,21 +46,30 @@ async function watchStatuses(page: import("@playwright/test").Page) {
     const record = () => {
       for (const el of document.querySelectorAll(".leg-access-icons, .day-warning-chip")) {
         const text = `${el.className}|${el.textContent}`;
-        if (seen[seen.length - 1] !== text) seen.push(text);
+        if (seen[seen.length - 1] !== text) {
+          seen.push(text);
+        }
       }
     };
-    new MutationObserver(record).observe(document, { subtree: true, childList: true, characterData: true, attributes: true });
+    new MutationObserver(record).observe(document, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+    });
   });
 }
 const history = (page: import("@playwright/test").Page) =>
   page.evaluate(() => (window as unknown as { __seen: string[] }).__seen);
 
-test("status history is checking, then closed: open never appears; nothing leaks into the saved trip", async ({ page }) => {
+test("status history is checking, then closed: open never appears; nothing leaks into the saved trip", async ({
+  page,
+}) => {
   await page.clock.setFixedTime(RECORDED_AT);
   const held = delayedKiwis(RECORDED);
   const network = await serveOffline(page, { kiwis: held.kiwis });
   await watchStatuses(page);
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), save("2026-10-14"));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), save("2026-10-14"));
   await openPlanner(page);
   const leg = page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessChecking);
@@ -75,8 +89,10 @@ test("status history is checking, then closed: open never appears; nothing leaks
 
   const seen = await history(page);
   expect(seen[0]).toContain(strings.accessChecking);
-  expect(seen.some((s) => s.includes(strings.accessState["closed-today"]))).toBe(true);
-  expect(seen.filter((s) => s.includes("access-status-open") || s.includes(strings.accessState.open))).toEqual([]);
+  expect(seen.some((text) => text.includes(strings.accessState["closed-today"]))).toBe(true);
+  expect(seen.filter((text) => text.includes("access-status-open") || text.includes(strings.accessState.open))).toEqual(
+    [],
+  );
   expect(await page.evaluate(() => localStorage.getItem("packraft-go.trip"))).not.toContain("checking");
 });
 
@@ -85,14 +101,14 @@ test("a failing service ends unknown, never open, in the whole history", async (
   const held = delayedKiwis(FAILING);
   await serveOffline(page, { kiwis: held.kiwis });
   await watchStatuses(page);
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), save("2026-10-14"));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), save("2026-10-14"));
   await openPlanner(page);
   const leg = page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessChecking);
   held.release();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState.unknown);
   const seen = await history(page);
-  expect(seen.filter((s) => s.includes("access-status-open"))).toEqual([]);
+  expect(seen.filter((text) => text.includes("access-status-open"))).toEqual([]);
 });
 
 test("another date is never checking and asks no flows", async ({ page }) => {
@@ -100,10 +116,10 @@ test("another date is never checking and asks no flows", async ({ page }) => {
   const held = delayedKiwis(RECORDED);
   const network = await serveOffline(page, { kiwis: held.kiwis });
   await watchStatuses(page);
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), save("2026-10-20"));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), save("2026-10-20"));
   await openPlanner(page);
   const leg = page.getByRole("list", { name: strings.sectionsPanelLabel }).locator(leafRows).first();
   await expect(leg.locator(".leg-access-icons")).toContainText(strings.accessState.open);
-  expect((await history(page)).filter((s) => s.includes(strings.accessChecking))).toEqual([]);
+  expect((await history(page)).filter((text) => text.includes(strings.accessChecking))).toEqual([]);
   expect(network.kiwis).toHaveLength(0);
 });

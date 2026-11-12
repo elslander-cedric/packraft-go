@@ -7,7 +7,14 @@ import type { LegRoute } from "./router";
 import { parseTrip, serialiseTrip } from "./saveFile";
 import { applyEdit, type LatLng, type Leg, type Trip } from "./trip";
 import { legsAccess, tripAccess } from "./tripAccess";
-import { onWalloonAllYear, walloonAllYear, agreementStretch, fakeAccessRules, flandersSquare, forbiddenCanal } from "./testing/fakeAccessRules";
+import {
+  onWalloonAllYear,
+  walloonAllYear,
+  agreementStretch,
+  fakeAccessRules,
+  flandersSquare,
+  forbiddenCanal,
+} from "./testing/fakeAccessRules";
 
 const flanders = fakeAccessRules([flandersSquare, forbiddenCanal, agreementStretch]);
 
@@ -21,7 +28,7 @@ const agreementB: LatLng = { lat: 50.8, lng: 3.8 };
 
 const routed = (...points: LatLng[]): LegRoute => ({
   status: "routed",
-  geometry: points.map((p) => ({ ...p, elevation: 0 })),
+  geometry: points.map((point) => ({ ...point, elevation: 0 })),
 });
 
 function trip(points: LatLng[], legs: Leg[], extra: Partial<Trip> = {}): Trip {
@@ -30,24 +37,25 @@ function trip(points: LatLng[], legs: Leg[], extra: Partial<Trip> = {}): Trip {
 
 describe("access status per paddle leg", () => {
   it("a paddle leg crossing a forbidden canal is forbidden on its day's date, with every reason", () => {
-    const t = trip(
-      [southOfCanal, northOfCanal],
-      [{ mode: "paddle", route: routed(southOfCanal, northOfCanal) }],
-      { startDate: "2026-10-20" },
-    );
-    const access = tripAccess(t, flanders, { today: "2026-10-14" });
+    const aTrip = trip([southOfCanal, northOfCanal], [{ mode: "paddle", route: routed(southOfCanal, northOfCanal) }], {
+      startDate: "2026-10-20",
+    });
+    const access = tripAccess(aTrip, flanders, { today: "2026-10-14" });
     expect(access.dated).toBe(true);
     const leg = access.legs[0]!;
     expect(leg.date).toBe("2026-10-20");
     expect(leg.status.state).toBe("forbidden");
-    expect(leg.status.reasons.map((r) => r.kind === "rule" && r.recordId)).toEqual(["test-canal", "flanders"]);
+    expect(leg.status.reasons.map((reason) => reason.kind === "rule" && reason.recordId)).toEqual([
+      "test-canal",
+      "flanders",
+    ]);
   });
 });
 
 describe("warnings per paddle leg", () => {
   const today = { today: "2026-10-14" };
-  const paddle = (a: LatLng, b: LatLng): Trip =>
-    trip([a, b], [{ mode: "paddle", route: routed(a, b) }], { startDate: "2026-10-20" });
+  const paddle = (pointA: LatLng, pointB: LatLng): Trip =>
+    trip([pointA, pointB], [{ mode: "paddle", route: routed(pointA, pointB) }], { startDate: "2026-10-20" });
 
   it("forbidden water gives a warning with its reason and source", () => {
     const leg = tripAccess(paddle(southOfCanal, northOfCanal), flanders, today).legs[0]!;
@@ -87,13 +95,13 @@ describe("warnings per paddle leg", () => {
     const leg = tripAccess(paddle({ lat: 51.4, lng: 4.0 }, { lat: 51.6, lng: 4.0 }), flanders, today).legs[0]!;
     expect(leg.status.state).toBe("unknown");
     expect(leg.warnings).toEqual([]);
-    expect(leg.notes.map((n) => n.reason.kind)).toEqual(["no-rule"]);
+    expect(leg.notes.map((note) => note.reason.kind)).toEqual(["no-rule"]);
   });
 
   it("summaries don't count unknown as a warning and report the legs without rules separately (#78)", () => {
     const far: LatLng = { lat: 51.4, lng: 4.0 };
     const farther: LatLng = { lat: 51.6, lng: 4.0 };
-    const t = trip(
+    const aTrip = trip(
       [southOfCanal, northOfCanal, far, farther],
       [
         { mode: "paddle", route: routed(southOfCanal, northOfCanal) },
@@ -101,8 +109,8 @@ describe("warnings per paddle leg", () => {
         { mode: "paddle", route: routed(far, farther) },
       ],
     );
-    const { trip: summary } = tripAccess(t, flanders, today);
-    expect(summary.warnings.map((w) => w.kind)).toEqual(["forbidden"]);
+    const { trip: summary } = tripAccess(aTrip, flanders, today);
+    expect(summary.warnings.map((warning) => warning.kind)).toEqual(["forbidden"]);
     expect(summary.legsWithoutRules).toBeGreaterThanOrEqual(1);
     expect(summary.notes.length).toBeGreaterThanOrEqual(1);
   });
@@ -115,19 +123,30 @@ describe("future dates and flow", () => {
     id: "test-flow-stretch",
     name: "Test flow stretch",
     rule: { type: "fixed", state: "open", text: "Open when the flow allows it.", flowDependent: true },
-    geometry: { type: "LineString", coordinates: [[4.2, 50.6], [4.2, 50.9]] },
+    geometry: {
+      type: "LineString",
+      coordinates: [
+        [4.2, 50.6],
+        [4.2, 50.9],
+      ],
+    },
   };
   const rules = fakeAccessRules([flandersSquare, forbiddenCanal, flowStretch]);
   const flowA: LatLng = { lat: 50.7, lng: 4.2 };
   const flowB: LatLng = { lat: 50.8, lng: 4.2 };
-  const onFlowStretch = (extra: Partial<Trip>) => trip([flowA, flowB], [{ mode: "paddle", route: routed(flowA, flowB) }], extra);
+  const onFlowStretch = (extra: Partial<Trip>) =>
+    trip([flowA, flowB], [{ mode: "paddle", route: routed(flowA, flowB) }], extra);
 
   it("on a future date, rules OK on flow-dependent water says: check flow on the day", () => {
     const leg = tripAccess(onFlowStretch({ startDate: "2026-10-20" }), rules, { today: "2026-10-14" }).legs[0]!;
     expect(leg.status.state).toBe("open");
     expect(leg.checkFlowOnTheDay).toBe(true);
     expect(leg.warnings).toEqual([
-      expect.objectContaining({ kind: "check-flow", date: "2026-10-20", reason: expect.objectContaining({ recordId: "test-flow-stretch" }) }),
+      expect.objectContaining({
+        kind: "check-flow",
+        date: "2026-10-20",
+        reason: expect.objectContaining({ recordId: "test-flow-stretch" }),
+      }),
     ]);
   });
 
@@ -138,12 +157,12 @@ describe("future dates and flow", () => {
   });
 
   it("a future date on water without a flow rule doesn't ask either", () => {
-    const t = trip([openA, openB], [{ mode: "paddle", route: routed(openA, openB) }], { startDate: "2027-05-01" });
-    expect(tripAccess(t, rules, { today: "2026-10-14" }).legs[0]!.checkFlowOnTheDay).toBe(false);
+    const aTrip = trip([openA, openB], [{ mode: "paddle", route: routed(openA, openB) }], { startDate: "2027-05-01" });
+    expect(tripAccess(aTrip, rules, { today: "2026-10-14" }).legs[0]!.checkFlowOnTheDay).toBe(false);
   });
 
   it("forbidden water on a future date is a ban, not a flow check", () => {
-    const t = trip(
+    const aTrip = trip(
       [southOfCanal, northOfCanal, flowA, flowB],
       [
         { mode: "paddle", route: routed(southOfCanal, northOfCanal, flowA, flowB) },
@@ -152,26 +171,26 @@ describe("future dates and flow", () => {
       ],
       { startDate: "2026-10-20" },
     );
-    const leg = tripAccess(t, rules, { today: "2026-10-14" }).legs[0]!;
+    const leg = tripAccess(aTrip, rules, { today: "2026-10-14" }).legs[0]!;
     expect(leg.status.state).toBe("forbidden");
     expect(leg.checkFlowOnTheDay).toBe(false);
-    expect(leg.warnings.map((w) => w.kind)).toEqual(["forbidden"]);
+    expect(leg.warnings.map((warning) => warning.kind)).toEqual(["forbidden"]);
   });
 });
 
 describe("undated trips: the rules in general terms", () => {
   it("statuses are in general, with no date; bans still warn; flow is never 'on the day'", () => {
-    const t = trip(
+    const aTrip = trip(
       [southOfCanal, northOfCanal, agreementA],
       [
         { mode: "paddle", route: routed(southOfCanal, northOfCanal) },
         { mode: "paddle", route: routed(agreementA, agreementB) },
       ],
     );
-    const access = tripAccess(t, flanders, { today: "2026-10-14" });
+    const access = tripAccess(aTrip, flanders, { today: "2026-10-14" });
     expect(access.dated).toBe(false);
     expect(access.legs[0]).not.toHaveProperty("date");
-    expect(access.legs[0]!.warnings.map((w) => w.kind)).toEqual(["forbidden"]);
+    expect(access.legs[0]!.warnings.map((warning) => warning.kind)).toEqual(["forbidden"]);
     expect(access.legs[0]!.warnings[0]).not.toHaveProperty("date");
     // The general rules (text, extra conditions) are kept for showing.
     expect(access.legs[1]!.status.reasons[0]).toMatchObject({ conditions: agreementStretch.rule.conditions });
@@ -181,7 +200,7 @@ describe("undated trips: the rules in general terms", () => {
 
 describe("per-day and trip summaries", () => {
   // Day 1: open paddle, hike. Day 2: forbidden paddle. Day 3: hike only.
-  const t = trip(
+  const aTrip = trip(
     [openA, openB, southOfCanal, northOfCanal, openA],
     [
       { mode: "paddle", route: routed(openA, openB) },
@@ -191,10 +210,17 @@ describe("per-day and trip summaries", () => {
     ],
     { startDate: "2026-10-20", camps: [2, 3] },
   );
-  const access = tripAccess(t, flanders, { today: "2026-10-14" });
+  const access = tripAccess(aTrip, flanders, { today: "2026-10-14" });
 
   it("each day has the most restrictive status of its paddle legs and their warnings", () => {
-    expect(access.days.map((day) => [day.day, day.date, day.state, day.warnings.map((w) => [w.kind, w.leg])])).toEqual([
+    expect(
+      access.days.map((day) => [
+        day.day,
+        day.date,
+        day.state,
+        day.warnings.map((warning) => [warning.kind, warning.leg]),
+      ]),
+    ).toEqual([
       [0, "2026-10-20", "open", []],
       [1, "2026-10-21", "forbidden", [["forbidden", 2]]],
       [2, "2026-10-22", undefined, []],
@@ -203,7 +229,9 @@ describe("per-day and trip summaries", () => {
 
   it("the trip summary has the most restrictive status and every warning, in leg order", () => {
     expect(access.trip.state).toBe("forbidden");
-    expect(access.trip.warnings.map((w) => [w.kind, w.leg, w.day])).toEqual([["forbidden", 2, 1]]);
+    expect(access.trip.warnings.map((warning) => [warning.kind, warning.leg, warning.day])).toEqual([
+      ["forbidden", 2, 1],
+    ]);
   });
 
   it("a trip without checked paddle legs has no status and no warnings", () => {
@@ -243,7 +271,7 @@ describe("warnings never block", () => {
 
 describe("which legs get a status, and for which date", () => {
   it("each paddle leg uses its own day's date; hike legs and legs still being routed get none", () => {
-    const t = trip(
+    const aTrip = trip(
       [openA, openB, southOfCanal, northOfCanal, openA],
       [
         { mode: "paddle", route: routed(openA, openB) },
@@ -253,7 +281,7 @@ describe("which legs get a status, and for which date", () => {
       ],
       { startDate: "2026-10-20", camps: [2] },
     );
-    const { legs } = tripAccess(t, flanders, { today: "2026-10-14" });
+    const { legs } = tripAccess(aTrip, flanders, { today: "2026-10-14" });
     expect(legs.map((leg) => leg && [leg.day, leg.date, leg.status.state])).toEqual([
       [0, "2026-10-20", "open"],
       undefined,
@@ -264,17 +292,17 @@ describe("which legs get a status, and for which date", () => {
 
   it("a paddle leg that failed to route is checked along its straight line", () => {
     const failed: Leg = { mode: "paddle", route: { status: "failed", failure: { kind: "no-route" } } };
-    const t = trip([southOfCanal, northOfCanal], [failed]);
-    expect(tripAccess(t, flanders, { today: "2026-10-14" }).legs[0]?.status.state).toBe("forbidden");
+    const aTrip = trip([southOfCanal, northOfCanal], [failed]);
+    expect(tripAccess(aTrip, flanders, { today: "2026-10-14" }).legs[0]?.status.state).toBe("forbidden");
   });
 });
 
 describe("flows still loading (#85)", () => {
   const walloon = fakeAccessRules([walloonAllYear]);
-  const a = { lat: onWalloonAllYear.lat, lng: 5.0 };
-  const b = { lat: onWalloonAllYear.lat, lng: 5.1 };
+  const pointA = { lat: onWalloonAllYear.lat, lng: 5.0 };
+  const pointB = { lat: onWalloonAllYear.lat, lng: 5.1 };
   const dated = (startDate: string): Trip =>
-    trip([a, b], [{ mode: "paddle", route: routed(a, b) }], { startDate });
+    trip([pointA, pointB], [{ mode: "paddle", route: routed(pointA, pointB) }], { startDate });
 
   it("a flow-dependent stretch dated today is checking, not open, and day and trip summaries don't count it", () => {
     const access = tripAccess(dated("2026-10-14"), walloon, { today: "2026-10-14", flowsPending: true });
@@ -288,18 +316,24 @@ describe("flows still loading (#85)", () => {
     const open: LatLng = { lat: 51.1, lng: 4.0 };
     const open2: LatLng = { lat: 51.2, lng: 4.1 };
     const rules = fakeAccessRules([walloonAllYear, flandersSquare, forbiddenCanal]);
-    const checkingLeg: Leg = { mode: "paddle", route: routed(a, b) };
+    const checkingLeg: Leg = { mode: "paddle", route: routed(pointA, pointB) };
     const mixed = tripAccess(
-      trip([a, b, open2], [checkingLeg, { mode: "paddle", route: routed(open, open2) }], { startDate: "2026-10-14" }),
+      trip([pointA, pointB, open2], [checkingLeg, { mode: "paddle", route: routed(open, open2) }], {
+        startDate: "2026-10-14",
+      }),
       rules,
       { today: "2026-10-14", flowsPending: true },
     );
     expect(mixed.days[0].state).toBe("checking");
     expect(mixed.trip.state).toBe("checking");
     const worse = tripAccess(
-      trip([a, b, northOfCanal], [checkingLeg, { mode: "paddle", route: routed(southOfCanal, northOfCanal) }], {
-        startDate: "2026-10-14",
-      }),
+      trip(
+        [pointA, pointB, northOfCanal],
+        [checkingLeg, { mode: "paddle", route: routed(southOfCanal, northOfCanal) }],
+        {
+          startDate: "2026-10-14",
+        },
+      ),
       rules,
       { today: "2026-10-14", flowsPending: true },
     );
@@ -311,7 +345,7 @@ describe("flows still loading (#85)", () => {
       id: "test-lock",
       name: "Test lock",
       region: "flanders",
-      position: [5.05, a.lat] as const,
+      position: [5.05, pointA.lat] as const,
       source: { title: "Rule", url: "https://example.org/rule" },
       researched: "2026-10-12",
     };
@@ -324,7 +358,9 @@ describe("flows still loading (#85)", () => {
   });
 
   it("another date, or flows that have arrived, are unchanged", () => {
-    expect(tripAccess(dated("2026-10-20"), walloon, { today: "2026-10-14", flowsPending: true }).legs[0]!.status.state).toBe("open");
+    expect(
+      tripAccess(dated("2026-10-20"), walloon, { today: "2026-10-14", flowsPending: true }).legs[0]!.status.state,
+    ).toBe("open");
     expect(tripAccess(dated("2026-10-14"), walloon, { today: "2026-10-14" }).legs[0]!.status.state).toBe("open");
   });
 });

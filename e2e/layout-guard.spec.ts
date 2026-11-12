@@ -25,15 +25,18 @@ async function twoPoints(page: Page) {
 
 /** Lines the text `wanted` is laid out on inside `row`. */
 const lines = (row: Locator, wanted: string) =>
-  row.evaluate((root, w) => {
+  row.evaluate((root, width) => {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-      const at = n.textContent!.indexOf(w);
-      if (at < 0) continue;
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const at = node.textContent!.indexOf(width);
+      if (at < 0) {
+        continue;
+      }
       const range = document.createRange();
-      range.setStart(n, at);
-      range.setEnd(n, at + w.length);
-      return new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top))).size;
+      range.setStart(node, at);
+      range.setEnd(node, at + width.length);
+      return new Set([...range.getClientRects()].filter((rect) => rect.width > 0).map((rect) => Math.round(rect.top)))
+        .size;
     }
     return -1;
   }, wanted);
@@ -43,7 +46,9 @@ test("the app's own font is loaded and used, not an operating system font", asyn
   const row = await twoPoints(page);
   await expect(row).toContainText(strings.climbLabel);
   expect(await row.evaluate((el) => getComputedStyle(el).fontFamily)).toContain("Inter");
-  const loaded = await page.evaluate(() => [...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family));
+  const loaded = await page.evaluate(() =>
+    [...document.fonts].filter((fontFace) => fontFace.status === "loaded").map((fontFace) => fontFace.family),
+  );
   expect(loaded.join()).toContain("Inter");
 });
 
@@ -55,7 +60,8 @@ test("seeded: a figure squeezed until it wraps inside itself is caught by the me
   await expect(row).toContainText(`${strings.climbLabel} ${figure}`);
   expect(await lines(row, figure)).toBe(1);
   await page.addStyleTag({
-    content: ".planner-row-figure { white-space: normal !important; display: inline-block !important; width: 1ch !important; }",
+    content:
+      ".planner-row-figure { white-space: normal !important; display: inline-block !important; width: 1ch !important; }",
   });
   expect(await lines(row, figure)).toBeGreaterThan(1);
 });
@@ -67,9 +73,14 @@ test("seeded: a Retry button cut off by its container is caught by the measureme
   await expect(retry).toBeVisible();
   const fullyInside = () =>
     retry.evaluate((node) => {
-      const r = node.getBoundingClientRect();
-      const c = node.closest("li")!.getBoundingClientRect();
-      return r.left >= c.left - 0.5 && r.right <= c.right + 0.5 && r.top >= c.top - 0.5 && r.bottom <= c.bottom + 0.5;
+      const rect = node.getBoundingClientRect();
+      const aRect = node.closest("li")!.getBoundingClientRect();
+      return (
+        rect.left >= aRect.left - 0.5 &&
+        rect.right <= aRect.right + 0.5 &&
+        rect.top >= aRect.top - 0.5 &&
+        rect.bottom <= aRect.bottom + 0.5
+      );
     });
   expect(await fullyInside()).toBe(true);
   await row.evaluate((el) => {

@@ -9,7 +9,6 @@ import { accessWater, holdWater } from "./support/planner";
 
 const water = accessWater;
 
-
 test("switching the date changes a Walloon stretch's colour, and the panel shows the rules", async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   const network = await serveOffline(page);

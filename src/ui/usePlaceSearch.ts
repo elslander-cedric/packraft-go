@@ -26,7 +26,9 @@ export function usePlaceSearch() {
   const sending = searchToSend(state);
 
   useEffect(() => {
-    if (!sending) return;
+    if (!sending) {
+      return;
+    }
     const { id, text, area } = sending;
     void sharedNominatim()
       .then(({ search }) => search.search(text, area))

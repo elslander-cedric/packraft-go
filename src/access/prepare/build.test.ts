@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { linesOf } from "@/core/geo";
 import { geometryQuery, waterRecord, type Overpass } from "./build";
 import type { OverpassResponse, Polygon } from "./osm";
 import { serialiseDataset } from "./serialise";
@@ -33,7 +34,9 @@ const aroundLier: Polygon[] = [
   ],
 ];
 
-const lierSpec = flandersWaterSpecs.find((s) => s.id === "flanders-lier-nete-diversion")!;
+const lierSpec = flandersWaterSpecs.find(
+  (flandersWaterSpec) => flandersWaterSpec.id === "flanders-lier-nete-diversion",
+)!;
 
 describe("building a water record", () => {
   it("asks Overpass for the spec's objects with their geometry", async () => {
@@ -55,7 +58,9 @@ describe("building a water record", () => {
     });
     expect(record.geometry.type).toBe("LineString");
     const line = record.geometry.type === "LineString" ? record.geometry.coordinates : [];
-    const raw = extract("lier-nete-diversion.json").elements.flatMap((e) => (e.type === "way" ? (e.geometry ?? []) : []));
+    const raw = extract("lier-nete-diversion.json").elements.flatMap((element) =>
+      element.type === "way" ? (element.geometry ?? []) : [],
+    );
     expect(line.length).toBeGreaterThanOrEqual(2);
     expect(line.length).toBeLessThan(raw.length);
     for (const [lng, lat] of line) {
@@ -78,7 +83,7 @@ describe("building a water record", () => {
       ],
     ];
     const record = await waterRecord(lierSpec, westOnly, saved(extract("lier-nete-diversion.json")).overpass);
-    const lines = record.geometry.type === "LineString" ? [record.geometry.coordinates] : record.geometry.type === "MultiLineString" ? record.geometry.coordinates : [];
+    const lines = linesOf(record.geometry);
     expect(lines.flat().every(([lng]) => lng <= 4.5625)).toBe(true);
   });
 
@@ -92,7 +97,8 @@ describe("building a water record", () => {
     const spec: WaterSpec = { ...lierSpec, between: { from, to } };
     const record = await waterRecord(spec, aroundLier, saved(answer).overpass);
     const line = record.geometry.type === "LineString" ? record.geometry.coordinates : [];
-    const near = (a: readonly number[], b: readonly number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.0005;
+    const near = (first: readonly number[], second: readonly number[]) =>
+      Math.hypot(first[0] - second[0], first[1] - second[1]) < 0.0005;
     const ends = [line[0], line[line.length - 1]];
     expect(ends.some((end) => near(end, from))).toBe(true);
     expect(ends.some((end) => near(end, to))).toBe(true);
@@ -120,7 +126,13 @@ describe("serialising a dataset", () => {
           scope: "water" as const,
           region: "flanders",
           rule: { type: "fixed" as const, state: "forbidden" as const, text: "No." },
-          geometry: { type: "LineString" as const, coordinates: [[4, 51], [4.1, 51]] as [number, number][] },
+          geometry: {
+            type: "LineString" as const,
+            coordinates: [
+              [4, 51],
+              [4.1, 51],
+            ] as [number, number][],
+          },
           source: { title: "S", url: "https://example.org" },
           researched: "2026-10-12",
         },

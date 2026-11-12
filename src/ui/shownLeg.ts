@@ -9,6 +9,8 @@ export type ShownLeg = { readonly leg: number; readonly seq: number };
 /** Scrolls a leg list's row for the shown leg to the top of its list, once per request. */
 export function useScrollToShownLeg(list: RefObject<HTMLOListElement | null>, shown: ShownLeg | null) {
   useEffect(() => {
-    if (shown) list.current?.children[shown.leg]?.scrollIntoView({ block: "start" });
+    if (shown) {
+      list.current?.children[shown.leg]?.scrollIntoView({ block: "start" });
+    }
   }, [list, shown]);
 }

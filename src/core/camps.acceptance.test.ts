@@ -6,34 +6,19 @@ import { routingInto } from "./testing/routingDispatch";
 import { parseTrip, restoreTrip, serialiseTrip } from "./saveFile";
 import { summarise } from "./summarise";
 import { createFakeRouter } from "./testing/fakeRouter";
-import {
-  applyEdit,
-  canUndo,
-  emptyTrip,
-  isCamp,
-  type Edit,
-  type LatLng,
-  type Leg,
-  type Trip,
-} from "./trip";
+import { applyEdit, canUndo, emptyTrip, isCamp, type Edit, type LatLng, type Leg, type Trip } from "./trip";
 
 const KM_PER_DEGREE = (6371.0088 * Math.PI) / 180;
 const atKm = (km: number): LatLng => ({ lat: 0, lng: km / KM_PER_DEGREE });
 
 const camp = (index: number): Edit => ({ type: "toggleCamp", index });
 const undo: Edit = { type: "undo" };
-const campsOf = (trip: Trip) =>
-  trip.points.map((_, i) => i).filter((i) => isCamp(trip, i));
+const campsOf = (trip: Trip) => trip.points.map((_, i) => i).filter((i) => isCamp(trip, i));
 const edits = (trip: Trip, ...list: Edit[]) => list.reduce(applyEdit, trip);
 const through = (...points: LatLng[]) =>
-  points.reduce((t, at) => applyEdit(t, { type: "addPoint", at }), emptyTrip());
+  points.reduce((result, at) => applyEdit(result, { type: "addPoint", at }), emptyTrip());
 
-const routed = (
-  from: LatLng,
-  to: LatLng,
-  elevations: [number, number],
-  climbM?: number,
-): LegRoute => ({
+const routed = (from: LatLng, to: LatLng, elevations: [number, number], climbM?: number): LegRoute => ({
   status: "routed",
   geometry: [
     { ...from, elevation: elevations[0] },
@@ -60,8 +45,7 @@ function fiveLegTrip(): Trip {
   return { name: "Five legs", points, legs };
 }
 
-const ranges = (trip: Trip) =>
-  summarise(trip).days.map((d) => [d.firstLeg, d.lastLeg]);
+const ranges = (trip: Trip) => summarise(trip).days.map((day) => [day.firstLeg, day.lastLeg]);
 
 describe("toggling a camp", () => {
   it("any point can be marked and unmarked, including the start and the end", () => {
@@ -123,12 +107,8 @@ describe("toggling a camp", () => {
     const deletedEarlier = applyEdit(trip, { type: "deletePoint", index: 1 });
     expect(campsOf(deletedEarlier)).toEqual([1, 3]);
     expect(deletedEarlier.points[1]).toEqual(trip.points[2]);
-    expect(campsOf(applyEdit(trip, { type: "deletePoint", index: 2 }))).toEqual(
-      [3],
-    );
-    expect(campsOf(applyEdit(trip, { type: "deletePoint", index: 5 }))).toEqual(
-      [2, 4],
-    );
+    expect(campsOf(applyEdit(trip, { type: "deletePoint", index: 2 }))).toEqual([3]);
+    expect(campsOf(applyEdit(trip, { type: "deletePoint", index: 5 }))).toEqual([2, 4]);
   });
 });
 
@@ -164,9 +144,7 @@ describe("days derived from camps", () => {
   });
 
   it("a camp on every middle point gives one day per leg", () => {
-    expect(
-      ranges(edits(fiveLegTrip(), camp(1), camp(2), camp(3), camp(4))),
-    ).toHaveLength(5);
+    expect(ranges(edits(fiveLegTrip(), camp(1), camp(2), camp(3), camp(4)))).toHaveLength(5);
   });
 
   it("camps on the start point or the end point add no day (and no empty day)", () => {
@@ -176,9 +154,7 @@ describe("days derived from camps", () => {
       [0, 2],
       [3, 4],
     ]);
-    expect(ranges(edits(through(atKm(0), atKm(3)), camp(0), camp(1)))).toEqual([
-      [0, 0],
-    ]);
+    expect(ranges(edits(through(atKm(0), atKm(3)), camp(0), camp(1)))).toEqual([[0, 0]]);
   });
 
   it("days follow edits: deleting the start point moves a camp onto the new start, which then splits nothing", () => {
@@ -221,15 +197,12 @@ describe("per-day totals", () => {
 
   it("day totals add up to the leg figures and the trip totals", () => {
     const summary = summarise(edits(fiveLegTrip(), camp(1), camp(3)));
-    const sum = (f: (d: (typeof summary.days)[number]) => number) =>
-      summary.days.reduce((t, d) => t + f(d), 0);
-    expect(sum((d) => d.hikeDistanceKm + d.paddleDistanceKm)).toBeCloseTo(
-      summary.trip.distanceKm,
-      9,
-    );
-    expect(sum((d) => d.timeH)).toBeCloseTo(summary.trip.timeH, 9);
-    expect(sum((d) => d.climbM)).toBeCloseTo(
-      summary.legs.reduce((t, l) => t + (l.climbM ?? 0), 0),
+    const sum = (figure: (d: (typeof summary.days)[number]) => number) =>
+      summary.days.reduce((total, day) => total + figure(day), 0);
+    expect(sum((summary) => summary.hikeDistanceKm + summary.paddleDistanceKm)).toBeCloseTo(summary.trip.distanceKm, 9);
+    expect(sum((summary) => summary.timeH)).toBeCloseTo(summary.trip.timeH, 9);
+    expect(sum((summary) => summary.climbM)).toBeCloseTo(
+      summary.legs.reduce((total, leg) => total + (leg.climbM ?? 0), 0),
       9,
     );
   });
@@ -255,39 +228,26 @@ describe("day time status follows the trip total rule (ADR 0009)", () => {
   };
 
   it("a fully routed day is an estimate", () => {
-    expect(summarise(twoDays()).days.map((d) => d.timeStatus)).toEqual([
-      "estimated",
-      "estimated",
-    ]);
+    expect(summarise(twoDays()).days.map((day) => day.timeStatus)).toEqual(["estimated", "estimated"]);
   });
 
   it("a day waits ('…') while any of its legs, hike or paddle, is unrouted or pending; other days don't", () => {
-    for (const leg of [
-      { mode: "paddle" } as Leg,
-      { mode: "paddle", route: { status: "pending" } } as Leg,
-    ]) {
+    for (const leg of [{ mode: "paddle" } as Leg, { mode: "paddle", route: { status: "pending" } } as Leg]) {
       const { days, trip } = summarise(withLeg(twoDays(), 1, leg));
-      expect(days.map((d) => d.timeStatus)).toEqual(["pending", "estimated"]);
+      expect(days.map((day) => day.timeStatus)).toEqual(["pending", "estimated"]);
       expect(trip.timeStatus).toBe("pending");
     }
   });
 
   it("a day with a failed hike leg is marked no-climb-data and counts the straight line at flat pace", () => {
-    const { days } = summarise(
-      withLeg(twoDays(), 2, { mode: "hike", route: FAILED }),
-    );
-    expect(days.map((d) => d.timeStatus)).toEqual([
-      "estimated",
-      "no-climb-data",
-    ]);
+    const { days } = summarise(withLeg(twoDays(), 2, { mode: "hike", route: FAILED }));
+    expect(days.map((day) => day.timeStatus)).toEqual(["estimated", "no-climb-data"]);
     // Legs 3-5: failed hike 6 km at 5 km/h (no climb) + paddle 3 km at 5 km/h + hike 12 km flat.
     expect(days[1].timeH).toBeCloseTo(1.2 + 0.6 + 2.4, 6);
   });
 
   it("a failed paddle leg does not mark its day: paddle time needs no climb", () => {
-    const { days } = summarise(
-      withLeg(twoDays(), 1, { mode: "paddle", route: FAILED }),
-    );
+    const { days } = summarise(withLeg(twoDays(), 1, { mode: "paddle", route: FAILED }));
     expect(days[0].timeStatus).toBe("estimated");
   });
 
@@ -302,7 +262,9 @@ describe("camps persist in the save format", () => {
   it("save -> open keeps the camps and the same days", () => {
     const trip = edits(fiveLegTrip(), camp(0), camp(2), camp(4));
     const parsed = parseTrip(serialiseTrip(trip));
-    if (!parsed.ok) throw new Error("did not parse");
+    if (!parsed.ok) {
+      throw new Error("did not parse");
+    }
     expect(campsOf(parsed.trip)).toEqual([0, 2, 4]);
     expect(summarise(parsed.trip).days).toEqual(summarise(trip).days);
     expect(campsOf(restoreTrip(serialiseTrip(trip)))).toEqual([0, 2, 4]);
@@ -335,7 +297,9 @@ describe("camps persist in the save format", () => {
 
   it("the restored trip has no undo history: camps are part of the trip, not of the history", () => {
     const parsed = parseTrip(serialiseTrip(edits(fiveLegTrip(), camp(2))));
-    if (!parsed.ok) throw new Error("did not parse");
+    if (!parsed.ok) {
+      throw new Error("did not parse");
+    }
     expect(canUndo(parsed.trip)).toBe(false);
   });
 });

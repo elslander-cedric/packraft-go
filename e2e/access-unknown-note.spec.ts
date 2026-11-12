@@ -15,21 +15,29 @@ const netherlands: P[] = [
   { lat: 52.372, lng: 4.9 },
 ];
 
-const routed = (points: P[]) => ({ status: "routed", geometry: points.map((p) => ({ ...p, elevation: 5 })) });
+const routed = (points: P[]) => ({ status: "routed", geometry: points.map((point) => ({ ...point, elevation: 5 })) });
 
 /** Seeds a trip of paddle legs (each on its own water), joined by short hike legs. */
 async function seed(page: Page, waters: P[][]) {
   const points: P[] = [];
   const legs: unknown[] = [];
   waters.forEach((water, i) => {
-    if (i > 0) legs.push({ mode: "hike", route: routed([points[points.length - 1], water[0]]) });
+    if (i > 0) {
+      legs.push({ mode: "hike", route: routed([points[points.length - 1], water[0]]) });
+    }
     points.push(water[0]);
     legs.push({ mode: "paddle", route: routed(water) });
     points.push(water[water.length - 1]);
   });
-  const save = { format: "packraft-go-trip", version: 1, trip: { name: "Trip", points, legs, startDate: "2027-07-10" } };
+  const save = {
+    format: "packraft-go-trip",
+    version: 1,
+    trip: { name: "Trip", points, legs, startDate: "2027-07-10" },
+  };
   await page.addInitScript((json) => {
-    if (sessionStorage.getItem("seeded")) return;
+    if (sessionStorage.getItem("seeded")) {
+      return;
+    }
     sessionStorage.setItem("seeded", "1");
     localStorage.setItem("packraft-go.trip", json);
   }, JSON.stringify(save));

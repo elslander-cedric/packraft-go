@@ -30,8 +30,7 @@ export type Incident = {
 
 /** Today's incidents. `failed` means none could be loaded, which isn't the same as there being none. */
 export type OfficialIncidents =
-  | { readonly status: "ok"; readonly incidents: readonly Incident[] }
-  | { readonly status: "failed" };
+  { readonly status: "ok"; readonly incidents: readonly Incident[] } | { readonly status: "failed" };
 
 /** One incident a paddle leg passes. */
 export type IncidentWarning = {

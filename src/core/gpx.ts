@@ -30,11 +30,17 @@ const notXmlChar = /[^\u0009\u000A\u000D -퟿-�\u{10000}-\u{10FFFF}]/gu;
 const escapeXml = (value: string) =>
   value
     .replace(notXmlChar, "")
-    .replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!);
+    .replace(
+      /[&<>"']/g,
+      (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[character]!,
+    );
 
 /** A plain decimal (GPX does not allow exponents like 1e-7), without trailing zeros. */
 function decimal(value: number, digits: number): string {
-  const text = value.toFixed(digits).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  const text = value
+    .toFixed(digits)
+    .replace(/(\.\d*?)0+$/, "$1")
+    .replace(/\.$/, "");
   return text === "-0" ? "0" : text;
 }
 
@@ -47,7 +53,9 @@ function position({ lat, lng }: LatLng): string {
   const rounded = (value: number) => Number(decimal(value, 7));
   const latitude = Math.min(90, Math.max(-90, rounded(lat)));
   let longitude = Math.min(180, Math.max(-180, rounded(lng)));
-  if (longitude === 180) longitude = -180;
+  if (longitude === 180) {
+    longitude = -180;
+  }
   return `lat="${decimal(latitude, 7)}" lon="${decimal(longitude, 7)}"`;
 }
 
@@ -60,7 +68,9 @@ const elevationOf = (point: GpxPoint) =>
  */
 function legGeometry(trip: Trip, index: number): readonly GpxPoint[] {
   const route = trip.legs[index].route;
-  if (route?.status === "routed" && route.geometry.length > 0) return route.geometry;
+  if (route?.status === "routed" && route.geometry.length > 0) {
+    return route.geometry;
+  }
   return [trip.points[index], trip.points[index + 1]];
 }
 
@@ -120,7 +130,9 @@ export type GpxFile = { readonly fileName: string; readonly text: string };
  */
 export function tripToGpx(trip: Trip, names: GpxNames): GpxFile | undefined {
   const sections = tripSections(trip);
-  if (sections.length === 0) return undefined;
+  if (sections.length === 0) {
+    return undefined;
+  }
   const tripName = trip.name.trim() || names.untitledTrip;
   const hasCamps = (trip.camps ?? []).length > 0;
   const { points, sectionStarts } = tripGeometry(trip, sections);

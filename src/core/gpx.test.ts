@@ -8,26 +8,30 @@ import { emptyTrip, type Trip } from "./trip";
 import { strings } from "../ui/strings";
 
 // The names the app passes in (ADR 0013), so these tests pin the exported names too.
-const names: GpxNames = { untitledTrip: strings.tripNamePlaceholder, section: strings.gpxSectionName, end: strings.gpxEnd };
+const names: GpxNames = {
+  untitledTrip: strings.tripNamePlaceholder,
+  section: strings.gpxSectionName,
+  end: strings.gpxEnd,
+};
 
-const A = { lat: 50.3, lng: 5.6 };
-const B = { lat: 50.31, lng: 5.61 };
-const C = { lat: 50.32, lng: 5.62 };
-const D = { lat: 50.33, lng: 5.63 };
+const pointA = { lat: 50.3, lng: 5.6 };
+const pointB = { lat: 50.31, lng: 5.61 };
+const pointC = { lat: 50.32, lng: 5.62 };
+const pointD = { lat: 50.33, lng: 5.63 };
 
 /** A hike leg to the put-in at B, then two paddle legs to D. */
 const ourthe: Trip = {
   name: "Ourthe weekend",
-  points: [A, B, C, D],
+  points: [pointA, pointB, pointC, pointD],
   legs: [
     {
       mode: "hike",
       route: {
         status: "routed",
         geometry: [
-          { ...A, elevation: 120 },
+          { ...pointA, elevation: 120 },
           { lat: 50.305, lng: 5.605, elevation: 180.5 },
-          { ...B, elevation: 150 },
+          { ...pointB, elevation: 150 },
         ],
         climbM: 60,
       },
@@ -37,9 +41,9 @@ const ourthe: Trip = {
       route: {
         status: "routed",
         geometry: [
-          { ...B, elevation: 110 },
+          { ...pointB, elevation: 110 },
           { lat: 50.315, lng: 5.615, elevation: 108 },
-          { ...C, elevation: 103 },
+          { ...pointC, elevation: 103 },
         ],
       },
     },
@@ -48,8 +52,8 @@ const ourthe: Trip = {
       route: {
         status: "routed",
         geometry: [
-          { ...C, elevation: 103 },
-          { ...D, elevation: 99 },
+          { ...pointC, elevation: 103 },
+          { ...pointD, elevation: 99 },
         ],
       },
     },
@@ -59,7 +63,9 @@ const ourthe: Trip = {
 /** The export of a trip with legs, parsed with the GPX 1.1 structure check. */
 function exported(trip: Trip, gpxNames: GpxNames = names): GpxFile & { gpx: ReturnType<typeof parseGpx11> } {
   const file = tripToGpx(trip, gpxNames);
-  if (!file) throw new Error("no GPX for this trip");
+  if (!file) {
+    throw new Error("no GPX for this trip");
+  }
   return { ...file, gpx: parseGpx11(file.text) };
 }
 
@@ -102,7 +108,12 @@ describe("GPX export: one file, one track, a waypoint per section", () => {
 
   it("adds the day to the section waypoints when the trip has camps, and keeps one track", () => {
     const { gpx } = exported({ ...ourthe, camps: [2] });
-    expect(gpx.waypoints.map((w) => w.name)).toEqual(["1 – Day 1 – hike", "2 – Day 1 – paddle", "3 – Day 2 – paddle", "End"]);
+    expect(gpx.waypoints.map((waypoint) => waypoint.name)).toEqual([
+      "1 – Day 1 – hike",
+      "2 – Day 1 – paddle",
+      "3 – Day 2 – paddle",
+      "End",
+    ]);
     expect(gpx.waypoints[2]).toMatchObject({ lat: 50.32, lon: 5.62 });
     expect(gpx.tracks).toHaveLength(1);
     expect(gpx.tracks[0].points).toEqual(ourthePoints);
@@ -129,7 +140,7 @@ describe("GPX export: one file, one track, a waypoint per section", () => {
 
   it("makes no file for a trip without legs", () => {
     expect(tripToGpx(emptyTrip(), names)).toBeUndefined();
-    expect(tripToGpx({ name: "Start", points: [A], legs: [] }, names)).toBeUndefined();
+    expect(tripToGpx({ name: "Start", points: [pointA], legs: [] }, names)).toBeUndefined();
   });
 
   it("names an unnamed trip with the untitled name", () => {
@@ -152,15 +163,22 @@ describe("GPX export: one file, one track, a waypoint per section", () => {
   });
 
   it("drops characters XML 1.0 does not allow from every name it writes, keeping the rest", () => {
-    const odd: GpxNames = { untitledTrip: "x", section: (n) => `\u0001${n}\uFFFF\uD800`, end: "E\u0007nd" };
+    const odd: GpxNames = { untitledTrip: "x", section: (number) => `\u0001${number}\uFFFF\uD800`, end: "E\u0007nd" };
     const { gpx } = exported({ ...ourthe, name: "Bell\u0007 trip\u001F 🛶" }, odd);
     expect(gpx.metadataName).toBe("Bell trip 🛶");
     expect(gpx.tracks[0].name).toBe("Bell trip 🛶");
-    expect(gpx.waypoints.map((w) => w.name)).toEqual(["1", "2", "End"]);
+    expect(gpx.waypoints.map((waypoint) => waypoint.name)).toEqual(["1", "2", "End"]);
   });
 
   it("writes longitude 180 as -180, the same place, since GPX 1.1 only allows -180 up to 180", () => {
-    const trip: Trip = { name: "Date line", points: [{ lat: 0, lng: 179.9 }, { lat: 0, lng: 180 }], legs: [{ mode: "hike" }] };
+    const trip: Trip = {
+      name: "Date line",
+      points: [
+        { lat: 0, lng: 179.9 },
+        { lat: 0, lng: 180 },
+      ],
+      legs: [{ mode: "hike" }],
+    };
     const { gpx } = exported(trip);
     expect(gpx.tracks[0].points[1]).toEqual({ lat: 0, lon: -180 });
     expect(gpx.waypoints[1]).toEqual({ lat: 0, lon: -180, name: "End" });
@@ -169,7 +187,10 @@ describe("GPX export: one file, one track, a waypoint per section", () => {
   it("wraps a longitude that only rounds to 180 to -180, and keeps latitudes that round to ±90 in range", () => {
     const trip: Trip = {
       name: "Edges",
-      points: [{ lat: 89.99999999, lng: 179.99999999 }, { lat: -89.99999999, lng: -179.99999999 }],
+      points: [
+        { lat: 89.99999999, lng: 179.99999999 },
+        { lat: -89.99999999, lng: -179.99999999 },
+      ],
       legs: [{ mode: "hike" }],
     };
     expect(exported(trip).gpx.tracks[0].points).toEqual([
@@ -181,8 +202,19 @@ describe("GPX export: one file, one track, a waypoint per section", () => {
   it("writes very small numbers as plain decimals, which GPX requires (no 1e-7)", () => {
     const trip: Trip = {
       name: "Tiny",
-      points: [{ lat: 0.0000001, lng: -0.0000002 }, B],
-      legs: [{ mode: "hike", route: { status: "routed", geometry: [{ lat: 0.0000001, lng: -0.0000002, elevation: 0.000001 }, { ...B, elevation: 1 }] } }],
+      points: [{ lat: 0.0000001, lng: -0.0000002 }, pointB],
+      legs: [
+        {
+          mode: "hike",
+          route: {
+            status: "routed",
+            geometry: [
+              { lat: 0.0000001, lng: -0.0000002, elevation: 0.000001 },
+              { ...pointB, elevation: 1 },
+            ],
+          },
+        },
+      ],
     };
     const { text, gpx } = exported(trip);
     expect(text).not.toMatch(/\de-?\d/i);

@@ -3,9 +3,18 @@
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/ui/strings";
 import { brouterFixture, serveOffline, type BRouterReply } from "./support/offline";
-import { freeMapCentre, legLines, legRows as rows, mapClicker, mapRegion, nextLegMode, openPlanner, showAllLegs } from "./support/planner";
+import {
+  freeMapCentre,
+  legLines,
+  legRows as rows,
+  mapClicker,
+  mapRegion,
+  nextLegMode,
+  openPlanner,
+  showAllLegs,
+} from "./support/planner";
 
-const profiles = (urls: URL[]) => urls.map((u) => u.searchParams.get("profile"));
+const profiles = (urls: URL[]) => urls.map((url) => url.searchParams.get("profile"));
 
 const TRAIL: BRouterReply = { status: 200, body: brouterFixture("hiking-success.geojson") };
 const RIVER: BRouterReply = { status: 200, body: brouterFixture("river-success.geojson") };
@@ -25,7 +34,9 @@ test.beforeEach(({ page }) => showAllLegs(page));
 test("a leg is drawn with the next leg's mode; paddle legs look different in the panel and on the map", async ({
   page,
 }) => {
-  const network = await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
+  const network = await serveOffline(page, {
+    brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL),
+  });
   const clickMap = await openMap(page);
   await expect(nextLegMode(page, strings.legModeHike)).toHaveAttribute("aria-pressed", "true");
   await clickMap(-100, 0);
@@ -80,7 +91,9 @@ test("picking the next leg's mode sends no request and adds no undo step", async
 test("a paddle leg is routed on the river once; Ctrl+Z removes it and drawing it as a hike asks the trail profile", async ({
   page,
 }) => {
-  const network = await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
+  const network = await serveOffline(page, {
+    brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL),
+  });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
   await clickMap(100, 0, "paddle");
@@ -100,7 +113,7 @@ test("a paddle leg that can't be snapped stays as a dashed straight paddle leg w
 }) => {
   const riverReplies = [RIVER_NO_ROUTE, RIVER];
   const network = await serveOffline(page, {
-    brouter: (u) => (u.searchParams.get("profile") === "river" ? riverReplies.shift()! : TRAIL),
+    brouter: (url) => (url.searchParams.get("profile") === "river" ? riverReplies.shift()! : TRAIL),
   });
   const clickMap = await openMap(page);
   await clickMap(-150, 0);
@@ -132,7 +145,7 @@ test("a paddle leg that can't be snapped stays as a dashed straight paddle leg w
 });
 
 test("a portage (paddle, hike, paddle) shows a take-out then a put-in", async ({ page }) => {
-  await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
+  await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
   const clickMap = await openMap(page);
   await clickMap(-150, 0);
   await clickMap(-50, 0, "paddle");
@@ -147,9 +160,9 @@ test("a portage (paddle, hike, paddle) shows a take-out then a put-in", async ({
   await expect(takeOut).toHaveCount(2);
   await expect(putIn).toHaveCount(2);
   const centre = await centreX(page);
-  const cx = async (l: typeof putIn) => {
-    const b = (await l.boundingBox())!;
-    return b.x + b.width / 2;
+  const cx = async (locator: typeof putIn) => {
+    const boxB = (await locator.boundingBox())!;
+    return boxB.x + boxB.width / 2;
   };
   expect(Math.abs((await cx(putIn.nth(0))) - (centre - 150))).toBeLessThan(3);
   expect(Math.abs((await cx(takeOut.nth(0))) - (centre - 50))).toBeLessThan(3);
@@ -169,7 +182,7 @@ function riverEndingAbove(rise: number): BRouterReply {
 
 test(", rule 2: a paddle leg ending 1.5 m higher shows Drop 0 m and no upstream hint", async ({ page }) => {
   const RISE = riverEndingAbove(1.5);
-  await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RISE : TRAIL) });
+  await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? RISE : TRAIL) });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
   await clickMap(100, 0, "paddle");
@@ -183,11 +196,9 @@ test(", rule 2: a paddle leg ending 1.5 m higher shows Drop 0 m and no upstream 
   expect(figures).not.toMatch(/-\s*\d/);
 });
 
-test(", rule 2: a paddle leg ending 5 m higher shows the rise with the upstream hint and no drop", async ({
-  page,
-}) => {
+test(", rule 2: a paddle leg ending 5 m higher shows the rise with the upstream hint and no drop", async ({ page }) => {
   const RISE = riverEndingAbove(5);
-  await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RISE : TRAIL) });
+  await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? RISE : TRAIL) });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
   await clickMap(100, 0, "paddle");
@@ -201,7 +212,7 @@ test(", rule 3: a paddle leg whose service is down keeps the unavailable message
 }) => {
   const DOWN: BRouterReply = { status: 503, body: "" };
   await serveOffline(page, {
-    brouter: (u) => (u.searchParams.get("profile") === "river" ? DOWN : RIVER_NO_ROUTE),
+    brouter: (url) => (url.searchParams.get("profile") === "river" ? DOWN : RIVER_NO_ROUTE),
   });
   const clickMap = await openMap(page);
   await clickMap(-100, 0);
@@ -225,7 +236,7 @@ test(", rule 3: a paddle leg whose service is down keeps the unavailable message
 test(", rule 1: drawing the last leg as paddle too puts the take-out at the trip's end, with nothing between the paddle legs", async ({
   page,
 }) => {
-  await serveOffline(page, { brouter: (u) => (u.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
+  await serveOffline(page, { brouter: (url) => (url.searchParams.get("profile") === "river" ? RIVER : TRAIL) });
   const clickMap = await openMap(page);
   await clickMap(-150, 0);
   await clickMap(0, 0, "paddle");
@@ -242,8 +253,8 @@ test(", rule 1: drawing the last leg as paddle too puts the take-out at the trip
   await expect(putIn).toHaveCount(1);
   await expect(takeOut).toHaveCount(1);
   const centre = await centreX(page);
-  const b = (await takeOut.boundingBox())!;
-  expect(Math.abs(b.x + b.width / 2 - (centre + 150))).toBeLessThan(3);
-  const p = (await putIn.boundingBox())!;
-  expect(Math.abs(p.x + p.width / 2 - (centre - 150))).toBeLessThan(3);
+  const boxB = (await takeOut.boundingBox())!;
+  expect(Math.abs(boxB.x + boxB.width / 2 - (centre + 150))).toBeLessThan(3);
+  const box = (await putIn.boundingBox())!;
+  expect(Math.abs(box.x + box.width / 2 - (centre - 150))).toBeLessThan(3);
 });

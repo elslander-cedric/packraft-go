@@ -12,7 +12,15 @@ export function hasLegDetails(access: TripAccess | null, aire: readonly AireWarn
 }
 
 /** A leg's access details: its status, rules, flow figures, warnings and notes, then its aire warnings. */
-export function LegDetails({ leg, access, aire }: { leg: number; access: TripAccess | null; aire: readonly AireWarning[] }) {
+export function LegDetails({
+  leg,
+  access,
+  aire,
+}: {
+  leg: number;
+  access: TripAccess | null;
+  aire: readonly AireWarning[];
+}) {
   const legAccess = access?.legs[leg];
   const warnings = aire.filter((warning) => warning.leg === leg);
   return (

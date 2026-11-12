@@ -24,11 +24,18 @@ const markers = (page: Page) => page.locator(".leaflet-container .access-point-m
 /** The Access points tab of the trip panel. */
 const panel = (page: Page) => tripPanel(page);
 const details = accessPointDialog;
-const stored = (page: Page) => page.evaluate((k) => localStorage.getItem(k), KEY);
+const stored = (page: Page) => page.evaluate((key) => localStorage.getItem(key), KEY);
 
-const T = "2026-10-12T08:00:00.000Z";
+const TIMESTAMP = "2026-10-12T08:00:00.000Z";
 const point = (id: string, lat: number, lng: number, note = "") => ({
-  id, position: { lat, lng }, use: "both", kind: "slipway", note, checkedOnSite: null, createdAt: T, updatedAt: T,
+  id,
+  position: { lat, lng },
+  use: "both",
+  kind: "slipway",
+  note,
+  checkedOnSite: null,
+  createdAt: TIMESTAMP,
+  updatedAt: TIMESTAMP,
 });
 const file = (version: number, pts: unknown[]) =>
   JSON.stringify({ format: "packraft-go-access-points", version, accessPoints: pts });
@@ -37,12 +44,12 @@ async function openWith(page: Page, initial?: string) {
   await serveOffline(page);
   await openPlanner(page);
   if (initial !== undefined) {
-    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, initial]);
+    await page.evaluate(([key, value]) => localStorage.setItem(key, value), [KEY, initial]);
     await page.reload();
     await expect(mapRegion(page).locator("img.leaflet-tile-loaded").first()).toBeVisible();
   }
   await enterAccessPointEditing(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
@@ -64,8 +71,16 @@ test("new trip and opening a trip file leave access points untouched", async ({ 
   await page.mouse.click(mid.x + 200, mid.y + 100);
   await page.mouse.click(mid.x + 250, mid.y + 100);
   const trip = JSON.stringify({
-    format: "packraft-go-trip", version: 1,
-    trip: { name: "T", points: [{ lat: 50.3, lng: 5.6 }, { lat: 50.31, lng: 5.61 }], legs: [{ mode: "hike" }] },
+    format: "packraft-go-trip",
+    version: 1,
+    trip: {
+      name: "T",
+      points: [
+        { lat: 50.3, lng: 5.6 },
+        { lat: 50.31, lng: 5.61 },
+      ],
+      legs: [{ mode: "hike" }],
+    },
   });
   await openTripFile(page, { name: "t.packraft.json", mimeType: "application/json", buffer: Buffer.from(trip) });
   await answerConfirmation(page, "openFile", "confirm");
@@ -75,7 +90,7 @@ test("new trip and opening a trip file leave access points untouched", async ({ 
 
 test("damaged autosave: starts empty without crashing, and is overwritten by the next change", async ({ page }) => {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", (error) => errors.push(error.message));
   const mid = await openWith(page, "{corrupt");
   await expect(markers(page)).toHaveCount(0);
   await expect(page.getByRole("alert").filter({ hasText: text.autosaveUnknownVersion })).toHaveCount(0);
@@ -83,8 +98,8 @@ test("damaged autosave: starts empty without crashing, and is overwritten by the
   // before it is replaced by an empty one.
   const backups = await page.evaluate(() =>
     Object.keys(localStorage)
-      .filter((k) => k.startsWith("packraft-go.access-points.backup-"))
-      .map((k) => [k, localStorage.getItem(k)]),
+      .filter((key) => key.startsWith("packraft-go.access-points.backup-"))
+      .map((key) => [key, localStorage.getItem(key)]),
   );
   expect(backups).toHaveLength(1);
   expect(backups[0][1]).toBe("{corrupt");
@@ -113,22 +128,30 @@ test("unknown-version autosave: warned, kept byte for byte, edits not saved", as
 });
 
 test("special characters in notes and border positions survive a reload", async ({ page }) => {
-  const notes = ['a/b:c&d<e>"f\'', "emoji 🛶 é ü 日本", "</script><!--", "tab\there"];
-  const coords: [number, number][] = [[49.5, 5.8], [50.4, 6.4], [51.5, 4.9], [51.09, 2.55]];
-  const pts = notes.map((n, i) => point(`p${i}`, coords[i][0], coords[i][1], n));
+  const notes = ["a/b:c&d<e>\"f'", "emoji 🛶 é ü 日本", "</script><!--", "tab\there"];
+  const coords: [number, number][] = [
+    [49.5, 5.8],
+    [50.4, 6.4],
+    [51.5, 4.9],
+    [51.09, 2.55],
+  ];
+  const pts = notes.map((note, i) => point(`p${i}`, coords[i][0], coords[i][1], note));
   await openWith(page, file(1, pts));
   await expect(markers(page)).toHaveCount(4);
   // A change saves them all again, and a reload reads them back.
   // Edited from its row (the markers spread over the country, some behind the panel).
-  const edit = (note: string) => panel(page).getByRole("button", { name: strings.planner.editAccessPoint(note), exact: true });
+  const edit = (note: string) =>
+    panel(page).getByRole("button", { name: strings.planner.editAccessPoint(note), exact: true });
   await edit(notes[1]).click();
   await details(page).getByLabel(text.noteLabel).fill(notes[1]);
   await saveAccessPoint(page);
   await page.reload();
   await expect(markers(page)).toHaveCount(4);
   const saved = JSON.parse((await stored(page))!).accessPoints;
-  expect(saved.map((p: { note: string }) => p.note)).toEqual(notes);
-  expect(saved.map((p: { position: { lat: number; lng: number } }) => [p.position.lat, p.position.lng])).toEqual(coords);
+  expect(saved.map((saved: { note: string }) => saved.note)).toEqual(notes);
+  expect(
+    saved.map((saved: { position: { lat: number; lng: number } }) => [saved.position.lat, saved.position.lng]),
+  ).toEqual(coords);
   await enterAccessPointEditing(page);
   await edit(notes[0]).click();
   await expect(details(page).getByLabel(text.noteLabel)).toHaveValue(notes[0]);

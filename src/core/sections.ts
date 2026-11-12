@@ -25,7 +25,9 @@ export function tripSections(trip: Trip): Section[] {
   trip.legs.forEach((leg, i) => {
     const current = sections.at(-1);
     const atCamp = i > 0 && isCamp(trip, i);
-    if (atCamp) day += 1;
+    if (atCamp) {
+      day += 1;
+    }
     if (current && !atCamp && current.mode === leg.mode) {
       sections[sections.length - 1] = { ...current, lastLeg: i };
     } else {

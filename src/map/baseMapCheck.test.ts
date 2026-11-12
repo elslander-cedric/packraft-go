@@ -41,7 +41,9 @@ describe("base map check (#179)", () => {
     const sources = new Set([...baseMaps.flatMap((map) => map.sources), ...overlays.map((overlay) => overlay.source)]);
     expect(requests).toHaveLength(sources.size);
     expect(new Set(requests.map((request) => new URL(request.url).hostname)).size).toBe(sources.size);
-    for (const request of requests) expect(request.url).not.toMatch(/[{}]/);
+    for (const request of requests) {
+      expect(request.url).not.toMatch(/[{}]/);
+    }
     expect(requests.find((request) => request.url.includes("vlaanderen"))?.url).toContain("TILEMATRIX=15&");
   });
 
@@ -64,9 +66,15 @@ describe("base map check (#179)", () => {
     const result = await runBaseMapCheck({
       fetch: async () => {
         call++;
-        if (call === 1) return { status: 400, headers: new Headers({ "content-type": "text/xml" }) };
-        if (call === 2) return { status: 200, headers: new Headers({ "content-type": "text/html" }) };
-        if (call === 3) throw new Error("offline");
+        if (call === 1) {
+          return { status: 400, headers: new Headers({ "content-type": "text/xml" }) };
+        }
+        if (call === 2) {
+          return { status: 200, headers: new Headers({ "content-type": "text/html" }) };
+        }
+        if (call === 3) {
+          throw new Error("offline");
+        }
         return image;
       },
       wait: async () => {},

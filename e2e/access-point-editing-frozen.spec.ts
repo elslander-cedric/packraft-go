@@ -82,13 +82,13 @@ test.describe("on a phone", () => {
     ],
     legs: [{ mode: "hike" }],
   };
-  const T = "2026-05-01T08:00:00.000Z";
+  const TIMESTAMP = "2026-05-01T08:00:00.000Z";
   // A slipway exactly on the first route point.
   const onFirstPoint = updateAccessPoint(
-    addAccessPoint([], { id: "ap-1", at: trip.points[0], now: T }),
+    addAccessPoint([], { id: "ap-1", at: trip.points[0], now: TIMESTAMP }),
     "ap-1",
     { kind: "slipway", use: "put-in" },
-    T,
+    TIMESTAMP,
   );
 
   /** Opens the phone with the trip (and `accessPoints`) stored, enters access point editing and puts the sheet back to its peek. */
@@ -210,12 +210,12 @@ test.describe("on a wide screen", () => {
       ],
       legs: [{ mode: "hike" }],
     };
-    const T = "2026-05-01T08:00:00.000Z";
+    const TIMESTAMP = "2026-05-01T08:00:00.000Z";
     const onFirstPoint = updateAccessPoint(
-      addAccessPoint([], { id: "ap-1", at: trip.points[0], now: T }),
+      addAccessPoint([], { id: "ap-1", at: trip.points[0], now: TIMESTAMP }),
       "ap-1",
       { kind: "slipway", use: "put-in" },
-      T,
+      TIMESTAMP,
     );
     await serveOffline(page, hiking);
     await page.addInitScript(
@@ -251,7 +251,9 @@ test.describe("on a wide screen", () => {
     await expect.poll(async () => (await storedAccessPoints(page))[0].position.lng).toBeGreaterThan(trip.points[0].lng);
   });
 
-  test("undo, delete, camp and the next leg's mode are off, by button and by key; leaving brings them back", async ({ page }) => {
+  test("undo, delete, camp and the next leg's mode are off, by button and by key; leaving brings them back", async ({
+    page,
+  }) => {
     await serveOffline(page, hiking);
     await openPlanner(page);
     const click = await mapClicker(page);
@@ -267,7 +269,9 @@ test.describe("on a wide screen", () => {
     await expect(page.getByRole("button", { name: text.backToStartButton })).toHaveCount(0);
     await expect(page.getByRole("group", { name: text.nextLegModeLabel })).toHaveCount(0);
     await page.locator("body").focus();
-    for (const key of ["Control+z", "Meta+z", "Delete", "Backspace"]) await page.keyboard.press(key);
+    for (const key of ["Control+z", "Meta+z", "Delete", "Backspace"]) {
+      await page.keyboard.press(key);
+    }
     await inputHandled(page);
     await expect(points(page)).toHaveCount(2);
 
@@ -282,12 +286,12 @@ test.describe("on a wide screen", () => {
     const start = { lat: 50.3427, lng: 5.4563 };
     const putIn = { lat: 50.3527, lng: 5.4563 };
     const nearby = { lat: 50.3537, lng: 5.4563 }; // about 111 m from the put-in
-    const T = "2026-10-14T08:00:00.000Z";
+    const TIMESTAMP = "2026-10-14T08:00:00.000Z";
     const slipway = updateAccessPoint(
-      addAccessPoint([], { id: "ap1", at: nearby, now: T }),
+      addAccessPoint([], { id: "ap1", at: nearby, now: TIMESTAMP }),
       "ap1",
       { kind: "slipway", use: "put-in" },
-      T,
+      TIMESTAMP,
     );
     const seeded: Trip = {
       name: "Ourthe",
@@ -297,7 +301,7 @@ test.describe("on a wide screen", () => {
           mode: "hike",
           route: {
             status: "routed",
-            geometry: [start, putIn].map((p) => ({ ...p, elevation: 5 })),
+            geometry: [start, putIn].map((point) => ({ ...point, elevation: 5 })),
           },
         },
       ],
@@ -305,7 +309,9 @@ test.describe("on a wide screen", () => {
     await serveOffline(page, river);
     await page.addInitScript(
       ([tripKey, tripValue, key, value]) => {
-        if (sessionStorage.getItem("seeded")) return;
+        if (sessionStorage.getItem("seeded")) {
+          return;
+        }
         sessionStorage.setItem("seeded", "1");
         localStorage.setItem(tripKey, tripValue);
         localStorage.setItem(key, value);
@@ -314,7 +320,9 @@ test.describe("on a wide screen", () => {
     );
     await openPlanner(page);
     // Beside the hike leg, which runs up the middle of the map: a click on a leg selects it (#230).
-    await (await mapClicker(page))(100, -150, "paddle");
+    await (
+      await mapClicker(page)
+    )(100, -150, "paddle");
     await expect(legLines(page)).toHaveCount(2);
     await expect(snapOffer(page)).toBeVisible();
 

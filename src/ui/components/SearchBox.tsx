@@ -161,13 +161,17 @@ export function SearchBox<Item>({
       value={value}
       onValueChange={(next, details) => {
         // Only typing changes the text; picking, Escape and the like are ours to handle.
-        if (details.reason === "input-change" || details.reason === "input-clear") onValueChange(next);
+        if (details.reason === "input-change" || details.reason === "input-clear") {
+          onValueChange(next);
+        }
       }}
       // Base UI wants an inline list always open; whether anything shows is ours to decide.
       inline={inline}
       open={inline || open}
       onOpenChange={(next) => {
-        if (!next) onDismiss();
+        if (!next) {
+          onDismiss();
+        }
       }}
       onItemHighlighted={(item) => {
         highlighted.current = item;

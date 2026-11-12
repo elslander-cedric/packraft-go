@@ -130,8 +130,8 @@ describe("the other records", () => {
     const before = draft("1X8", { to: end("end", 5, { sameAs: "1X1.from" }) });
     const after = draft("1X7", { from: end("start", 5.1, { sameAs: "1X1.to" }) });
     const stretches = split([before, draft("1X1"), after]);
-    expect(stretches.find((s) => s.id === "1X8")!.to.sameAs).toBe("1X1-1.from");
-    expect(stretches.find((s) => s.id === "1X7")!.from.sameAs).toBe("1X1-2.to");
+    expect(stretches.find((stretch) => stretch.id === "1X8")!.to.sameAs).toBe("1X1-1.from");
+    expect(stretches.find((stretch) => stretch.id === "1X7")!.from.sameAs).toBe("1X1-2.to");
   });
 });
 
@@ -143,7 +143,9 @@ describe("reviewing a boundary", () => {
   });
 
   it("moves along the river, snapped to it, when moved", () => {
-    const [upper, lower] = split([draft("1X1")], { "1X1-1.to": { action: "move", lat: LAT + 0.0001, lng: 5.08, note: "The bridge" } });
+    const [upper, lower] = split([draft("1X1")], {
+      "1X1-1.to": { action: "move", lat: LAT + 0.0001, lng: 5.08, note: "The bridge" },
+    });
     expect(upper!.line.at(-1)).toEqual([5.08, LAT]);
     expect(lower!.line[0]).toEqual([5.08, LAT]);
     expect(upper!.to).toMatchObject({ status: "reviewed", point: { lat: LAT, lng: 5.08 } });
@@ -154,11 +156,19 @@ describe("reviewing a boundary", () => {
 describe("re-cutting the shipped lines, with no OSM data", () => {
   it("keeps apart records that share an Annex reference", () => {
     const records = [draft("1A3a", { annex1Ref: "1A3" }), draft("1A3b", { annex1Ref: "1A3" })];
-    expect(rejoinSplits(records, []).map((s) => s.id)).toEqual(["1A3a", "1A3b"]);
+    expect(rejoinSplits(records, []).map((rejoinSplit) => rejoinSplit.id)).toEqual(["1A3a", "1A3b"]);
   });
 
-  const annex = [{ id: "1X1", annex2Gauge: "Membre" }, { id: "1X2", annex2Gauge: "Gendron" }];
-  const shipped = (stretch: DraftStretch): ShippedStretch => ({ ...stretch, gauge: null, source: "s", researchDate: "2026-10-12" });
+  const annex = [
+    { id: "1X1", annex2Gauge: "Membre" },
+    { id: "1X2", annex2Gauge: "Gendron" },
+  ];
+  const shipped = (stretch: DraftStretch): ShippedStretch => ({
+    ...stretch,
+    gauge: null,
+    source: "s",
+    researchDate: "2026-10-12",
+  });
 
   it("gets the record back as it was before the split", () => {
     const pieces = split([draft("1X1"), draft("1X2")]).map(shipped);
@@ -180,9 +190,9 @@ describe("re-cutting the shipped lines, with no OSM data", () => {
   it("gives the same pieces when cut again", () => {
     const pieces = split([draft("1X1"), draft("1X2")]);
     const again = split(rejoinSplits(pieces.map(shipped), annex));
-    expect(again.map((s) => s.line)).toEqual(pieces.map((s) => s.line));
-    expect(again.map((s) => s.to)).toEqual(pieces.map((s) => s.to));
-    expect(again.map((s) => s.from)).toEqual(pieces.map((s) => s.from));
+    expect(again.map((stretch) => stretch.line)).toEqual(pieces.map((piece) => piece.line));
+    expect(again.map((stretch) => stretch.to)).toEqual(pieces.map((piece) => piece.to));
+    expect(again.map((stretch) => stretch.from)).toEqual(pieces.map((piece) => piece.from));
   });
 });
 
@@ -209,13 +219,13 @@ describe("where a line runs along the SPW's lines", () => {
 
   it("gives the runs in order along it, with their lengths, and the part on no line", () => {
     const runs = officialRuns(line, lines);
-    expect(runs.map((r) => r.official)).toEqual(["FIRST", "SECOND", null]);
+    expect(runs.map((run) => run.official)).toEqual(["FIRST", "SECOND", null]);
     expect(runs[0]!.fromKm).toBe(0);
     expect(runs[1]!.fromKm).toBeCloseTo(2.9, 1);
     expect(runs[2]!.toKm).toBeCloseTo(7.2, 1);
   });
 
   it("calls a line further than 100 m away no line at all", () => {
-    expect(officialRuns(line, { FAR: near(LAT + 0.002) }).map((r) => r.official)).toEqual([null]);
+    expect(officialRuns(line, { FAR: near(LAT + 0.002) }).map((officialRun) => officialRun.official)).toEqual([null]);
   });
 });

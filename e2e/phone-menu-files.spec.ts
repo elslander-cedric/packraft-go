@@ -152,7 +152,9 @@ test("New trip asks first when there are points, then starts with today in Bruss
   await context.close();
 });
 
-test("Open trip replaces the trip after the same question as on desktop, and it survives a reload", async ({ page }) => {
+test("Open trip replaces the trip after the same question as on desktop, and it survives a reload", async ({
+  page,
+}) => {
   const network = await serveOffline(page);
   await seed(page, OURTHE);
   await openPhone(page);
@@ -184,7 +186,9 @@ test("Open trip with a file that isn't a trip file shows why and keeps the trip"
   expect(await stored(page)).toBe(before);
 });
 
-test("Save trip asks for the name, prefilled; the file and the trip take the name from the dialog", async ({ page }) => {
+test("Save trip asks for the name, prefilled; the file and the trip take the name from the dialog", async ({
+  page,
+}) => {
   await serveOffline(page);
   await seed(page, OURTHE);
   await openPhone(page);
@@ -236,7 +240,9 @@ test("Export GPX asks for the name; the GPX file is well-formed, named from it, 
   const gpx = parseGpx11(file.text);
   expect(gpx.metadataName).toBe("Tom & Jerry: <Semois>/ trip");
   expect(gpx.tracks[0].name).toBe(gpx.metadataName);
-  for (const point of [...gpx.tracks[0].points, ...gpx.waypoints]) expect(point.lon).toBeLessThan(180);
+  for (const point of [...gpx.tracks[0].points, ...gpx.waypoints]) {
+    expect(point.lon).toBeLessThan(180);
+  }
   await expectTripName(page, "Tom & Jerry: <Semois>/\u0001 trip");
   expect((await storedTrip(page)).name).toBe("Tom & Jerry: <Semois>/\u0001 trip");
 });

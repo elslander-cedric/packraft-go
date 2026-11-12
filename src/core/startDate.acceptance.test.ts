@@ -5,7 +5,8 @@ import { parseTrip, restoreStoredTrip, restoreTrip, serialiseTrip, SAVE_VERSION 
 import { summarise } from "./summarise";
 import { applyEdit, canUndo, emptyTrip, setStartDate, type Trip } from "./trip";
 
-const points = (n: number) => Array.from({ length: n }, (_, i) => ({ lat: 50.3 + i / 100, lng: 5.6 + i / 100 }));
+const points = (number: number) =>
+  Array.from({ length: number }, (_, i) => ({ lat: 50.3 + i / 100, lng: 5.6 + i / 100 }));
 
 /** A trip of `legs` hike legs, with camps at the given point indices. */
 const tripWith = (legs: number, camps: number[] = [], startDate?: string): Trip => ({
@@ -23,18 +24,37 @@ const dates = (trip: Trip) => summarise(trip).days.map((day) => day.date);
 const ZONES = ["Europe/Brussels", "Pacific/Kiritimati", "Pacific/Pago_Pago", "America/Los_Angeles", "UTC"];
 const originalTz = process.env.TZ;
 afterEach(() => {
-  if (originalTz === undefined) delete process.env.TZ;
-  else process.env.TZ = originalTz;
+  if (originalTz === undefined) {
+    delete process.env.TZ;
+  } else {
+    process.env.TZ = originalTz;
+  }
 });
 
 describe("day n = start date + n - 1", () => {
   it.each([
     ["month end", "2026-10-29", ["2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02", "2026-11-03"]],
     ["year end", "2026-12-29", ["2026-12-29", "2026-12-30", "2026-12-31", "2027-01-01", "2027-01-02", "2027-01-03"]],
-    ["no leap day in 2027", "2027-02-26", ["2027-02-26", "2027-02-27", "2027-02-28", "2027-03-01", "2027-03-02", "2027-03-03"]],
-    ["leap day in 2028", "2028-02-27", ["2028-02-27", "2028-02-28", "2028-02-29", "2028-03-01", "2028-03-02", "2028-03-03"]],
-    ["spring DST change (Brussels)", "2026-03-27", ["2026-03-27", "2026-03-28", "2026-03-29", "2026-03-30", "2026-03-31", "2026-04-01"]],
-    ["autumn DST change (Brussels)", "2026-10-23", ["2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27", "2026-10-28"]],
+    [
+      "no leap day in 2027",
+      "2027-02-26",
+      ["2027-02-26", "2027-02-27", "2027-02-28", "2027-03-01", "2027-03-02", "2027-03-03"],
+    ],
+    [
+      "leap day in 2028",
+      "2028-02-27",
+      ["2028-02-27", "2028-02-28", "2028-02-29", "2028-03-01", "2028-03-02", "2028-03-03"],
+    ],
+    [
+      "spring DST change (Brussels)",
+      "2026-03-27",
+      ["2026-03-27", "2026-03-28", "2026-03-29", "2026-03-30", "2026-03-31", "2026-04-01"],
+    ],
+    [
+      "autumn DST change (Brussels)",
+      "2026-10-23",
+      ["2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27", "2026-10-28"],
+    ],
   ])("across a %s", (_label, start, expected) => {
     for (const zone of ZONES) {
       process.env.TZ = zone;
@@ -60,7 +80,7 @@ describe("camps and days still line up with dates", () => {
 
   it("each day keeps its legs and gets the next date", () => {
     const days = summarise(dated).days;
-    expect(days.map((d) => [d.firstLeg, d.lastLeg, d.date])).toEqual([
+    expect(days.map((day) => [day.firstLeg, day.lastLeg, day.date])).toEqual([
       [0, 1, "2026-10-31"],
       [2, 3, "2026-11-01"],
       [4, 5, "2026-11-02"],
@@ -70,7 +90,9 @@ describe("camps and days still line up with dates", () => {
   it("the day summaries are the undated ones plus a date", () => {
     const undated = summarise({ ...dated, startDate: undefined }).days;
     const days = summarise(dated).days;
-    expect(days.map((day) => ({ ...day, date: undefined }))).toEqual(undated.map((day) => ({ ...day, date: undefined })));
+    expect(days.map((day) => ({ ...day, date: undefined }))).toEqual(
+      undated.map((day) => ({ ...day, date: undefined })),
+    );
     expect(days.every((day) => day.date !== undefined)).toBe(true);
   });
 
@@ -107,12 +129,9 @@ describe("set, change and clear", () => {
     expect(emptyTrip()).not.toHaveProperty("startDate");
   });
 
-  it.each(["2026-02-29", "2026-04-31", "2026-00-10", "2026-1-5", " 2026-10-31", "31/10/2026"])(
-    "rejects %j",
-    (bad) => {
-      expect(setStartDate(sixDays(), bad).startDate).toBeUndefined();
-    },
-  );
+  it.each(["2026-02-29", "2026-04-31", "2026-00-10", "2026-1-5", " 2026-10-31", "31/10/2026"])("rejects %j", (bad) => {
+    expect(setStartDate(sixDays(), bad).startDate).toBeUndefined();
+  });
 });
 
 describe("saves are version 1 and keep the start date", () => {

@@ -40,12 +40,16 @@ export function createOverpassClient(deps: OverpassDeps) {
   async function politely() {
     if (lastRequestAt !== undefined) {
       const elapsed = deps.now() - lastRequestAt;
-      if (elapsed < OVERPASS_MIN_INTERVAL_MS) await deps.wait(OVERPASS_MIN_INTERVAL_MS - elapsed);
+      if (elapsed < OVERPASS_MIN_INTERVAL_MS) {
+        await deps.wait(OVERPASS_MIN_INTERVAL_MS - elapsed);
+      }
     }
     lastRequestAt = deps.now();
   }
 
-  async function attempt(query: string): Promise<{ ok: true; body: string; result: OverpassResult } | { ok: false; error: string }> {
+  async function attempt(
+    query: string,
+  ): Promise<{ ok: true; body: string; result: OverpassResult } | { ok: false; error: string }> {
     await politely();
     const response = await deps.fetch(deps.endpoint, {
       method: "POST",
@@ -53,22 +57,30 @@ export function createOverpassClient(deps: OverpassDeps) {
       body: `data=${encodeURIComponent(query)}`,
     });
     const body = await response.text();
-    if (response.status !== 200) return { ok: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
+    if (response.status !== 200) {
+      return { ok: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
+    }
     let result: OverpassResult & { remark?: string };
     try {
       result = JSON.parse(body);
     } catch {
       return { ok: false, error: `not JSON: ${body.slice(0, 200)}` };
     }
-    if (typeof result.remark === "string" && /error/i.test(result.remark)) return { ok: false, error: result.remark };
-    if (!Array.isArray(result.elements)) return { ok: false, error: "no elements in the answer" };
+    if (typeof result.remark === "string" && /error/i.test(result.remark)) {
+      return { ok: false, error: result.remark };
+    }
+    if (!Array.isArray(result.elements)) {
+      return { ok: false, error: "no elements in the answer" };
+    }
     return { ok: true, body, result: { elements: result.elements } };
   }
 
   return {
     async query(query: string): Promise<OverpassResult> {
       const cached = await deps.cache.read(query);
-      if (cached !== undefined) return { elements: JSON.parse(cached).elements };
+      if (cached !== undefined) {
+        return { elements: JSON.parse(cached).elements };
+      }
       let lastError = "";
       for (let i = 0; i < MAX_ATTEMPTS; i++) {
         if (i > 0) {

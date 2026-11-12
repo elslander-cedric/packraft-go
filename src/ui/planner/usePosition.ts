@@ -13,7 +13,9 @@ export function usePosition(): [MyPosition, (onFirst?: (first: MyPosition) => vo
   const watch = useRef<number | null>(null);
 
   const stopWatching = () => {
-    if (watch.current !== null) navigator.geolocation.clearWatch(watch.current);
+    if (watch.current !== null) {
+      navigator.geolocation.clearWatch(watch.current);
+    }
     watch.current = null;
   };
   useEffect(() => stopWatching, []);

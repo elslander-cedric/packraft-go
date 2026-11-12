@@ -48,9 +48,13 @@ export type MenuProps = {
 };
 
 function Entry({ item }: { item: MenuEntry }) {
-  if ("choices" in item)
+  if ("choices" in item) {
     return (
-      <BaseMenu.RadioGroup aria-label={item.label} value={item.value} onValueChange={(value: string) => item.onChange(value)}>
+      <BaseMenu.RadioGroup
+        aria-label={item.label}
+        value={item.value}
+        onValueChange={(value: string) => item.onChange(value)}
+      >
         {item.choices.map((choice) => (
           <BaseMenu.RadioItem key={choice.value} className="menu-item" value={choice.value} closeOnClick>
             <span className="menu-item-icon">
@@ -61,7 +65,8 @@ function Entry({ item }: { item: MenuEntry }) {
         ))}
       </BaseMenu.RadioGroup>
     );
-  if ("checked" in item)
+  }
+  if ("checked" in item) {
     return (
       <BaseMenu.CheckboxItem
         className="menu-item menu-toggle"
@@ -77,6 +82,7 @@ function Entry({ item }: { item: MenuEntry }) {
         </span>
       </BaseMenu.CheckboxItem>
     );
+  }
   return (
     <BaseMenu.Item className="menu-item" disabled={item.disabled} onClick={item.onSelect}>
       {item.icon && <span className="menu-item-icon">{item.icon}</span>}

@@ -46,12 +46,17 @@ export type Touch = {
 /** Opens the touch driver for a page. Throws outside Chromium. */
 export async function touch(page: Page): Promise<Touch> {
   const browserName = page.context().browser()?.browserType().name();
-  if (browserName !== "chromium") throw new Error(`The touch helper needs Chromium (CDP); got ${browserName}.`);
+  if (browserName !== "chromium") {
+    throw new Error(`The touch helper needs Chromium (CDP); got ${browserName}.`);
+  }
   const cdp = await page.context().newCDPSession(page);
 
   const send = (type: "touchStart" | "touchMove" | "touchEnd", touchPoints: TouchPoint[]) =>
     cdp.send("Input.dispatchTouchEvent", { type, touchPoints });
-  const lerp = (a: Pixel, b: Pixel, t: number): Pixel => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  const lerp = (pixelA: Pixel, pixelB: Pixel, fraction: number): Pixel => ({
+    x: pixelA.x + (pixelB.x - pixelA.x) * fraction,
+    y: pixelA.y + (pixelB.y - pixelA.y) * fraction,
+  });
 
   return {
     async press(at) {
@@ -63,7 +68,9 @@ export async function touch(page: Page): Promise<Touch> {
     },
     async drag(from, to, { steps = 10 } = {}) {
       await send("touchStart", [{ ...from, id: 1 }]);
-      for (let i = 1; i <= steps; i++) await send("touchMove", [{ ...lerp(from, to, i / steps), id: 1 }]);
+      for (let i = 1; i <= steps; i++) {
+        await send("touchMove", [{ ...lerp(from, to, i / steps), id: 1 }]);
+      }
       await send("touchEnd", []);
     },
     async hold(at, ms) {

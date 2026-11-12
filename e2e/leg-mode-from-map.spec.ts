@@ -30,7 +30,9 @@ const legHits = (page: Page) => mapRegion(page).locator("path.leg-hit");
 const selectedCasing = (page: Page) => mapRegion(page).locator("path.leg-casing-selected");
 const card = (page: Page) => page.getByRole("group", { name: /^Leg 1 · / });
 const modeButton = (page: Page, mode: string) =>
-  card(page).getByRole("group", { name: strings.legModeLabel(1) }).getByRole("button", { name: mode });
+  card(page)
+    .getByRole("group", { name: strings.legModeLabel(1) })
+    .getByRole("button", { name: mode });
 
 /** The trip as autosaved on the device. */
 const storedTrip = (page: Page): Promise<Trip> =>
@@ -183,6 +185,8 @@ test.describe("on a phone", () => {
     expect((await cardPlacement(page)).offCentre).toBeLessThan(1);
     const title = card(page).locator(".planner-leg-card-title");
     expect(await title.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
-    await expect(card(page).getByRole("button", { name: strings.planner.selectedLegClose })).toBeInViewport({ ratio: 1 });
+    await expect(card(page).getByRole("button", { name: strings.planner.selectedLegClose })).toBeInViewport({
+      ratio: 1,
+    });
   });
 });

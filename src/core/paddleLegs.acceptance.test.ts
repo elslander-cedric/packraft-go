@@ -18,7 +18,7 @@ import {
   type Trip,
 } from "./trip";
 
-const P = [
+const POINTS = [
   { lat: 50.21, lng: 4.94 },
   { lat: 50.216, lng: 4.933 },
   { lat: 50.237, lng: 4.912 },
@@ -54,33 +54,37 @@ function planner(router: Router) {
     state.trip = change(state.trip);
   };
   const auto = createAutoRouter(router, routingInto(update));
-  const edit = (e: Edit) => {
-    update((t) => applyEdit(t, e));
+  const edit = (edit: Edit) => {
+    update((trip) => applyEdit(trip, edit));
     return auto.sync(state.trip);
   };
   const retry = (i: number) => {
-    update((t) => retryLeg(t, i));
+    update((trip) => retryLeg(trip, i));
     return auto.sync(state.trip);
   };
   return { state, edit, retry };
 }
 
-const flush = () => new Promise((r) => setTimeout(r, 0));
-const statuses = (trip: Trip) => trip.legs.map((l) => l.route?.status);
-const modes = (trip: Trip) => trip.legs.map((l) => l.mode);
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+const statuses = (trip: Trip) => trip.legs.map((leg) => leg.route?.status);
+const modes = (trip: Trip) => trip.legs.map((leg) => leg.mode);
 const setMode = (index: number, mode: LegMode): Edit => ({ type: "setLegMode", index, mode });
 const undo: Edit = { type: "undo" };
 
 /** Draws `n` points, answers every hike request, so all legs are routed hike legs. */
-async function routedHikeTrip(n = 4) {
+async function routedHikeTrip(number = 4) {
   const { router, calls } = manualRouter();
-  const p = planner(router);
-  for (const at of P.slice(0, n)) void p.edit({ type: "addPoint", at });
-  for (const c of calls) c.answer(track(c.points[0], c.points[1]));
+  const planning = planner(router);
+  for (const at of POINTS.slice(0, number)) {
+    void planning.edit({ type: "addPoint", at });
+  }
+  for (const call of calls) {
+    call.answer(track(call.points[0], call.points[1]));
+  }
   await flush();
-  expect(statuses(p.state.trip)).toEqual(Array(n - 1).fill("routed"));
-  expect(calls.every((c) => c.mode === "hike")).toBe(true);
-  return { ...p, calls };
+  expect(statuses(planning.state.trip)).toEqual(Array(number - 1).fill("routed"));
+  expect(calls.every((call) => call.mode === "hike")).toBe(true);
+  return { ...planning, calls };
 }
 
 describe("a leg's mode can be switched hike <-> paddle (an edit, undoable)", () => {
@@ -96,7 +100,7 @@ describe("a leg's mode can be switched hike <-> paddle (an edit, undoable)", () 
     const { state, edit, calls } = await routedHikeTrip();
     const hikeLeg = state.trip.legs[1];
     void edit(setMode(1, "paddle"));
-    calls.at(-1)!.answer(track(P[1], P[2], 99, 92));
+    calls.at(-1)!.answer(track(POINTS[1], POINTS[2], 99, 92));
     await flush();
     expect(state.trip.legs[1].mode).toBe("paddle");
     expect(canUndo(state.trip)).toBe(true);
@@ -116,7 +120,7 @@ describe("a leg's mode can be switched hike <-> paddle (an edit, undoable)", () 
     void edit(undo);
     expect(state.trip.legs[1]).toEqual(hikeLeg);
 
-    calls.at(-1)!.answer(track(P[1], P[2], 99, 92));
+    calls.at(-1)!.answer(track(POINTS[1], POINTS[2], 99, 92));
     await flush();
     expect(state.trip.legs[1]).toEqual(hikeLeg);
   });
@@ -135,7 +139,9 @@ describe("a leg's mode can be switched hike <-> paddle (an edit, undoable)", () 
     const { state, edit, calls } = await routedHikeTrip();
     void edit(setMode(0, "paddle"));
     void edit(setMode(2, "paddle"));
-    for (const c of calls.slice(3)) c.answer(track(c.points[0], c.points[1]));
+    for (const call of calls.slice(3)) {
+      call.answer(track(call.points[0], call.points[1]));
+    }
     await flush();
     expect(modes(state.trip)).toEqual(["paddle", "hike", "paddle"]);
     await edit(undo);
@@ -151,12 +157,12 @@ describe("switching re-routes only that leg, with the profile of its new mode", 
     const { state, edit, calls } = await routedHikeTrip();
     const [first, , last] = state.trip.legs;
     void edit(setMode(1, "paddle"));
-    expect(calls.slice(3).map((c) => [c.mode, c.points])).toEqual([["paddle", [P[1], P[2]]]]);
+    expect(calls.slice(3).map((call) => [call.mode, call.points])).toEqual([["paddle", [POINTS[1], POINTS[2]]]]);
     expect(statuses(state.trip)).toEqual(["routed", "pending", "routed"]);
     expect(state.trip.legs[0]).toBe(first);
     expect(state.trip.legs[2]).toBe(last);
 
-    calls[3].answer(track(P[1], P[2], 99, 92));
+    calls[3].answer(track(POINTS[1], POINTS[2], 99, 92));
     await flush();
     expect(statuses(state.trip)).toEqual(["routed", "routed", "routed"]);
     expect(state.trip.legs[0]).toBe(first);
@@ -165,32 +171,32 @@ describe("switching re-routes only that leg, with the profile of its new mode", 
 
   it("a late hike answer never lands on a leg that was switched to paddle meanwhile", async () => {
     const { router, calls } = manualRouter();
-    const p = planner(router);
-    void p.edit({ type: "addPoint", at: P[0] });
-    void p.edit({ type: "addPoint", at: P[1] });
-    expect(calls.map((c) => c.mode)).toEqual(["hike"]);
-    void p.edit(setMode(0, "paddle"));
-    expect(calls.map((c) => c.mode)).toEqual(["hike", "paddle"]);
+    const planning = planner(router);
+    void planning.edit({ type: "addPoint", at: POINTS[0] });
+    void planning.edit({ type: "addPoint", at: POINTS[1] });
+    expect(calls.map((call) => call.mode)).toEqual(["hike"]);
+    void planning.edit(setMode(0, "paddle"));
+    expect(calls.map((call) => call.mode)).toEqual(["hike", "paddle"]);
 
-    calls[0].answer(track(P[0], P[1], 100, 140));
+    calls[0].answer(track(POINTS[0], POINTS[1], 100, 140));
     await flush();
-    expect(p.state.trip.legs[0]).toEqual({ mode: "paddle", route: { status: "pending" } });
-    calls[1].answer(track(P[0], P[1], 99, 92));
+    expect(planning.state.trip.legs[0]).toEqual({ mode: "paddle", route: { status: "pending" } });
+    calls[1].answer(track(POINTS[0], POINTS[1], 99, 92));
     await flush();
-    expect(summarise(p.state.trip).legs[0].dropM).toBe(7);
+    expect(summarise(planning.state.trip).legs[0].dropM).toBe(7);
   });
 
   it("a failed hike leg switched to paddle is routed again with the river profile", async () => {
     const { router, calls } = manualRouter();
-    const p = planner(router);
-    void p.edit({ type: "addPoint", at: P[0] });
-    void p.edit({ type: "addPoint", at: P[1] });
+    const planning = planner(router);
+    void planning.edit({ type: "addPoint", at: POINTS[0] });
+    void planning.edit({ type: "addPoint", at: POINTS[1] });
     calls[0].answer({ ok: false, failure: { kind: "no-route" } });
     await flush();
-    expect(statuses(p.state.trip)).toEqual(["failed"]);
-    void p.edit(setMode(0, "paddle"));
-    expect(calls.map((c) => c.mode)).toEqual(["hike", "paddle"]);
-    expect(statuses(p.state.trip)).toEqual(["pending"]);
+    expect(statuses(planning.state.trip)).toEqual(["failed"]);
+    void planning.edit(setMode(0, "paddle"));
+    expect(calls.map((call) => call.mode)).toEqual(["hike", "paddle"]);
+    expect(statuses(planning.state.trip)).toEqual(["pending"]);
   });
 });
 
@@ -223,8 +229,8 @@ describe("paddle-leg routing failure (hand-made via the fake router; no recorded
     const { state, retry, calls } = await paddleThatFails("unavailable");
     const before = calls.length;
     void retry(1);
-    expect(calls.slice(before).map((c) => [c.mode, c.points])).toEqual([["paddle", [P[1], P[2]]]]);
-    calls.at(-1)!.answer(track(P[1], P[2], 99, 92));
+    expect(calls.slice(before).map((call) => [call.mode, call.points])).toEqual([["paddle", [POINTS[1], POINTS[2]]]]);
+    calls.at(-1)!.answer(track(POINTS[1], POINTS[2], 99, 92));
     await flush();
     expect(statuses(state.trip)).toEqual(["routed", "routed"]);
     expect(summarise(state.trip).legs[1].dropM).toBe(7);
@@ -284,13 +290,13 @@ describe("the recorded river fixture (Lesse near Anseremme) through the adapter 
         return new Response(body, { status: 200 });
       },
     });
-    const p = planner(brouter);
-    await p.edit({ type: "addPoint", at: { lat: 50.216, lng: 4.933 } });
-    await p.edit({ type: "addPoint", at: { lat: 50.237, lng: 4.912 } });
-    await p.edit(setMode(0, "paddle"));
+    const planning = planner(brouter);
+    await planning.edit({ type: "addPoint", at: { lat: 50.216, lng: 4.933 } });
+    await planning.edit({ type: "addPoint", at: { lat: 50.237, lng: 4.912 } });
+    await planning.edit(setMode(0, "paddle"));
 
-    expect(urls.map((u) => new URL(u).searchParams.get("profile"))).toEqual(["hiking-mountain", "river"]);
-    const leg = summarise(p.state.trip).legs[0];
+    expect(urls.map((url) => new URL(url).searchParams.get("profile"))).toEqual(["hiking-mountain", "river"]);
+    const leg = summarise(planning.state.trip).legs[0];
     expect(leg.mode).toBe("paddle");
     expect(leg.distanceKm).toBeCloseTo(5.9, 1);
     expect(leg.dropM).toBeCloseTo(7.25, 2);
@@ -298,10 +304,10 @@ describe("the recorded river fixture (Lesse near Anseremme) through the adapter 
 });
 
 describe("put-ins and take-outs at mode changes", () => {
-  const withModes = (...m: LegMode[]): Trip => ({
+  const withModes = (...legModes: LegMode[]): Trip => ({
     ...emptyTrip(),
-    points: P.slice(0, m.length + 1),
-    legs: m.map((mode) => ({ mode })),
+    points: POINTS.slice(0, legModes.length + 1),
+    legs: legModes.map((mode) => ({ mode })),
   });
 
   it("an all-hike trip, or an empty one, has none", () => {
@@ -344,14 +350,14 @@ describe("put-ins and take-outs at mode changes", () => {
 // Round 2 acceptance tests written from the three rules Cedric
 // approved (trip ends on the water; 2 m rise rule, ADR 0018; river no-route message).
 describe("Round 2, rule 1: a trip that starts or ends on the water is marked at its ends", () => {
-  const withModes = (...m: LegMode[]): Trip => ({
+  const withModes = (...legModes: LegMode[]): Trip => ({
     ...emptyTrip(),
-    points: P.slice(0, m.length + 1),
-    legs: m.map((mode) => ({ mode })),
+    points: POINTS.slice(0, legModes.length + 1),
+    legs: legModes.map((mode) => ({ mode })),
   });
 
   it("a single point, or a trip with no legs, has no markers", () => {
-    expect(putInsAndTakeOuts({ ...emptyTrip(), points: [P[0]], legs: [] })).toEqual([]);
+    expect(putInsAndTakeOuts({ ...emptyTrip(), points: [POINTS[0]], legs: [] })).toEqual([]);
   });
 
   it("one paddle leg: put-in at the start, take-out at the end", () => {
@@ -392,16 +398,16 @@ describe("Round 2, rule 2: a paddle leg rise of 2 m or less is drop 0; a larger 
   const leg = (mode: LegMode, start: number, end: number) =>
     summarise({
       ...emptyTrip(),
-      points: [P[0], P[1]],
+      points: [POINTS[0], POINTS[1]],
       legs: [
         {
           mode,
           route: {
             status: "routed",
             geometry: [
-              { ...P[0], elevation: start },
+              { ...POINTS[0], elevation: start },
               { lat: 50.213, lng: 4.937, elevation: Math.max(start, end) + 10 },
-              { ...P[1], elevation: end },
+              { ...POINTS[1], elevation: end },
             ],
           },
         },
@@ -410,9 +416,9 @@ describe("Round 2, rule 2: a paddle leg rise of 2 m or less is drop 0; a larger 
 
   it("level and small rises (0, 0.1, 1.99, exactly 2 m) show a drop of 0 and no rise", () => {
     for (const rise of [0, 0.1, 1.99, 2]) {
-      const l = leg("paddle", 100, 100 + rise);
-      expect(l.dropM, `rise ${rise}`).toBe(0);
-      expect(l.riseM, `rise ${rise}`).toBeUndefined();
+      const summary = leg("paddle", 100, 100 + rise);
+      expect(summary.dropM, `rise ${rise}`).toBe(0);
+      expect(summary.riseM, `rise ${rise}`).toBeUndefined();
     }
   });
 
@@ -420,36 +426,36 @@ describe("Round 2, rule 2: a paddle leg rise of 2 m or less is drop 0; a larger 
   // rule, so 2.01 m (shown as 2 m) is now a drop of 0; the boundary is 2.5 m.
   it("a rise that rounds to 2 m (2.01, 2.4) is a drop of 0", () => {
     for (const rise of [2.01, 2.4]) {
-      const l = leg("paddle", 100, 100 + rise);
-      expect(l.dropM, `rise ${rise}`).toBe(0);
-      expect(l.riseM, `rise ${rise}`).toBeUndefined();
+      const summary = leg("paddle", 100, 100 + rise);
+      expect(summary.dropM, `rise ${rise}`).toBe(0);
+      expect(summary.riseM, `rise ${rise}`).toBeUndefined();
     }
   });
 
   it("a rise that rounds to 3 m (2.6) becomes a rise and has no drop", () => {
-    const l = leg("paddle", 100, 102.6);
-    expect(l.dropM).toBeUndefined();
-    expect(l.riseM).toBeCloseTo(2.6, 5);
+    const summary = leg("paddle", 100, 102.6);
+    expect(summary.dropM).toBeUndefined();
+    expect(summary.riseM).toBeCloseTo(2.6, 5);
   });
 
   it("a normal drop is unchanged and has no rise", () => {
-    const l = leg("paddle", 100, 92.5);
-    expect(l.dropM).toBe(7.5);
-    expect(l.riseM).toBeUndefined();
+    const summary = leg("paddle", 100, 92.5);
+    expect(summary.dropM).toBe(7.5);
+    expect(summary.riseM).toBeUndefined();
   });
 
   it("a hike leg that ends higher has climb and descent, never a drop or a rise", () => {
-    const l = leg("hike", 100, 120);
-    expect(l.climbM).toBeGreaterThan(0);
-    expect(l.dropM).toBeUndefined();
-    expect(l.riseM).toBeUndefined();
+    const summary = leg("hike", 100, 120);
+    expect(summary.climbM).toBeGreaterThan(0);
+    expect(summary.dropM).toBeUndefined();
+    expect(summary.riseM).toBeUndefined();
   });
 
   it("an unrouted paddle leg has neither drop nor rise", async () => {
     const { state, edit } = await routedHikeTrip(2);
     void edit(setMode(0, "paddle"));
-    const l = summarise(state.trip).legs[0];
-    expect(l.dropM).toBeUndefined();
-    expect(l.riseM).toBeUndefined();
+    const summary = summarise(state.trip).legs[0];
+    expect(summary.dropM).toBeUndefined();
+    expect(summary.riseM).toBeUndefined();
   });
 });

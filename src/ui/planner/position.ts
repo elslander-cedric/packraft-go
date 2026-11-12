@@ -17,8 +17,12 @@ export type MyPosition =
 
 /** The reason for a Geolocation API error code (GeolocationPositionError.code). */
 export function positionFailure(code: number): PositionFailure {
-  if (code === 1) return "denied";
-  if (code === 3) return "timeout";
+  if (code === 1) {
+    return "denied";
+  }
+  if (code === 3) {
+    return "timeout";
+  }
   return "unavailable";
 }
 

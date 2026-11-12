@@ -62,7 +62,9 @@ export default function SectionsList({
     list.current?.querySelector("[aria-current]")?.closest("li")?.scrollIntoView?.({ block: "nearest" });
   }, [selected, selectedLeg, open]);
 
-  if (sections.length === 0) return <p className="planner-empty">{strings.sectionsPanelEmpty}</p>;
+  if (sections.length === 0) {
+    return <p className="planner-empty">{strings.sectionsPanelEmpty}</p>;
+  }
   return (
     <ol ref={list} className="planner-legs" aria-label={strings.sectionsPanelLabel}>
       {sections.map((section, i) => {
@@ -123,7 +125,10 @@ export default function SectionsList({
                     selected={leg === selectedLeg}
                     onSelect={() => onSelectLeg(leg)}
                     {...(hasLegDetails(access, aire, leg) && {
-                      details: { label: strings.planner.legDetailsButton(leg + 1), onShow: () => onShowLegDetails(leg) },
+                      details: {
+                        label: strings.planner.legDetailsButton(leg + 1),
+                        onShow: () => onShowLegDetails(leg),
+                      },
                     })}
                   />
                 ))}

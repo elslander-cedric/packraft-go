@@ -30,9 +30,11 @@ const campButton = (page: Page) => page.getByRole("button", { name: strings.camp
 /** Draws three points and makes the middle one a camp: a two-day trip. */
 async function drawTwoDays(page: Page) {
   await openPlanner(page);
-  const box = (await freeMapBox(page));
+  const box = await freeMapBox(page);
   const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  for (const dx of [-150, 0, 150]) await page.mouse.click(middle.x + dx, middle.y);
+  for (const dx of [-150, 0, 150]) {
+    await page.mouse.click(middle.x + dx, middle.y);
+  }
   await page.mouse.click(middle.x, middle.y); // select the middle point
   await campButton(page).click();
   await expect(await dayRows(page)).toHaveCount(2);

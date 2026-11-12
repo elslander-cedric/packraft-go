@@ -114,7 +114,9 @@ test("the peek shows the five tabs (an empty, unnamed trip has no name or totals
 
   // Normal mode's tabs; access point editing shows only its own (ADR 0036).
   const names = [strings.planner.tabs.sections, strings.planner.tabs.days];
-  for (const name of names) await expect(tab(page, name)).toBeVisible();
+  for (const name of names) {
+    await expect(tab(page, name)).toBeVisible();
+  }
   await expect(sheet(page).locator(".planner-totals")).toHaveCount(0);
 
   // The sheet slides in when the planner opens.
@@ -142,7 +144,9 @@ test("on a narrow phone the tabs share the row equally, each keeps its full name
     await expect(tab(page, name)).toBeInViewport({ ratio: 1 });
     widths.push((await tab(page, name).boundingBox())!.width);
   }
-  for (const width of widths) expect(Math.abs(width - widths[0])).toBeLessThanOrEqual(1);
+  for (const width of widths) {
+    expect(Math.abs(width - widths[0])).toBeLessThanOrEqual(1);
+  }
 });
 
 test("the sheet settles at peek, half or 90% by drag distance, never closes, and the map stays usable", async ({
@@ -171,7 +175,9 @@ test("the sheet settles at peek, half or 90% by drag distance, never closes, and
   await expect(sheet(page)).toBeVisible();
   await expect(tab(page, strings.planner.tabs.sections)).toBeVisible();
   // And it stays there: the drawer doesn't bounce back to 90% once its animations end (#126).
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))),
+  );
   await page.waitForTimeout(300);
   expect(await sheetHeight(page)).toBeLessThan(peek + 4);
 });
@@ -235,7 +241,7 @@ test("a pinch zooms the map and adds no point", async ({ page }) => {
   const before = await tilePixels();
 
   const cdp = await page.context().newCDPSession(page);
-  const touch = (type: "touchStart" | "touchMove" | "touchEnd",points: { x: number; y: number }[]) =>
+  const touch = (type: "touchStart" | "touchMove" | "touchEnd", points: { x: number; y: number }[]) =>
     cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points.map(({ x, y }, id) => ({ x, y, id })) });
   await touch("touchStart", [
     { x: cx - 20, y: cy },
@@ -311,7 +317,9 @@ test("offline, the planner opens from the app cache with the stored trip; an unr
   await openPhone(page);
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
-    if (navigator.serviceWorker.controller) return;
+    if (navigator.serviceWorker.controller) {
+      return;
+    }
     await new Promise((resolve) => navigator.serviceWorker.addEventListener("controllerchange", resolve));
   });
 

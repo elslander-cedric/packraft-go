@@ -21,19 +21,24 @@ function build(river: string, extract: string, ids: string[], review?: ReviewDec
   return buildStretches({
     annex,
     rivers: RIVERS,
-    recipes: STRETCH_RECIPES.filter((r) => ids.includes(r.id)),
+    recipes: STRETCH_RECIPES.filter((stretchRecipe) => ids.includes(stretchRecipe.id)),
     osm: { rivers: { [river]: data }, border },
     review,
   });
 }
 
 const byId = (stretches: DraftStretch[], id: string) => {
-  const found = stretches.find((s) => s.id === id);
-  if (!found) throw new Error(`no stretch ${id}`);
+  const found = stretches.find((stretch) => stretch.id === id);
+  if (!found) {
+    throw new Error(`no stretch ${id}`);
+  }
   return found;
 };
-const first = (s: DraftStretch): Pt => ({ lng: s.line[0][0], lat: s.line[0][1] });
-const last = (s: DraftStretch): Pt => ({ lng: s.line[s.line.length - 1][0], lat: s.line[s.line.length - 1][1] });
+const first = (stretch: DraftStretch): Pt => ({ lng: stretch.line[0][0], lat: stretch.line[0][1] });
+const last = (stretch: DraftStretch): Pt => ({
+  lng: stretch.line[stretch.line.length - 1][0],
+  lat: stretch.line[stretch.line.length - 1][1],
+});
 
 describe("Warche below Robertville dam (1C1a)", () => {
   const { stretches, problems } = build("Warche", "warche", ["1C1a"]);
@@ -63,7 +68,13 @@ describe("Warche below Robertville dam (1C1a)", () => {
   });
 
   it("keeps the Annex data: category, thresholds and gauge", () => {
-    expect(warche).toMatchObject({ category: "1.C", river: "Warche", annex2Gauge: "Malmedy", minM3s: null, maxM3s: 8.9 });
+    expect(warche).toMatchObject({
+      category: "1.C",
+      river: "Warche",
+      annex2Gauge: "Malmedy",
+      minM3s: null,
+      maxM3s: 8.9,
+    });
   });
 });
 
@@ -72,32 +83,32 @@ describe("lower Lesse (1B2a, 1B2b, 1B2c, 1A2)", () => {
   const { stretches } = build("Lesse", "lower-lesse", ids);
 
   it("ends 1A2 at the Meuse confluence at Anseremme, confidently", () => {
-    const s = byId(stretches, "1A2");
-    expect(s.to.status).toBe("confident");
-    expect(s.to.reason).toMatch(/Meuse/);
-    expect(distanceM(s.to.point, { lat: 50.2398, lng: 4.9124 })).toBeLessThan(150);
+    const stretch = byId(stretches, "1A2");
+    expect(stretch.to.status).toBe("confident");
+    expect(stretch.to.reason).toMatch(/Meuse/);
+    expect(distanceM(stretch.to.point, { lat: 50.2398, lng: 4.9124 })).toBeLessThan(150);
   });
 
   it("flags the ambiguous 'first fixed weir' for review, at a weir on the Lesse, not on the Meuse", () => {
-    const s = byId(stretches, "1A2");
-    expect(s.from.status).toBe("needsReview");
+    const stretch = byId(stretches, "1A2");
+    expect(stretch.from.status).toBe("needsReview");
     // The Barrage de Waulsort on the Meuse lies about 100 m from the Lesse mouth: it must not be picked.
-    expect(distanceM(s.from.point, { lat: 50.23788, lng: 4.90907 })).toBeGreaterThan(300);
+    expect(distanceM(stretch.from.point, { lat: 50.23788, lng: 4.90907 })).toBeGreaterThan(300);
   });
 
   it("puts 1B2a's start 100 m upstream of the Houyet road bridge", () => {
-    const s = byId(stretches, "1B2a");
+    const stretch = byId(stretches, "1B2a");
     const houyetBridge = { lat: 50.19032, lng: 5.00773 };
-    expect(distanceM(s.from.point, houyetBridge)).toBeGreaterThan(70);
-    expect(distanceM(s.from.point, houyetBridge)).toBeLessThan(130);
-    expect(s.from.reason).toMatch(/100 m upstream/);
+    expect(distanceM(stretch.from.point, houyetBridge)).toBeGreaterThan(70);
+    expect(distanceM(stretch.from.point, houyetBridge)).toBeLessThan(130);
+    expect(stretch.from.reason).toMatch(/100 m upstream/);
   });
 
   it("joins neighbouring stretches at one shared point, reviewed only once", () => {
-    const b = byId(stretches, "1B2b");
-    const c = byId(stretches, "1B2c");
-    expect(c.from.point).toEqual(b.to.point);
-    expect(c.from.sameAs).toBe("1B2b.to");
+    const stretchB = byId(stretches, "1B2b");
+    const stretch = byId(stretches, "1B2c");
+    expect(stretch.from.point).toEqual(stretchB.to.point);
+    expect(stretch.from.sameAs).toBe("1B2b.to");
     const toReview = endsNeedingReview(stretches);
     expect(toReview).toContain("1B2b.to");
     expect(toReview).not.toContain("1B2c.from");
@@ -108,8 +119,8 @@ describe("Viroin, the whole river (1B3)", () => {
   const { stretches, problems } = build("Viroin", "viroin", ["1B3"]);
   const viroin = byId(stretches, "1B3");
   const { border } = fixture("viroin");
-  const borderWays = border.elements.map((e) =>
-    (e.geometry ?? []).flatMap((p) => (p ? [{ lat: p.lat, lng: p.lon }] : [])),
+  const borderWays = border.elements.map((element) =>
+    (element.geometry ?? []).flatMap((point) => (point ? [{ lat: point.lat, lng: point.lon }] : [])),
   );
 
   it("ends where the river crosses the national border", () => {
@@ -132,9 +143,9 @@ describe("review decisions", () => {
     const { stretches } = build("Warche", "warche", ["1C1a"], {
       "1C1a.to": { action: "confirm", lat: plain.to.point.lat, lng: plain.to.point.lng },
     });
-    const s = byId(stretches, "1C1a");
-    expect(s.to.status).toBe("reviewed");
-    expect(s.to.point).toEqual(plain.to.point);
+    const stretch = byId(stretches, "1C1a");
+    expect(stretch.to.status).toBe("reviewed");
+    expect(stretch.to.point).toEqual(plain.to.point);
     expect(endsNeedingReview(stretches)).toEqual([]);
   });
 
@@ -144,20 +155,20 @@ describe("review decisions", () => {
     const { stretches } = build("Warche", "warche", ["1C1a"], {
       "1C1a.to": { action: "move", lat: offRiver.lat, lng: offRiver.lng, note: "take-out above Malmedy" },
     });
-    const s = byId(stretches, "1C1a");
-    expect(s.to.status).toBe("reviewed");
-    expect(s.to.reason).toMatch(/take-out above Malmedy/);
-    expect(distanceM(s.to.point, plain.to.point)).toBeGreaterThan(200);
-    expect(distanceM(last(s), s.to.point)).toBeLessThan(2);
-    expect(s.lengthKm).toBeLessThan(plain.lengthKm);
+    const stretch = byId(stretches, "1C1a");
+    expect(stretch.to.status).toBe("reviewed");
+    expect(stretch.to.reason).toMatch(/take-out above Malmedy/);
+    expect(distanceM(stretch.to.point, plain.to.point)).toBeGreaterThan(200);
+    expect(distanceM(last(stretch), stretch.to.point)).toBeLessThan(2);
+    expect(stretch.lengthKm).toBeLessThan(plain.lengthKm);
   });
 
   it("a confirmed point that OSM has since moved needs review again", () => {
     const { stretches } = build("Warche", "warche", ["1C1a"], {
       "1C1a.to": { action: "confirm", lat: plain.to.point.lat + 0.01, lng: plain.to.point.lng },
     });
-    const s = byId(stretches, "1C1a");
-    expect(s.to.status).toBe("needsReview");
-    expect(s.to.reason).toMatch(/Confirmed in review, but OSM now puts it/);
+    const stretch = byId(stretches, "1C1a");
+    expect(stretch.to.status).toBe("needsReview");
+    expect(stretch.to.reason).toMatch(/Confirmed in review, but OSM now puts it/);
   });
 });

@@ -23,13 +23,13 @@ export type AgwDay = {
 
 const SATURDAY = 6;
 
-const pad = (n: number) => String(n).padStart(2, "0");
+const pad = (number: number) => String(number).padStart(2, "0");
 
 /** The n-th Saturday (1-based) of a month, as YYYY-MM-DD. Counted in UTC. */
-function nthSaturday(year: number, month: number, n: number): CalendarDate {
+function nthSaturday(year: number, month: number, number: number): CalendarDate {
   const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
   const firstSaturday = 1 + ((SATURDAY - firstWeekday + 7) % 7);
-  return `${year}-${pad(month)}-${pad(firstSaturday + 7 * (n - 1))}`;
+  return `${year}-${pad(month)}-${pad(firstSaturday + 7 * (number - 1))}`;
 }
 
 /** The fishing opening days of a year: the 3rd Saturday of March (trout) and the 1st Saturday of June (general). */
@@ -71,12 +71,16 @@ export function inSeason1C(date: CalendarDate): boolean {
 /** What the AGW says about a category on one date: closed or not, and the permitted hours. */
 export function agwDay(category: AgwCategory, date: CalendarDate): AgwDay {
   const md = monthDay(date);
-  const { from, to } = hoursTables[category].find((p) => p.contains(md))!;
+  const { from, to } = hoursTables[category].find((period) => period.contains(md))!;
   const hours = { from, to };
-  if (category === "1.C" && !inSeason1C(date)) return { closure: "season", hours };
+  if (category === "1.C" && !inSeason1C(date)) {
+    return { closure: "season", hours };
+  }
   if (category !== "1.A") {
     const { trout, general } = fishingOpeningDays(Number(date.slice(0, 4)));
-    if (date === trout || date === general) return { closure: "fishing-day", hours };
+    if (date === trout || date === general) {
+      return { closure: "fishing-day", hours };
+    }
   }
   return { hours };
 }

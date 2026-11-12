@@ -17,7 +17,9 @@ function fakeServer(reply: Reply | ((url: URL) => Reply)) {
     const url = new URL(input);
     requests.push({ url, at: Date.now() });
     const answer = typeof reply === "function" ? reply(url) : reply;
-    if (answer === "network-error") throw new TypeError("Failed to fetch");
+    if (answer === "network-error") {
+      throw new TypeError("Failed to fetch");
+    }
     return new Response(answer.body, { status: answer.status });
   };
   return { requests, names: createNominatimNames({ fetch }) };
@@ -57,7 +59,9 @@ describe("Nominatim requests", () => {
 
   it("never asks more than once a second, however many lookups wait", async () => {
     const server = fakeServer(ok("reverse-road.json"));
-    const lookups = [0, 1, 2, 3].map((i) => server.names.defaultNameAt({ lat: hotton.lat + i / 1000, lng: hotton.lng }));
+    const lookups = [0, 1, 2, 3].map((i) =>
+      server.names.defaultNameAt({ lat: hotton.lat + i / 1000, lng: hotton.lng }),
+    );
     await settle(Promise.all(lookups));
     const times = server.requests.map(({ at }) => at);
     expect(times).toHaveLength(4);
@@ -87,7 +91,11 @@ describe("default names from Nominatim", () => {
     ["road and village (recorded at Melreux, Hotton)", ok("reverse-road.json"), "Rue du Batty, Melreux"],
     ["no road: the village alone (recorded near Marcouray)", ok("reverse-no-road.json"), "Marcouray"],
     ["nothing found (recorded in the North Sea)", ok("reverse-nothing-found.json"), ""],
-    ["a road in a town", address({ road: "Rue de la Gare", town: "Durbuy", postcode: "6940" }), "Rue de la Gare, Durbuy"],
+    [
+      "a road in a town",
+      address({ road: "Rue de la Gare", town: "Durbuy", postcode: "6940" }),
+      "Rue de la Gare, Durbuy",
+    ],
     ["a road in a city", address({ road: "Quai de Rome", city: "Liège" }), "Quai de Rome, Liège"],
     ["no village or town: the municipality", address({ road: "N86", municipality: "Rendeux" }), "N86, Rendeux"],
     ["only a municipality", address({ municipality: "Rendeux", country: "België / Belgique / Belgien" }), "Rendeux"],
@@ -98,7 +106,13 @@ describe("default names from Nominatim", () => {
   });
 
   it("leaves out house numbers, postcodes and countries", async () => {
-    const reply = address({ house_number: "12", road: "Rue du Batty", village: "Melreux", postcode: "6990", country: "België" });
+    const reply = address({
+      house_number: "12",
+      road: "Rue du Batty",
+      village: "Melreux",
+      postcode: "6990",
+      country: "België",
+    });
     expect(await settle(fakeServer(reply).names.defaultNameAt(hotton))).toEqual({
       status: "found",
       name: "Rue du Batty, Melreux",

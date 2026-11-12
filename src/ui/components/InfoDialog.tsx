@@ -25,7 +25,9 @@ export function InfoDialog({ open, title, children, closeLabel, onClose }: InfoD
     <Dialog.Root
       open={open}
       onOpenChange={(next) => {
-        if (!next) onClose();
+        if (!next) {
+          onClose();
+        }
       }}
     >
       <Dialog.Portal>

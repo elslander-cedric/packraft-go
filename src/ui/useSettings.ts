@@ -27,7 +27,9 @@ const getServerSnapshot = () => null;
 function changeSettings(settings: Settings) {
   current = settings;
   storeSettings(settings);
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 }
 
 /**
@@ -46,7 +48,9 @@ export function useBaseMap(): [BaseMapId, (id: BaseMapId) => void] {
   return [
     settings?.baseMap ?? defaultSettings.baseMap,
     (id) => {
-      if (settings) saveSettings(withBaseMap(settings, id));
+      if (settings) {
+        saveSettings(withBaseMap(settings, id));
+      }
     },
   ];
 }
@@ -59,7 +63,9 @@ export function useOverlays(): [readonly OverlayId[], (id: OverlayId, on: boolea
   return [
     settings?.overlays ?? defaultSettings.overlays,
     (id, on) => {
-      if (settings) saveSettings(withOverlay(settings, id, on));
+      if (settings) {
+        saveSettings(withOverlay(settings, id, on));
+      }
     },
   ];
 }
@@ -68,15 +74,22 @@ export function useOverlays(): [readonly OverlayId[], (id: OverlayId, on: boolea
  * The side panel's chosen width and whether it is open (ADR 0034), and a way to change either.
  * Settings on this device; the defaults until the settings are read in the browser.
  */
-export function useSidePanel(): [{ width: number; open: boolean }, (change: { width?: number; open?: boolean }) => void] {
+export function useSidePanel(): [
+  { width: number; open: boolean },
+  (change: { width?: number; open?: boolean }) => void,
+] {
   const [settings, saveSettings] = useSettings();
   const { sidePanelWidth: width, sidePanelOpen: open } = settings ?? defaultSettings;
   return [
     { width, open },
     (change) => {
-      if (!settings) return;
+      if (!settings) {
+        return;
+      }
       const changed = withSidePanel(settings, change);
-      if (changed !== settings) saveSettings(changed);
+      if (changed !== settings) {
+        saveSettings(changed);
+      }
     },
   ];
 }

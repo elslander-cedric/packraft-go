@@ -32,7 +32,10 @@ export type AccessLayerProps = {
 const toLatLng = ([lng, lat]: Position): LatLngExpression => [lat, lng];
 
 /** Leaflet's nested lat/lng arrays for a geometry: lines for line geometries, rings for areas. */
-function shapeOf(geometry: Geometry): { kind: "line" | "area"; positions: LatLngExpression[][] | LatLngExpression[][][] } {
+function shapeOf(geometry: Geometry): {
+  kind: "line" | "area";
+  positions: LatLngExpression[][] | LatLngExpression[][][];
+} {
   switch (geometry.type) {
     case "LineString":
       return { kind: "line", positions: [geometry.coordinates.map(toLatLng)] };
@@ -41,7 +44,10 @@ function shapeOf(geometry: Geometry): { kind: "line" | "area"; positions: LatLng
     case "Polygon":
       return { kind: "area", positions: [geometry.coordinates.map((ring) => ring.map(toLatLng))] };
     case "MultiPolygon":
-      return { kind: "area", positions: geometry.coordinates.map((polygon) => polygon.map((ring) => ring.map(toLatLng))) };
+      return {
+        kind: "area",
+        positions: geometry.coordinates.map((polygon) => polygon.map((ring) => ring.map(toLatLng))),
+      };
   }
 }
 
@@ -98,11 +104,17 @@ function LockShape({ lock, selected, onSelect }: { lock: LockMarker; selected: b
 }
 
 /** The lock markers, once the map is zoomed in far enough for them not to cover the waters. */
-function LockMarkers({ locks, selectedId, onSelect }: Required<Pick<AccessLayerProps, "locks" | "selectedId" | "onSelect">>) {
+function LockMarkers({
+  locks,
+  selectedId,
+  onSelect,
+}: Required<Pick<AccessLayerProps, "locks" | "selectedId" | "onSelect">>) {
   const map = useMap();
   const [zoom, setZoom] = useState(() => map.getZoom());
   useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
-  if (zoom < lockMarkersMinZoom) return null;
+  if (zoom < lockMarkersMinZoom) {
+    return null;
+  }
   return locks.map((lock) => (
     <LockShape key={lock.id} lock={lock} selected={lock.id === selectedId} onSelect={() => onSelect(lock.id)} />
   ));

@@ -1,13 +1,8 @@
 // Access point storage: invalid saves refused, borders, special characters.
 import { describe, expect, it } from "vitest";
-import {
-  parseAccessPoints,
-  restoreStoredAccessPoints,
-  serialiseAccessPoints,
-  type AccessPoint,
-} from "./accessPoints";
+import { parseAccessPoints, restoreStoredAccessPoints, serialiseAccessPoints, type AccessPoint } from "./accessPoints";
 
-const T = "2026-10-12T08:00:00.000Z";
+const TIMESTAMP = "2026-10-12T08:00:00.000Z";
 const pt = (id: string, lat: number, lng: number, extra: Partial<AccessPoint> = {}): AccessPoint => ({
   id,
   position: { lat, lng },
@@ -17,8 +12,8 @@ const pt = (id: string, lat: number, lng: number, extra: Partial<AccessPoint> = 
   kind: "informal-bank",
   note: "",
   checkedOnSite: null,
-  createdAt: T,
-  updatedAt: T,
+  createdAt: TIMESTAMP,
+  updatedAt: TIMESTAMP,
   ...extra,
 });
 describe("format", () => {
@@ -31,14 +26,23 @@ describe("format", () => {
     pt("edge2", -90, -180),
   ];
   it("round-trips border positions exactly", () => {
-    const r = parseAccessPoints(serialiseAccessPoints(border));
-    expect(r).toEqual({ ok: true, accessPoints: border });
+    const accessPointsParseResult = parseAccessPoints(serialiseAccessPoints(border));
+    expect(accessPointsParseResult).toEqual({ ok: true, accessPoints: border });
   });
   it("round-trips special characters in notes", () => {
-    const notes = ['a/b:c&d<e>"f\'', "line1\nline2\ttab", "emoji 🛶 é ü ß 日本", "\u0000ctrl\u001f", "</script><!--", "\\u0041 \\", " ", "x".repeat(10000)];
+    const notes = [
+      "a/b:c&d<e>\"f'",
+      "line1\nline2\ttab",
+      "emoji 🛶 é ü ß 日本",
+      "\u0000ctrl\u001f",
+      "</script><!--",
+      "\\u0041 \\",
+      " ",
+      "x".repeat(10000),
+    ];
     const pts = notes.map((note, i) => pt(`id/${i}&<`, 50.5, 5.5 + i / 1000, { note }));
-    const r = parseAccessPoints(serialiseAccessPoints(pts));
-    expect(r).toEqual({ ok: true, accessPoints: pts });
+    const accessPointsParseResult = parseAccessPoints(serialiseAccessPoints(pts));
+    expect(accessPointsParseResult).toEqual({ ok: true, accessPoints: pts });
   });
   it.each([
     ["not json", "{nope"],
@@ -52,14 +56,21 @@ describe("format", () => {
     ["duplicate ids", serialiseAccessPoints([pt("a", 50, 5), pt("a", 51, 5)])],
     ["bad use", serialiseAccessPoints([pt("a", 50, 5, { use: "x" as never })])],
     ["bad date", serialiseAccessPoints([pt("a", 50, 5, { checkedOnSite: "2026-02-30" })])],
-    ["note not string", JSON.stringify({ format: "packraft-go-access-points", version: 1, accessPoints: [{ ...pt("a", 50, 5), note: 5 }] })],
+    [
+      "note not string",
+      JSON.stringify({
+        format: "packraft-go-access-points",
+        version: 1,
+        accessPoints: [{ ...pt("a", 50, 5), note: 5 }],
+      }),
+    ],
     ["one bad among good", serialiseAccessPoints([pt("a", 50, 5), pt("b", 500, 5)])],
     ["missing list", JSON.stringify({ format: "packraft-go-access-points", version: 1 })],
   ])("refuses %s without a reason", (_n, text) => {
     expect(parseAccessPoints(text)).toEqual({ ok: false });
   });
-  it.each([0, 2, 99, 1.5])("refuses version %s as unknown-version", (v) => {
-    const text = JSON.stringify({ format: "packraft-go-access-points", version: v, accessPoints: [] });
+  it.each([0, 2, 99, 1.5])("refuses version %s as unknown-version", (value) => {
+    const text = JSON.stringify({ format: "packraft-go-access-points", version: value, accessPoints: [] });
     expect(parseAccessPoints(text)).toEqual({ ok: false, reason: "unknown-version" });
   });
   // Updated: round 2 (#55). A damaged save is now flagged as damaged, so it can be backed up.

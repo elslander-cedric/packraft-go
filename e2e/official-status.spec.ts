@@ -41,11 +41,13 @@ async function seedSalmToday(page: Page) {
     trip: {
       name: "Salm today",
       points: salm,
-      legs: [{ mode: "paddle", route: { status: "routed", geometry: salm.map((p) => ({ ...p, elevation: 300 })) } }],
+      legs: [
+        { mode: "paddle", route: { status: "routed", geometry: salm.map((point) => ({ ...point, elevation: 300 })) } },
+      ],
       startDate: "2026-11-02",
     },
   };
-  await page.addInitScript((s) => localStorage.setItem("packraft-go.trip", s), JSON.stringify(save));
+  await page.addInitScript((text) => localStorage.setItem("packraft-go.trip", text), JSON.stringify(save));
 }
 
 test("the map shows the SPW's status today, with its reason on a closed stretch", async ({ page }) => {

@@ -41,7 +41,9 @@ export function ConfirmDialog({
     <AlertDialog.Root
       open={open}
       onOpenChange={(next) => {
-        if (!next) onCancel();
+        if (!next) {
+          onCancel();
+        }
       }}
     >
       <AlertDialog.Portal>

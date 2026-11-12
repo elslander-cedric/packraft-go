@@ -14,10 +14,12 @@ export function formatElevation(metres: number): string {
 /** An estimated time in hours for display, e.g. "3 h 05 min", or "45 min" under an hour. */
 export function formatDuration(hours: number): string {
   const totalMinutes = Math.round(hours * 60);
-  const h = Math.floor(totalMinutes / 60);
+  const wholeHours = Math.floor(totalMinutes / 60);
   const min = totalMinutes % 60;
-  if (h === 0) return `${min} ${strings.minuteUnit}`;
-  return `${h} ${strings.hourUnit} ${String(min).padStart(2, "0")} ${strings.minuteUnit}`;
+  if (wholeHours === 0) {
+    return `${min} ${strings.minuteUnit}`;
+  }
+  return `${wholeHours} ${strings.hourUnit} ${String(min).padStart(2, "0")} ${strings.minuteUnit}`;
 }
 
 /**
@@ -59,7 +61,9 @@ export function formatReadingTime(at: string): string {
  * routing, and marked when it counts distance only.
  */
 export function formatTimeEstimate(hours: number, status: TimeStatus): string {
-  if (status === "pending") return strings.timePending;
+  if (status === "pending") {
+    return strings.timePending;
+  }
   const duration = formatDuration(hours);
   return status === "no-climb-data" ? strings.timeWithoutClimb(duration) : duration;
 }

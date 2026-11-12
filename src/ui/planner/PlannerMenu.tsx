@@ -119,7 +119,9 @@ export default function PlannerMenu({
           const file = event.target.files?.[0];
           // Clear the choice, so choosing the same file again still opens it.
           event.target.value = "";
-          if (file) void openFile(file);
+          if (file) {
+            void openFile(file);
+          }
         }}
       />
       <TextEntryDialog
@@ -130,8 +132,11 @@ export default function PlannerMenu({
         confirmLabel={dialog.confirm}
         cancelLabel={strings.confirmCancel}
         onConfirm={(name) => {
-          if (naming === "export") exportGpx(name);
-          else saveFile(name);
+          if (naming === "export") {
+            exportGpx(name);
+          } else {
+            saveFile(name);
+          }
           setNamingOpen(false);
         }}
         onCancel={() => setNamingOpen(false)}

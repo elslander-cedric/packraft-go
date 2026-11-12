@@ -70,26 +70,40 @@ describe("a reason's text", () => {
 
   it("gives the SPW's reason on a closed stretch, in its own words", () => {
     const text = reasonText(
-      reason("closed-today", { kind: "closed", cause: "too-low-or-stated", reason: "Rivière non sécurisée" }, { closedBy: "official" }),
+      reason(
+        "closed-today",
+        { kind: "closed", cause: "too-low-or-stated", reason: "Rivière non sécurisée" },
+        { closedBy: "official" },
+      ),
     );
     expect(text).toBe("Closed today by the SPW: Rivière non sécurisée");
   });
 
   it("says too low when the SPW gives code 0 and no reason", () => {
-    const text = reasonText(reason("closed-today", { kind: "closed", cause: "too-low-or-stated" }, { closedBy: "official" }));
+    const text = reasonText(
+      reason("closed-today", { kind: "closed", cause: "too-low-or-stated" }, { closedBy: "official" }),
+    );
     expect(text).toBe("Closed today by the SPW: the water is too low.");
   });
 
   it("reads high water and out of season as such, with any reason after", () => {
     const high = reason("closed-today", { kind: "closed", cause: "high-water" }, { closedBy: "official" });
     expect(reasonText(high)).toBe("Closed today by the SPW: high water.");
-    const season = reason("closed-today", { kind: "closed", cause: "out-of-season", reason: "Hiver" }, { closedBy: "official" });
+    const season = reason(
+      "closed-today",
+      { kind: "closed", cause: "out-of-season", reason: "Hiver" },
+      { closedBy: "official" },
+    );
     expect(reasonText(season)).toBe("Closed today by the SPW: out of season. Hiver");
   });
 
   it("gives a calendar closure first, then the SPW's own", () => {
     const text = reasonText(
-      reason("closed-today", { kind: "closed", cause: "too-low-or-stated", reason: "Travaux" }, { closedBy: "fishing-day" }),
+      reason(
+        "closed-today",
+        { kind: "closed", cause: "too-low-or-stated", reason: "Travaux" },
+        { closedBy: "fishing-day" },
+      ),
     );
     expect(text).toBe("Rule text. Closed today by the SPW: Travaux");
   });
@@ -114,12 +128,16 @@ describe("a reason's text", () => {
   });
 
   it("says no official status exists for a record with no official stretch", () => {
-    expect(reasonText(reason("open", { kind: "none" }))).toBe("Rule text. The SPW publishes no official status for this stretch.");
+    expect(reasonText(reason("open", { kind: "none" }))).toBe(
+      "Rule text. The SPW publishes no official status for this stretch.",
+    );
   });
 
   it("adds the note after the rule text on a future date, with the SPW's reason", () => {
     const text = reasonText(
-      reason("open", undefined, { closedToday: { kind: "closed", cause: "too-low-or-stated", reason: "Arrêté ministériel" } }),
+      reason("open", undefined, {
+        closedToday: { kind: "closed", cause: "too-low-or-stated", reason: "Arrêté ministériel" },
+      }),
     );
     expect(text).toBe("Rule text. Officially closed today, says the SPW: Arrêté ministériel");
   });
@@ -142,11 +160,15 @@ describe("the note on what wasn't checked with the SPW (#211)", () => {
   });
 
   it("says official closures weren't checked", () => {
-    expect(notCheckedText(["closures"])).toBe("Official closures weren't checked, so the SPW may have closed this stretch.");
+    expect(notCheckedText(["closures"])).toBe(
+      "Official closures weren't checked, so the SPW may have closed this stretch.",
+    );
   });
 
   it("says the incidents couldn't be loaded, as none on the map doesn't mean none on the river (#216)", () => {
-    expect(notCheckedText(["incidents"])).toBe("The SPW's incidents couldn't be loaded, so there may be hazards here that aren't shown.");
+    expect(notCheckedText(["incidents"])).toBe(
+      "The SPW's incidents couldn't be loaded, so there may be hazards here that aren't shown.",
+    );
   });
 
   it("names both, one sentence each", () => {

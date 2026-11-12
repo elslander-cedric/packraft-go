@@ -8,22 +8,33 @@ const P1 = { lat: 50.1, lng: 5.1 };
 const P2 = { lat: 50.11, lng: 5.12 };
 const through = (...points: LatLng[]) =>
   points.reduce((trip, at) => applyEdit(trip, { type: "addPoint", at }), emptyTrip());
-const ok: RouteResult = { ok: true, geometry: [{ ...P1, elevation: 1 }, { ...P2, elevation: 2 }] };
+const ok: RouteResult = {
+  ok: true,
+  geometry: [
+    { ...P1, elevation: 1 },
+    { ...P2, elevation: 2 },
+  ],
+};
 
 describe("routing actions", () => {
   it("emits plain-data actions and a known answer as routeArrived without calling the router", async () => {
     let calls = 0;
-    const router: Router = { route: async () => { calls++; return ok; } };
+    const router: Router = {
+      route: async () => {
+        calls++;
+        return ok;
+      },
+    };
     const actions: RoutingAction[] = [];
-    const auto = createAutoRouter(router, (a) => actions.push(a));
+    const auto = createAutoRouter(router, (routingActionA) => actions.push(routingActionA));
     const trip = through(P1, P2);
     await auto.sync(trip);
-    expect(actions.map((a) => a.type)).toEqual(["routeRequested", "routeArrived"]);
+    expect(actions.map((action) => action.type)).toEqual(["routeRequested", "routeArrived"]);
     expect(JSON.parse(JSON.stringify(actions))).toEqual(actions);
     actions.length = 0;
     await auto.sync(trip);
     expect(calls).toBe(1);
-    expect(actions.map((a) => a.type)).toEqual(["routeArrived"]);
+    expect(actions.map((action) => action.type)).toEqual(["routeArrived"]);
   });
 
   it("pure functions do not mutate, are idempotent, and ignore stale requests", () => {

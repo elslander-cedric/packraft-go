@@ -42,7 +42,9 @@ export function listenForPressDrag(element: Element, map: LeafletMap, handlers: 
   } | null = null;
 
   const down = (event: PointerEvent) => {
-    if (pressed || (event.pointerType === "mouse" && event.button !== 0)) return;
+    if (pressed || (event.pointerType === "mouse" && event.button !== 0)) {
+      return;
+    }
     pressed = {
       id: event.pointerId,
       x: event.clientX,
@@ -53,25 +55,38 @@ export function listenForPressDrag(element: Element, map: LeafletMap, handlers: 
     element.setPointerCapture?.(event.pointerId);
   };
   const move = (event: PointerEvent) => {
-    if (pressed?.id !== event.pointerId) return;
+    if (pressed?.id !== event.pointerId) {
+      return;
+    }
     const far = Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y);
-    if (!pressed.to && far < pressed.slop) return;
+    if (!pressed.to && far < pressed.slop) {
+      return;
+    }
     const { lat, lng } = map.mouseEventToLatLng(event);
     pressed.to = { lat, lng };
     handlers().onDrag(pressed.to);
   };
   const up = (event: PointerEvent) => {
-    if (pressed?.id !== event.pointerId) return;
+    if (pressed?.id !== event.pointerId) {
+      return;
+    }
     const { to } = pressed;
     pressed = null;
-    if (to) handlers().onDrop(to);
-    else handlers().onTap();
+    if (to) {
+      handlers().onDrop(to);
+    } else {
+      handlers().onTap();
+    }
   };
   const cancel = (event: PointerEvent) => {
-    if (pressed?.id !== event.pointerId) return;
+    if (pressed?.id !== event.pointerId) {
+      return;
+    }
     const dragged = pressed.to !== null;
     pressed = null;
-    if (dragged) handlers().onCancel();
+    if (dragged) {
+      handlers().onCancel();
+    }
   };
 
   const listeners: [string, EventListener][] = [
@@ -84,9 +99,13 @@ export function listenForPressDrag(element: Element, map: LeafletMap, handlers: 
     ["mousedown", stopPropagation],
     ["click", stopPropagation],
   ];
-  for (const [type, listener] of listeners) element.addEventListener(type, listener);
+  for (const [type, listener] of listeners) {
+    element.addEventListener(type, listener);
+  }
   return () => {
-    for (const [type, listener] of listeners) element.removeEventListener(type, listener);
+    for (const [type, listener] of listeners) {
+      element.removeEventListener(type, listener);
+    }
   };
 }
 

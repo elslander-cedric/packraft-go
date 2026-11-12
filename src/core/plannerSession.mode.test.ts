@@ -3,20 +3,26 @@
 // editing access points the trip is frozen (#227).
 import { describe, expect, it } from "vitest";
 import { addAccessPoint, updateAccessPoint } from "./accessPoints";
-import { firstSession, plannerSession, type PanelView, type PlannerAction, type PlannerSession } from "./plannerSession";
+import {
+  firstSession,
+  plannerSession,
+  type PanelView,
+  type PlannerAction,
+  type PlannerSession,
+} from "./plannerSession";
 import { applyEdit, emptyTrip, type LatLng } from "./trip";
 
-const A: LatLng = { lat: 50.3527, lng: 5.4563 };
-const B: LatLng = { lat: 50.3627, lng: 5.4563 };
-const C: LatLng = { lat: 50.3727, lng: 5.4563 };
+const pointA: LatLng = { lat: 50.3527, lng: 5.4563 };
+const pointB: LatLng = { lat: 50.3627, lng: 5.4563 };
+const pointC: LatLng = { lat: 50.3727, lng: 5.4563 };
 const nearA: LatLng = { lat: 50.3532, lng: 5.4563 }; // about 55 m from A
-const T = "2026-10-14T08:00:00.000Z";
-const trip = [A, B].reduce((t, at) => applyEdit(t, { type: "addPoint", at }), emptyTrip());
+const TIMESTAMP = "2026-10-14T08:00:00.000Z";
+const trip = [pointA, pointB].reduce((result, at) => applyEdit(result, { type: "addPoint", at }), emptyTrip());
 
 const daysPeek: PanelView = { tab: "days", sheet: "peek" };
 const selected = (): PlannerSession => ({ ...firstSession({ trip }), selectedPoint: 1 });
-const enter = (s: PlannerSession, returnTo: PanelView = daysPeek) =>
-  plannerSession(s, { type: "enterAccessPointEditing", returnTo });
+const enter = (session: PlannerSession, returnTo: PanelView = daysPeek) =>
+  plannerSession(session, { type: "enterAccessPointEditing", returnTo });
 
 describe("planner modes", () => {
   it("the planner opens in normal mode", () => {
@@ -50,8 +56,8 @@ describe("planner modes", () => {
   });
 
   it("Done in normal mode changes nothing", () => {
-    const s = selected();
-    expect(plannerSession(s, { type: "leaveAccessPointEditing" })).toBe(s);
+    const session = selected();
+    expect(plannerSession(session, { type: "leaveAccessPointEditing" })).toBe(session);
   });
 
   it("the mode outlasts replacing the trip", () => {
@@ -62,12 +68,15 @@ describe("planner modes", () => {
 
 describe("the trip is frozen while editing access points (#227)", () => {
   const slipway = updateAccessPoint(
-    addAccessPoint([], { id: "near", at: nearA, now: T }),
+    addAccessPoint([], { id: "near", at: nearA, now: TIMESTAMP }),
     "near",
     { kind: "slipway", use: "both" },
-    T,
+    TIMESTAMP,
   );
-  const threePoints = [A, B, C].reduce((t, at) => applyEdit(t, { type: "addPoint", at }), emptyTrip());
+  const threePoints = [pointA, pointB, pointC].reduce(
+    (result, at) => applyEdit(result, { type: "addPoint", at }),
+    emptyTrip(),
+  );
   /** Editing access points with one snap offer and, as if left from before, point 1 selected. */
   const editing = (): PlannerSession => {
     const withOffer = plannerSession(firstSession({ trip: threePoints }), {
@@ -95,8 +104,8 @@ describe("the trip is frozen while editing access points (#227)", () => {
     ["undo", () => ({ type: "undo" })],
     ["point clicked", () => ({ type: "pointClicked", index: 2 })],
     ["leg clicked", () => ({ type: "legClicked", index: 0 })],
-    ["accept offer", (s) => ({ type: "acceptOffer", offer: s.offers[0] })],
-    ["decline offer", (s) => ({ type: "declineOffer", offer: s.offers[0] })],
+    ["accept offer", (session) => ({ type: "acceptOffer", offer: session.offers[0] })],
+    ["decline offer", (session) => ({ type: "declineOffer", offer: session.offers[0] })],
   ];
   for (const [name, make] of frozen) {
     it(`${name} changes nothing`, () => {
@@ -107,7 +116,7 @@ describe("the trip is frozen while editing access points (#227)", () => {
 
   it("the snap offers wait for Done, following a moved access point", () => {
     const before = editing();
-    const moved = updateAccessPoint(slipway, "near", { position: { lat: 50.3531, lng: 5.4563 } }, T);
+    const moved = updateAccessPoint(slipway, "near", { position: { lat: 50.3531, lng: 5.4563 } }, TIMESTAMP);
     const after = plannerSession(plannerSession(before, { type: "accessPointsChanged", accessPoints: moved }), {
       type: "leaveAccessPointEditing",
     });

@@ -5,7 +5,13 @@ import { dayWarnings } from "./dayWarnings";
 import { incidentsOn, incidentsOnLine, incidentText, type Incident } from "./incident";
 import { PASSING_TOLERANCE_M } from "./locks";
 import type { LegRoute } from "./router";
-import { fakeAccessRules, flandersSquare, forbiddenCanal, nearForbiddenCanal, onForbiddenCanal } from "./testing/fakeAccessRules";
+import {
+  fakeAccessRules,
+  flandersSquare,
+  forbiddenCanal,
+  nearForbiddenCanal,
+  onForbiddenCanal,
+} from "./testing/fakeAccessRules";
 import type { LatLng, Trip } from "./trip";
 import { legsAccess, tripAccess, type TripAccessOptions } from "./tripAccess";
 
@@ -35,11 +41,12 @@ describe("incidents on a leg's line (#217)", () => {
   // 0.001 degrees of latitude is about 111 m.
   const west: LatLng = { lat: 51.1, lng: 4.0 };
   const east: LatLng = { lat: 51.1, lng: 4.1 };
-  const at = (spwId: number, lng: number, lat: number) => incident({ id: `incident-${spwId}`, spwId, position: [lng, lat] });
+  const at = (spwId: number, lng: number, lat: number) =>
+    incident({ id: `incident-${spwId}`, spwId, position: [lng, lat] });
   const ids = (found: readonly Incident[]) => found.map((i) => i.spwId);
 
   it("uses the obstacles' tolerance: one just inside it counts and one just outside doesn't", () => {
-    const degrees = (m: number) => m / 111_195;
+    const degrees = (metres: number) => metres / 111_195;
     const inside = at(1, 4.05, 51.1 + degrees(PASSING_TOLERANCE_M - 5));
     const outside = at(2, 4.06, 51.1 + degrees(PASSING_TOLERANCE_M + 5));
     expect(ids(incidentsOnLine([west, east], [inside, outside]))).toEqual([1]);
@@ -56,9 +63,9 @@ describe("incident warnings in the trip's access (#217)", () => {
   const west: LatLng = { lat: 51.1, lng: 4.0 };
   const east: LatLng = { lat: 51.1, lng: 4.1 };
   const north: LatLng = { lat: 51.2, lng: 4.1 };
-  const routed = (a: LatLng, b: LatLng): LegRoute => ({
+  const routed = (pointA: LatLng, pointB: LatLng): LegRoute => ({
     status: "routed",
-    geometry: [a, b].map((p) => ({ ...p, elevation: 0 })),
+    geometry: [pointA, pointB].map((point) => ({ ...point, elevation: 0 })),
   });
   const rules = fakeAccessRules([flandersSquare, forbiddenCanal]);
   const today = "2026-11-02";
@@ -82,7 +89,9 @@ describe("incident warnings in the trip's access (#217)", () => {
     ...(startDate !== undefined && { startDate }),
   });
   const found = (trip: Trip, ...incidents: Incident[]) =>
-    tripAccess(trip, rules, reported(...incidents)).trip.incidentWarnings.map((w) => w.incident);
+    tripAccess(trip, rules, reported(...incidents)).trip.incidentWarnings.map(
+      (incidentWarning) => incidentWarning.incident,
+    );
 
   it("warns on the leg, the day and the trip, in leg order, with the leg's day and date", () => {
     const access = tripAccess(paddled, rules, reported(onSecond, onFirst));
@@ -96,7 +105,11 @@ describe("incident warnings in the trip's access (#217)", () => {
 
   it("gives a section the warnings of its own legs only", () => {
     const access = tripAccess(paddled, rules, reported(onFirst, onSecond));
-    expect(legsAccess(access, { firstLeg: 1, lastLeg: 1 }).incidentWarnings.map((w) => w.incident)).toEqual([onSecond]);
+    expect(
+      legsAccess(access, { firstLeg: 1, lastLeg: 1 }).incidentWarnings.map(
+        (incidentWarning) => incidentWarning.incident,
+      ),
+    ).toEqual([onSecond]);
   });
 
   it("gives no warning on a hike leg, on a paddle leg still being routed, or a leg it isn't near", () => {
@@ -127,8 +140,12 @@ describe("incident warnings in the trip's access (#217)", () => {
       camps: [1],
       startDate: "2026-11-30",
     };
-    const access = tripAccess(camped, rules, reported({ ...onFirst, expires: "2026-11-30" }, { ...onSecond, expires: "2026-11-30" }));
-    expect(access.days.map((d) => d.date)).toEqual(["2026-11-30", "2026-12-01"]);
+    const access = tripAccess(
+      camped,
+      rules,
+      reported({ ...onFirst, expires: "2026-11-30" }, { ...onSecond, expires: "2026-11-30" }),
+    );
+    expect(access.days.map((day) => day.date)).toEqual(["2026-11-30", "2026-12-01"]);
     expect(access.legs[0]!.incidentWarnings).toHaveLength(1);
     expect(access.legs[1]!.incidentWarnings).toEqual([]);
   });
@@ -167,7 +184,9 @@ describe("incident warnings in the trip's access (#217)", () => {
       snapshot: "2026-11-02",
     } as const;
     const { days } = tripAccess(paddled, rules, { ...reported(onFirst), obstacles: [obstacle] });
-    expect(dayWarnings(0, days[0], [{ kind: "put-in", point: 0, leg: 0, day: 0 }])).toEqual([{ leg: 0, kind: "incident", count: 3 }]);
+    expect(dayWarnings(0, days[0], [{ kind: "put-in", point: 0, leg: 0, day: 0 }])).toEqual([
+      { leg: 0, kind: "incident", count: 3 },
+    ]);
   });
 });
 

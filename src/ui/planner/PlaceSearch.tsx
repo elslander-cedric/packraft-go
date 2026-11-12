@@ -23,7 +23,9 @@ export default function PlaceSearch({ search }: { search: PlaceSearch }) {
   const [lastShown, setLastShown] = useState(shown);
   if (shown !== lastShown) {
     setLastShown(shown);
-    if (shown) setOpen(false);
+    if (shown) {
+      setOpen(false);
+    }
   }
   const box = useRef<HTMLDivElement>(null);
   const visibleArea = useVisibleArea(open, box);
@@ -31,16 +33,25 @@ export default function PlaceSearch({ search }: { search: PlaceSearch }) {
   const pill = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(open);
   useEffect(() => {
-    if (wasOpen.current && !open && document.activeElement === document.body) pill.current?.focus();
+    if (wasOpen.current && !open && document.activeElement === document.body) {
+      pill.current?.focus();
+    }
     wasOpen.current = open;
   }, [open]);
 
   if (!open) {
     return (
       <div className="planner-place-search">
-        <Button ref={pill} className="planner-search-pill" aria-label={text.pill(shown?.label)} onClick={() => setOpen(true)}>
+        <Button
+          ref={pill}
+          className="planner-search-pill"
+          aria-label={text.pill(shown?.label)}
+          onClick={() => setOpen(true)}
+        >
           <Icon icon={icons.search} />
-          <span className={shown ? "planner-search-pill-text" : "planner-search-pill-text planner-search-pill-placeholder"}>
+          <span
+            className={shown ? "planner-search-pill-text" : "planner-search-pill-text planner-search-pill-placeholder"}
+          >
             {shown?.label ?? text.placeholder}
           </span>
         </Button>
@@ -63,7 +74,9 @@ export default function PlaceSearch({ search }: { search: PlaceSearch }) {
       className="planner-place-search planner-place-search-open"
       style={visibleArea}
       onKeyDown={(event) => {
-        if (event.key === "Escape") close();
+        if (event.key === "Escape") {
+          close();
+        }
       }}
     >
       <PlaceSearchBar

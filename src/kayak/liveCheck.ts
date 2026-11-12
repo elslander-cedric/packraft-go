@@ -43,7 +43,12 @@ type LayerName = keyof KayakAnswers;
 const LAYERS: readonly { key: LayerName; title: string; fixture: string; url: string }[] = [
   { key: "stretches", title: "layer 5 (stretches)", fixture: "layer5-stretches.json", url: stretchesUrl() },
   { key: "incidents", title: "layer 0 (incidents)", fixture: "layer0-incidents.json", url: incidentsUrl() },
-  { key: "aires", title: "layer 3 (aires)", fixture: "layer3-aires.json", url: pkayakQuery(PKAYAK_LAYERS.aires, AIRE_FIELDS) },
+  {
+    key: "aires",
+    title: "layer 3 (aires)",
+    fixture: "layer3-aires.json",
+    url: pkayakQuery(PKAYAK_LAYERS.aires, AIRE_FIELDS),
+  },
   {
     key: "obstacles",
     title: "layer 1 (obstacles)",
@@ -63,8 +68,11 @@ function fieldsOfRows(rows: Record<string, unknown>[]): Layer["fields"] {
   const fields: Layer["fields"] = new Map();
   for (const row of rows) {
     for (const [name, value] of Object.entries(row)) {
-      if (value !== null) fields.set(name, typeof value);
-      else if (!fields.has(name)) fields.set(name, null);
+      if (value !== null) {
+        fields.set(name, typeof value);
+      } else if (!fields.has(name)) {
+        fields.set(name, null);
+      }
     }
   }
   return fields;
@@ -78,26 +86,37 @@ function readLayer(body: string): Layer | string {
   } catch {
     return "answer is not JSON";
   }
-  if (json?.error) return `ArcGIS error: ${JSON.stringify(json.error.message ?? json.error)}`;
-  if (!Array.isArray(json?.features)) return "answer has no features";
+  if (json?.error) {
+    return `ArcGIS error: ${JSON.stringify(json.error.message ?? json.error)}`;
+  }
+  if (!Array.isArray(json?.features)) {
+    return "answer has no features";
+  }
   const features = json.features as { attributes?: Record<string, unknown>; properties?: Record<string, unknown> }[];
-  const rows = features.map((f) => f.attributes ?? f.properties ?? {});
+  const rows = features.map((feature) => feature.attributes ?? feature.properties ?? {});
   const listed = json.fields as { name: string; type: string }[] | undefined;
-  const fields = listed ? new Map(listed.map((f) => [f.name, f.type])) : fieldsOfRows(rows);
+  const fields = listed ? new Map(listed.map((field) => [field.name, field.type])) : fieldsOfRows(rows);
   return { rows, fields, answer: json as unknown as PkayakAnswer };
 }
 
 /** Whether every field the app relies on came back. */
 function compareFields(title: string, live: Layer, recorded: Layer, report: Report): boolean {
   const missing = [...recorded.fields.keys()].filter((name) => !live.fields.has(name));
-  if (missing.length > 0) report.mismatch(`${title}: no field ${missing.join(", ")} any more`);
-  else report.match(`${title}: has ${[...recorded.fields.keys()].join(", ")}`);
+  if (missing.length > 0) {
+    report.mismatch(`${title}: no field ${missing.join(", ")} any more`);
+  } else {
+    report.match(`${title}: has ${[...recorded.fields.keys()].join(", ")}`);
+  }
   for (const [name, type] of recorded.fields) {
     const liveType = live.fields.get(name);
-    if (type && liveType && liveType !== type) report.drift(`${title}: field ${name} is now ${liveType}, fixture has ${type}`);
+    if (type && liveType && liveType !== type) {
+      report.drift(`${title}: field ${name} is now ${liveType}, fixture has ${type}`);
+    }
   }
   const added = [...live.fields.keys()].filter((name) => !recorded.fields.has(name));
-  if (added.length > 0) report.drift(`${title}: new field ${added.join(", ")}`);
+  if (added.length > 0) {
+    report.drift(`${title}: new field ${added.join(", ")}`);
+  }
   return missing.length === 0;
 }
 
@@ -113,7 +132,9 @@ function compareStretches(live: Layer, recorded: Layer, report: Report) {
   const title = "layer 5 (stretches)";
   const unknown = live.rows.filter((row) => !isKnownStatus(String(row.stapub)));
   for (const row of unknown) {
-    report.mismatch(`${title}: status code ${String(row.stapub)} on ${String(row.nomtro)}, which the app doesn't know: it reads as unknown`);
+    report.mismatch(
+      `${title}: status code ${String(row.stapub)} on ${String(row.nomtro)}, which the app doesn't know: it reads as unknown`,
+    );
   }
   if (unknown.length === 0) {
     const codes = [...new Set(live.rows.map((row) => String(row.stapub)))].toSorted();
@@ -122,8 +143,12 @@ function compareStretches(live: Layer, recorded: Layer, report: Report) {
   const [liveIds, recordedIds] = [stretchIds(live), stretchIds(recorded)];
   const added = liveIds.filter((id) => !recordedIds.includes(id));
   const gone = recordedIds.filter((id) => !liveIds.includes(id));
-  if (added.length > 0) report.drift(`${title}: new official stretch ${added.join(", ")}`);
-  if (gone.length > 0) report.drift(`${title}: official stretch gone: ${gone.join(", ")}`);
+  if (added.length > 0) {
+    report.drift(`${title}: new official stretch ${added.join(", ")}`);
+  }
+  if (gone.length > 0) {
+    report.drift(`${title}: official stretch gone: ${gone.join(", ")}`);
+  }
 }
 
 /** Any date: the snapshots built here are thrown away. */
@@ -142,11 +167,22 @@ function comparePreparation(title: string, build: () => unknown, report: Report)
 function compareObstacles(live: Layer, report: Report) {
   const title = "layer 1 (obstacles)";
   const isKnown = (code: unknown) => String(code) in OBSTACLE_KINDS;
-  const unknown = [...new Set(live.rows.map((row) => row.codico).filter((code) => !isKnown(code)).map(String))];
+  const unknown = [
+    ...new Set(
+      live.rows
+        .map((row) => row.codico)
+        .filter((code) => !isKnown(code))
+        .map(String),
+    ),
+  ];
   if (unknown.length > 0) {
-    report.drift(`${title}: obstacle codes ${unknown.join(", ")} aren't shown by the app; prepare:spw-data refuses until that's decided`);
+    report.drift(
+      `${title}: obstacle codes ${unknown.join(", ")} aren't shown by the app; prepare:spw-data refuses until that's decided`,
+    );
   } else {
-    const codes = [...new Set(live.rows.map((row) => String(row.codico)))].toSorted((a, b) => Number(a) - Number(b));
+    const codes = [...new Set(live.rows.map((row) => String(row.codico)))].toSorted(
+      (left, right) => Number(left) - Number(right),
+    );
     report.match(`${title}: obstacle codes ${codes.join(", ")} are all known`);
   }
   const features = live.answer.features.filter((feature) => isKnown(feature.properties.codico));
@@ -168,9 +204,13 @@ async function compareAdapter(live: KayakAnswers, report: Report) {
   });
   const [readings, incidents] = [await source.readings(), await source.incidents()];
   const compare = (what: string, read: number | null, total: unknown[]) => {
-    if (read === null) report.mismatch(`adapter can't read the ${what}`);
-    else if (read === total.length) report.match(`adapter reads ${read} of ${total.length} ${what}`);
-    else report.mismatch(`adapter reads ${read} of ${total.length} ${what}`);
+    if (read === null) {
+      report.mismatch(`adapter can't read the ${what}`);
+    } else if (read === total.length) {
+      report.match(`adapter reads ${read} of ${total.length} ${what}`);
+    } else {
+      report.mismatch(`adapter reads ${read} of ${total.length} ${what}`);
+    }
   };
   const rows = (answer: RecordedResponse) => {
     const layer = readLayer(answer.body);
@@ -192,8 +232,12 @@ export async function compareWithFixture(live: KayakAnswers, recorded: KayakAnsw
   let stretches: readonly string[] = [];
   for (const { key, title } of LAYERS) {
     const fromRecording = readLayer(recorded[key].body);
-    if (typeof fromRecording === "string") throw new Error(`recorded fixture is not a PKAYAK answer: ${fromRecording}`);
-    if (key === "stretches") stretches = stretchIds(fromRecording);
+    if (typeof fromRecording === "string") {
+      throw new Error(`recorded fixture is not a PKAYAK answer: ${fromRecording}`);
+    }
+    if (key === "stretches") {
+      stretches = stretchIds(fromRecording);
+    }
     const answer = live[key];
     if (answer.status === 0) {
       report.mismatch(`${title}: no answer (${answer.body})`);
@@ -216,13 +260,19 @@ export async function compareWithFixture(live: KayakAnswers, recorded: KayakAnsw
     if (key !== "incidents" && layer.rows.length !== fromRecording.rows.length) {
       report.drift(`${title}: ${layer.rows.length} records, fixture has ${fromRecording.rows.length}`);
     }
-    if (!compareFields(title, layer, fromRecording, report)) continue;
+    if (!compareFields(title, layer, fromRecording, report)) {
+      continue;
+    }
     if (key === "stretches") {
       compareStretches(layer, fromRecording, report);
       stretches = stretchIds(layer);
     }
-    if (key === "aires") compareAires(layer, stretches, report);
-    if (key === "obstacles") compareObstacles(layer, report);
+    if (key === "aires") {
+      compareAires(layer, stretches, report);
+    }
+    if (key === "obstacles") {
+      compareObstacles(layer, report);
+    }
   }
   await compareAdapter(live, report);
   return findings;
@@ -243,7 +293,9 @@ export async function runKayakCheck(deps: KayakCheckDeps): Promise<KayakCheckRes
   const recorded: Partial<KayakAnswers> = {};
   for (const [i, { key, fixture, url }] of LAYERS.entries()) {
     recorded[key] = { status: 200, body: deps.readFixture(fixture) };
-    if (i > 0) await deps.wait(KAYAK_CHECK_DELAY_MS);
+    if (i > 0) {
+      await deps.wait(KAYAK_CHECK_DELAY_MS);
+    }
     try {
       const response = await deps.fetch(url, { headers: { "User-Agent": KAYAK_CHECK_USER_AGENT } });
       answers[key] = { status: response.status, body: await response.text() };
@@ -254,13 +306,21 @@ export async function runKayakCheck(deps: KayakCheckDeps): Promise<KayakCheckRes
   const findings = await compareWithFixture(answers as KayakAnswers, recorded as KayakAnswers);
 
   const lines = ["", ...LAYERS.map(({ url }) => `  ${url}`), ""];
-  for (const finding of findings) lines.push(`  ${finding.level.toUpperCase().padEnd(8)} ${finding.message}`);
-  const mismatches = findings.filter((f) => f.level === "mismatch").length;
-  const drifts = findings.filter((f) => f.level === "drift").length;
+  for (const finding of findings) {
+    lines.push(`  ${finding.level.toUpperCase().padEnd(8)} ${finding.message}`);
+  }
+  const mismatches = findings.filter((finding) => finding.level === "mismatch").length;
+  const drifts = findings.filter((finding) => finding.level === "drift").length;
 
   lines.push("");
-  if (mismatches > 0) lines.push(`FAILED: ${mismatches} mismatch(es). The live service no longer answers the way the app expects.`);
-  else if (drifts > 0) lines.push(`PASSED with ${drifts} drift(s): the app still copes, but consider re-recording the fixtures or refreshing the snapshots.`);
-  else lines.push("PASSED: the live service still matches the recorded fixtures.");
+  if (mismatches > 0) {
+    lines.push(`FAILED: ${mismatches} mismatch(es). The live service no longer answers the way the app expects.`);
+  } else if (drifts > 0) {
+    lines.push(
+      `PASSED with ${drifts} drift(s): the app still copes, but consider re-recording the fixtures or refreshing the snapshots.`,
+    );
+  } else {
+    lines.push("PASSED: the live service still matches the recorded fixtures.");
+  }
   return { passed: mismatches === 0, report: lines.join("\n") };
 }

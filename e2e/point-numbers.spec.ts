@@ -11,7 +11,7 @@ import { mapRegion, openPlanner, points } from "./support/planner";
 const numbers = (page: Page) => mapRegion(page).locator(".point-number");
 /** The numbers shown, in order (a newly numbered point's label is added last). */
 const shownNumbers = (page: Page) =>
-  expect.poll(async () => (await numbers(page).allTextContents()).map(Number).sort((a, b) => a - b));
+  expect.poll(async () => (await numbers(page).allTextContents()).map(Number).sort((left, right) => left - right));
 
 async function seedTrip(page: Page) {
   const trip = {
@@ -51,7 +51,9 @@ test("every point shows its number close in, only the ends and the selected one 
   const box = (await points(page).nth(1).boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(points(page).nth(1)).toHaveClass(/point-selected/);
-  await expect(page.getByRole("group", { name: /^Point 2 · / })).toContainText(strings.planner.selectedPointShortName(2));
+  await expect(page.getByRole("group", { name: /^Point 2 · / })).toContainText(
+    strings.planner.selectedPointShortName(2),
+  );
   await shownNumbers(page).toEqual([1, 2, 4]);
 
   expect(network.blocked).toEqual([]);

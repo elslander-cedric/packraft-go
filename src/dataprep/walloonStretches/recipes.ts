@@ -74,7 +74,9 @@ export const STRETCH_RECIPES: readonly StretchRecipe[] = [
   },
   {
     id: "1B1b",
-    from: { recipe: { kind: "offset", base: { kind: "bridge", name: "Remouchamps", near: "Remouchamps" }, metres: -200 } },
+    from: {
+      recipe: { kind: "offset", base: { kind: "bridge", name: "Remouchamps", near: "Remouchamps" }, metres: -200 },
+    },
     to: { recipe: { kind: "sameAs", stretch: "1A1", end: "from" } },
   },
   {

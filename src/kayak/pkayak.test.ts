@@ -3,7 +3,14 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import builtIn from "@/data/walloon-stretches.json";
-import { CACHE_MS, PKAYAK_URL, REQUEST_TIMEOUT_MS, createPkayakStatusSource, incidentsUrl, stretchesUrl } from "./pkayak";
+import {
+  CACHE_MS,
+  PKAYAK_URL,
+  REQUEST_TIMEOUT_MS,
+  createPkayakStatusSource,
+  incidentsUrl,
+  stretchesUrl,
+} from "./pkayak";
 
 const RECORDED = readFileSync(path.join(__dirname, "fixtures", "layer5-stretches.json"), "utf8");
 const RECORDED_INCIDENTS = readFileSync(path.join(__dirname, "fixtures", "layer0-incidents.json"), "utf8");
@@ -27,9 +34,15 @@ function fakeServer(
     requests.push(url);
     signals.push(init?.signal);
     const answer = url.pathname.endsWith("/0/query") ? incidentsReply : reply;
-    if (answer === "network-error") throw new TypeError("Failed to fetch");
-    if (answer === "hangs") return new Promise<Response>(() => {});
-    if (answer === "hangs-in-body") return new Response(new ReadableStream());
+    if (answer === "network-error") {
+      throw new TypeError("Failed to fetch");
+    }
+    if (answer === "hangs") {
+      return new Promise<Response>(() => {});
+    }
+    if (answer === "hangs-in-body") {
+      return new Response(new ReadableStream());
+    }
     return new Response(answer.body, { status: answer.status });
   };
   return {
@@ -44,14 +57,16 @@ function fakeServer(
         setTimer: (fire, ms) => {
           const timer = { at: clock + ms, fire };
           timers.push(timer);
-          return () => (timers = timers.filter((t) => t !== timer));
+          return () => (timers = timers.filter((otherTimer) => otherTimer !== timer));
         },
       }),
     advance(ms: number) {
       clock += ms;
-      const due = timers.filter((t) => t.at <= clock);
-      timers = timers.filter((t) => t.at > clock);
-      for (const timer of due) timer.fire();
+      const due = timers.filter((timer) => timer.at <= clock);
+      timers = timers.filter((timer) => timer.at > clock);
+      for (const timer of due) {
+        timer.fire();
+      }
     },
   };
 }
@@ -97,7 +112,9 @@ describe("the request", () => {
 describe("reading the recorded answer", () => {
   it("gives a reading per official stretch, with its code", async () => {
     const readings = await fakeServer().source().readings();
-    if (readings.status !== "ok") throw new Error("expected readings");
+    if (readings.status !== "ok") {
+      throw new Error("expected readings");
+    }
     expect(Object.keys(readings.stretches)).toHaveLength(21);
     expect(readings.stretches["SEMOIS4-5"].code).toBe("1");
     expect(readings.stretches["AMBLEVE3"].code).toBe("0");
@@ -105,7 +122,9 @@ describe("reading the recorded answer", () => {
 
   it("keeps the SPW's French reason, and no reason where it gives none or an empty one", async () => {
     const readings = await fakeServer().source().readings();
-    if (readings.status !== "ok") throw new Error("expected readings");
+    if (readings.status !== "ok") {
+      throw new Error("expected readings");
+    }
     expect(readings.stretches["AMBLEVE3"]).toEqual({
       code: "0",
       reasonFr: "Rivière non sécurisée suite aux inondations",
@@ -116,10 +135,16 @@ describe("reading the recorded answer", () => {
 
   it("knows every official stretch the app's data names", async () => {
     const readings = await fakeServer().source().readings();
-    if (readings.status !== "ok") throw new Error("expected readings");
-    const stretches = builtIn.stretches.flatMap((s) => ("officialStretch" in s ? [s.officialStretch as string] : []));
+    if (readings.status !== "ok") {
+      throw new Error("expected readings");
+    }
+    const stretches = builtIn.stretches.flatMap((stretch) =>
+      "officialStretch" in stretch ? [stretch.officialStretch as string] : [],
+    );
     expect(stretches.length).toBeGreaterThan(0);
-    for (const id of stretches) expect(readings.stretches).toHaveProperty([id]);
+    for (const id of stretches) {
+      expect(readings.stretches).toHaveProperty([id]);
+    }
   });
 });
 
@@ -128,11 +153,20 @@ describe("parsing", () => {
 
   it("keeps the English reason beside the French", async () => {
     const readings = await readingsOf(answer([{ nomtro: "A", stapub: "0", justie: " Too low ", justif: "Trop bas" }]));
-    expect(readings).toEqual({ status: "ok", stretches: { A: { code: "0", reasonEn: "Too low", reasonFr: "Trop bas" } } });
+    expect(readings).toEqual({
+      status: "ok",
+      stretches: { A: { code: "0", reasonEn: "Too low", reasonFr: "Trop bas" } },
+    });
   });
 
   it("keeps a code as the SPW gives it, for the core to judge", async () => {
-    const readings = await readingsOf(answer([{ nomtro: "A", stapub: "7" }, { nomtro: "B", stapub: 1 }, { nomtro: "C", stapub: null }]));
+    const readings = await readingsOf(
+      answer([
+        { nomtro: "A", stapub: "7" },
+        { nomtro: "B", stapub: 1 },
+        { nomtro: "C", stapub: null },
+      ]),
+    );
     expect(readings).toEqual({
       status: "ok",
       stretches: { A: { code: "7" }, B: { code: "1" }, C: { code: "" } },
@@ -156,13 +190,16 @@ describe("parsing", () => {
 });
 
 describe("the timeout", () => {
-  it.each<Reply>(["hangs", "hangs-in-body"])("a request that %s fails after the timeout, and is aborted", async (reply) => {
-    const server = fakeServer(reply);
-    const answered = server.source().readings();
-    server.advance(REQUEST_TIMEOUT_MS);
-    expect(await answered).toEqual({ status: "failed" });
-    expect(server.signals[0]?.aborted).toBe(true);
-  });
+  it.each<Reply>(["hangs", "hangs-in-body"])(
+    "a request that %s fails after the timeout, and is aborted",
+    async (reply) => {
+      const server = fakeServer(reply);
+      const answered = server.source().readings();
+      server.advance(REQUEST_TIMEOUT_MS);
+      expect(await answered).toEqual({ status: "failed" });
+      expect(server.signals[0]?.aborted).toBe(true);
+    },
+  );
 
   it("an answer in time isn't cut off later", async () => {
     const server = fakeServer();
@@ -229,7 +266,9 @@ describe("the 15-minute cache", () => {
 describe("the incidents", () => {
   const recorded = async () => {
     const incidents = await fakeServer().source().incidents();
-    if (incidents.status !== "ok") throw new Error("expected incidents");
+    if (incidents.status !== "ok") {
+      throw new Error("expected incidents");
+    }
     return incidents.incidents;
   };
   const incidentsOf = (reply: Reply) => fakeServer(undefined, reply).source().incidents();
@@ -268,7 +307,9 @@ describe("the incidents", () => {
     const answered = await incidentsOf(
       incidentsAnswer({ attributes: { id: 7, commen: "Travaux", commene: "  " }, geometry: POINT }),
     );
-    if (answered.status !== "ok") throw new Error("expected incidents");
+    if (answered.status !== "ok") {
+      throw new Error("expected incidents");
+    }
     expect(answered.incidents[0].textFr).toBe("Travaux");
     expect(answered.incidents[0]).not.toHaveProperty("textEn");
   });
@@ -282,7 +323,9 @@ describe("the incidents", () => {
         { attributes: { id: 4, commen: "Kept" }, geometry: POINT },
       ),
     );
-    if (answered.status !== "ok") throw new Error("expected incidents");
+    if (answered.status !== "ok") {
+      throw new Error("expected incidents");
+    }
     expect(answered.incidents.map((incident) => incident.spwId)).toEqual([4]);
   });
 
