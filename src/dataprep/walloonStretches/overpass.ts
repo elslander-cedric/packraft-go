@@ -17,6 +17,8 @@ export type OverpassElement = {
   lat?: number;
   lon?: number;
   tags?: Record<string, string>;
+  /** A way's node ids, in order (with `out geom`, beside its geometry). */
+  nodes?: number[];
   geometry?: Array<{ lat: number; lon: number } | null>;
 };
 export type OverpassResult = { elements: OverpassElement[] };

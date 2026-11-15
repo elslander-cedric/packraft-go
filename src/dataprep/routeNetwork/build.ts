@@ -5,10 +5,11 @@ import type { AccessSource } from "@/core/access";
 import type { CalendarDate } from "@/core/calendarDate";
 import type { Position } from "@/core/geo";
 import type { AccessPointUse } from "@/core/accessPoints";
-import { ROUTE_NETWORK_FORMAT, ROUTE_NETWORK_VERSION, type RouteNetwork, type RouteNode } from "@/core/routeNetwork";
+import { ROUTE_NETWORK_FORMAT, ROUTE_NETWORK_VERSION, type PaddleLink, type RouteNetwork, type RouteNode } from "@/core/routeNetwork";
 import { distanceM, project } from "../walloonStretches/geo";
 import type { OverpassResult } from "../walloonStretches/overpass";
 import { orientRecord, toPt } from "./direction";
+import { bankNetwork, type BankInputs } from "./banks";
 import { paddleLinks, type BrokenLink, type PreparedRecord, type Station } from "./links";
 import { markersOnRecord, type MarkerInput, type ObstacleInput } from "./markers";
 
@@ -30,6 +31,8 @@ export type NetworkInputs = {
   readonly locks: readonly MarkerInput[];
   readonly sources: readonly AccessSource[];
   readonly snapshot: CalendarDate;
+  /** Outside Wallonia: the waters and paths for bank spots. Without it, the network has none. */
+  readonly banks?: BankInputs;
 };
 
 /** What the maintainer should look at before shipping the network. */
@@ -42,6 +45,8 @@ export type NetworkReport = {
   readonly airesOffWater: readonly string[];
   /** Neighbouring nodes with a barrier between them. */
   readonly broken: readonly BrokenLink[];
+  /** Links between bank spots dropped because part of their water has no access rule (outside Belgium). */
+  readonly unruled: readonly string[];
 };
 
 export const ROUTE_NETWORK_TITLE = "Route network for suggested trips";
@@ -104,6 +109,11 @@ export function buildRouteNetwork(inputs: NetworkInputs): { network: RouteNetwor
     position: aire.position,
   }));
   const onWater = new Set(stations.map((station) => station.node));
+  const banks = inputs.banks
+    ? bankNetwork(inputs.banks, inputs)
+    : { nodes: [], links: [], broken: [], unruled: [] };
+  const byEnds = (a: PaddleLink, b: PaddleLink) =>
+    `${a.from}>${a.to}`.localeCompare(`${b.from}>${b.to}`, "en", { numeric: true });
   return {
     network: {
       format: ROUTE_NETWORK_FORMAT,
@@ -112,14 +122,15 @@ export function buildRouteNetwork(inputs: NetworkInputs): { network: RouteNetwor
       attribution: ROUTE_NETWORK_ATTRIBUTION,
       sources: inputs.sources,
       snapshot: inputs.snapshot,
-      nodes,
-      paddleLinks: links,
+      nodes: [...nodes, ...banks.nodes],
+      paddleLinks: [...links, ...banks.links].sort(byEnds),
     },
     report: {
       disagreeing,
       withoutOsm,
       airesOffWater: inputs.aires.filter((aire) => !onWater.has(aire.id)).map((aire) => aire.id),
-      broken,
+      broken: [...broken, ...banks.broken],
+      unruled: banks.unruled,
     },
   };
 }

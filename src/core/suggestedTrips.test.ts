@@ -572,3 +572,40 @@ describe("suggested trips: hike and paddle", () => {
     expect(stops(search({ network: ways, wishes: wishes({ hikeKm: 5 }) }))).toEqual(["Q>B2>C2", "P>B>C"]);
   });
 });
+
+describe("bank spots", () => {
+  /** A region record covering the nodes from x = 10 on, as Wallonia. */
+  const wallonia: AccessRecord = {
+    ...fixedRecord("wallonia", "forbidden"),
+    scope: "region",
+    region: "wallonia",
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [5.095, 50],
+          [5.5, 50],
+          [5.5, 51],
+          [5.095, 51],
+          [5.095, 50],
+        ],
+      ],
+    },
+  };
+  const withWallonia: AccessRules = { records: [...rules.records, wallonia] };
+  const bankSpot = (id: string, x: number): RouteNode => ({ ...node(id, x), kind: "bank-spot" });
+
+  it("gets in and out at bank spots outside Wallonia", () => {
+    const spots = network([bankSpot("A", 0), bankSpot("B", 1)], [link("A", "B", 10)]);
+    expect(stops(search({ rules: withWallonia, network: spots }))).toEqual(["A>B"]);
+  });
+
+  it("never uses a bank spot in Wallonia, where only official aires and access points are allowed", () => {
+    const mixed = network(
+      [bankSpot("A", 10), node("B", 11), node("C", 12)],
+      [link("A", "B", 10), link("B", "C", 10)],
+      [walk("A", "C", 3)],
+    );
+    expect(stops(search({ rules: withWallonia, network: mixed }))).toEqual(["B>C"]);
+  });
+});

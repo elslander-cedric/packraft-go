@@ -9,12 +9,13 @@ import type { AccessPointUse } from "./accessPoints";
 export const ROUTE_NETWORK_FORMAT = "packraft-go/route-network";
 export const ROUTE_NETWORK_VERSION = 1;
 
-export const routeNodeKinds = ["official-aire"] as const;
+/** `bank-spot`: outside Wallonia, where a path or road reaches the bank (GLOSSARY "Bank spot"). */
+export const routeNodeKinds = ["official-aire", "bank-spot"] as const;
 export type RouteNodeKind = (typeof routeNodeKinds)[number];
 
 /** A place a suggested trip may get in or out. */
 export type RouteNode = {
-  /** For an official aire, the aire's own id (`official-aire-<number>`). */
+  /** For an official aire, the aire's own id (`official-aire-<number>`); for a bank spot, `bank-spot-<OSM node id>`. */
   readonly id: string;
   readonly kind: RouteNodeKind;
   readonly use: AccessPointUse;

@@ -12,7 +12,7 @@ import {
 } from "./testing/fakeAccessRules";
 import type { Trip } from "./trip";
 import { tripAccess } from "./tripAccess";
-import { suggestionAccess, tripFromSuggestion } from "./tripFromSuggestion";
+import { bankSpotsOf, isTripFrom, suggestionAccess, tripFromSuggestion } from "./tripFromSuggestion";
 
 const rules = fakeAccessRules([flandersSquare, agreementStretch]);
 
@@ -156,5 +156,21 @@ describe("using a suggested trip", () => {
       shown.legs[0]?.obstacleWarnings.map((warning) => warning.obstacle.id),
     ).toEqual(leg.obstacles);
     expect(shown.legs[0]?.date).toBe("2027-07-10");
+  });
+});
+
+describe("bank spots of a used suggestion", () => {
+  const spotA: RouteNode = { ...putIn, id: "bank-spot-1", kind: "bank-spot" };
+  const spotB: RouteNode = { ...takeOut, id: "bank-spot-2", kind: "bank-spot" };
+  const throughSpots: SuggestedTrip = { ...hikeAndPaddle, nodes: [start, spotA, spotB, start] };
+
+  it("are the suggestion's bank spots, once each, and no aire", () => {
+    expect(bankSpotsOf(throughSpots).map((node) => node.id)).toEqual(["bank-spot-1", "bank-spot-2"]);
+    expect(bankSpotsOf(suggestion)).toEqual([]);
+  });
+
+  it("are offered only once the trip is the suggestion", () => {
+    expect(isTripFrom(tripFromSuggestion(throughSpots, "2027-07-10"), throughSpots)).toBe(true);
+    expect(isTripFrom(tripFromSuggestion(suggestion, "2027-07-10"), throughSpots)).toBe(false);
   });
 });

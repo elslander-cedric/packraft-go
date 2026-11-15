@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { recordsAt, regionsAt } from "@/core/access";
 import { distanceM, projectOntoLine } from "@/core/geo";
 import { PASSING_TOLERANCE_M } from "@/core/locks";
 import {
@@ -48,10 +49,28 @@ describe("the built-in route network", () => {
     for (const node of network.nodes) {
       expect(routeNodeKinds, node.id).toContain(node.kind);
       expect(inBelgium(node.position), node.id).toBe(true);
+      if (node.kind !== "official-aire") continue;
       const aire = airesById.get(node.id);
       expect(aire, node.id).toBeDefined();
       expect([node.use, node.position], node.id).toEqual([aire?.use, aire?.position]);
     }
+  });
+
+  it("has bank spots in Flanders and Brussels, used both ways, never in Wallonia nor on a VMM agreement stretch", () => {
+    const spots = network.nodes.filter((node) => node.kind === "bank-spot");
+    expect(spots.length).toBeGreaterThan(0);
+    const wrong = spots.flatMap((spot) => {
+      const at = { lat: spot.position[1], lng: spot.position[0] };
+      const regions = regionsAt(at, builtInAccessRules);
+      const vmm = recordsAt(at, builtInAccessRules).filter((record) => record.id.startsWith("flanders-vmm-"));
+      const problems = [
+        ...(regions.includes("wallonia") || regions.length === 0 ? [`in ${regions.join(", ") || "no region"}`] : []),
+        ...vmm.map((record) => `on ${record.id}`),
+        ...(spot.use === "both" ? [] : [`use ${spot.use}`]),
+      ];
+      return problems.map((problem) => `${spot.id}: ${problem}`);
+    });
+    expect(wrong).toEqual([]);
   });
 
   it("gives every paddle link known nodes, a direction, a distance and its access records", () => {

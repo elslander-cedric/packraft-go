@@ -1,6 +1,6 @@
 import { useId, useMemo } from "react";
 import type { SuggestedTrip } from "@/core/suggestedTrips";
-import { suggestionAccess } from "@/core/tripFromSuggestion";
+import { bankSpotsOf, suggestionAccess } from "@/core/tripFromSuggestion";
 import { Button } from "../components/Button";
 import { formatDuration, formatElevation, formatShare } from "../format";
 import { Icon } from "../icons/Icon";
@@ -53,6 +53,7 @@ export default function SuggestedTripDetails({
       ),
     ),
   ].filter((name) => name !== undefined);
+  const bankSpots = bankSpotsOf(trip).length;
   const rivers = [...new Set(trip.legs.flatMap((leg) => (leg.mode === "paddle" ? leg.waters : [])))];
 
   return (
@@ -86,6 +87,7 @@ export default function SuggestedTripDetails({
       {aireNames.length > 0 && (
         <p>{`${text.airesLabel}: ${aireNames.join(", ")}`}</p>
       )}
+      {bankSpots > 0 && <p>{text.bankSpots(bankSpots)}</p>}
       {access?.legs.map(
         (leg) => leg && <LegAccessView key={leg.leg} access={leg} />,
       )}

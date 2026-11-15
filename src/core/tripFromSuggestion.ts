@@ -2,6 +2,7 @@
 // details show before it is used.
 import type { AccessRules } from "./access";
 import type { CalendarDate } from "./calendarDate";
+import type { RouteNode } from "./routeNetwork";
 import type { SuggestedTrip } from "./suggestedTrips";
 import { setStartDate, type Trip } from "./trip";
 import {
@@ -24,6 +25,20 @@ export function tripFromSuggestion(
     legs: suggestion.legs.map((leg) => ({ mode: leg.mode })),
   };
   return setStartDate(trip, date);
+}
+
+/** The bank spots a suggestion gets in or out at, once each: unchecked on the ground, so worth saving. */
+export function bankSpotsOf(suggestion: SuggestedTrip): RouteNode[] {
+  const spots = suggestion.nodes.filter((node) => node.kind === "bank-spot");
+  return spots.filter((node, i) => spots.findIndex((other) => other.id === node.id) === i);
+}
+
+/** True when the trip's points are the suggestion's nodes: it is the suggestion, used. */
+export function isTripFrom(trip: Trip, suggestion: SuggestedTrip): boolean {
+  return (
+    trip.points.length === suggestion.nodes.length &&
+    trip.points.every(({ lat, lng }, i) => lng === suggestion.nodes[i].position[0] && lat === suggestion.nodes[i].position[1])
+  );
 }
 
 /**

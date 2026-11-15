@@ -6,6 +6,7 @@
 //
 //   npm run prepare:route-network              # reuses cached Overpass and BRouter answers
 //   npm run prepare:route-network -- --offline # refuses to ask Overpass or BRouter
+//   npm run prepare:route-network -- --count-walks # says how many walks BRouter would be asked for, and stops
 //
 // Politeness: one request at a time with a pause between them, identified by the project URL
 // only, every answer cached in .cache/route-network-osm/ and .cache/route-network-brouter/
@@ -19,10 +20,11 @@ import { dateInBrussels } from "../src/core/calendarDate";
 import type { WalkingLink } from "../src/core/routeNetwork";
 import { createBRouterClient } from "../src/dataprep/routeNetwork/brouterClient";
 import { buildRouteNetwork, type NetworkInputs } from "../src/dataprep/routeNetwork/build";
-import { recordQuery } from "../src/dataprep/routeNetwork/overpass";
+import { bankSpotQuery, bankSpotTiles, recordQuery } from "../src/dataprep/routeNetwork/overpass";
 import { serialiseRouteNetwork } from "../src/dataprep/routeNetwork/serialise";
 import { WALKING_CEILING_M, walkingLink, walkingPairs, walkingUrl } from "../src/dataprep/routeNetwork/walking";
-import { createOverpassClient, type OverpassResult } from "../src/dataprep/walloonStretches/overpass";
+import { createOverpassClient, type OverpassElement, type OverpassResult } from "../src/dataprep/walloonStretches/overpass";
+import { builtInAccessRules } from "../src/access/builtInRules";
 
 const ROOT = path.join(import.meta.dirname, "..");
 const CACHE_DIR = path.join(ROOT, ".cache", "route-network-osm");
@@ -30,6 +32,7 @@ const BROUTER_CACHE_DIR = path.join(ROOT, ".cache", "route-network-brouter");
 const OUT = path.join(ROOT, "src", "access", "data", "route-network.json");
 const ENDPOINT = process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";
 const offline = process.argv.includes("--offline");
+const countWalks = process.argv.includes("--count-walks");
 
 type StretchFile = {
   sources: { annex1: string };
@@ -78,6 +81,16 @@ for (const record of records) {
   osm[record.id] = await overpass.query(recordQuery(record.line));
 }
 
+const flemishRegions = builtInAccessRules.records.filter(
+  (record) => record.scope === "region" && record.region !== "wallonia",
+);
+const tiles = bankSpotTiles(flemishRegions.map((record) => record.geometry));
+const bankElements: OverpassElement[] = [];
+for (const [i, tile] of tiles.entries()) {
+  console.log(`OSM: bank spot tile ${i + 1} of ${tiles.length} (${tile.join(", ")})`);
+  bankElements.push(...(await overpass.query(bankSpotQuery(tile))).elements);
+}
+
 const today = dateInBrussels(Date.now());
 const inputs: NetworkInputs = {
   records,
@@ -95,9 +108,11 @@ const inputs: NetworkInputs = {
     { title: `${obstacles.source.title} (snapshot ${obstacles.snapshot})`, url: obstacles.source.url },
     { title: `Locks in Flanders and Brussels, OpenStreetMap (extracted ${locks.extracted})`, url: "https://www.openstreetmap.org/copyright" },
     { title: `OpenStreetMap waterways, dams and lock gates via Overpass (${today})`, url: "https://www.openstreetmap.org/copyright" },
+    { title: `OpenStreetMap rivers, canals, weirs and paths near them for bank spots, via Overpass (${today})`, url: "https://www.openstreetmap.org/copyright" },
     { title: `Walking links routed by BRouter on OpenStreetMap (${today})`, url: "https://brouter.de/" },
   ],
   snapshot: today,
+  banks: { osm: { elements: bankElements }, rules: builtInAccessRules },
 };
 
 const built = buildRouteNetwork(inputs);
@@ -123,6 +138,15 @@ const brouter = createBRouterClient({
   log: (message) => console.log(`  ${message}`),
 });
 const pairs = walkingPairs(built.network.nodes);
+if (countWalks) {
+  const asked = await Promise.all(pairs.map((pair) => readFile(keyFile(walkingUrl(pair), BROUTER_CACHE_DIR)).then(() => false, () => true)));
+  const byKind = (kind: string) => built.network.nodes.filter((node) => node.kind === kind).length;
+  console.log(
+    `${built.network.nodes.length} nodes (${byKind("bank-spot")} bank spots), ${built.network.paddleLinks.length} paddle links, ` +
+      `${pairs.length} walking pairs, ${asked.filter(Boolean).length} not yet cached`,
+  );
+  process.exit(0);
+}
 const walkingLinks: WalkingLink[] = [];
 const unwalked: string[] = [];
 for (const [i, pair] of pairs.entries()) {
@@ -152,6 +176,9 @@ for (const { record, river, withM, againstM } of report.disagreeing) {
 }
 for (const record of report.withoutOsm) {
   console.log(`REVIEW ${record}: no OSM waterway along it, so no links`);
+}
+for (const link of report.unruled) {
+  console.log(`no link ${link}: part of its water has no access rule`);
 }
 for (const aire of report.airesOffWater) {
   console.log(`REVIEW ${aire}: on no stretch's water, so no links`);

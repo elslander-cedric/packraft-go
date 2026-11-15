@@ -1,7 +1,7 @@
 // Suggested trips (ADR 0039, GLOSSARY "Suggested trip"): one-day trips proposed from your
 // trip wishes, searched on the route network. Pure: the network, the rules and today's
 // readings are passed in, and nothing is loaded or asked for here.
-import { evaluateRecord, type AccessContext, type AccessRules } from "./access";
+import { evaluateRecord, regionsAt, type AccessContext, type AccessRules } from "./access";
 import type { Bounds, Position } from "./geo";
 import type { PaddleLink, RouteNetwork, RouteNode, WalkingLink } from "./routeNetwork";
 import type { Pace, TripWishes } from "./settings";
@@ -131,7 +131,8 @@ const shapeOf = (trip: Candidate): SuggestedTrip["shape"] =>
 const switchesOf = (trip: Candidate) => 2 * trip.paddleLegs;
 
 /** Up to 10 suggested trips for the wishes, best first, or why there are none. */
-export function suggestTrips({ network, rules, when, area, wishes, pace }: SuggestedTripsSearch): SuggestedTrips {
+export function suggestTrips({ network: shipped, rules, when, area, wishes, pace }: SuggestedTripsSearch): SuggestedTrips {
+  const network = withoutBankSpotsInWallonia(shipped, rules);
   const graph = searchGraph(network, openRecords(rules, when), pace);
   // Trips with one paddle leg are always searched, so "too many switches" can be told.
   const limits = { area, pace, maxPaddleLegs: Math.max(1, Math.floor(wishes.maxSwitches / 2)) };
@@ -144,6 +145,20 @@ export function suggestTrips({ network, rules, when, area, wishes, pace }: Sugge
   }
   const best = varied(ranked(trips, wishes)).slice(0, MAX_TRIPS);
   return { status: "found", trips: best.map((trip) => suggestion(trip, graph.byId)) };
+}
+
+/** The network without any bank spot in Wallonia and its links: there the AGW allows only aires (ADR 0039). */
+function withoutBankSpotsInWallonia(network: RouteNetwork, rules: AccessRules): RouteNetwork {
+  const inWallonia = ({ position: [lng, lat] }: RouteNode) => regionsAt({ lat, lng }, rules).includes("wallonia");
+  const dropped = new Set(network.nodes.filter((node) => node.kind === "bank-spot" && inWallonia(node)).map((node) => node.id));
+  if (dropped.size === 0) return network;
+  const kept = (link: { from: string; to: string }) => !dropped.has(link.from) && !dropped.has(link.to);
+  return {
+    ...network,
+    nodes: network.nodes.filter((node) => !dropped.has(node.id)),
+    paddleLinks: network.paddleLinks.filter(kept),
+    walkingLinks: (network.walkingLinks ?? []).filter(kept),
+  };
 }
 
 type SearchGraph = {
