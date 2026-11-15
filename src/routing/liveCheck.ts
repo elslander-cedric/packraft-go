@@ -5,7 +5,8 @@
 // fixtures: re-recording stays a deliberate step.
 import type { RouteResult } from "@/core/router";
 import type { LatLng, LegMode } from "@/core/trip";
-import { brouterUrl, createBRouterRouter } from "./brouter";
+import { brouterUrl, createBRouterRouter, TRAIL_PREFERENCE } from "./brouter";
+import { wayShares } from "./wayShares";
 
 /** One request to replay against the live server, and the fixture it was recorded as. */
 export type LiveCheckCase = {
@@ -16,6 +17,8 @@ export type LiveCheckCase = {
   fixture: string;
   /** HTTP status of the recorded response. */
   status: number;
+  /** Asks for a trail-preferring walk, and checks the trail share its messages give. */
+  trailPreference?: number;
 };
 
 /** An HTTP response reduced to what the adapter looks at. */
@@ -30,7 +33,7 @@ export type RecordedResponse = { status: number; body: string };
 export type FindingLevel = "match" | "drift" | "mismatch";
 export type Finding = { level: FindingLevel; message: string };
 
-/** Points as listed in `src/routing/fixtures/README.md`. At most four, to be polite to the public server. */
+/** Points as listed in `src/routing/fixtures/README.md`. At most five, to be polite to the public server. */
 export const liveCheckCases: readonly LiveCheckCase[] = [
   {
     name: "hike leg, hiking-mountain profile",
@@ -41,6 +44,17 @@ export const liveCheckCases: readonly LiveCheckCase[] = [
     ],
     fixture: "hiking-success.geojson",
     status: 200,
+  },
+  {
+    name: "trail-preferring hike, as walking links are routed (Ourthe at Comblain)",
+    mode: "hike",
+    points: [
+      { lat: 50.4745, lng: 5.577 },
+      { lat: 50.456, lng: 5.566 },
+    ],
+    fixture: "hiking-trail-preference.geojson",
+    status: 200,
+    trailPreference: TRAIL_PREFERENCE,
   },
   {
     name: "hike leg without height data (ferry)",
@@ -78,6 +92,13 @@ export const liveCheckCases: readonly LiveCheckCase[] = [
 const TRACK_LENGTH_TOLERANCE = 0.1;
 /** Number of track points may differ by this share before we call it drift. */
 const POINT_COUNT_TOLERANCE = 0.2;
+/** Trail share may differ by this many points (of 1) before we call it drift. */
+const TRAIL_SHARE_TOLERANCE = 0.1;
+
+/** The URL a case asks the live server. */
+export function liveCheckUrl(check: LiveCheckCase): string {
+  return brouterUrl(check.mode, check.points, { trailPreference: check.trailPreference });
+}
 
 export async function compareWithFixture(
   check: LiveCheckCase,
@@ -91,8 +112,12 @@ export async function compareWithFixture(
 
   if (live.status === recorded.status) {
     match(`HTTP status ${live.status}`);
-    if (recorded.status === 200) compareTracks(live.body, recorded.body, { match, drift, mismatch });
-    else if (live.body.trim() === "") mismatch("routing error came back with an empty body");
+    if (recorded.status === 200) {
+      compareTracks(live.body, recorded.body, { match, drift, mismatch });
+      if (check.trailPreference !== undefined) {
+        compareTrailShare(live.body, recorded.body, { match, drift, mismatch });
+      }
+    } else if (live.body.trim() === "") mismatch("routing error came back with an empty body");
     else match(`routing error message: ${live.body.trim()}`);
   } else {
     mismatch(`HTTP status ${live.status}, fixture has ${recorded.status}`);
@@ -161,6 +186,31 @@ function compareTracks(liveBody: string, recordedBody: string, report: Report) {
   const fixtureCreator = String(fixture.properties.creator);
   if (liveCreator === fixtureCreator) report.match(`server version ${liveCreator}`);
   else report.drift(`server version ${liveCreator}, fixture recorded with ${fixtureCreator}`);
+}
+
+/** The walking links' trail share is read from the messages' way tags, so losing them breaks the network build. */
+function compareTrailShare(liveBody: string, recordedBody: string, report: Report) {
+  const fixture = wayShares(JSON.parse(recordedBody));
+  if (fixture === null) {
+    throw new Error("recorded fixture has no way tags in its messages");
+  }
+  let live: ReturnType<typeof wayShares>;
+  try {
+    live = wayShares(JSON.parse(liveBody));
+  } catch {
+    live = null;
+  }
+  if (live === null) {
+    report.mismatch("messages no longer carry distances and way tags: no trail share");
+    return;
+  }
+  const percent = (share: number) => `${Math.round(share * 100)}%`;
+  const message = `trail share ${percent(live.trailShare)}, road share ${percent(live.roadShare)} (fixture: ${percent(fixture.trailShare)}, ${percent(fixture.roadShare)})`;
+  if (Math.abs(live.trailShare - fixture.trailShare) <= TRAIL_SHARE_TOLERANCE) {
+    report.match(message);
+  } else {
+    report.drift(message);
+  }
 }
 
 /** Returns the track, or a description of why the body is not one. */
@@ -236,7 +286,7 @@ export async function runLiveCheck(deps: LiveCheckDeps): Promise<LiveCheckResult
 
   for (const [index, check] of liveCheckCases.entries()) {
     if (index > 0) await deps.wait(LIVE_CHECK_DELAY_MS);
-    const url = brouterUrl(check.mode, check.points);
+    const url = liveCheckUrl(check);
     const recorded: RecordedResponse = { status: check.status, body: deps.readFixture(check.fixture) };
 
     let findings: Finding[];
