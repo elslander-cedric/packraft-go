@@ -22,9 +22,25 @@ export type BRouterOptions = {
 const NO_ROUTE: RouteResult = { ok: false, failure: { kind: "no-route" } };
 const UNAVAILABLE: RouteResult = { ok: false, failure: { kind: "unavailable" } };
 
-export function brouterUrl(mode: LegMode, points: readonly LatLng[], serverUrl = PUBLIC_SERVER): string {
+/**
+ * `hiking_routes_preference` for walking links of suggested trips (ADR 0039): every way
+ * that isn't on a hiking route costs `1 + preference` times as much. The profile's
+ * default, 0.2, stays for hand-drawn hike legs.
+ */
+export const TRAIL_PREFERENCE = 1.0;
+
+export type BRouterUrlOptions = {
+  serverUrl?: string;
+  /** Sets `profile:hiking_routes_preference` on the hike profile; leave out for its default. */
+  trailPreference?: number;
+};
+
+export function brouterUrl(mode: LegMode, points: readonly LatLng[], options: BRouterUrlOptions = {}): string {
   const lonlats = points.map((p) => `${p.lng},${p.lat}`).join("|");
-  return `${serverUrl}?lonlats=${lonlats}&profile=${profiles[mode]}&alternativeidx=0&format=geojson`;
+  const url = `${options.serverUrl ?? PUBLIC_SERVER}?lonlats=${lonlats}&profile=${profiles[mode]}&alternativeidx=0&format=geojson`;
+  return options.trailPreference === undefined
+    ? url
+    : `${url}&profile:hiking_routes_preference=${options.trailPreference}`;
 }
 
 export function createBRouterRouter(options: BRouterOptions = {}): Router {
@@ -33,7 +49,7 @@ export function createBRouterRouter(options: BRouterOptions = {}): Router {
     async route(mode, points) {
       let response: Response;
       try {
-        response = await fetchFn(brouterUrl(mode, points, options.serverUrl));
+        response = await fetchFn(brouterUrl(mode, points, { serverUrl: options.serverUrl }));
       } catch {
         return UNAVAILABLE;
       }
