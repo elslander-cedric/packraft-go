@@ -17,6 +17,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import type { LockDataset, ObstacleDataset, OfficialAireDataset } from "../src/access/dataset";
 import { dateInBrussels } from "../src/core/calendarDate";
+import type { Bounds } from "../src/core/geo";
 import type { WalkingLink } from "../src/core/routeNetwork";
 import { createBRouterClient } from "../src/dataprep/routeNetwork/brouterClient";
 import { buildRouteNetwork, type NetworkInputs } from "../src/dataprep/routeNetwork/build";
@@ -33,6 +34,8 @@ const OUT = path.join(ROOT, "src", "access", "data", "route-network.json");
 const ENDPOINT = process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";
 const offline = process.argv.includes("--offline");
 const countWalks = process.argv.includes("--count-walks");
+// How long to wait when Overpass turns a bank spot tile away.
+const BUSY_PAUSE_MS = 3 * 60_000;
 
 type StretchFile = {
   sources: { annex1: string };
@@ -88,11 +91,26 @@ const tiles = bankSpotTiles(flemishRegions.map((record) => record.geometry));
 const bankElements: OverpassElement[] = [];
 for (const [i, tile] of tiles.entries()) {
   console.log(`OSM: bank spot tile ${i + 1} of ${tiles.length} (${tile.join(", ")})`);
-  const { elements } = await overpass.query(bankSpotQuery(tile));
-  bankElements.push(...elements);
-  // The public server has answered rivers without any path near them: a broken answer.
-  if (elements.some((element) => element.type === "way") && !elements.some((element) => element.type === "node" && !element.tags)) {
-    console.log(`REVIEW bank spot tile ${tile.join(", ")}: waters but no paths; delete its cache file to ask again`);
+  bankElements.push(...(await bankTile(tile)));
+}
+
+/**
+ * One tile's answer. These queries are heavy, and a busy public server turns them away for
+ * minutes at a time: wait a few minutes before giving up.
+ */
+async function bankTile(tile: Bounds): Promise<OverpassElement[]> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const { elements } = await overpass.query(bankSpotQuery(tile));
+      if (elements.some((element) => element.type === "way") && !elements.some((element) => element.type === "node" && !element.tags)) {
+        console.log(`REVIEW bank spot tile ${tile.join(", ")}: waters but no paths near them`);
+      }
+      return elements;
+    } catch (error) {
+      if (attempt === 5) throw error;
+      console.log(`  Overpass is busy; asking again in ${BUSY_PAUSE_MS / 60_000} minutes`);
+      await sleep(BUSY_PAUSE_MS);
+    }
   }
 }
 
