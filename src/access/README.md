@@ -45,9 +45,10 @@ ADR 0035, #214.
 
 ADR 0039, GLOSSARY "Route network". What suggested trips are searched on.
 
-- Types in `src/core/routeNetwork.ts`. Built-in file `data/route-network.json` (format `packraft-go/route-network`, version 1) with its sources and snapshot date, one node and one paddle link per line, so a refresh reads well as a diff.
+- Types in `src/core/routeNetwork.ts`. Built-in file `data/route-network.json` (format `packraft-go/route-network`, version 1) with its sources and snapshot date, one node, paddle link and walking link per line, so a refresh reads well as a diff.
 - **Nodes:** every official aire, by its id (`official-aire-<number>`, as `builtInOfficialAires`), with its use and position. An aire more than 150 m from every stretch record's line is still a node, but has no links (the script reports it).
 - **Paddle links:** from each node along its water to the next node, on the Walloon stretch records' lines, carrying on into the next record where one runs into another (end to start). Each has `direction` (`downstream`: only `from` to `to`, the way OSM's waterways flow; `both`: a canal), `distanceM` along the water, `waters` (river names), `records` (access record ids, e.g. `walloon-1A2`, in order), `obstacles` (rocks, drossage and low bridges it passes, by obstacle id, in order) and its `line`, simplified to 3 m and rounded to 5 decimals. A dam or impassable obstacle (SPW), a built-in lock, or a dam or lock gate mapped in OSM between two nodes means no link.
+- **Walking links:** between every two nodes at most 15 km apart as the crow flies, routed by the public BRouter server with `hiking-mountain` and `profile:hiking_routes_preference=1.0` (`TRAIL_PREFERENCE` in `src/routing/brouter.ts`), kept when the walk is at most 15 km along paths (`WALKING_CEILING_M`); a longer walk passes through a node. One per pair, `from` before `to` by id, walked either way (the other way, the line runs backwards and climb and descent swap). Each has `distanceM`, `climbM` (BRouter's filtered ascend), `descentM` (the climb less the rise from start to end), `trailShare` and `roadShare` (0 to 1, two decimals, as `wayShares` in `src/routing/wayShares.ts`) and its `line`, simplified to 15 m and rounded to 5 decimals (enough to draw; the trip you use is routed for real). `walkingLinks` is optional in the type: a network prepared without it has no walks.
 - `builtInRouteNetwork.ts` is its own chunk. Never import it statically: load it with `loadRouteNetwork()` from `src/ui/routeNetwork.ts`, the first time a search needs it. `routeNetwork.data.test.ts` checks the shape, that no link passes a barrier, and that no app module imports it statically.
 - Prepared by `npm run prepare:route-network` (below), with the pure, tested logic in `src/dataprep/routeNetwork/`.
 
@@ -68,15 +69,15 @@ npm run prepare:spw-data   # the official aires, stretches and obstacles, from t
 Manual only, like the above; see `docs/manual-scripts.md`. It writes nothing unless every layer passes its checks. Review the diff of `data/` before committing.
 
 ```
-npm run prepare:route-network              # the route network; reuses cached Overpass answers
-npm run prepare:route-network -- --offline # refuses to ask Overpass
+npm run prepare:route-network              # the route network; reuses cached Overpass and BRouter answers
+npm run prepare:route-network -- --offline # refuses to ask Overpass or BRouter
 ```
 
 Manual only, like the above; see `docs/manual-scripts.md`. Run it after a refresh of the aires, obstacles, locks or Walloon stretches. Review its report and the diff of `data/route-network.json` before committing.
 
 ## Licence and credit
 
-All water and lock geometry is derived from OpenStreetMap, © OpenStreetMap contributors, under the ODbL. The map credits it while the access layer is on, and so does the detail panel. Apart from the SPW's data below, no other dataset is used: the VHA and RIS-index services were not needed.
+All water, lock and walking link geometry is derived from OpenStreetMap (the walks routed by BRouter), © OpenStreetMap contributors, under the ODbL. The map credits it while the access layer is on, and so does the detail panel. Apart from the SPW's data below, no other dataset is used: the VHA and RIS-index services were not needed.
 
 The official aires and stretches are the SPW's, shipped with its permission (ADR 0035). Credit: "Sources des données : Service public de Wallonie", shown in the map's attribution while the access layer is on and in each aire's details.
 

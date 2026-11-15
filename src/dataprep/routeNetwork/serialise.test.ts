@@ -28,6 +28,22 @@ const network: RouteNetwork = {
       ],
     },
   ],
+  walkingLinks: [
+    {
+      from: "official-aire-1",
+      to: "official-aire-2",
+      distanceM: 1700,
+      climbM: 40,
+      descentM: 38,
+      trailShare: 0.8,
+      roadShare: 0.1,
+      line: [
+        [4.9, 50.2],
+        [4.905, 50.207],
+        [4.91, 50.21],
+      ],
+    },
+  ],
 };
 
 describe("serialiseRouteNetwork", () => {
@@ -37,6 +53,7 @@ describe("serialiseRouteNetwork", () => {
     expect(lines).toContain(`    ${JSON.stringify(network.nodes[0])},`);
     expect(lines).toContain(`    ${JSON.stringify(network.nodes[1])}`);
     expect(lines).toContain(`    ${JSON.stringify(network.paddleLinks[0])}`);
+    expect(lines).toContain(`    ${JSON.stringify(network.walkingLinks?.[0])}`);
     expect(text.endsWith("\n")).toBe(true);
   });
 
