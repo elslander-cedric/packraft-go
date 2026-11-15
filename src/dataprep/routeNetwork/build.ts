@@ -45,7 +45,7 @@ export type NetworkReport = {
   readonly airesOffWater: readonly string[];
   /** Neighbouring nodes with a barrier between them. */
   readonly broken: readonly BrokenLink[];
-  /** Links between bank spots dropped because part of their water has no access rule (outside Belgium). */
+  /** Links between bank spots dropped because part of their water has no access rule (abroad). */
   readonly unruled: readonly string[];
 };
 

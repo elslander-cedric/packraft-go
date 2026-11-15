@@ -39,11 +39,12 @@ export function bankSpotQuery([west, south, east, north]: Bounds): string {
     `[out:json][timeout:180][bbox:${round(south)},${round(west)},${round(north)},${round(east)}];`,
     `way["waterway"~"^(river|canal)$"]->.water;`,
     `.water out geom;`,
-    `nw["waterway"~"^(dam|lock_gate|weir)$"];`,
-    `out geom;`,
+    // The paths before the barriers: asked after them, the public server answered no paths.
     `way(around.water:${BANK_QUERY_M})["highway"~"${BANK_HIGHWAYS}"][!"bridge"][!"tunnel"]["access"!~"^(private|no)$"]->.roads;`,
     `node(w.roads)(around.water:${BANK_QUERY_M});`,
     `out skel qt;`,
+    `nw["waterway"~"^(dam|lock_gate|weir)$"];`,
+    `out geom;`,
   ].join("\n");
 }
 

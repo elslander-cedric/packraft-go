@@ -88,7 +88,12 @@ const tiles = bankSpotTiles(flemishRegions.map((record) => record.geometry));
 const bankElements: OverpassElement[] = [];
 for (const [i, tile] of tiles.entries()) {
   console.log(`OSM: bank spot tile ${i + 1} of ${tiles.length} (${tile.join(", ")})`);
-  bankElements.push(...(await overpass.query(bankSpotQuery(tile))).elements);
+  const { elements } = await overpass.query(bankSpotQuery(tile));
+  bankElements.push(...elements);
+  // The public server has answered rivers without any path near them: a broken answer.
+  if (elements.some((element) => element.type === "way") && !elements.some((element) => element.type === "node" && !element.tags)) {
+    console.log(`REVIEW bank spot tile ${tile.join(", ")}: waters but no paths; delete its cache file to ask again`);
+  }
 }
 
 const today = dateInBrussels(Date.now());

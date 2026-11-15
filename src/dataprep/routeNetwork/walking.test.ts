@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { RouteNode } from "@/core/routeNetwork";
-import { walkingLink, walkingPairs, walkingUrl } from "./walking";
+import { BANK_SPOT_WALKS, walkingLink, walkingPairs, walkingUrl } from "./walking";
 
 const recorded = (name: string) =>
   readFileSync(
@@ -101,6 +101,23 @@ describe("the pairs of nodes to walk between", () => {
       "official-aire-2 - official-aire-3",
       "official-aire-2 - official-aire-10",
     ]);
+  });
+
+  it("pairs a bank spot only with its nearest few nodes, as there are many of them", () => {
+    const spot = (id: number, km: number): RouteNode => ({
+      ...node(`bank-spot-${id}`, [4 + km / 70, 51]),
+      kind: "bank-spot",
+    });
+    // Twelve bank spots 1 km apart along 51 N.
+    const spots = Array.from({ length: 12 }, (_, i) => spot(i + 1, i));
+    const pairs = walkingPairs(spots);
+    const of = (id: string) => pairs.filter(({ from, to }) => from.id === id || to.id === id).map(({ from, to }) => (from.id === id ? to.id : from.id));
+    expect(of("bank-spot-1").sort()).toEqual(
+      Array.from({ length: BANK_SPOT_WALKS }, (_, i) => `bank-spot-${i + 2}`).sort(),
+    );
+    // A node may be the nearest of more than a few others: pairs are kept once.
+    expect(new Set(pairs.map(({ from, to }) => `${from.id} - ${to.id}`)).size).toBe(pairs.length);
+    expect(pairs.length).toBeLessThanOrEqual(spots.length * BANK_SPOT_WALKS);
   });
 
   it("asks BRouter for a trail-preferring hike from one node to the other", () => {
