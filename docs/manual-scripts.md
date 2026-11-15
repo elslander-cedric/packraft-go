@@ -36,3 +36,15 @@ Walloon stretch geometry (#54, ADR 0024):
   **Official stretches (#209, ADR 0035).** After the build, `src/dataprep/walloonStretches/official.ts` gives each record its official stretch and cuts a record that spans two, or an official stretch and a long unlisted part. The pieces are `1A4-1`, `1A4-2` (`splitOf` names the record) and keep its category, thresholds and gauge. A boundary ships as `needsReview` and is listed under `review.pending` in the dataset until it is confirmed or moved on the review page, which draws the SPW's lines dashed, one colour per official stretch, and lists where the mapping and the lines differ. To split another record, add it to `OFFICIAL_MAPPING` and run `npx tsx scripts/walloon-stretches/build.mts --shipped`. The lines are in `docs/research/data/spw-stretch-lines.json`, written by `npm run prepare:spw-data`; they aren't shipped in the app, and the data tests check the mapping against them.
   3. Re-run step 1 to write the shipped dataset.
   End-point recipes (which dam, bridge, confluence or border ends each stretch) are in `src/dataprep/walloonStretches/recipes.ts`; logic in `src/dataprep/walloonStretches/` is pure and tested on saved OSM extracts in its `fixtures/` folder (make new ones with `scripts/walloon-stretches/save-fixture.mts`).
+
+## Route network
+
+`npm run prepare:route-network` (ADR 0039). Builds `src/access/data/route-network.json`, the route network for suggested trips: every official aire as a node, and the paddle links between aires next to each other along a water. Its inputs are the built-in Walloon stretch records (`src/data/walloon-stretches.json`), official aires, obstacles and locks, plus one Overpass query per stretch record (a box around its line: waterways, dams and lock gates). One request at a time with a pause between them, identifying itself with the project URL only; answers are cached in `.cache/route-network-osm/` (git-ignored), so re-runs don't re-fetch. Delete that folder to refresh from OSM; `--offline` refuses to fetch; set `OVERPASS_URL` to use another public instance. Each record's direction of flow comes from its OSM ways (a river's ways point downstream; canals are paddled either way).
+
+It prints a report to review before committing:
+- `REVIEW <record>: OSM ways disagree on direction`: some of the record's OSM ways run against the others; the longer side wins. Check the river in OSM.
+- `REVIEW <record>: no OSM waterway along it`: no links on that record.
+- `REVIEW <aire>: on no stretch's water`: the aire is a node without links.
+- `no link <from> -> <to>: <barrier> is in the way`: a dam, impassable obstacle or lock between neighbouring aires (information).
+
+Run it after `prepare:spw-data` or `data:walloon-stretches`, and review the diff. Logic: `src/dataprep/routeNetwork/` (unit-tested offline on a recorded Overpass answer in its `fixtures/`); entry point: `scripts/prepare-route-network.mts`.

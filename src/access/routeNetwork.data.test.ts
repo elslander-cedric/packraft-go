@@ -1,0 +1,117 @@
+// Checks on the built-in route network (ADR 0039): every node and paddle link is usable as
+// it ships, whatever a refresh brought in.
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import { distanceM, projectOntoLine } from "@/core/geo";
+import { PASSING_TOLERANCE_M } from "@/core/locks";
+import { paddleDirections, ROUTE_NETWORK_FORMAT, routeNodeKinds, type PaddleLink } from "@/core/routeNetwork";
+import { loadRouteNetwork } from "@/ui/routeNetwork";
+import { builtInAccessRules, builtInLocks, builtInObstacles, builtInOfficialAires } from "./builtInRules";
+import { builtInRouteNetwork as network } from "./builtInRouteNetwork";
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const nodeIds = new Set(network.nodes.map((node) => node.id));
+const recordIds = new Set(builtInAccessRules.records.map((record) => record.id));
+const airesById = new Map(builtInOfficialAires.map((aire) => [aire.id, aire]));
+const linkName = (link: PaddleLink) => `${link.from} -> ${link.to}`;
+
+/** Belgium and a little around it. */
+const inBelgium = ([lng, lat]: readonly [number, number]) => lng > 2.4 && lng < 6.5 && lat > 49.4 && lat < 51.6;
+
+describe("the built-in route network", () => {
+  it("records its format version, sources and snapshot date", () => {
+    expect(network.format).toBe(ROUTE_NETWORK_FORMAT);
+    expect(network.version).toBe(1);
+    expect(network.snapshot).toMatch(DATE);
+    expect(network.sources.length).toBeGreaterThan(0);
+    for (const source of network.sources) {
+      expect(source.title).not.toBe("");
+      expect(source.url).toMatch(/^https:\/\//);
+    }
+  });
+
+  it("has every official aire as a node, once, with a known kind, its use and its position", () => {
+    expect(nodeIds.size).toBe(network.nodes.length);
+    expect(network.nodes.filter((node) => node.kind === "official-aire")).toHaveLength(builtInOfficialAires.length);
+    for (const node of network.nodes) {
+      expect(routeNodeKinds, node.id).toContain(node.kind);
+      expect(inBelgium(node.position), node.id).toBe(true);
+      const aire = airesById.get(node.id);
+      expect(aire, node.id).toBeDefined();
+      expect([node.use, node.position], node.id).toEqual([aire?.use, aire?.position]);
+    }
+  });
+
+  it("gives every paddle link known nodes, a direction, a distance and its access records", () => {
+    expect(network.paddleLinks.length).toBeGreaterThan(0);
+    for (const link of network.paddleLinks) {
+      expect(nodeIds.has(link.from) && nodeIds.has(link.to), linkName(link)).toBe(true);
+      expect(link.from, linkName(link)).not.toBe(link.to);
+      expect(paddleDirections, linkName(link)).toContain(link.direction);
+      expect(link.distanceM, linkName(link)).toBeGreaterThan(0);
+      expect(link.records.length, linkName(link)).toBeGreaterThan(0);
+      for (const record of link.records) expect(recordIds.has(record), `${linkName(link)}: ${record}`).toBe(true);
+      expect(link.line.length, linkName(link)).toBeGreaterThanOrEqual(2);
+      expect(link.line.every(inBelgium), linkName(link)).toBe(true);
+    }
+  });
+
+  it("has no paddle link that passes a dam, an impassable obstacle or a lock", () => {
+    const barriers = [
+      ...builtInObstacles.filter((obstacle) => obstacle.kind === "dam" || obstacle.kind === "impassable"),
+      ...builtInLocks.locks,
+    ];
+    const passing = network.paddleLinks.flatMap((link) => {
+      const line = link.line.map(([lng, lat]) => ({ lat, lng }));
+      const lengthM = line.slice(1).reduce((sum, point, i) => sum + distanceM(line[i], point), 0);
+      return barriers.flatMap((barrier) => {
+        const { offM, alongM } = projectOntoLine({ lat: barrier.position[1], lng: barrier.position[0] }, line);
+        // Beyond either end of the line, a barrier is before the put-in or after the take-out.
+        const between = alongM > 1 && alongM < lengthM - 1;
+        return offM <= PASSING_TOLERANCE_M && between ? [`${linkName(link)}: ${barrier.id}`] : [];
+      });
+    });
+    expect(passing).toEqual([]);
+  });
+
+  it("lists only known obstacles on its links", () => {
+    const obstacleIds = new Set(builtInObstacles.map((obstacle) => obstacle.id));
+    for (const link of network.paddleLinks) {
+      for (const obstacle of link.obstacles) expect(obstacleIds.has(obstacle), `${linkName(link)}: ${obstacle}`).toBe(true);
+    }
+  });
+
+  it("links each pair of nodes at most once each way", () => {
+    const pairs = network.paddleLinks.map(linkName);
+    expect(new Set(pairs).size).toBe(pairs.length);
+  });
+});
+
+/** Every app source file (not tests, scripts or offline preparation). */
+function appSources(directory: string): string[] {
+  return readdirSync(directory).flatMap((name) => {
+    const file = path.join(directory, name);
+    if (statSync(file).isDirectory()) {
+      return ["dataprep", "prepare", "testing"].includes(name) ? [] : appSources(file);
+    }
+    return /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) ? [file] : [];
+  });
+}
+
+describe("loading the route network", () => {
+  it("is lazy: no app module imports it statically, so it stays out of the initial bundle", () => {
+    const root = path.join(__dirname, "..");
+    // Type-only imports are erased from the bundle.
+    const staticImport = /^\s*import\s+(?!type\s)[^;]*from\s+["'][^"']*(builtInRouteNetwork|route-network\.json)["']/m;
+    const importers = appSources(root)
+      .filter((file) => !file.endsWith(path.join("access", "builtInRouteNetwork.ts")))
+      .filter((file) => staticImport.test(readFileSync(file, "utf8")))
+      .map((file) => path.relative(root, file));
+    expect(importers).toEqual([]);
+  });
+
+  it("loads the built-in network when asked", async () => {
+    expect(await loadRouteNetwork()).toBe(network);
+  });
+});
