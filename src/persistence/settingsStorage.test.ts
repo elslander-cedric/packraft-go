@@ -31,6 +31,7 @@ describe("settings storage", () => {
       overlays: ["hiking-trails"],
       sidePanelWidth: 420,
       sidePanelOpen: false,
+      tripWishes: { paddleKm: 12, maxSwitches: 2, shape: "one-way" },
     } as const;
     storeSettings(settings, storage);
     expect([...storage.items.keys()]).toEqual([SETTINGS_KEY]);

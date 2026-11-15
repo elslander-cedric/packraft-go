@@ -8,6 +8,7 @@ import {
   withOverlay,
   withSetting,
   withSidePanel,
+  withTripWishes,
 } from "./settings";
 
 describe("settings", () => {
@@ -19,6 +20,7 @@ describe("settings", () => {
       overlays: [],
       sidePanelWidth: 380,
       sidePanelOpen: true,
+      tripWishes: { paddleKm: 10, maxSwitches: 2, shape: "either" },
     });
   });
 
@@ -30,7 +32,8 @@ describe("settings", () => {
       overlays: ["hiking-trails"] as const,
       sidePanelWidth: 452,
       sidePanelOpen: false,
-    };
+      tripWishes: { paddleKm: 14.5, maxSwitches: 4, shape: "loop" },
+    } as const;
     expect(restoreSettings(serialiseSettings(settings))).toEqual(settings);
   });
 
@@ -60,6 +63,7 @@ describe("settings", () => {
       overlays: [],
       sidePanelWidth: 380,
       sidePanelOpen: true,
+      tripWishes: defaultSettings.tripWishes,
     });
     expect(restoreSettings(JSON.stringify({ paceFactor: 0, paddleSpeedKmh: null }))).toEqual(defaultSettings);
   });
@@ -88,7 +92,12 @@ describe("settings", () => {
 
   it("settings stored before the side panel was resizable restore with it open at 380 px", () => {
     const stored = { paceFactor: 1.2, paddleSpeedKmh: 4, baseMap: "aerial-be", overlays: ["hiking-trails"] };
-    expect(restoreSettings(JSON.stringify(stored))).toEqual({ ...stored, sidePanelWidth: 380, sidePanelOpen: true });
+    expect(restoreSettings(JSON.stringify(stored))).toEqual({
+      ...stored,
+      sidePanelWidth: 380,
+      sidePanelOpen: true,
+      tripWishes: defaultSettings.tripWishes,
+    });
   });
 
   it.each([
@@ -112,6 +121,50 @@ describe("settings", () => {
     ["a repeated id", ["hiking-trails", "hiking-trails"], ["hiking-trails"]],
   ])("restoring overlays drops what isn't a known overlay (%s)", (_, overlays, expected) => {
     expect(restoreSettings(JSON.stringify({ paceFactor: 1, paddleSpeedKmh: 5, overlays })).overlays).toEqual(expected);
+  });
+
+  describe("trip wishes", () => {
+    it("default to about 10 km of paddling, at most 2 switches, and a loop or one-way trip", () => {
+      expect(defaultSettings.tripWishes).toEqual({ paddleKm: 10, maxSwitches: 2, shape: "either" });
+    });
+
+    it("round-trip with no paddle distance wished, which means no preference", () => {
+      const settings = { ...defaultSettings, tripWishes: { maxSwitches: 2, shape: "one-way" } } as const;
+      expect(restoreSettings(serialiseSettings(settings))).toEqual(settings);
+    });
+
+    it("settings stored before trip wishes existed restore with the default wishes", () => {
+      expect(restoreSettings(JSON.stringify({ paceFactor: 1.2 })).tripWishes).toEqual(defaultSettings.tripWishes);
+    });
+
+    it.each([
+      ["a paddle distance of 0", { paddleKm: 0, maxSwitches: 3, shape: "loop" }, { paddleKm: 10, maxSwitches: 3, shape: "loop" }],
+      ["a paddle distance as text", { paddleKm: "12", maxSwitches: 3, shape: "loop" }, { paddleKm: 10, maxSwitches: 3, shape: "loop" }],
+      ["switches that aren't whole", { paddleKm: 12, maxSwitches: 2.5, shape: "loop" }, { paddleKm: 12, maxSwitches: 2, shape: "loop" }],
+      ["negative switches", { paddleKm: 12, maxSwitches: -1, shape: "one-way" }, { paddleKm: 12, maxSwitches: 2, shape: "one-way" }],
+      ["an unknown shape", { paddleKm: 12, maxSwitches: 4, shape: "circle" }, { paddleKm: 12, maxSwitches: 4, shape: "either" }],
+      ["not an object", "lots", { paddleKm: 10, maxSwitches: 2, shape: "either" }],
+    ])("an unreadable wish (%s) falls back to its default, keeping the other wishes", (_, tripWishes, expected) => {
+      expect(restoreSettings(JSON.stringify({ tripWishes })).tripWishes).toEqual(expected);
+    });
+
+    it("zero switches is a wish that is kept", () => {
+      const tripWishes = { maxSwitches: 0, shape: "either" };
+      expect(restoreSettings(JSON.stringify({ tripWishes })).tripWishes).toEqual(tripWishes);
+    });
+
+    it("withTripWishes changes the wishes, keeping the other settings", () => {
+      const tripWishes = { maxSwitches: 3, shape: "loop" } as const;
+      expect(withTripWishes(defaultSettings, tripWishes)).toEqual({ ...defaultSettings, tripWishes });
+    });
+
+    it.each([
+      ["a paddle distance of 0", { paddleKm: 0, maxSwitches: 2, shape: "either" }],
+      ["switches that aren't whole", { paddleKm: 8, maxSwitches: 1.5, shape: "either" }],
+      ["negative switches", { paddleKm: 8, maxSwitches: -2, shape: "either" }],
+    ] as const)("withTripWishes ignores wishes with %s, keeping the settings as they were", (_, tripWishes) => {
+      expect(withTripWishes(defaultSettings, tripWishes)).toBe(defaultSettings);
+    });
   });
 
   describe("withSetting", () => {

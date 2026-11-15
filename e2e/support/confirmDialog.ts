@@ -2,9 +2,13 @@ import { expect, type Page } from "@playwright/test";
 import { strings } from "../../src/ui/strings";
 
 /** Which question the planner is asked before a trip with points is replaced. */
-export type Confirmation = "newTrip" | "openFile";
+export type Confirmation = "newTrip" | "openFile" | "useSuggestedTrip";
 
-const texts = { newTrip: strings.newTripConfirm, openFile: strings.openFileConfirm } as const;
+const texts = {
+  newTrip: strings.newTripConfirm,
+  openFile: strings.openFileConfirm,
+  useSuggestedTrip: strings.useSuggestedTripConfirm,
+} as const;
 
 /**
  * The in-page confirmation (a Base UI Alert Dialog) that replaced the

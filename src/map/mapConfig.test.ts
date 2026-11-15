@@ -201,6 +201,13 @@ describe("overlays (ADR 0032)", () => {
   });
 });
 
+describe("suggested trips", () => {
+  it("sit above the access layer's waters and below the trip's legs", () => {
+    expect(paneZIndex.suggestedTrips).toBeGreaterThan(paneZIndex.access);
+    expect(paneZIndex.suggestedTrips).toBeLessThan(paneZIndex.tripLegs);
+  });
+});
+
 describe("the trip's legs", () => {
   it("sit above the access layer's waters and below the put-ins, take-outs and points", () => {
     expect(paneZIndex.tripLegs).toBeGreaterThan(paneZIndex.access);

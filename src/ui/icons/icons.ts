@@ -40,6 +40,7 @@ import {
   faPen,
   faRightFromBracket,
   faRotateLeft,
+  faRoute,
   faShoePrints,
   faStairs,
   faTent,
@@ -128,4 +129,10 @@ export const icons = {
   searchResult: faLocationDot,
   // The open search field closes back to its pill.
   closeSearch: faArrowLeft,
+  // Find trips (ADR 0039), and the same button while suggested trips are shown, which closes them.
+  findTrips: faRoute,
+  closeSuggestedTrips: faXmark,
+  // A suggested trip's details: back to the list, and Use this trip.
+  backToSuggestions: faArrowLeft,
+  useSuggestedTrip: faCircleCheck,
 };

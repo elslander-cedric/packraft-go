@@ -200,6 +200,8 @@ export const paneZIndex = {
   access: 350,
   /** Your access points in normal mode, inert: below the trip, so the route and its points are drawn over them. */
   accessPoints: 355,
+  /** Suggested trips (ADR 0039), numbered: below the trip, which stays on top while you compare them. */
+  suggestedTrips: 357,
   /** The legs and their casings: above the access layer's waters, so a water never covers a leg. */
   tripLegs: 360,
   /** Put-ins and take-outs, above the legs: Leaflet's own overlay pane, where they are drawn. */
