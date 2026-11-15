@@ -24,6 +24,11 @@ as the walking links of suggested trips are routed, ADR 0039), BRouter 1.7.11-be
 | --- | --- | --- |
 | `hiking-trail-preference.geojson` | `5.5770,50.4745\|5.5660,50.4560` | 200, 3919 m walk from Comblain-au-Pont towards Comblain-la-Tour, 93% on hiking route ways, 30% on roads (the default preference gives 3087 m, 33% and 7%) |
 
+The walking link tests (`src/dataprep/routeNetwork/walking.test.ts`) build a link from
+`hiking-trail-preference.geojson` and check that the no-route answers give none. The
+route network script routes every walking link this way, with
+`hiking_routes_preference=1.0` (tuned on 2026-11-15; see `docs/manual-scripts.md`).
+
 ## Checking the live server still matches
 
 `npm run check:brouter` replays five of these requests (all but the single-point

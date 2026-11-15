@@ -5,7 +5,13 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { distanceM, projectOntoLine } from "@/core/geo";
 import { PASSING_TOLERANCE_M } from "@/core/locks";
-import { paddleDirections, ROUTE_NETWORK_FORMAT, routeNodeKinds, type PaddleLink } from "@/core/routeNetwork";
+import {
+  paddleDirections,
+  ROUTE_NETWORK_FORMAT,
+  routeNodeKinds,
+  type PaddleLink,
+  type WalkingLink,
+} from "@/core/routeNetwork";
 import { loadRouteNetwork } from "@/ui/routeNetwork";
 import { builtInAccessRules, builtInLocks, builtInObstacles, builtInOfficialAires } from "./builtInRules";
 import { builtInRouteNetwork as network } from "./builtInRouteNetwork";
@@ -14,7 +20,10 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const nodeIds = new Set(network.nodes.map((node) => node.id));
 const recordIds = new Set(builtInAccessRules.records.map((record) => record.id));
 const airesById = new Map(builtInOfficialAires.map((aire) => [aire.id, aire]));
-const linkName = (link: PaddleLink) => `${link.from} -> ${link.to}`;
+const linkName = (link: PaddleLink | WalkingLink) => `${link.from} -> ${link.to}`;
+const walkingLinks = network.walkingLinks ?? [];
+/** The longest walking link (ADR 0039: about 15 km). */
+const WALKING_CEILING_M = 15_000;
 
 /** Belgium and a little around it. */
 const inBelgium = ([lng, lat]: readonly [number, number]) => lng > 2.4 && lng < 6.5 && lat > 49.4 && lat < 51.6;
@@ -84,6 +93,33 @@ describe("the built-in route network", () => {
 
   it("links each pair of nodes at most once each way", () => {
     const pairs = network.paddleLinks.map(linkName);
+    expect(new Set(pairs).size).toBe(pairs.length);
+  });
+
+  it("has no walking link over the ceiling", () => {
+    const over = walkingLinks.filter((link) => link.distanceM > WALKING_CEILING_M).map(linkName);
+    expect(over).toEqual([]);
+  });
+
+  it("gives every walking link known nodes, distance, climb, descent, trail and road shares, and a line", () => {
+    expect(walkingLinks.length).toBeGreaterThan(0);
+    for (const link of walkingLinks) {
+      expect(nodeIds.has(link.from) && nodeIds.has(link.to), linkName(link)).toBe(true);
+      expect(link.from, linkName(link)).not.toBe(link.to);
+      expect(link.distanceM, linkName(link)).toBeGreaterThan(0);
+      expect(link.climbM, linkName(link)).toBeGreaterThanOrEqual(0);
+      expect(link.descentM, linkName(link)).toBeGreaterThanOrEqual(0);
+      for (const share of [link.trailShare, link.roadShare]) {
+        expect(share, linkName(link)).toBeGreaterThanOrEqual(0);
+        expect(share, linkName(link)).toBeLessThanOrEqual(1);
+      }
+      expect(link.line.length, linkName(link)).toBeGreaterThanOrEqual(2);
+      expect(link.line.every(inBelgium), linkName(link)).toBe(true);
+    }
+  });
+
+  it("walks between each two nodes at most once, as walking links go either way", () => {
+    const pairs = walkingLinks.map((link) => [link.from, link.to].sort().join(" - "));
     expect(new Set(pairs).size).toBe(pairs.length);
   });
 });

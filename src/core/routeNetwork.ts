@@ -1,5 +1,5 @@
 // The route network for suggested trips (ADR 0039, GLOSSARY "Route network"): the places
-// a suggested trip may get in or out (its nodes) and the paddle links between them,
+// a suggested trip may get in or out (its nodes) and the paddle and walking links between them,
 // prepared offline and shipped with the app. Read-only; the search never changes it.
 import type { AccessSource } from "./access";
 import type { CalendarDate } from "./calendarDate";
@@ -48,6 +48,27 @@ export type PaddleLink = {
   readonly line: readonly Position[];
 };
 
+/**
+ * A walk along paths between two nodes, routed preferring waymarked trails, at most about
+ * 15 km. Either way: walked from `to` to `from`, the line runs backwards and climb and
+ * descent swap.
+ */
+export type WalkingLink = {
+  readonly from: string;
+  readonly to: string;
+  /** Along the path, in metres. */
+  readonly distanceM: number;
+  /** Walking from `from` to `to`, in metres. */
+  readonly climbM: number;
+  readonly descentM: number;
+  /** Share of the distance on waymarked hiking trails, 0 to 1. */
+  readonly trailShare: number;
+  /** Share of the distance on roads, 0 to 1; a trail along a road counts in both. */
+  readonly roadShare: number;
+  /** From `from` to `to`, simplified and rounded. */
+  readonly line: readonly Position[];
+};
+
 export type RouteNetwork = {
   readonly format: typeof ROUTE_NETWORK_FORMAT;
   readonly version: typeof ROUTE_NETWORK_VERSION;
@@ -58,4 +79,6 @@ export type RouteNetwork = {
   readonly snapshot: CalendarDate;
   readonly nodes: readonly RouteNode[];
   readonly paddleLinks: readonly PaddleLink[];
+  /** One per pair of nodes; none when the network was prepared without them. */
+  readonly walkingLinks?: readonly WalkingLink[];
 };
