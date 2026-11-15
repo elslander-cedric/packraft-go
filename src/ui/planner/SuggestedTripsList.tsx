@@ -1,4 +1,5 @@
-import type { NoTripReason } from "@/core/suggestedTrips";
+import type { NoTripReason, SuggestedTrip } from "@/core/suggestedTrips";
+import { Button } from "../components/Button";
 import { formatDistance } from "../format";
 import { strings } from "../strings";
 import type { SuggestionsState } from "./useSuggestedTrips";
@@ -25,11 +26,30 @@ const waitingText = {
   failed: text.networkFailed,
 } as const;
 
+/** A suggestion's figures on one line, e.g. "One-way · 9.9 km paddle · 2 switches". */
+export function suggestionFigures(trip: SuggestedTrip): string {
+  return [text.shapes[trip.shape], text.paddle(formatDistance(trip.paddleM / 1000)), text.switches(trip.switches)].join(
+    " · ",
+  );
+}
+
+/** A suggestion's number, on a badge like the one on its line. */
+export function SuggestionNumber({ n }: { n: number }) {
+  return <span className="planner-suggested-trip-number">{n}</span>;
+}
+
 /**
  * The suggested trips in the panel or sheet (ADR 0039): one row each, numbered as on the map,
  * with loop or one-way, paddle km and switches; or why there are none, or what it waits for.
+ * A row selects its suggestion.
  */
-export default function SuggestedTripsList({ state }: { state: SuggestionsState }) {
+export default function SuggestedTripsList({
+  state,
+  onSelect,
+}: {
+  state: SuggestionsState;
+  onSelect: (index: number) => void;
+}) {
   if (state.status === "none") {
     return (
       <p role="status" className="planner-empty">
@@ -47,15 +67,11 @@ export default function SuggestedTripsList({ state }: { state: SuggestionsState 
   return (
     <ol className="planner-suggested-trips" aria-label={text.listLabel}>
       {state.trips.map((trip, i) => (
-        <li key={i} className="planner-suggested-trip">
-          <span className="planner-suggested-trip-number">{i + 1}</span>
-          <span>
-            {[
-              text.shapes[trip.shape],
-              text.paddle(formatDistance(trip.paddleM / 1000)),
-              text.switches(trip.switches),
-            ].join(" · ")}
-          </span>
+        <li key={i}>
+          <Button className="planner-suggested-trip" onClick={() => onSelect(i)}>
+            <SuggestionNumber n={i + 1} />
+            <span>{suggestionFigures(trip)}</span>
+          </Button>
         </li>
       ))}
     </ol>

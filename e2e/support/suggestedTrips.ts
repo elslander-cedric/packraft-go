@@ -12,10 +12,21 @@ export const wishesDialog = (page: Page) => page.getByRole("dialog", { name: tex
 /** The list of suggested trips, in the side panel or the sheet. */
 export const suggestionList = (page: Page) => page.getByRole("list", { name: text.listLabel });
 export const suggestionRows = (page: Page) => suggestionList(page).getByRole("listitem");
+/** The button that selects the `n`th suggestion (from 1) in the list. */
+export const suggestionRowButton = (page: Page, n: number) => suggestionRows(page).nth(n - 1).getByRole("button");
+
+/** A selected suggestion's details, in the panel or the sheet. */
+export const suggestionDetails = (page: Page, n: number) => page.getByRole("region", { name: text.detailsTitle(n) });
 
 /** The suggestions' lines on the map, one per leg, and their number badges. */
 export const suggestionLines = (page: Page) => page.locator(".leaflet-pane path.suggested-trip");
 export const suggestionNumbers = (page: Page) => page.locator(".suggested-trip-number");
+/** The selected suggestion's lines, and the lines faded behind it. */
+export const selectedSuggestionLines = (page: Page) => page.locator(".leaflet-pane path.suggested-trip-selected");
+export const fadedSuggestionLines = (page: Page) => page.locator(".leaflet-pane path.suggested-trip-faded");
+/** The wide, unseen line a tap on the `n`th suggestion (from 1) hits on the map. */
+export const suggestionHitLine = (page: Page, n: number) =>
+  page.locator(`.leaflet-pane path.suggested-trip-hit[data-suggestion="${n - 1}"]`);
 
 export type Wishes = {
   paddleKm?: number | null;

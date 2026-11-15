@@ -78,6 +78,8 @@ Find trips (ADR 0039) is the planner's third mode, `{ kind: "suggestedTrips", re
 - `useFindTrips` keeps the dialog, the search (wishes, date and the map area when confirmed) and its answer; `useSuggestedTrips` loads the route network (`useRouteNetwork`) and the rules and runs `suggestTrips`. A search for today waits (`waiting`) until today's official status and flows have answered, ok or failed.
 - While shown the trip is frozen as in access point editing (`frozen` on `TripMap`, the same ignored actions), a map tap does nothing, the bottom button stacks are hidden, and the panel has only the Suggested trips tab (`SuggestedTripsList`: one row each, or the reason, or the waiting state). The lines are `SuggestedTripLayer` in `src/map/`.
 - The same button, coloured with an × while they are shown, closes them: the tab and the sheet's stop come back from `returnTo`.
+- A row (a button) or a tap on a line (its hit line, `onSuggestionTap`) selects a suggestion (`selected` in `useFindTrips`): its lines are highlighted and the others fade, and `SuggestedTripDetails` replaces the list: Back and Use this trip first, then its figures, time, rivers and aires, and each paddle leg's `LegAccessView` from `suggestionAccess` (core), the same access and warnings the trip it becomes shows once routed along that water. Back or a map tap returns to the list.
+- Use this trip dispatches `useSuggestedTrip`: the session asks the usual replace question when a trip is open (`question: "useSuggestedTrip"`), and once replaced goes back to normal mode. The planner restores the tab and the sheet when it sees the mode leave suggested trips, whether closed or used. New trip and Open trip keep the suggestions shown, as they keep access point editing.
 
 ## Tests
 

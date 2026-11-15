@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { addAccessPoint, updateAccessPoint } from "./accessPoints";
 import { firstSession, plannerSession, type PanelView, type PlannerAction, type PlannerSession } from "./plannerSession";
+import type { SuggestedTrip } from "./suggestedTrips";
 import { applyEdit, emptyTrip, type LatLng } from "./trip";
 
 const A: LatLng = { lat: 50.3527, lng: 5.4563 };
@@ -90,6 +91,78 @@ describe("showing suggested trips", () => {
     const showing = showSuggestions(selected());
     expect(enter(showing)).toBe(showing);
     expect(plannerSession(showing, { type: "leaveAccessPointEditing" })).toBe(showing);
+  });
+
+  it("they outlast New trip and Open trip, as access point editing does", () => {
+    const showing = showSuggestions(firstSession({ trip: emptyTrip() }));
+    expect(plannerSession(showing, { type: "newTrip" }).mode).toEqual(showing.mode);
+    expect(plannerSession(showing, { type: "fileOpened", trip }).mode).toEqual(showing.mode);
+  });
+});
+
+describe("using a suggested trip", () => {
+  const suggestion: SuggestedTrip = {
+    shape: "one-way",
+    nodes: [
+      { id: "official-aire-1", kind: "official-aire", use: "both", position: [C.lng, C.lat] },
+      { id: "official-aire-2", kind: "official-aire", use: "both", position: [5.4663, 50.3827] },
+    ],
+    legs: [
+      {
+        mode: "paddle",
+        from: "official-aire-1",
+        to: "official-aire-2",
+        distanceM: 1500,
+        waters: ["River"],
+        records: ["walloon-1A2"],
+        obstacles: [],
+        line: [
+          [C.lng, C.lat],
+          [5.4663, 50.3827],
+        ],
+      },
+    ],
+    paddleM: 1500,
+    switches: 2,
+  };
+  const use: PlannerAction = { type: "useSuggestedTrip", suggestion, date: "2027-07-10" };
+  const used = { name: "", points: [C, { lat: 50.3827, lng: 5.4663 }], legs: [{ mode: "paddle" }], startDate: "2027-07-10" };
+
+  it("with a trip open asks the usual replace question, still showing the suggestions", () => {
+    const after = plannerSession(showSuggestions(firstSession({ trip })), use);
+    expect(after.question).toBe("useSuggestedTrip");
+    expect(after.pendingTrip).toEqual(used);
+    expect(after.trip).toBe(trip);
+    expect(after.mode.kind).toBe("suggestedTrips");
+  });
+
+  it("confirming makes it the trip and goes back to normal mode", () => {
+    const asked = plannerSession(showSuggestions(firstSession({ trip })), use);
+    const after = plannerSession(asked, { type: "confirmReplace" });
+    expect(after.trip).toEqual(used);
+    expect(after.pendingTrip).toBeNull();
+    expect(after.mode).toEqual({ kind: "normal" });
+  });
+
+  it("cancelling keeps the trip and the suggestions", () => {
+    const showing = showSuggestions(firstSession({ trip }));
+    const after = plannerSession(plannerSession(showing, use), { type: "cancelReplace" });
+    expect(after.trip).toBe(trip);
+    expect(after.mode).toEqual(showing.mode);
+  });
+
+  it("without a trip open makes it the trip at once and goes back to normal mode", () => {
+    const after = plannerSession(showSuggestions(firstSession({ trip: emptyTrip() })), use);
+    expect(after.trip).toEqual(used);
+    expect(after.pendingTrip).toBeNull();
+    expect(after.mode).toEqual({ kind: "normal" });
+  });
+
+  it("changes nothing unless suggested trips are shown", () => {
+    const normal = firstSession({ trip: emptyTrip() });
+    expect(plannerSession(normal, use)).toBe(normal);
+    const editing = enter(normal);
+    expect(plannerSession(editing, use)).toBe(editing);
   });
 });
 

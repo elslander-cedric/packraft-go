@@ -8,6 +8,7 @@ import {
   type NormalTab,
 } from "@/core/plannerSession";
 import type { Router } from "@/core/router";
+import { defaultSettings } from "@/core/settings";
 import { isCamp, type LatLng } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import type { MapFocus } from "@/map/TripMap";
@@ -38,6 +39,7 @@ import PointCard from "./PointCard";
 import { positionMessage } from "./position";
 import SectionDetailsDialog from "./SectionDetailsDialog";
 import SectionsList from "./SectionsList";
+import SuggestedTripDetails from "./SuggestedTripDetails";
 import SuggestedTripsList from "./SuggestedTripsList";
 import TripButtons from "./TripButtons";
 import TripWishesDialog from "./TripWishesDialog";
@@ -122,17 +124,28 @@ export default function Planner({ router }: { router?: Router }) {
     panel.openForMode();
     if (!panel.sideways) panel.raiseFromPeek();
   });
-  const closeSuggestions = () => {
-    if (session.mode.kind !== "suggestedTrips") return;
-    const { returnTo } = session.mode;
-    dispatch({ type: "closeSuggestedTrips" });
-    findTrips.close();
-    setTab(returnTo.tab);
-    panel.setStop(returnTo.sheet);
+  const closeSuggestions = () => dispatch({ type: "closeSuggestedTrips" });
+  // Leaving suggested trips, closed or by using one (once the replace question is answered),
+  // restores the tab and the sheet's stop.
+  const [shownMode, setShownMode] = useState(session.mode);
+  if (shownMode !== session.mode) {
+    setShownMode(session.mode);
+    if (shownMode.kind === "suggestedTrips" && session.mode.kind === "normal") {
+      findTrips.close();
+      setTab(shownMode.returnTo.tab);
+      panel.setStop(shownMode.returnTo.sheet);
+    }
+  }
+  const found = showingSuggestions && findTrips.state.status === "found" ? findTrips.state.trips : null;
+  const selectedSuggestion = (findTrips.selected !== null && found?.[findTrips.selected]) || null;
+  // A row or a line selects a suggestion and brings its details into view.
+  const selectSuggestion = (index: number) => {
+    findTrips.select(index);
+    panel.raiseFromPeek();
   };
 
   const onMapTap = (at: LatLng) => {
-    if (showingSuggestions) return;
+    if (showingSuggestions) return findTrips.select(null);
     if (editingAccessPoints) access.placeDraft(at);
     else if (selectedPoint !== null || selectedLeg !== null) dispatch({ type: "deselect" });
     else {
@@ -218,9 +231,8 @@ export default function Planner({ router }: { router?: Router }) {
           search.setArea(area);
           findTrips.setArea(area);
         }}
-        suggestedTrips={
-          showingSuggestions && findTrips.state.status === "found" ? { trips: findTrips.state.trips } : null
-        }
+        suggestedTrips={found && { trips: found, selected: findTrips.selected }}
+        onSuggestionTap={selectSuggestion}
       />
 
       {layer.on && (
@@ -375,7 +387,21 @@ export default function Planner({ router }: { router?: Router }) {
       >
         {showingSuggestions && (
           <TabPanel value="suggestedTrips">
-            <SuggestedTripsList state={findTrips.state} />
+            {selectedSuggestion && findTrips.selected !== null && findTrips.date ? (
+              <SuggestedTripDetails
+                n={findTrips.selected + 1}
+                trip={selectedSuggestion}
+                date={findTrips.date}
+                pace={settings ?? defaultSettings}
+                onBack={() => findTrips.select(null)}
+                onUse={() =>
+                  findTrips.date &&
+                  dispatch({ type: "useSuggestedTrip", suggestion: selectedSuggestion, date: findTrips.date })
+                }
+              />
+            ) : (
+              <SuggestedTripsList state={findTrips.state} onSelect={selectSuggestion} />
+            )}
           </TabPanel>
         )}
         {editingAccessPoints && (

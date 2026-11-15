@@ -58,6 +58,8 @@ export type TripMapProps = {
   onAreaChange?: (area: SearchArea) => void;
   /** The suggested trips while they are shown (ADR 0039), drawn below the trip. */
   suggestedTrips?: SuggestedTripLayerProps | null;
+  /** A tap on a suggested trip's line, by its index; it is not a tap on the map. */
+  onSuggestionTap?: (index: number) => void;
 };
 
 const positionStyle = { color: "#fff", weight: 3, fillColor: "#1a73e8", fillOpacity: 1 };
@@ -90,6 +92,7 @@ export default function TripMap({
   searchCover,
   onAreaChange,
   suggestedTrips,
+  onSuggestionTap,
 }: TripMapProps) {
   return (
     <MapContainer
@@ -106,7 +109,7 @@ export default function TripMap({
       <OpeningView trip={trip} position={position} cover={searchCover} />
       {focus && <Focus focus={focus} />}
       {suggestedTrips && <SuggestedTripLayer {...suggestedTrips} />}
-      <Taps onTap={onMapTap} onLegTap={onLegTap} />
+      <Taps onTap={onMapTap} onLegTap={onLegTap} onSuggestionTap={onSuggestionTap} />
       <TripLayers
         trip={trip}
         selectedPoint={selectedPoint}

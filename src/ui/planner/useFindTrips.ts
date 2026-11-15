@@ -22,6 +22,8 @@ export function useFindTrips(
   // The visible map, kept as the map reports it, so a search covers what was shown at Find trips.
   const area = useRef<Bounds>([-180, -90, 180, 90]);
   const [asking, setAsking] = useState(false);
+  // The suggestion whose details are shown, by its index in the list.
+  const [selected, setSelected] = useState<number | null>(null);
   const [search, setSearch] = useState<{
     wishes: TripWishes;
     date: string;
@@ -40,11 +42,20 @@ export function useFindTrips(
     confirm: (wishes: TripWishes, date: string) => {
       if (settings) saveSettings(withTripWishes(settings, wishes));
       setSearch({ wishes, date, area: area.current });
+      setSelected(null);
       setAsking(false);
       onShow();
     },
-    close: () => setSearch(null),
+    close: () => {
+      setSearch(null);
+      setSelected(null);
+    },
     state,
+    /** The date searched for: a used suggestion starts on it. */
+    date: search?.date ?? null,
+    selected,
+    /** Selects a suggestion by its index, or goes back to the list with null. */
+    select: setSelected,
     /** The map moved. */
     setArea: ({ west, south, east, north }: SearchArea) => {
       area.current = [west, south, east, north];

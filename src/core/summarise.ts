@@ -177,7 +177,7 @@ function hikeTimeH(km: number, climbM: number, settings: Pace): number {
 }
 
 /** Paddle time in hours (ADR 0009): distance at the planner's paddling speed. */
-function paddleTimeH(km: number, settings: Pace): number {
+export function paddleTimeH(km: number, settings: Pace): number {
   return km / settings.paddleSpeedKmh;
 }
 
