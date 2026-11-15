@@ -3,7 +3,7 @@
 Date: 2026-11-15
 
 ## Status
-Proposed. Amends ADR 0003 (the user still draws; the app may now also propose whole one-day trips, which the user browses and may use as their trip).
+Accepted. Amends ADR 0003 (the user still draws; the app may now also propose whole one-day trips, which the user browses and may use as their trip).
 
 ## Context
 Drawing the hike/paddle mix by hand means checking yourself which water is open, where you may get in and out (in Wallonia only at an aire), whether a dam or lock is in the way, and whether the day fits what you want to do. The app already knows most of this: the access rules, official aires, obstacles, locks and your access points. ADR 0003 left automatic route-finding out of v1 as too hard. Packrafters often start from "what's a good day out around here?" rather than from two fixed points, so the first slice answers that. The planner is still the home planner (ADRs 0001, 0002).
