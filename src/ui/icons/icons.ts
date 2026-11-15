@@ -132,4 +132,7 @@ export const icons = {
   // Find trips (ADR 0039), and the same button while suggested trips are shown, which closes them.
   findTrips: faRoute,
   closeSuggestedTrips: faXmark,
+  // A suggested trip's details: back to the list, and Use this trip.
+  backToSuggestions: faArrowLeft,
+  useSuggestedTrip: faCircleCheck,
 };

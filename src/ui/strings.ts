@@ -29,6 +29,11 @@ export const strings = {
     message: "Your current trip will be replaced.",
     confirm: "Replace current trip",
   },
+  useSuggestedTripConfirm: {
+    title: "Use this suggested trip?",
+    message: "Your current trip will be replaced.",
+    confirm: "Replace current trip",
+  },
   openFileInvalid: "This is not a packraft-go trip file, or it is damaged. Your current trip is unchanged.",
   openFileUnknownVersion:
     "This trip file is from a newer or unknown version of packraft-go and can't be opened here. Your current trip is unchanged.",
@@ -260,6 +265,13 @@ export const strings = {
       shapes: { loop: "Loop", "one-way": "One-way" },
       paddle: (distance: string) => `${distance} paddle`,
       switches: (count: number) => (count === 1 ? "1 switch" : `${count} switches`),
+      // A selected suggestion's details, named by its number in the list and on the map.
+      detailsTitle: (n: number) => `Suggested trip ${n}`,
+      back: "Back",
+      use: "Use this trip",
+      timeLabel: "Time",
+      riversLabel: "Rivers",
+      airesLabel: "Aires",
       // Why nothing was found.
       reasons: {
         noOpenWater: "No open water in this area on this date.",

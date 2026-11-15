@@ -30,11 +30,15 @@
 //   for Done (still following your access points).
 // - showing suggested trips (ADR 0039) is a third mode, entered from normal mode only and
 //   closed back to it, keeping the panel view to return to. The trip is frozen as while
-//   editing access points, so closing leaves it as it was.
+//   editing access points, so closing leaves it as it was. Use this trip replaces the trip
+//   through the replace question and, once replaced, goes back to normal mode; like access
+//   point editing, the mode outlasts New trip and Open trip.
 // Actions that can't apply return the same session.
 import type { AccessPoints } from "./accessPoints";
 import type { CalendarDate } from "./calendarDate";
 import type { OfficialAire } from "./officialAire";
+import type { SuggestedTrip } from "./suggestedTrips";
+import { tripFromSuggestion } from "./tripFromSuggestion";
 import { applyRoutingAction, retryLeg, type RoutingAction } from "./routing";
 import { distanceM } from "./geo";
 import { acceptSnap, movedPointOffers, snapOffers, type SnapOffer } from "./snap";
@@ -51,7 +55,7 @@ import {
 } from "./trip";
 
 /** The questions asked before a trip with points is replaced. */
-export type ReplaceQuestion = "newTrip" | "openFile";
+export type ReplaceQuestion = "newTrip" | "openFile" | "useSuggestedTrip";
 
 /** Why a file could not be opened. */
 export type FileError = "unknown-version" | "invalid";
@@ -142,6 +146,8 @@ export type PlannerAction =
   /** Shows suggested trips; closing them returns to `returnTo`. */
   | { readonly type: "showSuggestedTrips"; readonly returnTo: PanelView }
   | { readonly type: "closeSuggestedTrips" }
+  /** Use this trip: the suggestion becomes the trip, starting on the searched `date`. */
+  | { readonly type: "useSuggestedTrip"; readonly suggestion: SuggestedTrip; readonly date: CalendarDate }
   | RoutingAction;
 
 /** The first session, from what loading the stored trip returned. */
@@ -175,6 +181,10 @@ const replace = (session: PlannerSession, next: Trip, question: ReplaceQuestion)
   newTripNeedsConfirmation(session.trip)
     ? { ...session, question, pendingTrip: next, fileError: null }
     : replaced(session, next);
+
+/** The answer yes to the replace question: a used suggested trip also leaves its mode. */
+const confirmed = (session: PlannerSession, next: Trip): PlannerSession =>
+  session.question === "useSuggestedTrip" ? left(replaced(session, next), "suggestedTrips") : replaced(session, next);
 
 /** An edit of the points or leg modes: selection and offers are dropped. */
 const edited = (session: PlannerSession, trip: Trip, offers: readonly SnapOffer[] = []): PlannerSession => ({
@@ -221,7 +231,7 @@ const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set([
 
 export function plannerSession(session: PlannerSession, action: PlannerAction): PlannerSession {
   if (action.type === "routeRequested" || action.type === "routeArrived") return routing(session, action);
-  if (action.type === "confirmReplace") return session.pendingTrip ? replaced(session, session.pendingTrip) : session;
+  if (action.type === "confirmReplace") return session.pendingTrip ? confirmed(session, session.pendingTrip) : session;
   if (action.type === "cancelReplace") return session.pendingTrip ? { ...session, pendingTrip: null } : session;
   if (session.pendingTrip) return session;
   if (session.mode.kind !== "normal" && frozenWhileEditing.has(action.type)) return session;
@@ -319,6 +329,11 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
       return entered(session, { kind: "suggestedTrips", returnTo: action.returnTo });
     case "closeSuggestedTrips":
       return left(session, "suggestedTrips");
+    case "useSuggestedTrip": {
+      if (!showingSuggestedTrips(session)) return session;
+      const after = replace(session, tripFromSuggestion(action.suggestion, action.date), "useSuggestedTrip");
+      return after.pendingTrip ? after : left(after, "suggestedTrips");
+    }
   }
 }
 

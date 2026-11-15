@@ -17,7 +17,11 @@ import TripDetailsDialog from "./TripDetailsDialog";
 const text = strings.planner.menu;
 
 /** The questions asked before a trip with points is replaced. */
-const confirmations = { newTrip: strings.newTripConfirm, openFile: strings.openFileConfirm } as const;
+const confirmations = {
+  newTrip: strings.newTripConfirm,
+  openFile: strings.openFileConfirm,
+  useSuggestedTrip: strings.useSuggestedTripConfirm,
+} as const;
 
 /** Which file the name dialog is asking the name for. */
 type NamedFile = "save" | "export";
