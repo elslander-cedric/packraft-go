@@ -70,8 +70,18 @@ While editing the trip is frozen (#227):
 - Each row has edit and delete buttons, and the marker drags to correct it.
 - Official aires on the route (`officialAiresOnRoute`, #208) are merged into the route-ordered part as read-only rows that open `AccessDetailsDialog`, with the access layer on or off; off-route ones aren't listed.
 
+## Suggested trips
+
+Find trips (ADR 0039) is the planner's third mode, `{ kind: "suggestedTrips", returnTo }` in the planner session (`showSuggestedTrips`, `closeSuggestedTrips`), entered from normal mode only.
+
+- The floating button under the layers button (top right; hidden while editing access points) opens `TripWishesDialog`: paddle km (empty = no preference), most switches, date (today by default, never stored). The wishes are stored with `withTripWishes`.
+- `useFindTrips` keeps the dialog, the search (wishes, date and the map area when confirmed) and its answer; `useSuggestedTrips` loads the route network (`useRouteNetwork`) and the rules and runs `suggestTrips`. A search for today waits (`waiting`) until today's official status and flows have answered, ok or failed.
+- While shown the trip is frozen as in access point editing (`frozen` on `TripMap`, the same ignored actions), a map tap does nothing, the bottom button stacks are hidden, and the panel has only the Suggested trips tab (`SuggestedTripsList`: one row each, or the reason, or the waiting state). The lines are `SuggestedTripLayer` in `src/map/`.
+- The same button, coloured with an × while they are shown, closes them: the tab and the sheet's stop come back from `returnTo`.
+
 ## Tests
 
 - In e2e on a desktop-sized window use the helpers in `e2e/support/planner.ts`: the trip panel, its tabs, the menu, Open/Save trip, clicks on the free part of the map.
 - `showAllLegs(page)` opens every section as it appears, for specs about legs.
+- Suggested trips: `findTrips(page, wishes)` and `closeSuggestions(page)` in `e2e/support/suggestedTrips.ts`, with the list, rows, lines and number locators.
 - Specs that use access points enter access point editing first with `enterAccessPointEditing(page)` from `e2e/support/accessPointEditing.ts` (`markAccessPointAt` does it for you).

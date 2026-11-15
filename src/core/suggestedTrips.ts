@@ -198,9 +198,12 @@ function nearWish(distanceM: number, wishKm: number): boolean {
   return distanceM >= wishM * (1 - WISH_BAND) && distanceM <= wishM * (1 + WISH_BAND);
 }
 
-/** How far a distance is from the wish, as a share of it; 0 when nothing was wished. */
+/**
+ * How far a distance is from the wish, as a share of it: lower ranks first. With nothing wished
+ * the longest ranks first, so the few-hundred-metre hops between neighbouring aires come last.
+ */
 function offWish(distanceM: number, wishKm: number | undefined): number {
-  return wishKm === undefined ? 0 : Math.abs(distanceM - wishKm * 1000) / (wishKm * 1000);
+  return wishKm === undefined ? -distanceM : Math.abs(distanceM - wishKm * 1000) / (wishKm * 1000);
 }
 
 /** Whether an access record's water is open on the date; each record is evaluated once. */

@@ -8,7 +8,8 @@ import { icons } from "../src/ui/icons/icons";
 import { strings } from "../src/ui/strings";
 import { iconIn } from "./support/icons";
 import { serveOffline } from "./support/offline";
-import { enterAccessPointEditing } from "./support/accessPointEditing";
+import { enterAccessPointEditing, leaveAccessPointEditing } from "./support/accessPointEditing";
+import { findTrips } from "./support/suggestedTrips";
 
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
 test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
@@ -167,7 +168,11 @@ test("the section and day lists sit right under the tab row; every other tab's c
   for (const name of Object.values(text.tabs)) {
     // The Access points tab is shown in access point editing only (ADR 0036).
     if (name === text.tabs.accessPoints) await enterAccessPointEditing(page);
-    else await tab(page, name).click();
+    // The Suggested trips tab is shown only while they are (ADR 0039); around this trip it gives a reason.
+    else if (name === text.tabs.suggestedTrips) {
+      await leaveAccessPointEditing(page);
+      await findTrips(page, { paddleKm: 10, date: "2027-07-10" });
+    } else await tab(page, name).click();
     await settled(page);
     // Measured in one go, polled: the panel's content re-renders as the tab opens, and right
     // after Days the flush Days panel may still be the one shown.

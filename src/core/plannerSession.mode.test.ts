@@ -1,6 +1,6 @@
-// Seam: the planner session function (ADR 0025), for its two modes (ADR 0036, #225):
-// normal mode and access point editing, entered and left by actions. While
-// editing access points the trip is frozen (#227).
+// Seam: the planner session function (ADR 0025), for its modes (ADR 0036, ADR 0039):
+// normal mode, access point editing and showing suggested trips, entered and left by
+// actions. Outside normal mode the trip is frozen.
 import { describe, expect, it } from "vitest";
 import { addAccessPoint, updateAccessPoint } from "./accessPoints";
 import { firstSession, plannerSession, type PanelView, type PlannerAction, type PlannerSession } from "./plannerSession";
@@ -17,6 +17,8 @@ const daysPeek: PanelView = { tab: "days", sheet: "peek" };
 const selected = (): PlannerSession => ({ ...firstSession({ trip }), selectedPoint: 1 });
 const enter = (s: PlannerSession, returnTo: PanelView = daysPeek) =>
   plannerSession(s, { type: "enterAccessPointEditing", returnTo });
+const showSuggestions = (s: PlannerSession, returnTo: PanelView = daysPeek) =>
+  plannerSession(s, { type: "showSuggestedTrips", returnTo });
 
 describe("planner modes", () => {
   it("the planner opens in normal mode", () => {
@@ -57,6 +59,37 @@ describe("planner modes", () => {
   it("the mode outlasts replacing the trip", () => {
     const editing = enter(firstSession({ trip: emptyTrip() }));
     expect(plannerSession(editing, { type: "newTrip" }).mode).toEqual(editing.mode);
+  });
+});
+
+describe("showing suggested trips", () => {
+  it("showing them keeps the view to return to and clears the selection", () => {
+    const before = { ...firstSession({ trip }), selectedLeg: 0 };
+    const after = showSuggestions(before);
+    expect(after.mode).toEqual({ kind: "suggestedTrips", returnTo: daysPeek });
+    expect(after.selectedLeg).toBeNull();
+    expect(after.trip).toBe(before.trip);
+  });
+
+  it("closing them goes back to normal mode with the trip as it was", () => {
+    const before = selected();
+    const after = plannerSession(showSuggestions(before), { type: "closeSuggestedTrips" });
+    expect(after.mode).toEqual({ kind: "normal" });
+    expect(after.trip).toBe(before.trip);
+  });
+
+  it("closing them in normal mode changes nothing", () => {
+    const s = selected();
+    expect(plannerSession(s, { type: "closeSuggestedTrips" })).toBe(s);
+  });
+
+  it("they can't be shown while editing access points, nor access points edited while they are shown", () => {
+    const editing = enter(selected());
+    expect(showSuggestions(editing)).toBe(editing);
+    expect(plannerSession(editing, { type: "closeSuggestedTrips" })).toBe(editing);
+    const showing = showSuggestions(selected());
+    expect(enter(showing)).toBe(showing);
+    expect(plannerSession(showing, { type: "leaveAccessPointEditing" })).toBe(showing);
   });
 });
 
@@ -101,6 +134,11 @@ describe("the trip is frozen while editing access points (#227)", () => {
   for (const [name, make] of frozen) {
     it(`${name} changes nothing`, () => {
       const before = editing();
+      expect(plannerSession(before, make(before))).toBe(before);
+    });
+    it(`${name} changes nothing while suggested trips are shown`, () => {
+      const normal = plannerSession(editing(), { type: "leaveAccessPointEditing" });
+      const before = { ...showSuggestions(normal), selectedPoint: 1 };
       expect(plannerSession(before, make(before))).toBe(before);
     });
   }

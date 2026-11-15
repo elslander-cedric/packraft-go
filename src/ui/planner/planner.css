@@ -1053,3 +1053,52 @@
 .planner-access-dialog .access-legend {
   margin-top: var(--space-3);
 }
+
+/* The trip wishes dialog (ADR 0039): each label above its field, as in Edit trip. */
+.planner-trip-wishes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.planner-trip-wishes label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.planner-trip-wishes input[type="date"] {
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+
+/* The suggested trips' list: like the leg rows, edge to edge right under the tab row, at least
+   44 px a row, each number on a badge like the map's. */
+.planner-suggested-trips {
+  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planner-suggested-trip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.planner-suggested-trip-number {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: #8e24aa;
+  color: #fff;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

@@ -216,8 +216,8 @@ describe("suggested trips: switches, loops and one day", () => {
     );
     const noDistance = wishes({ paddleKm: undefined });
     // 8 hours at 5 km/h is 40 km: 45 km is too long.
-    expect(stops(search({ network: long, wishes: noDistance }))).toEqual(["A>B", "A>C", "B>C", "B>D", "C>D"]);
-    expect(stops(search({ network: long, wishes: noDistance, pace: { ...defaultSettings, paddleSpeedKmh: 6 } }))).toEqual([
+    expect(stops(search({ network: long, wishes: noDistance })).sort()).toEqual(["A>B", "A>C", "B>C", "B>D", "C>D"]);
+    expect(stops(search({ network: long, wishes: noDistance, pace: { ...defaultSettings, paddleSpeedKmh: 6 } })).sort()).toEqual([
       "A>B",
       "A>C",
       "A>D",
@@ -287,6 +287,14 @@ describe("suggested trips: ranking and variety", () => {
       [link("A", "B", 11, { records: ["open-1"] }), { ...link("C", "D", 9.5, { records: ["open-2"] }) }],
     );
     expect(stops(search({ network: nearer }))).toEqual(["C>D", "A>B"]);
+  });
+
+  it("put the longest paddles first when no paddle distance is wished", () => {
+    const lengths = network(
+      [node("A", 0), node("B", 1), node("C", 2), node("D", 3)],
+      [link("A", "B", 0.4, { records: ["open-1"] }), link("C", "D", 12, { records: ["open-2"] })],
+    );
+    expect(stops(search({ network: lengths, wishes: wishes({ paddleKm: undefined }) }))).toEqual(["C>D", "A>B"]);
   });
 
   it("show at most 10", () => {

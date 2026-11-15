@@ -28,6 +28,9 @@
 //   While editing access points the trip is frozen: the actions that edit its points or
 //   leg modes, select a point or a leg or answer a snap offer return the same session; the offers wait
 //   for Done (still following your access points).
+// - showing suggested trips (ADR 0039) is a third mode, entered from normal mode only and
+//   closed back to it, keeping the panel view to return to. The trip is frozen as while
+//   editing access points, so closing leaves it as it was.
 // Actions that can't apply return the same session.
 import type { AccessPoints } from "./accessPoints";
 import type { CalendarDate } from "./calendarDate";
@@ -62,7 +65,8 @@ export const normalTabs = ["sections", "days"] as const;
 export type NormalTab = (typeof normalTabs)[number];
 
 /**
- * The panel or sheet as it was before access point editing: Done restores it (ADR 0036). The side
+ * The panel or sheet as it was before access point editing (ADR 0036) or showing suggested
+ * trips (ADR 0039): leaving restores it. The side
  * panel's open state isn't here: it is a stored setting, left alone while editing.
  */
 export type PanelView = {
@@ -74,10 +78,14 @@ export type PanelView = {
 /** The planner's mode (GLOSSARY "Access point editing", ADR 0036): always normal on load. */
 export type PlannerMode =
   | { readonly kind: "normal" }
-  | { readonly kind: "accessPointEditing"; readonly returnTo: PanelView };
+  | { readonly kind: "accessPointEditing"; readonly returnTo: PanelView }
+  | { readonly kind: "suggestedTrips"; readonly returnTo: PanelView };
 
 /** Whether the planner is editing access points, so the trip is frozen. */
 export const editingAccessPoints = (session: PlannerSession): boolean => session.mode.kind === "accessPointEditing";
+
+/** Whether suggested trips are shown (ADR 0039), so the trip is frozen. */
+export const showingSuggestedTrips = (session: PlannerSession): boolean => session.mode.kind === "suggestedTrips";
 
 export type PlannerSession = {
   readonly mode: PlannerMode;
@@ -131,6 +139,9 @@ export type PlannerAction =
   | { readonly type: "enterAccessPointEditing"; readonly returnTo: PanelView }
   /** Done: back to normal mode. */
   | { readonly type: "leaveAccessPointEditing" }
+  /** Shows suggested trips; closing them returns to `returnTo`. */
+  | { readonly type: "showSuggestedTrips"; readonly returnTo: PanelView }
+  | { readonly type: "closeSuggestedTrips" }
   | RoutingAction;
 
 /** The first session, from what loading the stored trip returned. */
@@ -192,7 +203,7 @@ const routing = (session: PlannerSession, action: RoutingAction): PlannerSession
   return trip === session.trip ? session : { ...session, trip };
 };
 
-/** What can't apply while editing access points: the trip is frozen. */
+/** What can't apply outside normal mode: the trip is frozen. */
 const frozenWhileEditing: ReadonlySet<PlannerAction["type"]> = new Set([
   "addPoint",
   "movePoint",
@@ -213,7 +224,7 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
   if (action.type === "confirmReplace") return session.pendingTrip ? replaced(session, session.pendingTrip) : session;
   if (action.type === "cancelReplace") return session.pendingTrip ? { ...session, pendingTrip: null } : session;
   if (session.pendingTrip) return session;
-  if (editingAccessPoints(session) && frozenWhileEditing.has(action.type)) return session;
+  if (session.mode.kind !== "normal" && frozenWhileEditing.has(action.type)) return session;
 
   const { trip } = session;
   switch (action.type) {
@@ -301,17 +312,22 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
     case "fileDownloaded":
       return session.fileError === null ? session : { ...session, fileError: null };
     case "enterAccessPointEditing":
-      return editingAccessPoints(session)
-        ? session
-        : {
-            ...session,
-            mode: { kind: "accessPointEditing", returnTo: action.returnTo },
-            selectedPoint: null,
-            selectedLeg: null,
-          };
+      return entered(session, { kind: "accessPointEditing", returnTo: action.returnTo });
     case "leaveAccessPointEditing":
-      return editingAccessPoints(session)
-        ? { ...session, mode: { kind: "normal" }, selectedPoint: null, selectedLeg: null }
-        : session;
+      return left(session, "accessPointEditing");
+    case "showSuggestedTrips":
+      return entered(session, { kind: "suggestedTrips", returnTo: action.returnTo });
+    case "closeSuggestedTrips":
+      return left(session, "suggestedTrips");
   }
+}
+
+/** Another mode, entered only from normal mode; the selection is cleared. */
+function entered(session: PlannerSession, mode: Exclude<PlannerMode, { kind: "normal" }>): PlannerSession {
+  return session.mode.kind === "normal" ? { ...session, mode, selectedPoint: null, selectedLeg: null } : session;
+}
+
+/** Back to normal mode from `kind`, clearing the selection; from any other mode nothing changes. */
+function left(session: PlannerSession, kind: PlannerMode["kind"]): PlannerSession {
+  return session.mode.kind === kind ? { ...session, mode: { kind: "normal" }, selectedPoint: null, selectedLeg: null } : session;
 }

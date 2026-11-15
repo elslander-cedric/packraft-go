@@ -48,7 +48,7 @@ Areas with more detail have a `README.md` (each with a `CLAUDE.md` that imports 
 - `src/kayak/` (ADR 0035): the `PKAYAK` client (official status and incidents), the only module of the app that talks to the SPW's kayak map service, and the live feeds (`src/ui/liveFeed.ts`). See `src/kayak/README.md`.
 - `src/geocoding/` (ADRs 0027, 0030): the Nominatim client, the only module that talks to Nominatim and the only one that sends access point positions anywhere, and place search. See `src/geocoding/README.md`.
 - `src/pwa/` and `public/sw.js`: PWA registration and a hand-written service worker (ADR 0023). It caches the same-origin app shell only, never map tiles, BRouter, KiWIS, PKAYAK or Nominatim.
-- `src/ui/planner/` (+ `src/map/TripMap.tsx`): the one planner (ADRs 0026, 0034), on every screen, and access point editing (ADR 0036), its second mode. Runs `usePlanner` and adds no planning rules. See `src/ui/planner/README.md`.
+- `src/ui/planner/` (+ `src/map/TripMap.tsx`): the one planner (ADRs 0026, 0034), on every screen, access point editing (ADR 0036), its second mode, and suggested trips (ADR 0039), its third. Runs `usePlanner` and adds no planning rules. See `src/ui/planner/README.md`.
 - `src/ui/strings.ts`: all user-facing text (ADR 0013).
 
 ## Conventions

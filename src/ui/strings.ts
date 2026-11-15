@@ -138,7 +138,7 @@ export const strings = {
     // The planner's sheet and tabs (ADR 0026).
     sheetLabel: "Trip",
     tabsLabel: "Trip details",
-    tabs: { sections: "Sections", days: "Days", accessPoints: "Access points" },
+    tabs: { sections: "Sections", days: "Days", accessPoints: "Access points", suggestedTrips: "Suggested trips" },
     // The trip's totals in the sheet's peek: each figure after its icon, named for screen readers.
     totals: {
       labels: {
@@ -240,6 +240,36 @@ export const strings = {
     // The edit dialog: what you change is kept until Save stores it on the device.
     accessPointDialogTitle: "Access point details",
     accessPointSave: "Save",
+    // Suggested trips (ADR 0039): the floating button top right that asks for your trip wishes and,
+    // pressed again while they are shown, closes them; icon-only, coloured while they are shown.
+    findTripsButton: "Find trips",
+    suggestedTrips: {
+      wishesTitle: "Trip wishes",
+      paddleKmLabel: "Paddle distance (km)",
+      paddleKmHint: "About how far. Leave empty for no preference.",
+      maxSwitchesLabel: "Most switches",
+      maxSwitchesHint: "Every put-in and every take-out counts one.",
+      dateLabel: "Date",
+      confirm: "Find trips",
+      listLabel: "Suggested trips",
+      // In the area the map shows; the trip is left as it is.
+      loading: "Finding trips…",
+      waitingForToday: "Waiting for today's official status and flows…",
+      networkFailed: "The trip network couldn't be loaded. Trying again…",
+      // A row: its number, then e.g. "One-way · 9.9 km paddle · 2 switches".
+      shapes: { loop: "Loop", "one-way": "One-way" },
+      paddle: (distance: string) => `${distance} paddle`,
+      switches: (count: number) => (count === 1 ? "1 switch" : `${count} switches`),
+      // Why nothing was found.
+      reasons: {
+        noOpenWater: "No open water in this area on this date.",
+        switches: (max: number) =>
+          `Every trip here needs more than ${max === 1 ? "1 switch" : `${max} switches`}.`,
+        loop: "No loop fits here.",
+        oneWay: "No one-way trip fits here.",
+        paddleDistance: (km: string) => `Zoom out: no trip of about ${km} paddling fits here.`,
+      },
+    },
     // The access layer: switched on and off in the Map menu, named `accessLayerToggle`.
     // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a dialog.
     accessChip: (when: string) => `Access · ${when}`,
