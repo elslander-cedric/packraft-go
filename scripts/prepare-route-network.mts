@@ -123,7 +123,7 @@ async function patiently(query: string): Promise<OverpassResult> {
       return await overpass.query(query);
     } catch (error) {
       if (attempt === 5) throw error;
-      console.log(`  Overpass is busy; asking again in ${BUSY_PAUSE_MS / 60_000} minutes`);
+      console.log(`  Overpass is busy (${String(error).slice(0, 100)}); asking again in ${BUSY_PAUSE_MS / 60_000} minutes`);
       await sleep(BUSY_PAUSE_MS);
     }
   }
