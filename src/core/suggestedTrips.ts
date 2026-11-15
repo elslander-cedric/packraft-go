@@ -143,7 +143,7 @@ export function suggestTrips({ network: shipped, rules, when, area, wishes, pace
     trips = trips.filter(keep);
     if (trips.length === 0) return { status: "none", reason };
   }
-  const best = varied(ranked(trips, wishes)).slice(0, MAX_TRIPS);
+  const best = varied(ranked(trips, wishes), graph.byId).slice(0, MAX_TRIPS);
   return { status: "found", trips: best.map((trip) => suggestion(trip, graph.byId)) };
 }
 
@@ -407,20 +407,28 @@ function ranked(trips: readonly Candidate[], { hikeKm, paddleKm }: TripWishes): 
   return keys.sort((a, b) => compare(a.keys, b.keys)).map(({ trip }) => trip);
 }
 
-/** The access records a trip paddles: its river stretches. */
-const stretchesOf = (trip: Candidate) =>
-  unique(trip.choices.flatMap((choice) => (choice.mode === "paddle" ? choice.chain.steps.flatMap((step) => step.link.records) : [])));
+/**
+ * A trip's river stretches: the access records it paddles, as a Walloon record is one stretch.
+ * A link from or to a bank spot counts by its waters instead: there one region record covers
+ * every water (ADR 0039).
+ */
+function stretchesOf(trip: Candidate, byId: ReadonlyMap<string, RouteNode>): string[] {
+  const atBankSpot = (id: string) => byId.get(id)?.kind === "bank-spot";
+  const keys = (link: PaddleLink) =>
+    atBankSpot(link.from) || atBankSpot(link.to) ? link.waters.map((water) => `water:${water}`) : link.records;
+  return unique(trip.choices.flatMap((choice) => (choice.mode === "paddle" ? choice.chain.steps.flatMap((step) => keys(step.link)) : [])));
+}
 
 /**
- * The ranked trips, each trip that would be one too many on any of its stretches (access
- * records) moved after the others, in rank order, so the top ones aren't near-copies.
+ * The ranked trips, each trip that would be one too many on any of its stretches moved after
+ * the others, in rank order, so the top ones aren't near-copies.
  */
-function varied(ranked: readonly Candidate[]): Candidate[] {
+function varied(ranked: readonly Candidate[], byId: ReadonlyMap<string, RouteNode>): Candidate[] {
   const perStretch = new Map<string, number>();
   const first: Candidate[] = [];
   const later: Candidate[] = [];
   for (const trip of ranked) {
-    const stretches = stretchesOf(trip);
+    const stretches = stretchesOf(trip, byId);
     if (stretches.some((stretch) => (perStretch.get(stretch) ?? 0) >= PER_STRETCH)) {
       later.push(trip);
       continue;

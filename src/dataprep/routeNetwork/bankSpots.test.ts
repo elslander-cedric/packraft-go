@@ -1,5 +1,5 @@
 // Bank spots (ADR 0039, GLOSSARY "Bank spot"), picked from a recorded Overpass answer for the
-// Demer and the Dijle around Werchter (`bankSpotQuery`) and the built-in access rules.
+// Demer and the Dijle around Werchter (`bankWaterQuery` and `bankPathQuery`) and the built-in access rules.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";

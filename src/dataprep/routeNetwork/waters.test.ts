@@ -1,5 +1,5 @@
 // The waters outside Wallonia, from a recorded Overpass answer for the Demer and the Dijle
-// around Werchter (`bankSpotQuery`), never from live OSM.
+// around Werchter (`bankWaterQuery` and `bankPathQuery`), never from live OSM.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";

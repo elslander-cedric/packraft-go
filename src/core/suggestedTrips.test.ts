@@ -600,6 +600,23 @@ describe("bank spots", () => {
     expect(stops(search({ rules: withWallonia, network: spots }))).toEqual(["A>B"]);
   });
 
+  it("counts variety by water between bank spots, where one region record covers every water", () => {
+    // Three links down one river and one on another, all under the same record.
+    const twoRivers = (make: (id: string, x: number) => RouteNode) =>
+      network(
+        [make("A", 0), make("B", 1), make("C", 2), make("D", 3), make("P", 5), make("Q", 6)],
+        [
+          link("A", "B", 10, { waters: ["One"] }),
+          link("B", "C", 10, { waters: ["One"] }),
+          link("C", "D", 10, { waters: ["One"] }),
+          link("P", "Q", 10, { waters: ["Other"] }),
+        ],
+      );
+    expect(stops(search({ network: twoRivers(bankSpot) }))).toEqual(["A>B", "B>C", "P>Q", "C>D"]);
+    // Between aires, variety stays by access record (a Walloon stretch).
+    expect(stops(search({ network: twoRivers(node) }))).toEqual(["A>B", "B>C", "C>D", "P>Q"]);
+  });
+
   it("never uses a bank spot in Wallonia, where only official aires and access points are allowed", () => {
     const mixed = network(
       [bankSpot("A", 10), node("B", 11), node("C", 12)],

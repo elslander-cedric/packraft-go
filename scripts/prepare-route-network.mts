@@ -21,7 +21,7 @@ import type { Bounds } from "../src/core/geo";
 import type { WalkingLink } from "../src/core/routeNetwork";
 import { createBRouterClient } from "../src/dataprep/routeNetwork/brouterClient";
 import { buildRouteNetwork, type NetworkInputs } from "../src/dataprep/routeNetwork/build";
-import { bankSpotQuery, bankSpotTiles, recordQuery } from "../src/dataprep/routeNetwork/overpass";
+import { bankPathQuery, bankSpotTiles, bankWaterLines, bankWaterQuery, recordQuery } from "../src/dataprep/routeNetwork/overpass";
 import { serialiseRouteNetwork } from "../src/dataprep/routeNetwork/serialise";
 import { WALKING_CEILING_M, walkingLink, walkingPairs, walkingUrl } from "../src/dataprep/routeNetwork/walking";
 import { createOverpassClient, type OverpassElement, type OverpassResult } from "../src/dataprep/walloonStretches/overpass";
@@ -53,13 +53,21 @@ const keyFile = (query: string, directory = CACHE_DIR) =>
   path.join(directory, `${createHash("sha256").update(query).digest("hex").slice(0, 16)}.json`);
 await mkdir(CACHE_DIR, { recursive: true });
 await mkdir(BROUTER_CACHE_DIR, { recursive: true });
+let overpassRequests = 0;
+// A run never asks Overpass more than this, however busy it is: one run from an empty cache needs about 150.
+const OVERPASS_MAX_REQUESTS = Number(process.env.OVERPASS_MAX_REQUESTS ?? 200);
 const overpass = createOverpassClient({
   endpoint: ENDPOINT,
   fetch: async (url, init) => {
     if (offline) {
       throw new Error("an Overpass answer is not cached and --offline was given");
     }
-    console.log(`  fetching from ${new URL(url).host} ...`);
+    if (overpassRequests >= OVERPASS_MAX_REQUESTS) {
+      process.exitCode = 1;
+      throw new Error(`stopped after ${overpassRequests} requests to Overpass in this run (OVERPASS_MAX_REQUESTS)`);
+    }
+    overpassRequests += 1;
+    console.log(`  fetching from ${new URL(url).host} (request ${overpassRequests}) ...`);
     return fetch(url, { ...init, signal: AbortSignal.timeout(240_000) });
   },
   wait: async (ms) => {
@@ -71,6 +79,8 @@ const overpass = createOverpassClient({
     write: async (query, body) => writeFile(keyFile(query), body),
   },
   log: (message) => console.log(`  ${message}`),
+  // At 15 s most retries of a heavy query found the public server still at capacity.
+  retryPauseMs: 60_000,
 });
 
 const records = stretches.stretches.map((stretch) => ({
@@ -94,18 +104,23 @@ for (const [i, tile] of tiles.entries()) {
   bankElements.push(...(await bankTile(tile)));
 }
 
-/**
- * One tile's answer. These queries are heavy, and a busy public server turns them away for
- * minutes at a time: wait a few minutes before giving up.
- */
+/** One tile's waters, then the paths near them, asked around the waters' own lines. */
 async function bankTile(tile: Bounds): Promise<OverpassElement[]> {
+  const waters = await patiently(bankWaterQuery(tile));
+  const lines = bankWaterLines(waters, tile);
+  if (lines.length === 0) return waters.elements;
+  const paths = await patiently(bankPathQuery(tile, lines));
+  if (paths.elements.length === 0) {
+    console.log(`REVIEW bank spot tile ${tile.join(", ")}: ${lines.length} water lines but no paths near them`);
+  }
+  return [...waters.elements, ...paths.elements];
+}
+
+/** These queries are heavy, and a busy public server turns them away for minutes at a time: wait before giving up. */
+async function patiently(query: string): Promise<OverpassResult> {
   for (let attempt = 1; ; attempt++) {
     try {
-      const { elements } = await overpass.query(bankSpotQuery(tile));
-      if (elements.some((element) => element.type === "way") && !elements.some((element) => element.type === "node" && !element.tags)) {
-        console.log(`REVIEW bank spot tile ${tile.join(", ")}: waters but no paths near them`);
-      }
-      return elements;
+      return await overpass.query(query);
     } catch (error) {
       if (attempt === 5) throw error;
       console.log(`  Overpass is busy; asking again in ${BUSY_PAUSE_MS / 60_000} minutes`);
@@ -161,6 +176,7 @@ const brouter = createBRouterClient({
   log: (message) => console.log(`  ${message}`),
 });
 const pairs = walkingPairs(built.network.nodes);
+console.log(`${overpassRequests} requests to Overpass, the rest from its cache`);
 if (countWalks) {
   const asked = await Promise.all(pairs.map((pair) => readFile(keyFile(walkingUrl(pair), BROUTER_CACHE_DIR)).then(() => false, () => true)));
   const byKind = (kind: string) => built.network.nodes.filter((node) => node.kind === kind).length;

@@ -80,7 +80,7 @@ function stationsOf({ water, alongM }: Candidate, waters: readonly Water[]): Ban
 }
 
 /**
- * The bank spots on the waters: the path and road nodes in the Overpass answer (`bankSpotQuery`)
+ * The bank spots on the waters: the path and road nodes in the Overpass answer (`bankWaterQuery` and `bankPathQuery`)
  * on a water's bank, on open water, each water's first one along it, then the next one at least
  * the spacing away from those picked, and so on.
  */

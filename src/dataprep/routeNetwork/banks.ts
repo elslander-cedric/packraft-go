@@ -13,7 +13,7 @@ import { isOsmBarrier, markersOnRecord, type MarkerInput, type ObstacleInput } f
 import { watersFromOsm } from "./waters";
 
 export type BankInputs = {
-  /** The Overpass answers for every tile (`bankSpotQuery`), as one. */
+  /** The Overpass answers for every tile (`bankWaterQuery` and `bankPathQuery`), as one. */
   readonly osm: OverpassResult;
   readonly rules: AccessRules;
 };

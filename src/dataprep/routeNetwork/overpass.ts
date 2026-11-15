@@ -3,6 +3,8 @@
 // query on indexed tags, filtered by distance to the record's line afterwards. Outside
 // Wallonia: the rivers, canals and paths near them, tile by tile, for bank spots.
 import { boundsOf, insideArea, linesOf, type Bounds, type Geometry, type Position } from "@/core/geo";
+import { distanceM, lengthM, pointAt, simplify, type Pt } from "../walloonStretches/geo";
+import type { OverpassResult } from "../walloonStretches/overpass";
 
 /** How far around the record's line the box reaches, in degrees (about 300 m). */
 const MARGIN_DEG = 0.003;
@@ -27,25 +29,84 @@ export function recordQuery(line: readonly Position[]): string {
 /** The paths and roads that may reach a bank: not motorways, not private, not on a bridge or in a tunnel. */
 const BANK_HIGHWAYS =
   "^(path|footway|track|cycleway|bridleway|pedestrian|living_street|residential|unclassified|service|tertiary)$";
-/** How far from a waterway's line a path or road node is asked for: the widest bank distance (`bankSpots.ts`). */
-export const BANK_QUERY_M = 60;
+/** Simplification of the waters' lines the paths are asked around, in metres: well inside the bank distance. */
+const PATH_LINE_TOLERANCE_M = 10;
+/** How far outside its tile a water's line is kept, in degrees (about 200 m), so paths at the edge count. */
+const TILE_MARGIN_DEG = 0.002;
+
+const header = ([west, south, east, north]: Bounds) =>
+  `[out:json][timeout:180][bbox:${round(south)},${round(west)},${round(north)},${round(east)}];`;
+
+/** The first of a tile's two bank spot queries (ADR 0039): its rivers and canals, and the dams, lock gates and weirs. */
+export function bankWaterQuery(tile: Bounds): string {
+  return [header(tile), `way["waterway"~"^(river|canal)$"];`, `out geom;`, `nw["waterway"~"^(dam|lock_gate|weir)$"];`, `out geom;`].join(
+    "\n",
+  );
+}
 
 /**
- * The Overpass query for bank spots in one tile (ADR 0039): the rivers and canals, the dams,
- * lock gates and weirs on them, and the nodes of paths and roads near them.
+ * The named rivers' and canals' lines in the answer to `bankWaterQuery`, cut to the tile (and the
+ * first point beyond it) and simplified: what the paths are asked around.
  */
-export function bankSpotQuery([west, south, east, north]: Bounds): string {
+export function bankWaterLines(answer: OverpassResult, [west, south, east, north]: Bounds): Position[][] {
+  const inTile = ({ lat, lng }: Pt) =>
+    lng >= west - TILE_MARGIN_DEG && lng <= east + TILE_MARGIN_DEG && lat >= south - TILE_MARGIN_DEG && lat <= north + TILE_MARGIN_DEG;
+  return answer.elements
+    .filter((element) => element.type === "way" && ["river", "canal"].includes(element.tags?.waterway ?? "") && element.tags?.name)
+    .flatMap((way) => {
+      const points = (way.geometry ?? []).flatMap((point) => (point ? [{ lat: point.lat, lng: point.lon }] : []));
+      const kept = points.map((point, i) => inTile(point) || inTile(points[i - 1] ?? point) || inTile(points[i + 1] ?? point));
+      const runs: Pt[][] = [];
+      points.forEach((point, i) => {
+        if (!kept[i]) return;
+        if (i === 0 || !kept[i - 1]) runs.push([]);
+        runs[runs.length - 1].push(point);
+      });
+      return runs
+        .filter((run) => run.length >= 2)
+        .map((run) => simplify(run, PATH_LINE_TOLERANCE_M).map(({ lng, lat }): Position => [round(lng), round(lat)]));
+    });
+}
+
+/** The points along the waters the paths are asked around, this far apart, in metres. */
+const PATH_POINT_SPACING_M = 350;
+/**
+ * How far around each point, in metres: between two points it still reaches past the widest
+ * bank distance (sqrt(250² − 175²) ≈ 180 m). The nodes are measured against the water afterwards.
+ */
+export const PATH_POINT_RADIUS_M = 250;
+
+/** Points along the lines, no further apart than the spacing, none close to one already taken. */
+export function bankPathPoints(lines: readonly (readonly Position[])[]): Position[] {
+  const points: Pt[] = [];
+  const add = (point: Pt) => {
+    if (!points.some((other) => distanceM(other, point) < PATH_POINT_SPACING_M / 2)) points.push(point);
+  };
+  for (const line of lines) {
+    const pts = line.map(([lng, lat]) => ({ lat, lng }));
+    const length = lengthM(pts);
+    const steps = Math.max(1, Math.ceil(length / PATH_POINT_SPACING_M));
+    for (let i = 0; i <= steps; i++) add(pointAt(pts, (length * i) / steps));
+  }
+  return points.map(({ lng, lat }): Position => [round(lng), round(lat)]);
+}
+
+/**
+ * The second of a tile's two bank spot queries: the nodes of paths and roads near the waters,
+ * around points along their lines. Not around the lines themselves: the public server (0.7.62)
+ * silently answered nothing around a line or a set of ways in many tiles, but answers around a point.
+ */
+export function bankPathQuery(tile: Bounds, lines: readonly (readonly Position[])[]): string {
+  const around = bankPathPoints(lines).map(([lng, lat]) => `around:${PATH_POINT_RADIUS_M},${lat},${lng}`);
   return [
-    `[out:json][timeout:180][bbox:${round(south)},${round(west)},${round(north)},${round(east)}];`,
-    `way["waterway"~"^(river|canal)$"]->.water;`,
-    // The paths first: asked after the waters were put out, the public server (0.7.62) silently
-    // answered none in some tiles.
-    `way(around.water:${BANK_QUERY_M})["highway"~"${BANK_HIGHWAYS}"][!"bridge"][!"tunnel"]["access"!~"^(private|no)$"]->.roads;`,
-    `node(w.roads)(around.water:${BANK_QUERY_M});`,
+    header(tile),
+    `(`,
+    ...around.map((filter) => `way(${filter})["highway"~"${BANK_HIGHWAYS}"][!"bridge"][!"tunnel"]["access"!~"^(private|no)$"];`),
+    `)->.roads;`,
+    `(`,
+    ...around.map((filter) => `node(w.roads)(${filter});`),
+    `);`,
     `out skel qt;`,
-    `.water out geom;`,
-    `nw["waterway"~"^(dam|lock_gate|weir)$"];`,
-    `out geom;`,
   ].join("\n");
 }
 
