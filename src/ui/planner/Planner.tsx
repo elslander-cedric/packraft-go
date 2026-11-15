@@ -8,7 +8,6 @@ import {
   type NormalTab,
 } from "@/core/plannerSession";
 import type { Router } from "@/core/router";
-import { defaultSettings } from "@/core/settings";
 import { isCamp, type LatLng } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import type { MapFocus } from "@/map/TripMap";
@@ -392,7 +391,6 @@ export default function Planner({ router }: { router?: Router }) {
                 n={findTrips.selected + 1}
                 trip={selectedSuggestion}
                 date={findTrips.date}
-                pace={settings ?? defaultSettings}
                 onBack={() => findTrips.select(null)}
                 onUse={() =>
                   findTrips.date &&

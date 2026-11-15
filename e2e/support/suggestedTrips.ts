@@ -1,6 +1,7 @@
 // Suggested trips (ADR 0039): the Find trips button, the trip wishes dialog, the list and the
 // numbered lines on the map. Works with the side panel and with the bottom sheet.
 import { expect, type Page } from "@playwright/test";
+import type { TripShape } from "../../src/core/settings";
 import { strings } from "../../src/ui/strings";
 
 const text = strings.planner.suggestedTrips;
@@ -20,6 +21,8 @@ export const suggestionDetails = (page: Page, n: number) => page.getByRole("regi
 
 /** The suggestions' lines on the map, one per leg, and their number badges. */
 export const suggestionLines = (page: Page) => page.locator(".leaflet-pane path.suggested-trip");
+/** The suggestions' hike legs on the map, drawn dotted. */
+export const suggestionHikeLines = (page: Page) => page.locator(".leaflet-pane path.suggested-trip-hike");
 export const suggestionNumbers = (page: Page) => page.locator(".suggested-trip-number");
 /** The selected suggestion's lines, and the lines faded behind it. */
 export const selectedSuggestionLines = (page: Page) => page.locator(".leaflet-pane path.suggested-trip-selected");
@@ -29,24 +32,32 @@ export const suggestionHitLine = (page: Page, n: number) =>
   page.locator(`.leaflet-pane path.suggested-trip-hit[data-suggestion="${n - 1}"]`);
 
 export type Wishes = {
+  hikeKm?: number | null;
   paddleKm?: number | null;
+  shape?: TripShape;
   maxSwitches?: number;
   date?: string;
 };
 
 /**
- * Presses Find trips, fills in the wishes given (a null paddle distance empties its field) and
+ * Presses Find trips, fills in the wishes given (a null distance empties its field) and
  * confirms. Wishes left out keep what the dialog shows.
  */
 export async function findTrips(page: Page, wishes: Wishes = {}) {
   await findTripsButton(page).click();
   const dialog = wishesDialog(page);
   await expect(dialog).toBeVisible();
+  if (wishes.hikeKm !== undefined) {
+    await dialog.getByLabel(text.hikeKmLabel).fill(wishes.hikeKm === null ? "" : String(wishes.hikeKm));
+  }
   if (wishes.paddleKm !== undefined) {
     await dialog.getByLabel(text.paddleKmLabel).fill(wishes.paddleKm === null ? "" : String(wishes.paddleKm));
   }
   if (wishes.maxSwitches !== undefined) {
     await dialog.getByLabel(text.maxSwitchesLabel).fill(String(wishes.maxSwitches));
+  }
+  if (wishes.shape !== undefined) {
+    await dialog.getByRole("group", { name: text.shapeLabel }).getByRole("button", { name: text.shapeOptions[wishes.shape] }).click();
   }
   if (wishes.date !== undefined) await dialog.getByLabel(text.dateLabel).fill(wishes.date);
   await dialog.getByRole("button", { name: text.confirm }).click();

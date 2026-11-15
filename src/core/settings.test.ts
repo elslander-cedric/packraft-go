@@ -148,6 +148,21 @@ describe("settings", () => {
       expect(restoreSettings(JSON.stringify({ tripWishes })).tripWishes).toEqual(expected);
     });
 
+    it("round-trip a hike distance wished, which has no preference by default", () => {
+      const settings = { ...defaultSettings, tripWishes: { hikeKm: 8.5, paddleKm: 10, maxSwitches: 4, shape: "loop" } } as const;
+      expect(restoreSettings(serialiseSettings(settings))).toEqual(settings);
+      expect(defaultSettings.tripWishes.hikeKm).toBeUndefined();
+    });
+
+    it.each([0, -3, "8", null])("an unreadable hike distance (%s) is no preference, keeping the other wishes", (hikeKm) => {
+      const tripWishes = { hikeKm, paddleKm: 12, maxSwitches: 4, shape: "loop" };
+      expect(restoreSettings(JSON.stringify({ tripWishes })).tripWishes).toEqual({ paddleKm: 12, maxSwitches: 4, shape: "loop" });
+    });
+
+    it("withTripWishes ignores a hike distance of 0, keeping the settings as they were", () => {
+      expect(withTripWishes(defaultSettings, { hikeKm: 0, maxSwitches: 2, shape: "either" })).toBe(defaultSettings);
+    });
+
     it("zero switches is a wish that is kept", () => {
       const tripWishes = { maxSwitches: 0, shape: "either" };
       expect(restoreSettings(JSON.stringify({ tripWishes })).tripWishes).toEqual(tripWishes);

@@ -250,10 +250,15 @@ export const strings = {
     findTripsButton: "Find trips",
     suggestedTrips: {
       wishesTitle: "Trip wishes",
+      hikeKmLabel: "Hike distance (km)",
+      hikeKmHint: "About how far. Leave empty for no preference.",
       paddleKmLabel: "Paddle distance (km)",
       paddleKmHint: "About how far. Leave empty for no preference.",
       maxSwitchesLabel: "Most switches",
       maxSwitchesHint: "Every put-in and every take-out counts one.",
+      // Loop, one-way or either: a toggle in the wishes dialog.
+      shapeLabel: "Loop or one-way",
+      shapeOptions: { loop: "Loop", "one-way": "One-way", either: "Either" },
       dateLabel: "Date",
       confirm: "Find trips",
       listLabel: "Suggested trips",
@@ -261,8 +266,9 @@ export const strings = {
       loading: "Finding trips…",
       waitingForToday: "Waiting for today's official status and flows…",
       networkFailed: "The trip network couldn't be loaded. Trying again…",
-      // A row: its number, then e.g. "One-way · 9.9 km paddle · 2 switches".
+      // A row: its number, then e.g. "Loop · 6.2 km hike · 9.9 km paddle · 2 switches" (no hike when it doesn't walk).
       shapes: { loop: "Loop", "one-way": "One-way" },
+      hike: (distance: string) => `${distance} hike`,
       paddle: (distance: string) => `${distance} paddle`,
       switches: (count: number) => (count === 1 ? "1 switch" : `${count} switches`),
       // A selected suggestion's details, named by its number in the list and on the map.
@@ -270,6 +276,11 @@ export const strings = {
       back: "Back",
       use: "Use this trip",
       timeLabel: "Time",
+      // Its walks, e.g. "Climb: 120 m · Descent: 80 m" and "On trails: 82% · On roads: 30%".
+      climbLabel: "Climb",
+      descentLabel: "Descent",
+      trailShareLabel: "On trails",
+      roadShareLabel: "On roads",
       riversLabel: "Rivers",
       airesLabel: "Aires",
       // Why nothing was found.
@@ -280,6 +291,7 @@ export const strings = {
         loop: "No loop fits here.",
         oneWay: "No one-way trip fits here.",
         paddleDistance: (km: string) => `Zoom out: no trip of about ${km} paddling fits here.`,
+        hikeDistance: (km: string) => `Zoom out: no trip of about ${km} hiking fits here.`,
       },
     },
     // The access layer: switched on and off in the Map menu, named `accessLayerToggle`.

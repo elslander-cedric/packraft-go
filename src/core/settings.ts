@@ -40,11 +40,13 @@ export type TripShape = (typeof tripShapes)[number];
 /**
  * Trip wishes (GLOSSARY): what you'd like a suggested trip to be. The date is not one of
  * them: it is never remembered and defaults to today.
+ * - `hikeKm`: about how many km to hike, a positive number; absent for no preference.
  * - `paddleKm`: about how many km to paddle, a positive number; absent for no preference.
  * - `maxSwitches`: the most mode switches, a whole number from 0; every put-in and every
  *   take-out counts one. A hard maximum.
  */
 export type TripWishes = {
+  readonly hikeKm?: number;
   readonly paddleKm?: number;
   readonly maxSwitches: number;
   readonly shape: TripShape;
@@ -106,22 +108,27 @@ const isTripShape = (value: unknown): value is TripShape => tripShapes.some((sha
 
 /** Settings with other trip wishes; the same settings when a wish can't be kept (e.g. a paddle distance of 0). */
 export function withTripWishes(settings: Settings, tripWishes: TripWishes): Settings {
-  const { paddleKm, maxSwitches, shape } = tripWishes;
-  const usable = (paddleKm === undefined || isUsableSetting(paddleKm)) && isMaxSwitches(maxSwitches) && isTripShape(shape);
+  const { hikeKm, paddleKm, maxSwitches, shape } = tripWishes;
+  const usable =
+    [hikeKm, paddleKm].every((km) => km === undefined || isUsableSetting(km)) &&
+    isMaxSwitches(maxSwitches) &&
+    isTripShape(shape);
   return usable ? { ...settings, tripWishes } : settings;
 }
 
 /**
  * Trip wishes from their stored form, each unreadable wish falling back on its own. A missing
- * paddle distance is no preference; one that isn't a positive number gets the default.
+ * distance is no preference; one that isn't a positive number gets the default (for the hike
+ * distance, no preference).
  */
 function restoreTripWishes(stored: unknown): TripWishes {
   const defaults = defaultSettings.tripWishes;
   // Settings stored before trip wishes existed have none.
   if (typeof stored !== "object" || stored === null) return defaults;
-  const { paddleKm, maxSwitches, shape } = stored as Record<string, unknown>;
+  const { hikeKm, paddleKm, maxSwitches, shape } = stored as Record<string, unknown>;
   const restoredKm = isUsableSetting(paddleKm) ? paddleKm : defaults.paddleKm;
   return {
+    ...(isUsableSetting(hikeKm) && { hikeKm }),
     ...(paddleKm === undefined ? {} : { paddleKm: restoredKm }),
     maxSwitches: isMaxSwitches(maxSwitches) ? maxSwitches : defaults.maxSwitches,
     shape: isTripShape(shape) ? shape : defaults.shape,

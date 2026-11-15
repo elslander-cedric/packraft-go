@@ -122,7 +122,13 @@ describe("using a suggested trip", () => {
         ],
       },
     ],
+    hikeM: 0,
     paddleM: 1500,
+    climbM: 0,
+    descentM: 0,
+    trailShare: 0,
+    roadShare: 0,
+    timeH: 0.3,
     switches: 2,
   };
   const use: PlannerAction = { type: "useSuggestedTrip", suggestion, date: "2027-07-10" };

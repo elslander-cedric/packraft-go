@@ -17,6 +17,8 @@ function reasonText(reason: NoTripReason): string {
       return reason.shape === "loop" ? text.reasons.loop : text.reasons.oneWay;
     case "paddle-distance":
       return text.reasons.paddleDistance(`${reason.paddleKm} ${strings.kilometreUnit}`);
+    case "hike-distance":
+      return text.reasons.hikeDistance(`${reason.hikeKm} ${strings.kilometreUnit}`);
   }
 }
 
@@ -26,11 +28,14 @@ const waitingText = {
   failed: text.networkFailed,
 } as const;
 
-/** A suggestion's figures on one line, e.g. "One-way · 9.9 km paddle · 2 switches". */
+/** A suggestion's figures on one line, e.g. "Loop · 6.2 km hike · 9.9 km paddle · 2 switches". */
 export function suggestionFigures(trip: SuggestedTrip): string {
-  return [text.shapes[trip.shape], text.paddle(formatDistance(trip.paddleM / 1000)), text.switches(trip.switches)].join(
-    " · ",
-  );
+  return [
+    text.shapes[trip.shape],
+    ...(trip.hikeM > 0 ? [text.hike(formatDistance(trip.hikeM / 1000))] : []),
+    text.paddle(formatDistance(trip.paddleM / 1000)),
+    text.switches(trip.switches),
+  ].join(" · ");
 }
 
 /** A suggestion's number, on a badge like the one on its line. */
@@ -40,7 +45,7 @@ export function SuggestionNumber({ n }: { n: number }) {
 
 /**
  * The suggested trips in the panel or sheet (ADR 0039): one row each, numbered as on the map,
- * with loop or one-way, paddle km and switches; or why there are none, or what it waits for.
+ * with loop or one-way, hike km, paddle km and switches; or why there are none, or what it waits for.
  * A row selects its suggestion.
  */
 export default function SuggestedTripsList({

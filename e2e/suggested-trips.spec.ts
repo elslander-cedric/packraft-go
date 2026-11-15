@@ -38,8 +38,11 @@ test.describe("on a wide screen", () => {
 
     await expect(suggestionRows(page)).toHaveCount(10);
     await expect(suggestionRows(page).first()).toContainText("1");
-    await expect(suggestionRows(page).first()).toContainText(/(One-way|Loop) · \d+(\.\d)? km paddle · 2 switches/);
-    await expect(suggestionLines(page)).toHaveCount(10);
+    await expect(suggestionRows(page).first()).toContainText(
+      /(One-way|Loop) · (\d+\.\d km hike · )?\d+(\.\d)? km paddle · 2 switches/,
+    );
+    // One line per leg: some suggestions walk to or from the water too.
+    expect(await suggestionLines(page).count()).toBeGreaterThanOrEqual(10);
     await expect(suggestionNumbers(page)).toHaveText(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
     // The trip stays drawn and can't be changed: a map tap adds no point.
     await expect(points(page)).toHaveCount(2);
@@ -144,7 +147,7 @@ test.describe("on a phone", () => {
     await findTrips(page, { paddleKm: 10, date: SUMMER });
     // The phone's map shows less of Belgium, so it may find fewer than 10.
     await expect(suggestionRows(page).first()).toBeVisible();
-    await expect(suggestionLines(page)).toHaveCount(await suggestionRows(page).count());
+    expect(await suggestionLines(page).count()).toBeGreaterThanOrEqual(await suggestionRows(page).count());
     const row = await box(page, suggestionRows(page).first());
     expect(row.height).toBeGreaterThanOrEqual(44);
     await expect(suggestionRows(page).first()).toBeInViewport();

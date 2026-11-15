@@ -19,6 +19,8 @@ export type SuggestedTripLayerProps = {
 /** Purple, away from the trip's own hike and paddle colours, on a white casing like the legs. */
 const lineStyle = { color: "#8e24aa", weight: 5, opacity: 0.9 };
 const casingStyle = { color: "#fff", weight: lineStyle.weight + 4, opacity: 1 };
+/** Hike legs dotted, so the walks between waters read apart from the paddling. */
+const hikeDashes = "1 9";
 /** Behind a selected suggestion the others stay visible, so you still see where they are. */
 const FADED_OPACITY = 0.25;
 /** A line's unseen hit line, in screen pixels across: wide enough for a finger (ADR 0034). */
@@ -71,7 +73,13 @@ export default function SuggestedTripLayer({ trips, selected = null }: Suggested
   // The selected trip is drawn last, over the faded ones.
   const legs = trips
     .flatMap((trip, i) =>
-      trip.legs.map((leg, j) => ({ trip: i, look: lookOf(i), key: `${i}-${j}`, line: leg.line.map(toLatLng) })),
+      trip.legs.map((leg, j) => ({
+        trip: i,
+        look: lookOf(i),
+        key: `${i}-${j}`,
+        mode: leg.mode,
+        line: leg.line.map(toLatLng),
+      })),
     )
     .sort((a, b) => lookOrder[a.look] - lookOrder[b.look]);
   return (
@@ -84,14 +92,19 @@ export default function SuggestedTripLayer({ trips, selected = null }: Suggested
           pathOptions={{ ...casingStyle, opacity: look === "faded" ? FADED_OPACITY : 1 }}
         />
       ))}
-      {legs.map(({ key, look, line }) => (
+      {legs.map(({ key, look, mode, line }) => (
         // Keyed by its look, so a new look gets a new element with its class.
         <Polyline
           key={`${key}-${look}`}
           positions={line}
           interactive={false}
-          className={lookClass[look]}
-          pathOptions={{ ...lineStyle, opacity: look === "faded" ? FADED_OPACITY : lineStyle.opacity }}
+          className={`${lookClass[look]} suggested-trip-${mode}`}
+          pathOptions={{
+            ...lineStyle,
+            opacity: look === "faded" ? FADED_OPACITY : lineStyle.opacity,
+            dashArray: mode === "hike" ? hikeDashes : undefined,
+            lineCap: "round",
+          }}
         />
       ))}
       {legs.map(({ key, trip, line }) => (

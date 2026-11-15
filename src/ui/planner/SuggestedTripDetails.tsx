@@ -1,10 +1,8 @@
 import { useId, useMemo } from "react";
-import type { Pace } from "@/core/settings";
-import { paddleTimeH } from "@/core/summarise";
 import type { SuggestedTrip } from "@/core/suggestedTrips";
 import { suggestionAccess } from "@/core/tripFromSuggestion";
 import { Button } from "../components/Button";
-import { formatDuration } from "../format";
+import { formatDuration, formatElevation, formatShare } from "../format";
 import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
 import { strings } from "../strings";
@@ -28,7 +26,6 @@ export type SuggestedTripDetailsProps = {
   trip: SuggestedTrip;
   /** The date searched for, YYYY-MM-DD. */
   date: string;
-  pace: Pace;
   onBack: () => void;
   onUse: () => void;
 };
@@ -43,7 +40,6 @@ export default function SuggestedTripDetails({
   n,
   trip,
   date,
-  pace,
   onBack,
   onUse,
 }: SuggestedTripDetailsProps) {
@@ -57,7 +53,7 @@ export default function SuggestedTripDetails({
       ),
     ),
   ].filter((name) => name !== undefined);
-  const rivers = [...new Set(trip.legs.flatMap((leg) => leg.waters))];
+  const rivers = [...new Set(trip.legs.flatMap((leg) => (leg.mode === "paddle" ? leg.waters : [])))];
 
   return (
     <section
@@ -77,7 +73,13 @@ export default function SuggestedTripDetails({
         </Button>
       </div>
       <p>{suggestionFigures(trip)}</p>
-      <p>{`${text.timeLabel}: ${formatDuration(paddleTimeH(trip.paddleM / 1000, pace))}`}</p>
+      <p>{`${text.timeLabel}: ${formatDuration(trip.timeH)}`}</p>
+      {trip.hikeM > 0 && (
+        <>
+          <p>{`${text.climbLabel}: ${formatElevation(trip.climbM)} · ${text.descentLabel}: ${formatElevation(trip.descentM)}`}</p>
+          <p>{`${text.trailShareLabel}: ${formatShare(trip.trailShare)} · ${text.roadShareLabel}: ${formatShare(trip.roadShare)}`}</p>
+        </>
+      )}
       {rivers.length > 0 && (
         <p>{`${text.riversLabel}: ${rivers.join(", ")}`}</p>
       )}
