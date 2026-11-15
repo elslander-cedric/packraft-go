@@ -118,7 +118,7 @@ export default function Planner({ router }: { router?: Router }) {
   const marking = useMarkAccessPoint(access, position, showPosition, () => setEditingDraft(true));
 
   // Showing suggested trips keeps the tab and the sheet to return to, and shows their list.
-  const findTrips = useFindTrips(settings, saveSettings, () => {
+  const findTrips = useFindTrips(settings, saveSettings, access.points, () => {
     dispatch({ type: "showSuggestedTrips", returnTo: { tab, sheet: panel.stop } });
     panel.openForMode();
     if (!panel.sideways) panel.raiseFromPeek();
@@ -391,6 +391,7 @@ export default function Planner({ router }: { router?: Router }) {
                 n={findTrips.selected + 1}
                 trip={selectedSuggestion}
                 date={findTrips.date}
+                accessPoints={access.points}
                 onBack={() => findTrips.select(null)}
                 onUse={() =>
                   findTrips.date &&

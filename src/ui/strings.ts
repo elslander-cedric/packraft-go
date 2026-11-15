@@ -283,6 +283,7 @@ export const strings = {
       roadShareLabel: "On roads",
       riversLabel: "Rivers",
       airesLabel: "Aires",
+      accessPointsLabel: "Your access points",
       // Why nothing was found.
       reasons: {
         noOpenWater: "No open water in this area on this date.",
