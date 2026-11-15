@@ -1,7 +1,10 @@
 import { useId, useMemo } from "react";
+import { accessPointNodeId } from "@/core/accessPointNetwork";
+import type { AccessPoints } from "@/core/accessPoints";
 import type { SuggestedTrip } from "@/core/suggestedTrips";
 import { bankSpotsOf, suggestionAccess } from "@/core/tripFromSuggestion";
 import { Button } from "../components/Button";
+import { accessPointText } from "../accessPointText";
 import { formatDuration, formatElevation, formatShare } from "../format";
 import { Icon } from "../icons/Icon";
 import { icons } from "../icons/icons";
@@ -26,12 +29,14 @@ export type SuggestedTripDetailsProps = {
   trip: SuggestedTrip;
   /** The date searched for, YYYY-MM-DD. */
   date: string;
+  /** Your access points, to name those it gets in or out at. */
+  accessPoints: AccessPoints;
   onBack: () => void;
   onUse: () => void;
 };
 
 /**
- * A selected suggestion's details (ADR 0039): its figures, the rivers and aires it uses, and the
+ * A selected suggestion's details (ADR 0039): its figures, the rivers, aires and your access points it uses, and the
  * access of its water on the date with its warnings, as the trip it becomes will show them.
  * Back returns to the list; Use this trip makes it the trip. Both come first, so they show with
  * the sheet at half.
@@ -40,6 +45,7 @@ export default function SuggestedTripDetails({
   n,
   trip,
   date,
+  accessPoints,
   onBack,
   onUse,
 }: SuggestedTripDetailsProps) {
@@ -53,6 +59,14 @@ export default function SuggestedTripDetails({
       ),
     ),
   ].filter((name) => name !== undefined);
+  const accessPointNames = [
+    ...new Set(
+      trip.nodes.flatMap((node) => {
+        const point = accessPoints.find((candidate) => accessPointNodeId(candidate.id) === node.id);
+        return point ? [accessPointText(point).heading] : [];
+      }),
+    ),
+  ];
   const bankSpots = bankSpotsOf(trip).length;
   const rivers = [...new Set(trip.legs.flatMap((leg) => (leg.mode === "paddle" ? leg.waters : [])))];
 
@@ -86,6 +100,9 @@ export default function SuggestedTripDetails({
       )}
       {aireNames.length > 0 && (
         <p>{`${text.airesLabel}: ${aireNames.join(", ")}`}</p>
+      )}
+      {accessPointNames.length > 0 && (
+        <p>{`${text.accessPointsLabel}: ${accessPointNames.join(", ")}`}</p>
       )}
       {bankSpots > 0 && <p>{text.bankSpots(bankSpots)}</p>}
       {access?.legs.map(

@@ -283,6 +283,7 @@ export const strings = {
       roadShareLabel: "On roads",
       riversLabel: "Rivers",
       airesLabel: "Aires",
+      accessPointsLabel: "Your access points",
       // Bank spots (ADR 0039): where a path reaches the bank outside Wallonia; nobody has checked them.
       bankSpots: (count: number) =>
         `${count === 1 ? "1 bank spot" : `${count} bank spots`}: unchecked on the ground, look before you rely on ${count === 1 ? "it" : "them"}`,

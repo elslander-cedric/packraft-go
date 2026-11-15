@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+import { withAccessPoints } from "@/core/accessPointNetwork";
+import type { AccessPoints } from "@/core/accessPoints";
 import type { Bounds } from "@/core/geo";
 import type { Pace, TripWishes } from "@/core/settings";
 import { suggestTrips, type SuggestedTrips } from "@/core/suggestedTrips";
@@ -27,11 +29,12 @@ export type SuggestionsState =
   { readonly status: "loading" } | { readonly status: "waiting" } | { readonly status: "failed" } | SuggestedTrips;
 
 /**
- * The suggested trips for `search` (none while it is null). The search itself is pure and
+ * The suggested trips for `search` (none while it is null), through the route network and your
+ * access points, which join it with estimated walks. The search itself is pure and
  * instant (ADR 0039); this loads what it runs on and, for today, today's live readings, which
  * the rest of the page shares.
  */
-export function useSuggestedTrips(search: TripSearch | null, pace: Pace): SuggestionsState {
+export function useSuggestedTrips(search: TripSearch | null, pace: Pace, accessPoints: AccessPoints): SuggestionsState {
   const wanted = search !== null;
   const network = useRouteNetwork(wanted);
   const rules = useAccessRules(wanted);
@@ -51,12 +54,12 @@ export function useSuggestedTrips(search: TripSearch | null, pace: Pace): Sugges
       ...(official && { official }),
     };
     return suggestTrips({
-      network,
+      network: withAccessPoints(network, accessPoints),
       rules,
       when,
       area: search.area,
       wishes: search.wishes,
       pace,
     });
-  }, [network, rules, search, forToday, flows, official, today, pace]);
+  }, [network, rules, search, forToday, flows, official, today, pace, accessPoints]);
 }
