@@ -3,7 +3,7 @@
 Date: 2026-10-10
 
 ## Status
-Accepted
+Accepted. Amended by ADR 0039: the app may also propose one-day trips from your trip wishes (suggested trips), which you browse and may use as your trip.
 
 ## Context
 Automatically finding the best mix of hiking and paddling between two points is a hard routing problem. Manually drawing legs is far simpler and still very useful.

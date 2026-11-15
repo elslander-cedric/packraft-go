@@ -17,7 +17,8 @@ v2 (spec #51) shipped river access rules, the Walloon aires warning, access poin
 ### Left out of v1, could come later
 - [ ] **Live Flemish water levels** (waterinfo.be) for VMM agreement stretches such as the Kleine Nete (min 50 cm at Retie). ADR 0024
 - [ ] **Community / shared access points** (needs a backend). ADR 0023
-- [ ] **Automatic route-finding**: suggest the hike/paddle mix between a start and an end. ADR 0003
+- [ ] **Automatic route-finding**: suggested trips (one-day trips from your trip wishes in the visible map area) are decided in ADR 0039 (proposed); BRouter's trail preference is checked (a URL parameter works); spec [#255](https://github.com/elslander-cedric/packraft-go/issues/255). Whole trips from wishes come later. ADR 0003
+- [ ] **Ask VMM and De Vlaamse Waterweg** for permission to ship their access points, as the SPW gave (ADR 0035), so suggested trips in Flanders rely less on bank spots. ADR 0039
 - [ ] **Overpass + Turf.js fallback** for paddle legs, if BRouter's experimental river profile fails on real rivers. ADR 0014
 - [ ] **GPX import**: bring in tracks from other apps. Spec #2, Out of scope
 - [ ] **More editing**: redo, notes on points/legs, alternative routes per trip. ADR 0017
