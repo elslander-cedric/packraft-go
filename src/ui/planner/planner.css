@@ -1067,6 +1067,23 @@
   gap: var(--space-2);
 }
 
+.planner-trip-wishes-shape {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Loop, one-way or either: as wide and tall as the fields, easy to tap (ADR 0034). */
+.planner-trip-wishes-shape .toggle-group {
+  display: flex;
+}
+
+.planner-trip-wishes-shape .toggle {
+  flex: 1;
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+
 .planner-trip-wishes input[type="date"] {
   min-height: 2.75rem;
   font-size: 1rem;

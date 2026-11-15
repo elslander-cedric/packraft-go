@@ -63,8 +63,10 @@ test.describe("on a wide screen", () => {
     const details = suggestionDetails(page, 2);
     await expect(details).toBeVisible();
     await expect(suggestionList(page)).toHaveCount(0);
-    await expect(selectedSuggestionLines(page)).toHaveCount(1);
-    await expect(fadedSuggestionLines(page)).toHaveCount(9);
+    // One line per leg: the selected one's are highlighted, all the others' faded.
+    await expect(selectedSuggestionLines(page).first()).toBeAttached();
+    const selectedLines = await selectedSuggestionLines(page).count();
+    await expect(fadedSuggestionLines(page)).toHaveCount((await suggestionLines(page).count()) - selectedLines);
     const paddle =
       /\d+\.\d km paddle/.exec(rowText)?.[0] ?? "no paddle distance in the row";
     await expect(details).toContainText(paddle);
@@ -85,7 +87,7 @@ test.describe("on a wide screen", () => {
     // A tap on a line on the map selects it too.
     const tapped = await tapSomeSuggestionLine(page);
     await expect(suggestionDetails(page, tapped)).toBeVisible();
-    await expect(selectedSuggestionLines(page)).toHaveCount(1);
+    await expect(selectedSuggestionLines(page).first()).toBeAttached();
 
     // The trip open is replaced only after the usual question.
     const askedBefore = network.brouter.length;

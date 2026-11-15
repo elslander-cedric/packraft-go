@@ -12,6 +12,8 @@ import {
   type PaddleLink,
   type WalkingLink,
 } from "@/core/routeNetwork";
+import { defaultSettings } from "@/core/settings";
+import { suggestTrips } from "@/core/suggestedTrips";
 import { loadRouteNetwork } from "@/ui/routeNetwork";
 import { builtInAccessRules, builtInLocks, builtInObstacles, builtInOfficialAires } from "./builtInRules";
 import { builtInRouteNetwork as network } from "./builtInRouteNetwork";
@@ -121,6 +123,21 @@ describe("the built-in route network", () => {
   it("walks between each two nodes at most once, as walking links go either way", () => {
     const pairs = walkingLinks.map((link) => [link.from, link.to].sort().join(" - "));
     expect(new Set(pairs).size).toBe(pairs.length);
+  });
+
+  it("is searched for hike + paddle trips over all of Belgium in well under a second, even with many switches", () => {
+    const started = performance.now();
+    const result = suggestTrips({
+      network,
+      rules: builtInAccessRules,
+      when: { date: "2027-07-10", today: "2026-11-15" },
+      area: [2.4, 49.4, 6.5, 51.6],
+      // No distance wished leaves only the one-day limit to bound the search.
+      wishes: { maxSwitches: 10, shape: "either" },
+      pace: defaultSettings,
+    });
+    expect(performance.now() - started).toBeLessThan(500);
+    expect(result.status === "found" && result.trips.some((trip) => trip.hikeM > 0)).toBe(true);
   });
 });
 

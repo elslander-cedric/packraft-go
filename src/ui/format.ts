@@ -11,6 +11,11 @@ export function formatElevation(metres: number): string {
   return `${Math.round(metres)} ${strings.metreUnit}`;
 }
 
+/** A share from 0 to 1 for display, e.g. "82%". */
+export function formatShare(share: number): string {
+  return `${Math.round(share * 100)}%`;
+}
+
 /** An estimated time in hours for display, e.g. "3 h 05 min", or "45 min" under an hour. */
 export function formatDuration(hours: number): string {
   const totalMinutes = Math.round(hours * 60);

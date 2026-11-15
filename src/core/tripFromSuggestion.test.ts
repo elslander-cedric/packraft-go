@@ -57,8 +57,38 @@ const suggestion: SuggestedTrip = {
   shape: "one-way",
   nodes: [putIn, takeOut],
   legs: [leg],
+  hikeM: 0,
   paddleM: 11_100,
+  climbM: 0,
+  descentM: 0,
+  trailShare: 0,
+  roadShare: 0,
+  timeH: 2.22,
   switches: 2,
+};
+
+// Walk to the put-in from the west, paddle, and walk away from the take-out to the east.
+const start: RouteNode = { id: "official-aire-3", kind: "official-aire", use: "both", position: [3.79, 50.7] };
+const end: RouteNode = { id: "official-aire-4", kind: "official-aire", use: "both", position: [3.81, 50.8] };
+const walkLeg = (from: RouteNode, to: RouteNode): SuggestedLeg => ({
+  mode: "hike",
+  from: from.id,
+  to: to.id,
+  distanceM: 700,
+  climbM: 10,
+  descentM: 5,
+  trailShare: 1,
+  roadShare: 0,
+  line: [from.position, to.position],
+});
+const hikeAndPaddle: SuggestedTrip = {
+  ...suggestion,
+  nodes: [start, putIn, takeOut, end],
+  legs: [walkLeg(start, putIn), leg, walkLeg(takeOut, end)],
+  hikeM: 1400,
+  climbM: 20,
+  descentM: 10,
+  trailShare: 1,
 };
 
 /** The used trip as routing leaves it when BRouter follows the suggestion's own lines. */
@@ -90,6 +120,27 @@ describe("using a suggested trip", () => {
       legs: [{ mode: "paddle" }],
       startDate: "2027-07-10",
     });
+  });
+
+  it("becomes hike and paddle legs, a point at the start and at every switch", () => {
+    expect(tripFromSuggestion(hikeAndPaddle, "2027-07-10")).toEqual({
+      name: "",
+      points: [
+        { lat: 50.7, lng: 3.79 },
+        { lat: 50.7, lng: 3.8 },
+        { lat: 50.8, lng: 3.8 },
+        { lat: 50.8, lng: 3.81 },
+      ],
+      legs: [{ mode: "hike" }, { mode: "paddle" }, { mode: "hike" }],
+      startDate: "2027-07-10",
+    });
+  });
+
+  it("its details give access for its paddle legs only, as for hand-drawn legs", () => {
+    const shown = suggestionAccess(hikeAndPaddle, "2027-07-10", rules, { today: "2026-11-15", obstacles: [rocks] });
+    expect(shown.legs[0]).toBeUndefined();
+    expect(shown.legs[1]?.obstacleWarnings.map((warning) => warning.obstacle.id)).toEqual(leg.obstacles);
+    expect(shown.legs[2]).toBeUndefined();
   });
 
   it("its details warn of what the used trip warns of once routed along the same water", () => {

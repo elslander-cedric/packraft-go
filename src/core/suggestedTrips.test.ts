@@ -11,6 +11,7 @@ import {
   type PaddleLink,
   type RouteNetwork,
   type RouteNode,
+  type WalkingLink,
 } from "./routeNetwork";
 import { defaultSettings, type TripWishes } from "./settings";
 import { suggestTrips, type SearchDate, type SuggestedTripsSearch } from "./suggestedTrips";
@@ -46,7 +47,22 @@ function link(from: string, to: string, km: number, options: { records?: string[
   };
 }
 
-function network(nodes: RouteNode[], paddleLinks: PaddleLink[]): RouteNetwork {
+type WalkOptions = { climbM?: number; descentM?: number; trailShare?: number; roadShare?: number; line?: Position[] };
+
+function walk(from: string, to: string, km: number, options: WalkOptions = {}): WalkingLink {
+  return {
+    from,
+    to,
+    distanceM: km * 1000,
+    climbM: options.climbM ?? 0,
+    descentM: options.descentM ?? 0,
+    trailShare: options.trailShare ?? 1,
+    roadShare: options.roadShare ?? 0,
+    line: options.line ?? ([[0, 0], [1, 1]] as Position[]),
+  };
+}
+
+function network(nodes: RouteNode[], paddleLinks: PaddleLink[], walkingLinks: WalkingLink[] = []): RouteNetwork {
   return {
     format: ROUTE_NETWORK_FORMAT,
     version: ROUTE_NETWORK_VERSION,
@@ -56,6 +72,7 @@ function network(nodes: RouteNode[], paddleLinks: PaddleLink[]): RouteNetwork {
     snapshot: "2026-11-01",
     nodes,
     paddleLinks,
+    walkingLinks,
   };
 }
 
@@ -94,7 +111,13 @@ describe("suggested trips: paddle only", () => {
               line: [[0, 0], [1, 1]],
             },
           ],
+          hikeM: 0,
           paddleM: 10000,
+          climbM: 0,
+          descentM: 0,
+          trailShare: 0,
+          roadShare: 0,
+          timeH: 2,
           switches: 2,
         },
       ],
@@ -367,5 +390,185 @@ describe("suggested trips: only water open on the date", () => {
 
   it("leave out water whose status today is still loading", () => {
     expect(found(through("official"), { date: today, today, officialPending: true })).toEqual([]);
+  });
+});
+
+describe("suggested trips: hike and paddle", () => {
+  it("walk to the put-in and from the take-out, hike–paddle–hike reading as 2 switches", () => {
+    const walks = network(
+      [node("A", 0), node("B", 1), node("C", 2), node("D", 3)],
+      [link("B", "C", 10)],
+      [
+        walk("A", "B", 3, { climbM: 120, descentM: 20, trailShare: 1, roadShare: 0, line: [[1, 1], [2, 2]] }),
+        walk("C", "D", 2, { climbM: 30, descentM: 50, trailShare: 0.5, roadShare: 0.5, line: [[3, 3], [4, 4]] }),
+      ],
+    );
+    const result = search({ network: walks, wishes: wishes({ hikeKm: 5 }) });
+    expect(stops(result)).toEqual(["A>B>C>D"]);
+    if (result.status !== "found") throw new Error("no trips");
+    const [trip] = result.trips;
+    expect(trip.legs.map((leg) => leg.mode)).toEqual(["hike", "paddle", "hike"]);
+    expect(trip.legs[0]).toEqual({
+      mode: "hike",
+      from: "A",
+      to: "B",
+      distanceM: 3000,
+      climbM: 120,
+      descentM: 20,
+      trailShare: 1,
+      roadShare: 0,
+      line: [[1, 1], [2, 2]],
+    });
+    expect(trip).toMatchObject({
+      shape: "one-way",
+      hikeM: 5000,
+      paddleM: 10000,
+      climbM: 150,
+      descentM: 70,
+      // Weighted by distance: 3 km all on trails, 2 km half on trails and half on roads.
+      trailShare: 0.8,
+      roadShare: 0.2,
+      switches: 2,
+    });
+    // Naismith: 5 km at 5 km/h and 150 m of climb at 600 m/h, then 10 km at 5 km/h.
+    expect(trip.timeH).toBeCloseTo(1 + 0.25 + 2);
+  });
+
+  // A river from B down to C, 10 km, with walks to it from A and away from it to D, and back from C to B.
+  const riverWithWalks = (walkingLinks: WalkingLink[]) =>
+    network([node("A", 0), node("B", 1), node("C", 2), node("D", 3)], [link("B", "C", 10)], walkingLinks);
+
+  it("walk a walking link either way, its line turned round and its climb and descent swapped", () => {
+    const backwards = riverWithWalks([walk("B", "A", 4, { climbM: 100, descentM: 10, line: [[1, 1], [2, 2], [3, 3]] })]);
+    const result = search({ network: backwards, wishes: wishes({ hikeKm: 4 }) });
+    expect(stops(result)).toEqual(["A>B>C"]);
+    if (result.status !== "found") throw new Error("no trips");
+    expect(result.trips[0].legs[0]).toMatchObject({ from: "A", to: "B", climbM: 10, descentM: 100, line: [[3, 3], [2, 2], [1, 1]] });
+  });
+
+  it.each([
+    [5, ["A>B>C"]],
+    [4.2, ["A>B>C"]], // 5 km is just within 20% more
+    [4.1, []], // 5 km is more than 20% more
+    [6.25, ["A>B>C"]], // 5 km is 20% less
+    [6.3, []],
+  ])("keep trips within 20%% of a wished %s km of hiking", (hikeKm, expected) => {
+    expect(stops(search({ network: riverWithWalks([walk("A", "B", 5)]), wishes: wishes({ hikeKm }) }))).toEqual(expected);
+  });
+
+  it("with no hike distance wished, suggest trips with and without walks, those without first", () => {
+    const result = search({ network: riverWithWalks([walk("A", "B", 3), walk("C", "D", 3)]), wishes: wishes({ hikeKm: undefined }) });
+    expect(stops(result)).toEqual(["B>C", "A>B>C", "B>C>D", "A>B>C>D"]);
+  });
+
+  it("walk back from the take-out to the put-in as a loop", () => {
+    const back = riverWithWalks([walk("B", "C", 8)]);
+    const loops = search({ network: back, wishes: wishes({ hikeKm: 8, shape: "loop" }) });
+    // Park at the put-in and paddle first, or at the take-out and walk first.
+    expect(stops(loops)).toEqual(["B>C>B", "C>B>C"]);
+    if (loops.status !== "found") throw new Error("no trips");
+    expect(loops.trips[0]).toMatchObject({ shape: "loop", hikeM: 8000, paddleM: 10000, switches: 2 });
+    expect(stops(search({ network: back, wishes: wishes({ hikeKm: 8, shape: "one-way" }) }))).toEqual([]);
+    expect(stops(search({ network: back, wishes: wishes({ hikeKm: 8, shape: "either" }) })).sort()).toEqual(["B>C>B", "C>B>C"]);
+  });
+
+  it("never suggest a walk alone, without paddling", () => {
+    const noWater = network([node("A", 0), node("B", 1)], [], [walk("A", "B", 5)]);
+    expect(search({ network: noWater, wishes: wishes({ hikeKm: 5, paddleKm: undefined }) })).toEqual({
+      status: "none",
+      reason: { kind: "no-open-water" },
+    });
+  });
+
+  it("put in and take out only where an aire allows it, also between walks", () => {
+    const uses = (putIn: AccessPointUse, takeOut: AccessPointUse) =>
+      network(
+        [node("A", 0), node("B", 1, putIn), node("C", 2, takeOut), node("D", 3)],
+        [link("B", "C", 10)],
+        [walk("A", "B", 3), walk("C", "D", 3)],
+      );
+    expect(stops(search({ network: uses("both", "both"), wishes: wishes({ hikeKm: 6 }) }))).toEqual(["A>B>C>D"]);
+    expect(stops(search({ network: uses("take-out", "both"), wishes: wishes({ hikeKm: 6 }) }))).toEqual([]);
+    expect(stops(search({ network: uses("both", "put-in"), wishes: wishes({ hikeKm: 6 }) }))).toEqual([]);
+    // Walking starts and ends anywhere: A and D are no put-in or take-out here.
+    const walkEnds = network(
+      [node("A", 0, "take-out"), node("B", 1), node("C", 2), node("D", 3, "put-in")],
+      [link("B", "C", 10)],
+      [walk("A", "B", 3), walk("C", "D", 3)],
+    );
+    expect(stops(search({ network: walkEnds, wishes: wishes({ hikeKm: 6 }) }))).toEqual(["A>B>C>D"]);
+  });
+
+  describe("several switches", () => {
+    // Two rivers, B to C and D to E, 5 km each, joined by a 4 km walk from C to D, with 2 km walks to and from them.
+    const twoRivers = network(
+      [node("A", 0), node("B", 1), node("C", 2), node("D", 3), node("E", 4), node("F", 5)],
+      [link("B", "C", 5, { records: ["open-1"] }), link("D", "E", 5, { records: ["open-2"] })],
+      [walk("A", "B", 2), walk("C", "D", 4), walk("E", "F", 2)],
+    );
+
+    it("paddle, walk and paddle again, every put-in and every take-out counting one", () => {
+      const result = search({ network: twoRivers, wishes: wishes({ paddleKm: 10, hikeKm: 4, maxSwitches: 4 }) });
+      expect(stops(result)).toEqual(["B>C>D>E"]);
+      if (result.status !== "found") throw new Error("no trips");
+      expect(result.trips[0]).toMatchObject({ switches: 4, hikeM: 4000, paddleM: 10000 });
+      expect(result.trips[0].legs.map((leg) => leg.mode)).toEqual(["paddle", "hike", "paddle"]);
+    });
+
+    it("walk to, between and from two rivers: hike–paddle–hike–paddle–hike reads as 4", () => {
+      const result = search({ network: twoRivers, wishes: wishes({ paddleKm: 10, hikeKm: 8, maxSwitches: 5 }) });
+      expect(stops(result)).toEqual(["A>B>C>D>E>F"]);
+      if (result.status !== "found") throw new Error("no trips");
+      expect(result.trips[0].switches).toBe(4);
+    });
+
+    it.each([3, 2])("keep the switches a hard maximum: nothing paddles 10 km here within %s", (maxSwitches) => {
+      expect(search({ network: twoRivers, wishes: wishes({ paddleKm: 10, hikeKm: 4, maxSwitches }) })).toEqual({
+        status: "none",
+        reason: { kind: "paddle-distance", paddleKm: 10 },
+      });
+    });
+  });
+
+  it("keep within one day of hiking and paddling at the planner's pace", () => {
+    // 10 km of paddling is 2 hours; 28 km of walking on the flat is 5.6 hours: 7.6 hours in all.
+    const long = riverWithWalks([walk("A", "B", 14), walk("C", "D", 14)]);
+    const longWishes = wishes({ hikeKm: 28 });
+    expect(stops(search({ network: long, wishes: longWishes }))).toEqual(["A>B>C>D"]);
+    expect(stops(search({ network: long, wishes: longWishes, pace: { ...defaultSettings, paceFactor: 1.2 } }))).toEqual([]);
+    // 600 m of climb is one more hour.
+    const steep = riverWithWalks([walk("A", "B", 14, { climbM: 600 }), walk("C", "D", 14)]);
+    expect(stops(search({ network: steep, wishes: longWishes }))).toEqual([]);
+  });
+
+  it("no trip of about the wished hike distance fits here", () => {
+    expect(search({ network: riverWithWalks([walk("A", "B", 3)]), wishes: wishes({ hikeKm: 12 }) })).toEqual({
+      status: "none",
+      reason: { kind: "hike-distance", hikeKm: 12 },
+    });
+  });
+
+  it("among trips as close to the wishes, put more walking on trails first, then less on roads", () => {
+    // Three ways to three rivers, each 5 km, on their own stretches so variety doesn't reorder them.
+    const ways = network(
+      [node("P", 0), node("Q", 1), node("R", 2), node("B", 5), node("C", 6), node("B2", 7), node("C2", 8), node("B3", 9), node("C3", 10)],
+      [link("B", "C", 10, { records: ["open-1"] }), link("B2", "C2", 10, { records: ["open-2"] }), link("B3", "C3", 10, { records: ["open-3"] })],
+      [
+        walk("P", "B", 5, { trailShare: 0.4, roadShare: 0.1 }),
+        walk("Q", "B2", 5, { trailShare: 0.9, roadShare: 0.5 }),
+        walk("R", "B3", 5, { trailShare: 0.9, roadShare: 0.2 }),
+      ],
+    );
+    const threeOpen: AccessRules = { records: [...rules.records, fixedRecord("open-3", "open")] };
+    expect(stops(search({ network: ways, rules: threeOpen, wishes: wishes({ hikeKm: 5 }) }))).toEqual(["R>B3>C3", "Q>B2>C2", "P>B>C"]);
+  });
+
+  it("put closer to the wishes before more walking on trails", () => {
+    const ways = network(
+      [node("P", 0), node("Q", 1), node("B", 5), node("C", 6), node("B2", 7), node("C2", 8)],
+      [link("B", "C", 10, { records: ["open-1"] }), link("B2", "C2", 10, { records: ["open-2"] })],
+      [walk("P", "B", 4.5, { trailShare: 1 }), walk("Q", "B2", 5, { trailShare: 0.1 })],
+    );
+    expect(stops(search({ network: ways, wishes: wishes({ hikeKm: 5 }) }))).toEqual(["Q>B2>C2", "P>B>C"]);
   });
 });
