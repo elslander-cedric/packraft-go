@@ -66,6 +66,14 @@ Researched 2026-10-12, updated 2026-11-02 from [kayak-spw-access-points.md](kaya
 
 These counts are far too sparse to base access rules on. `CEMT` and lock tags are usable to detect navigable waterways and locks. The tag definitions are on the OSM wiki: [canoe](https://wiki.openstreetmap.org/wiki/Key:canoe) and [portage](https://wiki.openstreetmap.org/wiki/Key:portage).
 
+### BRouter: walks that prefer waymarked trails (checked 2026-11-15, for ADR 0039)
+
+- **The app's hike profile already prefers them.** [`hiking-mountain.brf`](https://github.com/abrensch/brouter/blob/master/misc/profiles2/hiking-mountain.brf) treats a way on a hiking route relation (`route=hiking`, `route_hiking_iwn` and the like) at its normal cost and multiplies every other way by `1 + hiking_routes_preference`. The default is 0.20 (a 1.2× penalty off-trail). The profile documents values up to 2.0 (3×). It doesn't apply in its `shortest_way` mode.
+- **The preference can be set per request.** BRouter reads URL parameters of the form `profile:<variable>=<value>` into the profile's variables (`RoutingParamCollector.java`, `key.startsWith("profile:")`). `hiking_routes_preference` is one of the profile's overridable variables (`# %hiking_routes_preference%`).
+- **The public server honours it.** One request each (Ourthe valley near Comblain, same two points): `profile:hiking_routes_preference=0.0` gave 5,129 m, `=2.0` gave 6,775 m. The route changed, so the parameter is applied.
+- **Custom profiles can also be uploaded** (`POST /brouter/profile`, giving a `custom_…` id), but that isn't needed: a URL parameter on the existing profile is enough, with nothing stored on the server.
+- **Consequence:** suggested trips need no trail dataset. The walking links in their route network are prepared offline with `hiking-mountain` and a raised `hiking_routes_preference`; hand-drawn hike legs keep the default. The value to use (somewhere between 0.5 and 2.0) is still to be tuned. A trail share per suggestion can be computed from BRouter's per-way tags in the response, if the GeoJSON's `messages` carry them; to be checked when building the network.
+
 ## Next steps (for v2 planning)
 
 1. ~~Check the Walloon hydrometry API.~~ Done: see [hydrometry.md](hydrometry.md).
