@@ -1,6 +1,6 @@
 // Manual check against the live public BRouter server (issue #29).
 // Run with `npm run check:brouter`. Never part of `npm test`, `npm run e2e` or CI (ADR 0019).
-// Makes at most four requests, one at a time with a pause between them, and only reads
+// Makes at most five requests, one at a time with a pause between them, and only reads
 // the fixtures: it never rewrites them.
 import { readFileSync } from "node:fs";
 import path from "node:path";
