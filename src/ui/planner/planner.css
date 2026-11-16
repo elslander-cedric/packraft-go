@@ -1147,8 +1147,8 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 50%;
-  background: #8e24aa;
-  color: #fff;
+  background: var(--color-suggested-trip);
+  color: var(--color-on-suggested-trip);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

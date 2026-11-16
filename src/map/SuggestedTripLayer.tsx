@@ -16,9 +16,9 @@ export type SuggestedTripLayerProps = {
   selected?: number | null;
 };
 
-/** Purple, away from the trip's own hike and paddle colours, on a white casing like the legs. */
-const lineStyle = { color: "#8e24aa", weight: 5, opacity: 0.9 };
-const casingStyle = { color: "#fff", weight: lineStyle.weight + 4, opacity: 1 };
+/** On a casing like the legs; the colours are design tokens, set in SuggestedTripLayer.css. */
+const lineStyle = { weight: 5, opacity: 0.9 };
+const casingStyle = { weight: lineStyle.weight + 4, opacity: 1 };
 /** Hike legs dotted, so the walks between waters read apart from the paddling. */
 const hikeDashes = "1 9";
 /** Behind a selected suggested trip the others stay visible, so you still see where they are. */
@@ -89,6 +89,7 @@ export default function SuggestedTripLayer({ trips, selected = null }: Suggested
           key={`casing-${key}-${look}`}
           positions={line}
           interactive={false}
+          className="suggested-trip-casing"
           pathOptions={{ ...casingStyle, opacity: look === "faded" ? FADED_OPACITY : 1 }}
         />
       ))}

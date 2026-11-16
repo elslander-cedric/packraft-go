@@ -8,9 +8,9 @@ import { HOLD_MS, isPrimaryPress } from "./hold";
 const DOUBLE_TAP_MS = 400;
 const DOUBLE_TAP_PX = 40;
 
-/** The leg a leg hit line's element stands for (#230), kept on the element. */
+/** The leg a leg hit line's element stands for, kept on the element. */
 export const LEG_HIT_ATTRIBUTE = "data-leg";
-/** The suggested trip a suggested trip's hit line stands for (ADR 0039), by its index. */
+/** The suggested trip a hit line stands for (ADR 0039), by its index. */
 export const SUGGESTED_TRIP_HIT_ATTRIBUTE = "data-suggested-trip";
 function hitOf(target: EventTarget | null, attribute: string): number | null {
   const index = target instanceof Element ? target.getAttribute(attribute) : null;
@@ -24,11 +24,11 @@ export type TapsProps = {
 };
 
 /**
- * Turns taps into `onMapTap`, or `onLegTap` when the tap is on a leg's hit line (#230), or
+ * Turns taps into `onMapTap`, or `onLegTap` when the tap is on a leg's hit line, or
  * `onSuggestedTripTap` on a suggested trip's. A
  * double tap gives one tap (its second tap is ignored), and the click that can follow a pinch
  * is ignored. So is the click that ends a finger or the mouse held for 0.4 s or more: holding
- * the map does nothing, and holding a leg inserts a point instead (#122, ADR 0034); a tap
+ * the map does nothing, and holding a leg inserts a point instead (ADR 0034); a tap
  * right after a hold is a tap.
  */
 export function Taps({ onTap, onLegTap, onSuggestedTripTap }: TapsProps) {
