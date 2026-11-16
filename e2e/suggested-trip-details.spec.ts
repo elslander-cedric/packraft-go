@@ -1,4 +1,4 @@
-// A suggested trip's details and Use this trip (ADR 0039): selecting a suggestion (its row or
+// A suggested trip's details and Use this trip (ADR 0039): selecting a suggested trip (its row or
 // its line) highlights it and shows its details, Back returns to the list, and Use this trip
 // makes it the trip, routed for real with recorded BRouter answers (ADR 0019).
 import { devices, expect, test, type Page } from "@playwright/test";
@@ -18,7 +18,7 @@ import {
   fadedSuggestionLines,
   findTrips,
   findTripsButton,
-  selectedSuggestionLines,
+  selectedSuggestedTripLines,
   suggestionDetails,
   suggestionHitLine,
   suggestionLines,
@@ -57,15 +57,15 @@ test.describe("on a wide screen", () => {
     await findTrips(page, { paddleKm: 10, maxSwitches: 2, date: SUMMER });
     await expect(suggestionRows(page)).toHaveCount(10);
 
-    // A row selects its suggestion: the others fade, its details replace the list.
+    // A row selects its suggested trip: the others fade, its details replace the list.
     const rowText = (await suggestionRows(page).nth(1).textContent()) ?? "";
     await suggestionRowButton(page, 2).click();
     const details = suggestionDetails(page, 2);
     await expect(details).toBeVisible();
     await expect(suggestionList(page)).toHaveCount(0);
     // One line per leg: the selected one's are highlighted, all the others' faded.
-    await expect(selectedSuggestionLines(page).first()).toBeAttached();
-    const selectedLines = await selectedSuggestionLines(page).count();
+    await expect(selectedSuggestedTripLines(page).first()).toBeAttached();
+    const selectedLines = await selectedSuggestedTripLines(page).count();
     await expect(fadedSuggestionLines(page)).toHaveCount((await suggestionLines(page).count()) - selectedLines);
     const paddle =
       /\d+\.\d km paddle/.exec(rowText)?.[0] ?? "no paddle distance in the row";
@@ -81,13 +81,13 @@ test.describe("on a wide screen", () => {
 
     await backButton(page).click();
     await expect(suggestionRows(page)).toHaveCount(10);
-    await expect(selectedSuggestionLines(page)).toHaveCount(0);
+    await expect(selectedSuggestedTripLines(page)).toHaveCount(0);
     await expect(fadedSuggestionLines(page)).toHaveCount(0);
 
     // A tap on a line on the map selects it too.
     const tapped = await tapSomeSuggestionLine(page);
     await expect(suggestionDetails(page, tapped)).toBeVisible();
-    await expect(selectedSuggestionLines(page).first()).toBeAttached();
+    await expect(selectedSuggestedTripLines(page).first()).toBeAttached();
 
     // The trip open is replaced only after the usual question.
     const askedBefore = network.brouter.length;
@@ -160,8 +160,8 @@ test.describe("on a phone", () => {
 });
 
 /**
- * Taps the line of the first suggestion with a part on top of the others in the free part of the
- * map (suggestions on one river overlap) and returns its number.
+ * Taps the line of the first suggested trip with a part on top of the others in the free part of the
+ * map (suggested trips on one river overlap) and returns its number.
  */
 async function tapSomeSuggestionLine(page: Page): Promise<number> {
   for (let n = 1; n <= 10; n++) {
@@ -172,5 +172,5 @@ async function tapSomeSuggestionLine(page: Page): Promise<number> {
     await page.mouse.click(at.x, at.y);
     return n;
   }
-  throw new Error("no suggestion's line can be tapped");
+  throw new Error("no suggested trip's line can be tapped");
 }

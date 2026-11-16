@@ -18,7 +18,7 @@ const daysPeek: PanelView = { tab: "days", sheet: "peek" };
 const selected = (): PlannerSession => ({ ...firstSession({ trip }), selectedPoint: 1 });
 const enter = (s: PlannerSession, returnTo: PanelView = daysPeek) =>
   plannerSession(s, { type: "enterAccessPointEditing", returnTo });
-const showSuggestions = (s: PlannerSession, returnTo: PanelView = daysPeek) =>
+const showSuggestedTrips = (s: PlannerSession, returnTo: PanelView = daysPeek) =>
   plannerSession(s, { type: "showSuggestedTrips", returnTo });
 
 describe("planner modes", () => {
@@ -66,7 +66,7 @@ describe("planner modes", () => {
 describe("showing suggested trips", () => {
   it("showing them keeps the view to return to and clears the selection", () => {
     const before = { ...firstSession({ trip }), selectedLeg: 0 };
-    const after = showSuggestions(before);
+    const after = showSuggestedTrips(before);
     expect(after.mode).toEqual({ kind: "suggestedTrips", returnTo: daysPeek });
     expect(after.selectedLeg).toBeNull();
     expect(after.trip).toBe(before.trip);
@@ -74,7 +74,7 @@ describe("showing suggested trips", () => {
 
   it("closing them goes back to normal mode with the trip as it was", () => {
     const before = selected();
-    const after = plannerSession(showSuggestions(before), { type: "closeSuggestedTrips" });
+    const after = plannerSession(showSuggestedTrips(before), { type: "closeSuggestedTrips" });
     expect(after.mode).toEqual({ kind: "normal" });
     expect(after.trip).toBe(before.trip);
   });
@@ -86,22 +86,22 @@ describe("showing suggested trips", () => {
 
   it("they can't be shown while editing access points, nor access points edited while they are shown", () => {
     const editing = enter(selected());
-    expect(showSuggestions(editing)).toBe(editing);
+    expect(showSuggestedTrips(editing)).toBe(editing);
     expect(plannerSession(editing, { type: "closeSuggestedTrips" })).toBe(editing);
-    const showing = showSuggestions(selected());
+    const showing = showSuggestedTrips(selected());
     expect(enter(showing)).toBe(showing);
     expect(plannerSession(showing, { type: "leaveAccessPointEditing" })).toBe(showing);
   });
 
   it("they outlast New trip and Open trip, as access point editing does", () => {
-    const showing = showSuggestions(firstSession({ trip: emptyTrip() }));
+    const showing = showSuggestedTrips(firstSession({ trip: emptyTrip() }));
     expect(plannerSession(showing, { type: "newTrip" }).mode).toEqual(showing.mode);
     expect(plannerSession(showing, { type: "fileOpened", trip }).mode).toEqual(showing.mode);
   });
 });
 
 describe("using a suggested trip", () => {
-  const suggestion: SuggestedTrip = {
+  const suggestedTrip: SuggestedTrip = {
     shape: "one-way",
     nodes: [
       { id: "official-aire-1", kind: "official-aire", use: "both", position: [C.lng, C.lat] },
@@ -131,11 +131,11 @@ describe("using a suggested trip", () => {
     timeH: 0.3,
     switches: 2,
   };
-  const use: PlannerAction = { type: "useSuggestedTrip", suggestion, date: "2027-07-10" };
+  const use: PlannerAction = { type: "useSuggestedTrip", suggestedTrip, date: "2027-07-10" };
   const used = { name: "", points: [C, { lat: 50.3827, lng: 5.4663 }], legs: [{ mode: "paddle" }], startDate: "2027-07-10" };
 
-  it("with a trip open asks the usual replace question, still showing the suggestions", () => {
-    const after = plannerSession(showSuggestions(firstSession({ trip })), use);
+  it("with a trip open asks the usual replace question, still showing the suggested trips", () => {
+    const after = plannerSession(showSuggestedTrips(firstSession({ trip })), use);
     expect(after.question).toBe("useSuggestedTrip");
     expect(after.pendingTrip).toEqual(used);
     expect(after.trip).toBe(trip);
@@ -143,22 +143,22 @@ describe("using a suggested trip", () => {
   });
 
   it("confirming makes it the trip and goes back to normal mode", () => {
-    const asked = plannerSession(showSuggestions(firstSession({ trip })), use);
+    const asked = plannerSession(showSuggestedTrips(firstSession({ trip })), use);
     const after = plannerSession(asked, { type: "confirmReplace" });
     expect(after.trip).toEqual(used);
     expect(after.pendingTrip).toBeNull();
     expect(after.mode).toEqual({ kind: "normal" });
   });
 
-  it("cancelling keeps the trip and the suggestions", () => {
-    const showing = showSuggestions(firstSession({ trip }));
+  it("cancelling keeps the trip and the suggested trips", () => {
+    const showing = showSuggestedTrips(firstSession({ trip }));
     const after = plannerSession(plannerSession(showing, use), { type: "cancelReplace" });
     expect(after.trip).toBe(trip);
     expect(after.mode).toEqual(showing.mode);
   });
 
   it("without a trip open makes it the trip at once and goes back to normal mode", () => {
-    const after = plannerSession(showSuggestions(firstSession({ trip: emptyTrip() })), use);
+    const after = plannerSession(showSuggestedTrips(firstSession({ trip: emptyTrip() })), use);
     expect(after.trip).toEqual(used);
     expect(after.pendingTrip).toBeNull();
     expect(after.mode).toEqual({ kind: "normal" });
@@ -217,7 +217,7 @@ describe("the trip is frozen while editing access points (#227)", () => {
     });
     it(`${name} changes nothing while suggested trips are shown`, () => {
       const normal = plannerSession(editing(), { type: "leaveAccessPointEditing" });
-      const before = { ...showSuggestions(normal), selectedPoint: 1 };
+      const before = { ...showSuggestedTrips(normal), selectedPoint: 1 };
       expect(plannerSession(before, make(before))).toBe(before);
     });
   }

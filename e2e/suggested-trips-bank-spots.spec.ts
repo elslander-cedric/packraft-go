@@ -1,5 +1,5 @@
 // Bank spots (ADR 0039, GLOSSARY "Bank spot"): in Flanders suggested trips get in and out where a
-// path reaches the bank. A suggestion through one says it is unchecked on the ground, and using
+// path reaches the bank. A suggested trip through one says it is unchecked on the ground, and using
 // it offers to save its bank spots as access points. Recorded BRouter answers only (ADR 0019).
 import { expect, test } from "@playwright/test";
 import { serialiseTrip } from "../src/core/saveFile";
@@ -33,7 +33,7 @@ const onTheDemer: Trip = {
 test.use({ viewport: { width: 1400, height: 900 }, timezoneId: "Europe/Brussels" });
 
 // Bank spot data not built yet; Overpass was unavailable; resume with `OVERPASS_MAX_REQUESTS=80 npm run prepare:route-network -- --count-walks`.
-test.skip("a Flemish suggestion says its bank spots are unchecked, and using it offers to save them", async ({ page }) => {
+test.skip("a Flemish suggested trip says its bank spots are unchecked, and using it offers to save them", async ({ page }) => {
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [TRIP_KEY, serialiseTrip(onTheDemer)]);
   const network = await serveOffline(page, { brouter: byProfile });
   await openPlanner(page);

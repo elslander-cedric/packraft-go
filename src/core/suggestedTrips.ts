@@ -67,7 +67,7 @@ export type SuggestedTripsSearch = {
   readonly network: RouteNetwork;
   readonly rules: AccessRules;
   readonly when: SearchDate;
-  /** The visible map area: every suggestion starts and ends inside it. */
+  /** The visible map area: every suggested trip starts and ends inside it. */
   readonly area: Bounds;
   readonly wishes: TripWishes;
   readonly pace: Pace;
@@ -92,14 +92,14 @@ export type SuggestedTrips =
   | { readonly status: "found"; readonly trips: readonly SuggestedTrip[] }
   | { readonly status: "none"; readonly reason: NoTripReason };
 
-/** A suggestion's distances may land this far, as a share, either side of the wish (ADR 0039). */
+/** A suggested trip's distances may land this far, as a share, either side of the wish (ADR 0039). */
 const WISH_BAND = 0.2;
-/** One day's hiking and paddling, in hours at the planner's pace: no suggestion is longer. */
+/** One day's hiking and paddling, in hours at the planner's pace: no suggested trip is longer. */
 const ONE_DAY_HOURS = 8;
 /** Trips this close to the wishes, as a share, count as equally close, so trail and road share can rank them. */
 const CLOSENESS_STEP = 0.05;
 const MAX_TRIPS = 10;
-/** At most this many suggestions per river stretch come before the others (ADR 0039). */
+/** At most this many suggested trips per river stretch come before the others (ADR 0039). */
 const PER_STRETCH = 2;
 
 /** A link as it is paddled: its own way, or backwards on a canal or still water. */
@@ -110,8 +110,8 @@ type PaddleChain = { readonly steps: readonly Step[]; readonly passes: readonly 
 type Walk = { readonly to: string; readonly link: WalkingLink; readonly backwards: boolean };
 type Choice = { readonly mode: "paddle"; readonly chain: PaddleChain } | { readonly mode: "hike"; readonly walk: Walk };
 
-/** A trip while it is searched: what it chose and its running totals; made a suggestion only if it ranks. */
-type Candidate = {
+/** A trip while it is searched: what it chose and its running totals; made a suggested trip only if it ranks. */
+type SearchedTrip = {
   readonly start: RouteNode;
   readonly choices: readonly Choice[];
   /** Every node it passes, the start first. */
@@ -125,26 +125,26 @@ type Candidate = {
   readonly paddleLegs: number;
 };
 
-const endOf = (trip: Candidate) => trip.passed[trip.passed.length - 1];
-const shapeOf = (trip: Candidate): SuggestedTrip["shape"] =>
+const endOf = (trip: SearchedTrip) => trip.passed[trip.passed.length - 1];
+const shapeOf = (trip: SearchedTrip): SuggestedTrip["shape"] =>
   trip.choices.length > 0 && endOf(trip) === trip.start.id ? "loop" : "one-way";
-const switchesOf = (trip: Candidate) => 2 * trip.paddleLegs;
+const switchesOf = (trip: SearchedTrip) => 2 * trip.paddleLegs;
 
 /** Up to 10 suggested trips for the wishes, best first, or why there are none. */
 export function suggestTrips({ network: shipped, rules, when, area, wishes, pace }: SuggestedTripsSearch): SuggestedTrips {
   const network = withoutBankSpotsInWallonia(shipped, rules);
-  const graph = searchGraph(network, openRecords(rules, when), pace);
+  const searchable = searchNetwork(network, openRecords(rules, when), pace);
   // Trips with one paddle leg are always searched, so "too many switches" can be told.
   const limits = { area, pace, maxPaddleLegs: Math.max(1, Math.floor(wishes.maxSwitches / 2)) };
-  const candidates = network.nodes.filter((node) => inside(node, area)).flatMap((start) => tripsFrom(start, graph, limits));
-  if (candidates.length === 0) return { status: "none", reason: { kind: "no-open-water" } };
-  let trips = candidates;
+  const searched = network.nodes.filter((node) => inside(node, area)).flatMap((start) => tripsFrom(start, searchable, limits));
+  if (searched.length === 0) return { status: "none", reason: { kind: "no-open-water" } };
+  let trips = searched;
   for (const [reason, keep] of wishFilters(wishes)) {
     trips = trips.filter(keep);
     if (trips.length === 0) return { status: "none", reason };
   }
-  const best = varied(ranked(trips, wishes), graph.byId).slice(0, MAX_TRIPS);
-  return { status: "found", trips: best.map((trip) => suggestion(trip, graph.byId)) };
+  const best = varied(ranked(trips, wishes), searchable.byId).slice(0, MAX_TRIPS);
+  return { status: "found", trips: best.map((trip) => suggestedTrip(trip, searchable.byId)) };
 }
 
 /** The network without any bank spot in Wallonia and its links: there the AGW allows only aires (ADR 0039). */
@@ -161,14 +161,14 @@ function withoutBankSpotsInWallonia(network: RouteNetwork, rules: AccessRules): 
   };
 }
 
-type SearchGraph = {
+type SearchNetwork = {
   readonly byId: ReadonlyMap<string, RouteNode>;
   /** Every way of paddling in one go from a node within a day, ending where you may take out. */
   readonly chainsFrom: (id: string) => readonly PaddleChain[];
   readonly walksFrom: ReadonlyMap<string, readonly Walk[]>;
 };
 
-function searchGraph(network: RouteNetwork, open: (record: string) => boolean, pace: Pace): SearchGraph {
+function searchNetwork(network: RouteNetwork, open: (record: string) => boolean, pace: Pace): SearchNetwork {
   const byId = new Map(network.nodes.map((node) => [node.id, node]));
   const steps = openSteps(network, open);
   const oneDayM = paddleKmInHours(ONE_DAY_HOURS, pace) * 1000;
@@ -204,13 +204,13 @@ type Limits = { readonly area: Bounds; readonly pace: Pace; readonly maxPaddleLe
  * paddle legs taking turns, never passing a node twice, but maybe coming back round to `start`,
  * where it ends. It puts in only where it may and takes out only where it may.
  */
-function tripsFrom(start: RouteNode, graph: SearchGraph, limits: Limits): Candidate[] {
-  const found: Candidate[] = [];
-  const extend = (trip: Candidate) => {
-    const here = graph.byId.get(endOf(trip))!;
+function tripsFrom(start: RouteNode, searchable: SearchNetwork, limits: Limits): SearchedTrip[] {
+  const found: SearchedTrip[] = [];
+  const extend = (trip: SearchedTrip) => {
+    const here = searchable.byId.get(endOf(trip))!;
     if (trip.paddleLegs > 0 && inside(here, limits.area)) found.push(trip);
     if (shapeOf(trip) === "loop") return;
-    for (const choice of nextChoices(trip, here, graph, limits)) {
+    for (const choice of nextChoices(trip, here, searchable, limits)) {
       const next = withChoice(trip, choice, limits.pace);
       if (next.timeH <= ONE_DAY_HOURS) extend(next);
     }
@@ -220,12 +220,12 @@ function tripsFrom(start: RouteNode, graph: SearchGraph, limits: Limits): Candid
 }
 
 /** The legs a trip may take next from where it is: the other mode than its last leg, to nodes it hasn't passed. */
-function nextChoices(trip: Candidate, here: RouteNode, graph: SearchGraph, limits: Limits): Choice[] {
+function nextChoices(trip: SearchedTrip, here: RouteNode, searchable: SearchNetwork, limits: Limits): Choice[] {
   const last = trip.choices[trip.choices.length - 1]?.mode;
   const fresh = (id: string) => id === trip.start.id || !trip.passed.includes(id);
   const choices: Choice[] = [];
   if (last !== "paddle" && trip.paddleLegs < limits.maxPaddleLegs && here.use !== "take-out") {
-    for (const chain of graph.chainsFrom(here.id)) {
+    for (const chain of searchable.chainsFrom(here.id)) {
       const through = chain.passes.slice(0, -1);
       if (fresh(chain.passes[chain.passes.length - 1]) && through.every((id) => !trip.passed.includes(id))) {
         choices.push({ mode: "paddle", chain });
@@ -233,7 +233,7 @@ function nextChoices(trip: Candidate, here: RouteNode, graph: SearchGraph, limit
     }
   }
   if (last !== "hike") {
-    for (const walk of graph.walksFrom.get(here.id) ?? []) {
+    for (const walk of searchable.walksFrom.get(here.id) ?? []) {
       if (fresh(walk.to)) {
         choices.push({ mode: "hike", walk });
       }
@@ -242,7 +242,7 @@ function nextChoices(trip: Candidate, here: RouteNode, graph: SearchGraph, limit
   return choices;
 }
 
-function withChoice(trip: Candidate, choice: Choice, pace: Pace): Candidate {
+function withChoice(trip: SearchedTrip, choice: Choice, pace: Pace): SearchedTrip {
   const choices = [...trip.choices, choice];
   if (choice.mode === "paddle") {
     const { distanceM, passes } = choice.chain;
@@ -335,7 +335,7 @@ function hikeLeg(from: string, { to, link, backwards }: Walk): SuggestedHikeLeg 
   };
 }
 
-function suggestion(trip: Candidate, byId: ReadonlyMap<string, RouteNode>): SuggestedTrip {
+function suggestedTrip(trip: SearchedTrip, byId: ReadonlyMap<string, RouteNode>): SuggestedTrip {
   let from = trip.start.id;
   const legs = trip.choices.map((choice) => {
     const leg = choice.mode === "paddle" ? paddleLeg(from, choice.chain) : hikeLeg(from, choice.walk);
@@ -359,7 +359,7 @@ function suggestion(trip: Candidate, byId: ReadonlyMap<string, RouteNode>): Sugg
   };
 }
 
-type WishFilter = readonly [NoTripReason, (trip: Candidate) => boolean];
+type WishFilter = readonly [NoTripReason, (trip: SearchedTrip) => boolean];
 
 /** What each wish keeps, in the order they are applied, with the reason given when it keeps nothing. */
 function wishFilters({ hikeKm, paddleKm, maxSwitches, shape }: TripWishes): WishFilter[] {
@@ -386,7 +386,7 @@ const offWish = (distanceM: number, wishKm: number | undefined) =>
  * that doesn't walk counts as all on trails and none on roads); with no hike wish the least
  * walking, as walking nobody wished for is no gain; then the closest, then the order found in.
  */
-function ranked(trips: readonly Candidate[], { hikeKm, paddleKm }: TripWishes): Candidate[] {
+function ranked(trips: readonly SearchedTrip[], { hikeKm, paddleKm }: TripWishes): SearchedTrip[] {
   const keys = trips.map((trip, order) => {
     const off = offWish(trip.hikeM, hikeKm) + offWish(trip.paddleM, paddleKm);
     const walked = trip.hikeM > 0;
@@ -412,7 +412,7 @@ function ranked(trips: readonly Candidate[], { hikeKm, paddleKm }: TripWishes): 
  * A link from or to a bank spot counts by its waters instead: there one region record covers
  * every water (ADR 0039).
  */
-function stretchesOf(trip: Candidate, byId: ReadonlyMap<string, RouteNode>): string[] {
+function stretchesOf(trip: SearchedTrip, byId: ReadonlyMap<string, RouteNode>): string[] {
   const atBankSpot = (id: string) => byId.get(id)?.kind === "bank-spot";
   const keys = (link: PaddleLink) =>
     atBankSpot(link.from) || atBankSpot(link.to) ? link.waters.map((water) => `water:${water}`) : link.records;
@@ -423,10 +423,10 @@ function stretchesOf(trip: Candidate, byId: ReadonlyMap<string, RouteNode>): str
  * The ranked trips, each trip that would be one too many on any of its stretches moved after
  * the others, in rank order, so the top ones aren't near-copies.
  */
-function varied(ranked: readonly Candidate[], byId: ReadonlyMap<string, RouteNode>): Candidate[] {
+function varied(ranked: readonly SearchedTrip[], byId: ReadonlyMap<string, RouteNode>): SearchedTrip[] {
   const perStretch = new Map<string, number>();
-  const first: Candidate[] = [];
-  const later: Candidate[] = [];
+  const first: SearchedTrip[] = [];
+  const later: SearchedTrip[] = [];
   for (const trip of ranked) {
     const stretches = stretchesOf(trip, byId);
     if (stretches.some((stretch) => (perStretch.get(stretch) ?? 0) >= PER_STRETCH)) {

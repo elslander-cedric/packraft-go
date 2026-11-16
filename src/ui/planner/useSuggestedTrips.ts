@@ -25,7 +25,7 @@ export type TripSearch = {
  *   otherwise count as not open and leave out water that is open.
  * - `failed`: the route network can't be loaded (it is asked for again).
  */
-export type SuggestionsState =
+export type SuggestedTripsState =
   { readonly status: "loading" } | { readonly status: "waiting" } | { readonly status: "failed" } | SuggestedTrips;
 
 /**
@@ -34,7 +34,7 @@ export type SuggestionsState =
  * instant (ADR 0039); this loads what it runs on and, for today, today's live readings, which
  * the rest of the page shares.
  */
-export function useSuggestedTrips(search: TripSearch | null, pace: Pace, accessPoints: AccessPoints): SuggestionsState {
+export function useSuggestedTrips(search: TripSearch | null, pace: Pace, accessPoints: AccessPoints): SuggestedTripsState {
   const wanted = search !== null;
   const network = useRouteNetwork(wanted);
   const rules = useAccessRules(wanted);
@@ -43,7 +43,7 @@ export function useSuggestedTrips(search: TripSearch | null, pace: Pace, accessP
   const flows = useWalloonFlows(rules, forToday);
   const official = useOfficialStatus(rules, forToday);
 
-  return useMemo<SuggestionsState>(() => {
+  return useMemo<SuggestedTripsState>(() => {
     if (network === null) return { status: "failed" };
     if (!search || !network || !rules) return { status: "loading" };
     if (forToday && (!flows || !official)) return { status: "waiting" };

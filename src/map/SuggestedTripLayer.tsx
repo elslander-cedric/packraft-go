@@ -4,7 +4,7 @@ import { Marker, Pane, Polyline } from "react-leaflet";
 import type { Position } from "@/core/geo";
 import type { SuggestedTrip } from "@/core/suggestedTrips";
 import { paneZIndex } from "./mapConfig";
-import { SUGGESTION_HIT_ATTRIBUTE } from "./Taps";
+import { SUGGESTED_TRIP_HIT_ATTRIBUTE } from "./Taps";
 import "./SuggestedTripLayer.css";
 
 // Imports Leaflet, which needs `window`: only load this through ClientTripMap.
@@ -21,7 +21,7 @@ const lineStyle = { color: "#8e24aa", weight: 5, opacity: 0.9 };
 const casingStyle = { color: "#fff", weight: lineStyle.weight + 4, opacity: 1 };
 /** Hike legs dotted, so the walks between waters read apart from the paddling. */
 const hikeDashes = "1 9";
-/** Behind a selected suggestion the others stay visible, so you still see where they are. */
+/** Behind a selected suggested trip the others stay visible, so you still see where they are. */
 const FADED_OPACITY = 0.25;
 /** A line's unseen hit line, in screen pixels across: wide enough for a finger (ADR 0034). */
 const HIT_WIDTH_PX = 28;
@@ -129,7 +129,7 @@ export default function SuggestedTripLayer({ trips, selected = null }: Suggested
 function HitLine({ trip, positions }: { trip: number; positions: [number, number][] }) {
   const line = useRef<LeafletPolyline>(null);
   useEffect(() => {
-    line.current?.getElement()?.setAttribute(SUGGESTION_HIT_ATTRIBUTE, String(trip));
+    line.current?.getElement()?.setAttribute(SUGGESTED_TRIP_HIT_ATTRIBUTE, String(trip));
   }, [trip]);
   return <Polyline ref={line} positions={positions} className="suggested-trip-hit" pathOptions={hitStyle} />;
 }

@@ -1112,7 +1112,7 @@
   text-align: left;
 }
 
-/* A selected suggestion's details: its number, Back and Use this trip (each at least 44 px
+/* A selected suggested trip's details: its number, Back and Use this trip (each at least 44 px
    tall), then its figures, water and warnings. */
 .planner-suggested-trip-details {
   display: flex;

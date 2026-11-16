@@ -2,7 +2,7 @@ import type { NoTripReason, SuggestedTrip } from "@/core/suggestedTrips";
 import { Button } from "../components/Button";
 import { formatDistance } from "../format";
 import { strings } from "../strings";
-import type { SuggestionsState } from "./useSuggestedTrips";
+import type { SuggestedTripsState } from "./useSuggestedTrips";
 
 const text = strings.planner.suggestedTrips;
 
@@ -28,8 +28,8 @@ const waitingText = {
   failed: text.networkFailed,
 } as const;
 
-/** A suggestion's figures on one line, e.g. "Loop · 6.2 km hike · 9.9 km paddle · 2 switches". */
-export function suggestionFigures(trip: SuggestedTrip): string {
+/** A suggested trip's figures on one line, e.g. "Loop · 6.2 km hike · 9.9 km paddle · 2 switches". */
+export function suggestedTripFigures(trip: SuggestedTrip): string {
   return [
     text.shapes[trip.shape],
     ...(trip.hikeM > 0 ? [text.hike(formatDistance(trip.hikeM / 1000))] : []),
@@ -38,21 +38,21 @@ export function suggestionFigures(trip: SuggestedTrip): string {
   ].join(" · ");
 }
 
-/** A suggestion's number, on a badge like the one on its line. */
-export function SuggestionNumber({ n }: { n: number }) {
+/** A suggested trip's number, on a badge like the one on its line. */
+export function SuggestedTripNumber({ n }: { n: number }) {
   return <span className="planner-suggested-trip-number">{n}</span>;
 }
 
 /**
  * The suggested trips in the panel or sheet (ADR 0039): one row each, numbered as on the map,
  * with loop or one-way, hike km, paddle km and switches; or why there are none, or what it waits for.
- * A row selects its suggestion.
+ * A row selects its suggested trip.
  */
 export default function SuggestedTripsList({
   state,
   onSelect,
 }: {
-  state: SuggestionsState;
+  state: SuggestedTripsState;
   onSelect: (index: number) => void;
 }) {
   if (state.status === "none") {
@@ -74,8 +74,8 @@ export default function SuggestedTripsList({
       {state.trips.map((trip, i) => (
         <li key={i}>
           <Button className="planner-suggested-trip" onClick={() => onSelect(i)}>
-            <SuggestionNumber n={i + 1} />
-            <span>{suggestionFigures(trip)}</span>
+            <SuggestedTripNumber n={i + 1} />
+            <span>{suggestedTripFigures(trip)}</span>
           </Button>
         </li>
       ))}

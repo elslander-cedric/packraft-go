@@ -1,5 +1,5 @@
 // Hike + paddle suggested trips (ADR 0039): with a hike distance and a loop wished, the
-// suggestions walk between waters on the network's walking links, and Use this trip makes one
+// suggested trips walk between waters on the network's walking links, and Use this trip makes one
 // the trip with its hike and paddle legs, routed for real with recorded BRouter answers (ADR 0019).
 import { expect, test } from "@playwright/test";
 import { strings } from "../src/ui/strings";

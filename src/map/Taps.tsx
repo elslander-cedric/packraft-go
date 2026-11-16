@@ -10,8 +10,8 @@ const DOUBLE_TAP_PX = 40;
 
 /** The leg a leg hit line's element stands for (#230), kept on the element. */
 export const LEG_HIT_ATTRIBUTE = "data-leg";
-/** The suggested trip a suggestion's hit line stands for (ADR 0039), by its index. */
-export const SUGGESTION_HIT_ATTRIBUTE = "data-suggestion";
+/** The suggested trip a suggested trip's hit line stands for (ADR 0039), by its index. */
+export const SUGGESTED_TRIP_HIT_ATTRIBUTE = "data-suggested-trip";
 function hitOf(target: EventTarget | null, attribute: string): number | null {
   const index = target instanceof Element ? target.getAttribute(attribute) : null;
   return index === null ? null : Number(index);
@@ -20,18 +20,18 @@ function hitOf(target: EventTarget | null, attribute: string): number | null {
 export type TapsProps = {
   onTap: (at: LatLng) => void;
   onLegTap: (leg: number) => void;
-  onSuggestionTap?: (index: number) => void;
+  onSuggestedTripTap?: (index: number) => void;
 };
 
 /**
  * Turns taps into `onMapTap`, or `onLegTap` when the tap is on a leg's hit line (#230), or
- * `onSuggestionTap` on a suggested trip's. A
+ * `onSuggestedTripTap` on a suggested trip's. A
  * double tap gives one tap (its second tap is ignored), and the click that can follow a pinch
  * is ignored. So is the click that ends a finger or the mouse held for 0.4 s or more: holding
  * the map does nothing, and holding a leg inserts a point instead (#122, ADR 0034); a tap
  * right after a hold is a tap.
  */
-export function Taps({ onTap, onLegTap, onSuggestionTap }: TapsProps) {
+export function Taps({ onTap, onLegTap, onSuggestedTripTap }: TapsProps) {
   const map = useMap();
   const lastTap = useRef<{ at: number; point: Point } | null>(null);
   const pinched = useRef(false);
@@ -70,9 +70,9 @@ export function Taps({ onTap, onLegTap, onSuggestionTap }: TapsProps) {
       }
       const { target } = event.originalEvent;
       const leg = hitOf(target, LEG_HIT_ATTRIBUTE);
-      const suggestion = hitOf(target, SUGGESTION_HIT_ATTRIBUTE);
+      const suggestedTrip = hitOf(target, SUGGESTED_TRIP_HIT_ATTRIBUTE);
       if (leg !== null) onLegTap(leg);
-      else if (suggestion !== null) onSuggestionTap?.(suggestion);
+      else if (suggestedTrip !== null) onSuggestedTripTap?.(suggestedTrip);
       else onTap({ lat: event.latlng.lat, lng: event.latlng.lng });
     },
   });

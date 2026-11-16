@@ -38,7 +38,7 @@ import type { AccessPoints } from "./accessPoints";
 import type { CalendarDate } from "./calendarDate";
 import type { OfficialAire } from "./officialAire";
 import type { SuggestedTrip } from "./suggestedTrips";
-import { tripFromSuggestion } from "./tripFromSuggestion";
+import { tripFromSuggestedTrip } from "./tripFromSuggestedTrip";
 import { applyRoutingAction, retryLeg, type RoutingAction } from "./routing";
 import { distanceM } from "./geo";
 import { acceptSnap, movedPointOffers, snapOffers, type SnapOffer } from "./snap";
@@ -146,8 +146,8 @@ export type PlannerAction =
   /** Shows suggested trips; closing them returns to `returnTo`. */
   | { readonly type: "showSuggestedTrips"; readonly returnTo: PanelView }
   | { readonly type: "closeSuggestedTrips" }
-  /** Use this trip: the suggestion becomes the trip, starting on the searched `date`. */
-  | { readonly type: "useSuggestedTrip"; readonly suggestion: SuggestedTrip; readonly date: CalendarDate }
+  /** Use this trip: the suggested trip becomes the trip, starting on the searched `date`. */
+  | { readonly type: "useSuggestedTrip"; readonly suggestedTrip: SuggestedTrip; readonly date: CalendarDate }
   | RoutingAction;
 
 /** The first session, from what loading the stored trip returned. */
@@ -331,7 +331,7 @@ export function plannerSession(session: PlannerSession, action: PlannerAction): 
       return left(session, "suggestedTrips");
     case "useSuggestedTrip": {
       if (!showingSuggestedTrips(session)) return session;
-      const after = replace(session, tripFromSuggestion(action.suggestion, action.date), "useSuggestedTrip");
+      const after = replace(session, tripFromSuggestedTrip(action.suggestedTrip, action.date), "useSuggestedTrip");
       return after.pendingTrip ? after : left(after, "suggestedTrips");
     }
   }

@@ -85,7 +85,7 @@ export default function Planner({ router }: { router?: Router }) {
   } = usePlanner(router);
   const { trip, selectedPoint, selectedLeg, offers } = session;
   const editingAccessPoints = isEditingAccessPoints(session);
-  const showingSuggestions = showingSuggestedTrips(session);
+  const suggestedTripsShown = showingSuggestedTrips(session);
   const frozen = session.mode.kind !== "normal";
   const snapTargets = { accessPoints: access.points, officialAires };
 
@@ -125,7 +125,7 @@ export default function Planner({ router }: { router?: Router }) {
     panel.openForMode();
     if (!panel.sideways) panel.raiseFromPeek();
   });
-  const closeSuggestions = () => dispatch({ type: "closeSuggestedTrips" });
+  const closeSuggestedTrips = () => dispatch({ type: "closeSuggestedTrips" });
   const bankSpots = useBankSpotsOffer(access.addAt);
   // Leaving suggested trips, closed or by using one (once the replace question is answered),
   // restores the tab and the sheet's stop.
@@ -139,16 +139,16 @@ export default function Planner({ router }: { router?: Router }) {
       panel.setStop(shownMode.returnTo.sheet);
     }
   }
-  const found = showingSuggestions && findTrips.state.status === "found" ? findTrips.state.trips : null;
-  const selectedSuggestion = (findTrips.selected !== null && found?.[findTrips.selected]) || null;
-  // A row or a line selects a suggestion and brings its details into view.
-  const selectSuggestion = (index: number) => {
+  const found = suggestedTripsShown && findTrips.state.status === "found" ? findTrips.state.trips : null;
+  const selectedSuggestedTrip = (findTrips.selected !== null && found?.[findTrips.selected]) || null;
+  // A row or a line selects a suggested trip and brings its details into view.
+  const selectSuggestedTrip = (index: number) => {
     findTrips.select(index);
     panel.raiseFromPeek();
   };
 
   const onMapTap = (at: LatLng) => {
-    if (showingSuggestions) return findTrips.select(null);
+    if (suggestedTripsShown) return findTrips.select(null);
     if (editingAccessPoints) access.placeDraft(at);
     else if (selectedPoint !== null || selectedLeg !== null) dispatch({ type: "deselect" });
     else {
@@ -190,7 +190,7 @@ export default function Planner({ router }: { router?: Router }) {
 
   const [panelTabs, shownTab] = (() => {
     if (editingAccessPoints) return [editingTabs, "accessPoints"] as const;
-    if (showingSuggestions) return [suggestionTabs, "suggestedTrips"] as const;
+    if (suggestedTripsShown) return [suggestionTabs, "suggestedTrips"] as const;
     return [normalTabs, tab] as const;
   })();
 
@@ -235,7 +235,7 @@ export default function Planner({ router }: { router?: Router }) {
           findTrips.setArea(area);
         }}
         suggestedTrips={found && { trips: found, selected: findTrips.selected }}
-        onSuggestionTap={selectSuggestion}
+        onSuggestedTripTap={selectSuggestedTrip}
       />
 
       {layer.on && (
@@ -296,12 +296,12 @@ export default function Planner({ router }: { router?: Router }) {
         />
         {!editingAccessPoints && (
           <Button
-            className={`planner-fab${showingSuggestions ? " planner-fab-active" : ""}`}
+            className={`planner-fab${suggestedTripsShown ? " planner-fab-active" : ""}`}
             aria-label={strings.planner.findTripsButton}
-            aria-pressed={showingSuggestions}
-            onClick={showingSuggestions ? closeSuggestions : findTrips.ask}
+            aria-pressed={suggestedTripsShown}
+            onClick={suggestedTripsShown ? closeSuggestedTrips : findTrips.ask}
           >
-            <Icon icon={showingSuggestions ? icons.closeSuggestedTrips : icons.findTrips} />
+            <Icon icon={suggestedTripsShown ? icons.closeSuggestedTrips : icons.findTrips} />
           </Button>
         )}
         {positionNote && (
@@ -312,7 +312,7 @@ export default function Planner({ router }: { router?: Router }) {
       </div>
 
       <div className="planner-buttons planner-buttons-bottom planner-buttons-left">
-        {!showingSuggestions && (
+        {!suggestedTripsShown && (
           <AccessPointButtons
             editing={editingAccessPoints}
             marking={marking}
@@ -398,23 +398,23 @@ export default function Planner({ router }: { router?: Router }) {
         tab={shownTab}
         onTabChange={(next) => (next === "sections" || next === "days") && setTab(next)}
       >
-        {showingSuggestions && (
+        {suggestedTripsShown && (
           <TabPanel value="suggestedTrips">
-            {selectedSuggestion && findTrips.selected !== null && findTrips.date ? (
+            {selectedSuggestedTrip && findTrips.selected !== null && findTrips.date ? (
               <SuggestedTripDetails
                 n={findTrips.selected + 1}
-                trip={selectedSuggestion}
+                trip={selectedSuggestedTrip}
                 date={findTrips.date}
                 accessPoints={access.points}
                 onBack={() => findTrips.select(null)}
                 onUse={() => {
                   if (!findTrips.date) return;
-                  bankSpots.use(selectedSuggestion);
-                  dispatch({ type: "useSuggestedTrip", suggestion: selectedSuggestion, date: findTrips.date });
+                  bankSpots.use(selectedSuggestedTrip);
+                  dispatch({ type: "useSuggestedTrip", suggestedTrip: selectedSuggestedTrip, date: findTrips.date });
                 }}
               />
             ) : (
-              <SuggestedTripsList state={findTrips.state} onSelect={selectSuggestion} />
+              <SuggestedTripsList state={findTrips.state} onSelect={selectSuggestedTrip} />
             )}
           </TabPanel>
         )}

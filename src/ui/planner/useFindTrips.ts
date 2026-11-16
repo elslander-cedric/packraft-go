@@ -6,7 +6,7 @@ import type { Bounds } from "@/core/geo";
 import type { SearchArea } from "@/core/placeSearch";
 import { defaultSettings, withTripWishes, type Settings, type TripWishes } from "@/core/settings";
 import { localToday } from "../useAccessRules";
-import { useSuggestedTrips, type SuggestionsState } from "./useSuggestedTrips";
+import { useSuggestedTrips, type SuggestedTripsState } from "./useSuggestedTrips";
 
 export type FindTrips = ReturnType<typeof useFindTrips>;
 
@@ -24,14 +24,14 @@ export function useFindTrips(
   // The visible map, kept as the map reports it, so a search covers what was shown at Find trips.
   const area = useRef<Bounds>([-180, -90, 180, 90]);
   const [asking, setAsking] = useState(false);
-  // The suggestion whose details are shown, by its index in the list.
+  // The suggested trip whose details are shown, by its index in the list.
   const [selected, setSelected] = useState<number | null>(null);
   const [search, setSearch] = useState<{
     wishes: TripWishes;
     date: string;
     area: Bounds;
   } | null>(null);
-  const state: SuggestionsState = useSuggestedTrips(search, settings ?? defaultSettings, accessPoints);
+  const state: SuggestedTripsState = useSuggestedTrips(search, settings ?? defaultSettings, accessPoints);
 
   return {
     /** The wishes dialog is open. */
@@ -53,10 +53,10 @@ export function useFindTrips(
       setSelected(null);
     },
     state,
-    /** The date searched for: a used suggestion starts on it. */
+    /** The date searched for: a used suggested trip starts on it. */
     date: search?.date ?? null,
     selected,
-    /** Selects a suggestion by its index, or goes back to the list with null. */
+    /** Selects a suggested trip by its index, or goes back to the list with null. */
     select: setSelected,
     /** The map moved. */
     setArea: ({ west, south, east, north }: SearchArea) => {

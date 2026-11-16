@@ -6,7 +6,7 @@ import { strings } from "../src/ui/strings";
 import { delayedKiwis, kayakFixture, kiwisFixtures, serveOffline } from "./support/offline";
 import { legLines, mapClicker, openPlanner, panelTab, points } from "./support/planner";
 import {
-  closeSuggestions,
+  closeSuggestedTrips,
   findTrips,
   findTripsButton,
   suggestionLines,
@@ -41,7 +41,7 @@ test.describe("on a wide screen", () => {
     await expect(suggestionRows(page).first()).toContainText(
       /(One-way|Loop) · (\d+\.\d km hike · )?\d+(\.\d)? km paddle · 2 switches/,
     );
-    // One line per leg: some suggestions walk to or from the water too.
+    // One line per leg: some suggested trips walk to or from the water too.
     expect(await suggestionLines(page).count()).toBeGreaterThanOrEqual(10);
     await expect(suggestionNumbers(page)).toHaveText(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
     // The trip stays drawn and can't be changed: a map tap adds no point.
@@ -49,7 +49,7 @@ test.describe("on a wide screen", () => {
     await click(0, 80);
     await expect(points(page)).toHaveCount(2);
 
-    await closeSuggestions(page);
+    await closeSuggestedTrips(page);
     await expect(suggestionLines(page)).toHaveCount(0);
     await expect(suggestionList(page)).toHaveCount(0);
     await expect(panelTab(page, strings.planner.tabs.sections)).toHaveAttribute("aria-selected", "true");
@@ -62,7 +62,7 @@ test.describe("on a wide screen", () => {
     await openPlanner(page);
     await findTrips(page, { paddleKm: 7.5, maxSwitches: 4, date: SUMMER });
     await expect(suggestionRows(page).first()).toBeVisible();
-    await closeSuggestions(page);
+    await closeSuggestedTrips(page);
 
     await page.reload();
     await findTripsButton(page).click();

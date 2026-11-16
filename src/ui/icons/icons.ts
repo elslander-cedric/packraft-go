@@ -133,6 +133,6 @@ export const icons = {
   findTrips: faRoute,
   closeSuggestedTrips: faXmark,
   // A suggested trip's details: back to the list, and Use this trip.
-  backToSuggestions: faArrowLeft,
+  backToSuggestedTrips: faArrowLeft,
   useSuggestedTrip: faCircleCheck,
 };

@@ -2,7 +2,7 @@ import { useId, useMemo } from "react";
 import { accessPointNodeId } from "@/core/accessPointNetwork";
 import type { AccessPoints } from "@/core/accessPoints";
 import type { SuggestedTrip } from "@/core/suggestedTrips";
-import { bankSpotsOf, suggestionAccess } from "@/core/tripFromSuggestion";
+import { bankSpotsOf, suggestedTripAccess } from "@/core/tripFromSuggestedTrip";
 import { Button } from "../components/Button";
 import { accessPointText } from "../accessPointText";
 import { formatDuration, formatElevation, formatShare } from "../format";
@@ -19,7 +19,7 @@ import {
 } from "../useAccessRules";
 import { useOfficialStatus } from "../useOfficialStatus";
 import { useWalloonFlows } from "../useWalloonFlows";
-import { SuggestionNumber, suggestionFigures } from "./SuggestedTripsList";
+import { SuggestedTripNumber, suggestedTripFigures } from "./SuggestedTripsList";
 
 const text = strings.planner.suggestedTrips;
 
@@ -36,7 +36,7 @@ export type SuggestedTripDetailsProps = {
 };
 
 /**
- * A selected suggestion's details (ADR 0039): its figures, the rivers, aires and your access points it uses, and the
+ * A selected suggested trip's details (ADR 0039): its figures, the rivers, aires and your access points it uses, and the
  * access of its water on the date with its warnings, as the trip it becomes will show them.
  * Back returns to the list; Use this trip makes it the trip. Both come first, so they show with
  * the sheet at half.
@@ -50,7 +50,7 @@ export default function SuggestedTripDetails({
   onUse,
 }: SuggestedTripDetailsProps) {
   const headingId = useId();
-  const access = useSuggestionAccess(trip, date);
+  const access = useSuggestedTripAccess(trip, date);
   const aires = useBuiltInOfficialAires(true)?.aires;
   const aireNames = [
     ...new Set(
@@ -77,17 +77,17 @@ export default function SuggestedTripDetails({
     >
       <div className="planner-suggested-trip-actions">
         <h3 id={headingId}>
-          <SuggestionNumber n={n} />
+          <SuggestedTripNumber n={n} />
           <span className="visually-hidden">{text.detailsTitle(n)}</span>
         </h3>
         <Button className="planner-button" onClick={onBack}>
-          <Icon icon={icons.backToSuggestions} /> {text.back}
+          <Icon icon={icons.backToSuggestedTrips} /> {text.back}
         </Button>
         <Button className="planner-button" onClick={onUse}>
           <Icon icon={icons.useSuggestedTrip} /> {text.use}
         </Button>
       </div>
-      <p>{suggestionFigures(trip)}</p>
+      <p>{suggestedTripFigures(trip)}</p>
       <p>{`${text.timeLabel}: ${formatDuration(trip.timeH)}`}</p>
       {trip.hikeM > 0 && (
         <>
@@ -113,10 +113,10 @@ export default function SuggestedTripDetails({
 }
 
 /**
- * The access of the suggestion's water on the date, with the obstacles and locks it passes:
+ * The access of the suggested trip's water on the date, with the obstacles and locks it passes:
  * today's readings for today, as the search used them.
  */
-function useSuggestionAccess(trip: SuggestedTrip, date: string) {
+function useSuggestedTripAccess(trip: SuggestedTrip, date: string) {
   const rules = useAccessRules(true);
   const obstacles = useBuiltInObstacles(true) ?? undefined;
   const locks = useBuiltInLocks(true) ?? undefined;
@@ -127,7 +127,7 @@ function useSuggestionAccess(trip: SuggestedTrip, date: string) {
   return useMemo(
     () =>
       rules &&
-      suggestionAccess(trip, date, rules, {
+      suggestedTripAccess(trip, date, rules, {
         today,
         ...(flows && { flows }),
         ...(official && { official }),
