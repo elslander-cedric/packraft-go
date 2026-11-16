@@ -39,8 +39,8 @@ export function suggestedTripFigures(trip: SuggestedTrip): string {
 }
 
 /** A suggested trip's number, on a badge like the one on its line. */
-export function SuggestedTripNumber({ n }: { n: number }) {
-  return <span className="planner-suggested-trip-number">{n}</span>;
+export function SuggestedTripNumber({ number }: { number: number }) {
+  return <span className="planner-suggested-trip-number">{number}</span>;
 }
 
 /**
@@ -74,7 +74,7 @@ export default function SuggestedTripsList({
       {state.trips.map((trip, i) => (
         <li key={i}>
           <Button className="planner-suggested-trip" onClick={() => onSelect(i)}>
-            <SuggestedTripNumber n={i + 1} />
+            <SuggestedTripNumber number={i + 1} />
             <span>{suggestedTripFigures(trip)}</span>
           </Button>
         </li>

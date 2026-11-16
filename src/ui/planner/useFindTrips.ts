@@ -6,7 +6,7 @@ import type { Bounds } from "@/core/geo";
 import type { SearchArea } from "@/core/placeSearch";
 import { defaultSettings, withTripWishes, type Settings, type TripWishes } from "@/core/settings";
 import { localToday } from "../useAccessRules";
-import { useSuggestedTrips, type SuggestedTripsState } from "./useSuggestedTrips";
+import { useSuggestedTrips, type SuggestedTripsState, type TripSearch } from "./useSuggestedTrips";
 
 export type FindTrips = ReturnType<typeof useFindTrips>;
 
@@ -26,11 +26,7 @@ export function useFindTrips(
   const [asking, setAsking] = useState(false);
   // The suggested trip whose details are shown, by its index in the list.
   const [selected, setSelected] = useState<number | null>(null);
-  const [search, setSearch] = useState<{
-    wishes: TripWishes;
-    date: string;
-    area: Bounds;
-  } | null>(null);
+  const [search, setSearch] = useState<TripSearch | null>(null);
   const state: SuggestedTripsState = useSuggestedTrips(search, settings ?? defaultSettings, accessPoints);
 
   return {

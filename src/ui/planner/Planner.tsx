@@ -44,6 +44,7 @@ import SuggestedTripsList from "./SuggestedTripsList";
 import TripButtons from "./TripButtons";
 import TripWishesDialog from "./TripWishesDialog";
 import { useBankSpotsOffer } from "./useBankSpotsOffer";
+import { useSuggestedTripsMode } from "./useSuggestedTripsMode";
 import { useFindTrips } from "./useFindTrips";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
 import { useNextLegMode } from "./useNextLegMode";
@@ -55,7 +56,7 @@ import "./planner.css";
 /** A tab of normal mode, or the one tab of access point editing or of suggested trips. */
 type PlannerTab = NormalTab | "accessPoints" | "suggestedTrips";
 const editingTabs: readonly PlannerTab[] = ["accessPoints"];
-const suggestionTabs: readonly PlannerTab[] = ["suggestedTrips"];
+const suggestedTripTabs: readonly PlannerTab[] = ["suggestedTrips"];
 
 /**
  * The planner, on every screen: a full-screen map with floating buttons, and the trip in a bottom
@@ -127,18 +128,13 @@ export default function Planner({ router }: { router?: Router }) {
   });
   const closeSuggestedTrips = () => dispatch({ type: "closeSuggestedTrips" });
   const bankSpots = useBankSpotsOffer(access.addAt);
-  // Leaving suggested trips, closed or by using one (once the replace question is answered),
-  // restores the tab and the sheet's stop.
-  const [shownMode, setShownMode] = useState(session.mode);
-  if (shownMode !== session.mode) {
-    setShownMode(session.mode);
-    if (shownMode.kind === "suggestedTrips" && session.mode.kind === "normal") {
-      findTrips.close();
-      bankSpots.left(trip);
-      setTab(shownMode.returnTo.tab);
-      panel.setStop(shownMode.returnTo.sheet);
-    }
-  }
+  // Leaving suggested trips restores the tab and the sheet's stop.
+  useSuggestedTripsMode(session.mode, (returnTo) => {
+    findTrips.close();
+    bankSpots.left(trip);
+    setTab(returnTo.tab);
+    panel.setStop(returnTo.sheet);
+  });
   const found = suggestedTripsShown && findTrips.state.status === "found" ? findTrips.state.trips : null;
   const selectedSuggestedTrip = (findTrips.selected !== null && found?.[findTrips.selected]) || null;
   // A row or a line selects a suggested trip and brings its details into view.
@@ -190,7 +186,7 @@ export default function Planner({ router }: { router?: Router }) {
 
   const [panelTabs, shownTab] = (() => {
     if (editingAccessPoints) return [editingTabs, "accessPoints"] as const;
-    if (suggestedTripsShown) return [suggestionTabs, "suggestedTrips"] as const;
+    if (suggestedTripsShown) return [suggestedTripTabs, "suggestedTrips"] as const;
     return [normalTabs, tab] as const;
   })();
 
@@ -396,13 +392,16 @@ export default function Planner({ router }: { router?: Router }) {
         totals={summary.trip}
         tabs={panelTabs}
         tab={shownTab}
-        onTabChange={(next) => (next === "sections" || next === "days") && setTab(next)}
+        onTabChange={(next) => {
+          const normal = normalTabs.find((name) => name === next);
+          if (normal) setTab(normal);
+        }}
       >
         {suggestedTripsShown && (
           <TabPanel value="suggestedTrips">
             {selectedSuggestedTrip && findTrips.selected !== null && findTrips.date ? (
               <SuggestedTripDetails
-                n={findTrips.selected + 1}
+                number={findTrips.selected + 1}
                 trip={selectedSuggestedTrip}
                 date={findTrips.date}
                 accessPoints={access.points}

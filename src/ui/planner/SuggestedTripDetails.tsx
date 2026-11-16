@@ -25,7 +25,7 @@ const text = strings.planner.suggestedTrips;
 
 export type SuggestedTripDetailsProps = {
   /** Its number in the list and on the map. */
-  n: number;
+  number: number;
   trip: SuggestedTrip;
   /** The date searched for, YYYY-MM-DD. */
   date: string;
@@ -42,7 +42,7 @@ export type SuggestedTripDetailsProps = {
  * the sheet at half.
  */
 export default function SuggestedTripDetails({
-  n,
+  number,
   trip,
   date,
   accessPoints,
@@ -77,8 +77,8 @@ export default function SuggestedTripDetails({
     >
       <div className="planner-suggested-trip-actions">
         <h3 id={headingId}>
-          <SuggestedTripNumber n={n} />
-          <span className="visually-hidden">{text.detailsTitle(n)}</span>
+          <SuggestedTripNumber number={number} />
+          <span className="visually-hidden">{text.detailsTitle(number)}</span>
         </h3>
         <Button className="planner-button" onClick={onBack}>
           <Icon icon={icons.backToSuggestedTrips} /> {text.back}
