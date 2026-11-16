@@ -1,12 +1,18 @@
 "use client";
 
 import { useRef, useState, type CSSProperties } from "react";
-import { editingAccessPoints as isEditingAccessPoints, normalTabs, type NormalTab } from "@/core/plannerSession";
+import {
+  editingAccessPoints as isEditingAccessPoints,
+  normalTabs,
+  showingSuggestedTrips,
+  type NormalTab,
+} from "@/core/plannerSession";
 import type { Router } from "@/core/router";
 import { isCamp, type LatLng } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import type { MapFocus } from "@/map/TripMap";
 import { Button } from "../components/Button";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { TabPanel } from "../components/Tabs";
 import DaysPanel from "../DaysPanel";
 import { Icon } from "../icons/Icon";
@@ -33,7 +39,13 @@ import PointCard from "./PointCard";
 import { positionMessage } from "./position";
 import SectionDetailsDialog from "./SectionDetailsDialog";
 import SectionsList from "./SectionsList";
+import SuggestedTripDetails from "./SuggestedTripDetails";
+import SuggestedTripsList from "./SuggestedTripsList";
 import TripButtons from "./TripButtons";
+import TripWishesDialog from "./TripWishesDialog";
+import { useBankSpotsOffer } from "./useBankSpotsOffer";
+import { useSuggestedTripsMode } from "./useSuggestedTripsMode";
+import { useFindTrips } from "./useFindTrips";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
 import { useNextLegMode } from "./useNextLegMode";
 import { measureMapCover, usePanel } from "./usePanel";
@@ -41,17 +53,19 @@ import { usePosition } from "./usePosition";
 import { useTripRows } from "./useTripRows";
 import "./planner.css";
 
-/** A tab of normal mode, or the one tab of access point editing. */
-type PlannerTab = NormalTab | "accessPoints";
+/** A tab of normal mode, or the one tab of access point editing or of suggested trips. */
+type PlannerTab = NormalTab | "accessPoints" | "suggestedTrips";
 const editingTabs: readonly PlannerTab[] = ["accessPoints"];
+const suggestedTripTabs: readonly PlannerTab[] = ["suggestedTrips"];
 
 /**
  * The planner, on every screen: a full-screen map with floating buttons, and the trip in a bottom
  * sheet (narrow screen in portrait) or a side panel (everywhere else). It draws what `usePlanner`
  * returns and sends it actions; it adds no planning rules.
  *
- * It has two modes. In normal mode a map tap adds a trip point. In access point editing the trip
- * is frozen and a map tap places an access point instead.
+ * It has three modes. In normal mode a map tap adds a trip point. In access point editing the trip
+ * is frozen and a map tap places an access point instead. While suggested trips are shown (ADR
+ * 0039) the trip is frozen too, and a map tap does nothing.
  */
 export default function Planner({ router }: { router?: Router }) {
   const {
@@ -72,10 +86,12 @@ export default function Planner({ router }: { router?: Router }) {
   } = usePlanner(router);
   const { trip, selectedPoint, selectedLeg, offers } = session;
   const editingAccessPoints = isEditingAccessPoints(session);
+  const suggestedTripsShown = showingSuggestedTrips(session);
+  const frozen = session.mode.kind !== "normal";
   const snapTargets = { accessPoints: access.points, officialAires };
 
   const root = useRef<HTMLDivElement>(null);
-  const panel = usePanel(editingAccessPoints);
+  const panel = usePanel(frozen);
   // Normal mode's tab; kept while editing access points, so leaving brings it back.
   const [tab, setTab] = useState<NormalTab>("sections");
 
@@ -104,7 +120,31 @@ export default function Planner({ router }: { router?: Router }) {
   const editedPoint = editingDraft ? access.draft : (access.points.find((p) => p.id === editedId) ?? null);
   const marking = useMarkAccessPoint(access, position, showPosition, () => setEditingDraft(true));
 
+  // Showing suggested trips keeps the tab and the sheet to return to, and shows their list.
+  const findTrips = useFindTrips(settings, saveSettings, access.points, () => {
+    dispatch({ type: "showSuggestedTrips", returnTo: { tab, sheet: panel.stop } });
+    panel.openForMode();
+    if (!panel.sideways) panel.raiseFromPeek();
+  });
+  const closeSuggestedTrips = () => dispatch({ type: "closeSuggestedTrips" });
+  const bankSpots = useBankSpotsOffer(access.addAt);
+  // Leaving suggested trips restores the tab and the sheet's stop.
+  useSuggestedTripsMode(session.mode, (returnTo) => {
+    findTrips.close();
+    bankSpots.left(trip);
+    setTab(returnTo.tab);
+    panel.setStop(returnTo.sheet);
+  });
+  const found = suggestedTripsShown && findTrips.state.status === "found" ? findTrips.state.trips : null;
+  const selectedSuggestedTrip = (findTrips.selected !== null && found?.[findTrips.selected]) || null;
+  // A row or a line selects a suggested trip and brings its details into view.
+  const selectSuggestedTrip = (index: number) => {
+    findTrips.select(index);
+    panel.raiseFromPeek();
+  };
+
   const onMapTap = (at: LatLng) => {
+    if (suggestedTripsShown) return findTrips.select(null);
     if (editingAccessPoints) access.placeDraft(at);
     else if (selectedPoint !== null || selectedLeg !== null) dispatch({ type: "deselect" });
     else {
@@ -118,7 +158,7 @@ export default function Planner({ router }: { router?: Router }) {
   const enterAccessPointEditing = () => {
     dispatch({ type: "enterAccessPointEditing", returnTo: { tab, sheet: panel.stop } });
     access.select(null);
-    panel.openForEditing();
+    panel.openForMode();
   };
   const leaveAccessPointEditing = () => {
     if (session.mode.kind === "normal") return;
@@ -144,6 +184,12 @@ export default function Planner({ router }: { router?: Router }) {
     showOnMap({ at: point.position });
   };
 
+  const [panelTabs, shownTab] = (() => {
+    if (editingAccessPoints) return [editingTabs, "accessPoints"] as const;
+    if (suggestedTripsShown) return [suggestedTripTabs, "suggestedTrips"] as const;
+    return [normalTabs, tab] as const;
+  })();
+
   const layoutClass = panel.sideways
     ? `planner-sideways ${panel.open ? "planner-panel-open" : "planner-panel-collapsed"}`
     : `planner-stop-${panel.stop}`;
@@ -165,7 +211,7 @@ export default function Planner({ router }: { router?: Router }) {
         onLegHold={(index, near) => dispatch({ type: "insertPoint", index, near })}
         selectedLeg={selectedLeg}
         onLegTap={(index) => dispatch({ type: "legClicked", index })}
-        frozen={editingAccessPoints}
+        frozen={frozen}
         position={position.state === "shown" ? { at: position.at, accuracyM: position.accuracyM } : null}
         accessPoints={{
           points: access.points,
@@ -180,7 +226,12 @@ export default function Planner({ router }: { router?: Router }) {
         access={layer.shown && { ...layer.shown, selectedId: layer.selectedId, onSelect: layer.select }}
         searchResult={search.state.shown}
         searchCover={() => measureMapCover(root.current, panel)}
-        onAreaChange={search.setArea}
+        onAreaChange={(area) => {
+          search.setArea(area);
+          findTrips.setArea(area);
+        }}
+        suggestedTrips={found && { trips: found, selected: findTrips.selected }}
+        onSuggestedTripTap={selectSuggestedTrip}
       />
 
       {layer.on && (
@@ -202,6 +253,16 @@ export default function Planner({ router }: { router?: Router }) {
           openFile={openFile}
           settings={settings}
           saveSettings={saveSettings}
+        />
+        <ConfirmDialog
+          open={bankSpots.offered.length > 0}
+          title={strings.planner.suggestedTrips.saveBankSpots.title(bankSpots.offered.length)}
+          message={strings.planner.suggestedTrips.saveBankSpots.message(bankSpots.offered.length)}
+          confirmLabel={strings.planner.suggestedTrips.saveBankSpots.confirm}
+          cancelLabel={strings.planner.suggestedTrips.saveBankSpots.cancel}
+          onConfirm={bankSpots.save}
+          onCancel={bankSpots.dismiss}
+          tone="primary"
         />
         {session.keepStoredSave && (
           <p role="alert" className="planner-message planner-message-alert">
@@ -229,6 +290,16 @@ export default function Planner({ router }: { router?: Router }) {
           overlays={overlays}
           onOverlayChange={switchOverlay}
         />
+        {!editingAccessPoints && (
+          <Button
+            className={`planner-fab${suggestedTripsShown ? " planner-fab-active" : ""}`}
+            aria-label={strings.planner.findTripsButton}
+            aria-pressed={suggestedTripsShown}
+            onClick={suggestedTripsShown ? closeSuggestedTrips : findTrips.ask}
+          >
+            <Icon icon={suggestedTripsShown ? icons.closeSuggestedTrips : icons.findTrips} />
+          </Button>
+        )}
         {positionNote && (
           <p role={positionNote.kind} className={`planner-message planner-message-${positionNote.kind}`}>
             {positionNote.text}
@@ -237,17 +308,19 @@ export default function Planner({ router }: { router?: Router }) {
       </div>
 
       <div className="planner-buttons planner-buttons-bottom planner-buttons-left">
-        <AccessPointButtons
-          editing={editingAccessPoints}
-          marking={marking}
-          onEnter={enterAccessPointEditing}
-          onLeave={leaveAccessPointEditing}
-        />
+        {!suggestedTripsShown && (
+          <AccessPointButtons
+            editing={editingAccessPoints}
+            marking={marking}
+            onEnter={enterAccessPointEditing}
+            onLeave={leaveAccessPointEditing}
+          />
+        )}
       </div>
 
       {/* Everything below edits or selects in the trip, so none of it shows while the trip is frozen. */}
       <div className="planner-buttons planner-buttons-bottom">
-        {!editingAccessPoints && (
+        {!frozen && (
           <TripButtons
             trip={trip}
             nextMode={nextMode}
@@ -307,8 +380,8 @@ export default function Planner({ router }: { router?: Router }) {
           />
         )}
         <SnapOffers
-          // Offers made before entering access point editing wait until leaving.
-          offers={editingAccessPoints ? [] : offers}
+          // Offers made before entering another mode wait until leaving it.
+          offers={frozen ? [] : offers}
           onAccept={(offer) => dispatch({ type: "acceptOffer", offer })}
           onDecline={(offer) => dispatch({ type: "declineOffer", offer })}
         />
@@ -317,11 +390,34 @@ export default function Planner({ router }: { router?: Router }) {
       <PlannerPanel<PlannerTab>
         panel={panel}
         totals={summary.trip}
-        tabs={editingAccessPoints ? editingTabs : normalTabs}
-        tab={editingAccessPoints ? "accessPoints" : tab}
-        onTabChange={(next) => next !== "accessPoints" && setTab(next)}
+        tabs={panelTabs}
+        tab={shownTab}
+        onTabChange={(next) => {
+          const normal = normalTabs.find((name) => name === next);
+          if (normal) setTab(normal);
+        }}
       >
-        {editingAccessPoints ? (
+        {suggestedTripsShown && (
+          <TabPanel value="suggestedTrips">
+            {selectedSuggestedTrip && findTrips.selected !== null && findTrips.date ? (
+              <SuggestedTripDetails
+                number={findTrips.selected + 1}
+                trip={selectedSuggestedTrip}
+                date={findTrips.date}
+                accessPoints={access.points}
+                onBack={() => findTrips.select(null)}
+                onUse={() => {
+                  if (!findTrips.date) return;
+                  bankSpots.use(selectedSuggestedTrip);
+                  dispatch({ type: "useSuggestedTrip", suggestedTrip: selectedSuggestedTrip, date: findTrips.date });
+                }}
+              />
+            ) : (
+              <SuggestedTripsList state={findTrips.state} onSelect={selectSuggestedTrip} />
+            )}
+          </TabPanel>
+        )}
+        {editingAccessPoints && (
           <TabPanel value="accessPoints">
             <AccessPoints
               access={access}
@@ -336,7 +432,8 @@ export default function Planner({ router }: { router?: Router }) {
               }}
             />
           </TabPanel>
-        ) : (
+        )}
+        {!frozen && (
           <>
             <TabPanel value="sections">
               <SectionsList
@@ -369,6 +466,14 @@ export default function Planner({ router }: { router?: Router }) {
           </>
         )}
       </PlannerPanel>
+
+      <TripWishesDialog
+        open={findTrips.asking}
+        wishes={findTrips.wishes}
+        today={findTrips.today}
+        onConfirm={findTrips.confirm}
+        onCancel={findTrips.cancel}
+      />
 
       <AccessPointDialog
         point={editedPoint}

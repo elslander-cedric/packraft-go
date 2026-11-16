@@ -172,12 +172,12 @@ const NAISMITH_FLAT_KMH = 5;
 const NAISMITH_CLIMB_M_PER_H = 600;
 
 /** Hike time in hours (ADR 0009): Naismith's rule scaled by the planner's pace factor. */
-function hikeTimeH(km: number, climbM: number, settings: Pace): number {
+export function hikeTimeH(km: number, climbM: number, settings: Pace): number {
   return (km / NAISMITH_FLAT_KMH + climbM / NAISMITH_CLIMB_M_PER_H) * settings.paceFactor;
 }
 
 /** Paddle time in hours (ADR 0009): distance at the planner's paddling speed. */
-function paddleTimeH(km: number, settings: Pace): number {
+export function paddleTimeH(km: number, settings: Pace): number {
   return km / settings.paddleSpeedKmh;
 }
 

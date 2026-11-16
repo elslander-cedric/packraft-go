@@ -3,7 +3,8 @@
 // least a second between requests, and a local cache so re-runs don't re-fetch.
 // No test here calls the network (ADR 0019): fetch, wait and the cache are fakes.
 import { describe, expect, it } from "vitest";
-import { createOverpassClient, OVERPASS_USER_AGENT } from "./overpass";
+import { SCRIPT_USER_AGENT } from "../politeRequests";
+import { createOverpassClient } from "./overpass";
 
 function fakes(answers: Array<{ status: number; body: string }>) {
   const calls: Array<{ url: string; init: { headers: Record<string, string>; body: string } }> = [];
@@ -38,8 +39,8 @@ describe("Overpass client", () => {
   it("identifies itself with the project URL only, never an email", async () => {
     const { client, calls } = fakes([EMPTY]);
     await client.query("[out:json];node(1);out;");
-    expect(calls[0].init.headers["User-Agent"]).toBe(OVERPASS_USER_AGENT);
-    expect(OVERPASS_USER_AGENT).toBe("packraft-go (+https://github.com/elslander-cedric/packraft-go)");
+    expect(calls[0].init.headers["User-Agent"]).toBe(SCRIPT_USER_AGENT);
+    expect(SCRIPT_USER_AGENT).toBe("packraft-go (+https://github.com/elslander-cedric/packraft-go)");
     expect(JSON.stringify(calls[0])).not.toMatch(/[a-z0-9.]+@[a-z0-9-]+\./i);
   });
 

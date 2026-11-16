@@ -4,8 +4,7 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { brouterUrl } from "./brouter";
-import { LIVE_CHECK_USER_AGENT, liveCheckCases, runLiveCheck, type LiveCheckDeps } from "./liveCheck";
+import { LIVE_CHECK_USER_AGENT, liveCheckCases, liveCheckUrl, runLiveCheck, type LiveCheckDeps } from "./liveCheck";
 
 const root = path.join(__dirname, "..", "..");
 const fixturesDir = path.join(__dirname, "fixtures");
@@ -36,7 +35,7 @@ function fakeServer(doctor: (fixture: string, answer: Answer) => Answer = (_f, a
       maxInFlight = Math.max(maxInFlight, inFlight);
       log.push({ type: "fetch", url, userAgent: init.headers["User-Agent"] });
       await new Promise((r) => setTimeout(r, 5));
-      const c = liveCheckCases.find((k) => brouterUrl(k.mode, k.points) === url);
+      const c = liveCheckCases.find((k) => liveCheckUrl(k) === url);
       inFlight -= 1;
       if (!c) return new Response("unexpected request", { status: 500 });
       const answer = doctor(c.fixture, { status: c.status, body: readFixture(c.fixture) });
@@ -65,14 +64,14 @@ const onlyFor =
   (name: string, a: Answer): Answer =>
     name === fixture ? change(a) : a;
 
-describe("at most ~4 live requests, sequential and polite", () => {
-  it("makes at most four requests, never two at once, with a pause of at least 1 s between them", async () => {
+describe("at most five live requests, sequential and polite", () => {
+  it("makes at most five requests, never two at once, with a pause of at least 1 s between them", async () => {
     const server = fakeServer();
     await runLiveCheck(server.deps);
 
     const fetches = server.log.filter((e) => e.type === "fetch");
     expect(fetches.length).toBeGreaterThan(0);
-    expect(fetches.length).toBeLessThanOrEqual(4);
+    expect(fetches.length).toBeLessThanOrEqual(5);
     expect(server.maxInFlight()).toBe(1);
     // Every pair of consecutive fetches has a wait in between.
     const types = server.log.map((e) => e.type).join(",");

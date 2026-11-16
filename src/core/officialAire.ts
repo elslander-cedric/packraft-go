@@ -4,6 +4,7 @@
 import type { AccessSource, Position } from "./access";
 import type { AccessPointUse } from "./accessPoints";
 import type { CalendarDate } from "./calendarDate";
+import { latLngOf } from "./geo";
 import type { LatLng } from "./trip";
 
 export type OfficialAire = {
@@ -25,7 +26,7 @@ export type OfficialAire = {
 };
 
 /** Where the aire is, as a trip point would be: its stored position is GeoJSON's [lng, lat]. */
-export const airePosition = ({ position: [lng, lat] }: OfficialAire): LatLng => ({ lat, lng });
+export const airePosition = ({ position }: OfficialAire): LatLng => latLngOf(position);
 
 /** An SPW stretch (GLOSSARY "Official stretch"): not always the same as an AGW Annex 1 stretch. */
 export type OfficialStretch = {

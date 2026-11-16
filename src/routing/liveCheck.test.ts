@@ -3,9 +3,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { brouterUrl } from "./brouter";
 import {
   compareWithFixture,
+  liveCheckUrl,
   LIVE_CHECK_DELAY_MS,
   LIVE_CHECK_USER_AGENT,
   liveCheckCases,
@@ -42,10 +42,16 @@ function editedTrack(fixtureName: string, edit: (feature: EditableFeature) => vo
 const levels = (findings: { level: string }[]) => new Set(findings.map((f) => f.level));
 
 describe("live check cases", () => {
-  it("covers the hiking and river profiles with at most four requests", () => {
-    expect(liveCheckCases.length).toBeLessThanOrEqual(4);
+  it("covers the hiking and river profiles with at most five requests", () => {
+    expect(liveCheckCases.length).toBeLessThanOrEqual(5);
     expect(liveCheckCases.map((c) => c.mode)).toContain("hike");
     expect(liveCheckCases.map((c) => c.mode)).toContain("paddle");
+  });
+
+  it("asks for a trail-preferring hike, as the walking links are routed", () => {
+    const url = new URL(liveCheckUrl(caseFor("hiking-trail-preference.geojson")));
+    expect(url.searchParams.get("profile")).toBe("hiking-mountain");
+    expect(Number(url.searchParams.get("profile:hiking_routes_preference"))).toBeGreaterThan(0.2);
   });
 
   it("only names fixtures that exist", () => {
@@ -59,6 +65,14 @@ describe("comparing a live response with its fixture", () => {
     expect(findings.length).toBeGreaterThan(0);
     expect(levels(findings)).toEqual(new Set(["match"]));
   });
+
+  it.each(["hiking-success.geojson", "hiking-trail-preference.geojson"])(
+    "reads a successful %s as a track, not as a routing error",
+    async (name) => {
+      const findings = await compareWithFixture(caseFor(name), recorded(name), recorded(name));
+      expect(findings.map((f) => f.message)).not.toContainEqual(expect.stringMatching(/routing error/));
+    },
+  );
 
   it("reports a mismatch when the HTTP status differs", async () => {
     const name = "hiking-success.geojson";
@@ -133,6 +147,27 @@ describe("comparing a live response with its fixture", () => {
     expect(levels(findings)).toEqual(new Set(["match"]));
   });
 
+  it("reports a mismatch when the trail-preferring walk's messages no longer carry way tags", async () => {
+    const name = "hiking-trail-preference.geojson";
+    const live = editedTrack(name, (f) => {
+      f.properties.messages = (f.properties.messages as string[][]).map((row) => row.slice(0, 4));
+    });
+    const findings = await compareWithFixture(caseFor(name), live, recorded(name));
+    expect(findings).toContainEqual(expect.objectContaining({ level: "mismatch", message: expect.stringMatching(/way tags/i) }));
+  });
+
+  it("reports drift when the trail share of the trail-preferring walk changes a lot", async () => {
+    const name = "hiking-trail-preference.geojson";
+    const live = editedTrack(name, (f) => {
+      f.properties.messages = (f.properties.messages as string[][]).map((row) =>
+        row.map((cell) => cell.replace(/ ?route_hiking_\w+=yes/g, "")),
+      );
+    });
+    const findings = await compareWithFixture(caseFor(name), live, recorded(name));
+    expect(levels(findings)).not.toContain("mismatch");
+    expect(findings).toContainEqual(expect.objectContaining({ level: "drift", message: expect.stringMatching(/trail share/i) }));
+  });
+
   it("reports a mismatch when a routing error no longer comes back as HTTP 400 text", async () => {
     const name = "hiking-no-route-400.txt";
     const findings = await compareWithFixture(caseFor(name), { status: 200, body: "" }, recorded(name));
@@ -160,7 +195,7 @@ describe("running the live check", () => {
   }
 
   function recordedFor(url: URL): RecordedResponse {
-    const c = liveCheckCases.find((c) => brouterUrl(c.mode, c.points) === url.toString());
+    const c = liveCheckCases.find((c) => liveCheckUrl(c) === url.toString());
     if (!c) throw new Error(`unexpected request ${url}`);
     return recorded(c.fixture);
   }
@@ -170,7 +205,7 @@ describe("running the live check", () => {
     await runLiveCheck({ fetch: server.fetch, wait: server.wait, readFixture: fixture });
 
     const pause = `wait ${LIVE_CHECK_DELAY_MS}`;
-    expect(server.events).toEqual(["fetch", pause, "fetch", pause, "fetch", pause, "fetch"]);
+    expect(server.events).toEqual(["fetch", pause, "fetch", pause, "fetch", pause, "fetch", pause, "fetch"]);
     expect(LIVE_CHECK_DELAY_MS).toBeGreaterThanOrEqual(1000);
   });
 

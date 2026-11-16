@@ -31,6 +31,10 @@
   --color-paddle: #1b6fb5;
   --color-paddle-tint: #eef5fc;
   --color-camp: #2e6b30;
+  /* Suggested trips: purple, away from the trip's own hike and paddle colours, with white
+     casings and badge text, on the map and in the list, in both themes. */
+  --color-suggested-trip: #8e24aa;
+  --color-on-suggested-trip: #fff;
   /* The place search result's pin. */
   --color-search-result: #d0021b;
   /* The lock marker's swatch, drawn like the marker on the map in both themes. */

@@ -21,6 +21,7 @@ export type OverlayId = (typeof overlayIds)[number];
  *   The panel keeps it within the screen's limits when it draws it.
  * - `sidePanelOpen`: whether the side panel is open rather than collapsed to its strip.
  *   Both are viewing preferences like the base map.
+ * - `tripWishes`: what suggested trips should be (ADR 0039). Never part of a trip.
  */
 export type Settings = {
   readonly paceFactor: number;
@@ -29,6 +30,26 @@ export type Settings = {
   readonly overlays: readonly OverlayId[];
   readonly sidePanelWidth: number;
   readonly sidePanelOpen: boolean;
+  readonly tripWishes: TripWishes;
+};
+
+/** Whether a suggested trip ends where it starts (`loop`), somewhere else (`one-way`), or either. */
+export const tripShapes = ["loop", "one-way", "either"] as const;
+export type TripShape = (typeof tripShapes)[number];
+
+/**
+ * Trip wishes (GLOSSARY): what you'd like a suggested trip to be. The date is not one of
+ * them: it is never remembered and defaults to today.
+ * - `hikeKm`: about how many km to hike, a positive number; absent for no preference.
+ * - `paddleKm`: about how many km to paddle, a positive number; absent for no preference.
+ * - `maxSwitches`: the most mode switches, a whole number from 0; every put-in and every
+ *   take-out counts one. A hard maximum.
+ */
+export type TripWishes = {
+  readonly hikeKm?: number;
+  readonly paddleKm?: number;
+  readonly maxSwitches: number;
+  readonly shape: TripShape;
 };
 
 /** The settings that are numbers: the planner's pace. */
@@ -44,6 +65,7 @@ export const defaultSettings: Settings = {
   overlays: [],
   sidePanelWidth: 380,
   sidePanelOpen: true,
+  tripWishes: { paddleKm: 10, maxSwitches: 2, shape: "either" },
 };
 
 /** True for a value a setting can take: a positive, finite number. */
@@ -81,6 +103,38 @@ export function withSidePanel(settings: Settings, change: { width?: number; open
   return { ...settings, sidePanelWidth, sidePanelOpen };
 }
 
+const isMaxSwitches = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0;
+const isTripShape = (value: unknown): value is TripShape => tripShapes.some((shape) => shape === value);
+
+/** Settings with other trip wishes; the same settings when a wish can't be kept (e.g. a paddle distance of 0). */
+export function withTripWishes(settings: Settings, tripWishes: TripWishes): Settings {
+  const { hikeKm, paddleKm, maxSwitches, shape } = tripWishes;
+  const usable =
+    [hikeKm, paddleKm].every((km) => km === undefined || isUsableSetting(km)) &&
+    isMaxSwitches(maxSwitches) &&
+    isTripShape(shape);
+  return usable ? { ...settings, tripWishes } : settings;
+}
+
+/**
+ * Trip wishes from their stored form, each unreadable wish falling back on its own. A missing
+ * distance is no preference; one that isn't a positive number gets the default (for the hike
+ * distance, no preference).
+ */
+function restoreTripWishes(stored: unknown): TripWishes {
+  const defaults = defaultSettings.tripWishes;
+  // Settings stored before trip wishes existed have none.
+  if (typeof stored !== "object" || stored === null) return defaults;
+  const { hikeKm, paddleKm, maxSwitches, shape } = stored as Record<string, unknown>;
+  const restoredKm = isUsableSetting(paddleKm) ? paddleKm : defaults.paddleKm;
+  return {
+    ...(isUsableSetting(hikeKm) && { hikeKm }),
+    ...(paddleKm === undefined ? {} : { paddleKm: restoredKm }),
+    maxSwitches: isMaxSwitches(maxSwitches) ? maxSwitches : defaults.maxSwitches,
+    shape: isTripShape(shape) ? shape : defaults.shape,
+  };
+}
+
 /** Settings in their stored form (JSON). */
 export function serialiseSettings(settings: Settings): string {
   return JSON.stringify(settings);
@@ -98,7 +152,7 @@ export function restoreSettings(stored: string | null): Settings {
     // Unreadable: use the defaults.
   }
   if (typeof parsed !== "object" || parsed === null) return defaultSettings;
-  const { paceFactor, paddleSpeedKmh, baseMap, overlays, sidePanelWidth, sidePanelOpen } = parsed as Record<
+  const { paceFactor, paddleSpeedKmh, baseMap, overlays, sidePanelWidth, sidePanelOpen, tripWishes } = parsed as Record<
     string,
     unknown
   >;
@@ -111,5 +165,6 @@ export function restoreSettings(stored: string | null): Settings {
     // Settings stored before the panel was resizable have neither: it opens at its default width.
     sidePanelWidth: isUsableSetting(sidePanelWidth) ? Math.round(sidePanelWidth) : defaultSettings.sidePanelWidth,
     sidePanelOpen: typeof sidePanelOpen === "boolean" ? sidePanelOpen : defaultSettings.sidePanelOpen,
+    tripWishes: restoreTripWishes(tripWishes),
   };
 }

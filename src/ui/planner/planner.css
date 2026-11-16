@@ -1053,3 +1053,102 @@
 .planner-access-dialog .access-legend {
   margin-top: var(--space-3);
 }
+
+/* The trip wishes dialog (ADR 0039): each label above its field, as in Edit trip. */
+.planner-trip-wishes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.planner-trip-wishes label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.planner-trip-wishes-shape {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Loop, one-way or either: as wide and tall as the fields, easy to tap (ADR 0034). */
+.planner-trip-wishes-shape .toggle-group {
+  display: flex;
+}
+
+.planner-trip-wishes-shape .toggle {
+  flex: 1;
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+
+.planner-trip-wishes input[type="date"] {
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+
+/* The suggested trips' list: like the leg rows, edge to edge right under the tab row, at least
+   44 px a row, each number on a badge like the map's. */
+.planner-suggested-trips {
+  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planner-suggested-trip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: none;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+/* A selected suggested trip's details: its number, Back and Use this trip (each at least 44 px
+   tall), then its figures, water and warnings. */
+.planner-suggested-trip-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.planner-suggested-trip-details h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 1rem;
+}
+
+.planner-suggested-trip-details p {
+  margin: 0;
+}
+
+.planner-suggested-trip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.planner-suggested-trip-number {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--color-suggested-trip);
+  color: var(--color-on-suggested-trip);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

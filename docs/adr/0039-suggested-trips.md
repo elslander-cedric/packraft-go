@@ -3,7 +3,7 @@
 Date: 2026-11-15
 
 ## Status
-Proposed. Amends ADR 0003 (the user still draws; the app may now also propose whole one-day trips, which the user browses and may use as their trip).
+Accepted. Amends ADR 0003 (the user still draws; the app may now also propose whole one-day trips, which the user browses and may use as their trip).
 
 ## Context
 Drawing the hike/paddle mix by hand means checking yourself which water is open, where you may get in and out (in Wallonia only at an aire), whether a dam or lock is in the way, and whether the day fits what you want to do. The app already knows most of this: the access rules, official aires, obstacles, locks and your access points. ADR 0003 left automatic route-finding out of v1 as too hard. Packrafters often start from "what's a good day out around here?" rather than from two fixed points, so the first slice answers that. The planner is still the home planner (ADRs 0001, 0002).
@@ -18,6 +18,13 @@ Drawing the hike/paddle mix by hand means checking yourself which water is open,
 - **Where it gets in and out:** official aires, your access points, and, outside Wallonia only, *bank spots*: where a path or road reaches the bank of open water, outside VMM agreement stretches, unchecked on the ground and labelled so. Using a trip through one offers to save it as an access point. Wallonia stays aires-only because the AGW says so.
 - **A route network shipped with the app, search in the browser.** A manual script prepares, offline, the nodes (aires, bank spots), the paddle links between them (distance along the water, stretch, obstacles, direction) and the walking links between nearby nodes, routed with BRouter preferring waymarked trails (`profile:hiking_routes_preference`, which the public server honours; see `docs/research/data-sources.md`). One walking link reaches at most about 15 km; longer walks pass through a node. Your access points join at search time with estimated walks. The search makes no live calls, so it is instant and works offline (bar today's live status). The trip you use is routed for real, as any leg is (ADR 0014).
 - **Hand-drawn legs are unchanged**, including their hike routing.
+- **A used trip's walks are re-routed with the default hike profile**, as any hike leg, not with the trail-preferring walks shown. No per-leg flag and no save format change: a used suggestion is an ordinary trip. Its walks may therefore differ a little from the suggestion (shorter, fewer trails); the hiking trails overlay and dragging the points let you follow the trails where wanted. Revisit if the difference proves annoying in use.
+- **How a hike + paddle search reads the wishes:** a suggestion is hike and paddle legs taking turns (a hike leg is one walking link), with at least one paddle leg, within one day of hiking (Naismith, pace factor) and paddling (8 hours). An empty hike distance is no preference: trips with and without walks, those walking least first. Trips closer to both wishes than 5% of them count as equally close, so trail and road share can rank them.
+- **Ranking with a distance left empty:** with no paddle wish, the longest paddle first; with no hike wish, the least walking first (walking nobody asked for is no gain).
+- **A loop is one trip wherever it starts.** The same loop started at another of its nodes (paddle then walk, or walk then paddle) is suggested once, the better ranked, so it doesn't take two of a stretch's places.
+- **Your access points on the water split a paddle link** at search time; each part passes only the obstacles on its own part (by the built-in obstacles' positions) and keeps the whole link's waters and access records, so it is never more open than the whole.
+- **Bank spots walk only to their 6 nearest nodes** within the walking ceiling (`BANK_SPOT_WALKS`), not to every node in reach: every walking link is a BRouter request, and the public server only takes a few hundred per run.
+- **No paddle drop.** The route network has no heights, so a suggested trip shows the climb and descent of its walks only, not the drop of its paddling; the trip you use gets heights when it is routed.
 
 ## Considered options
 - **Fill in one leg between two fixed points** (an earlier draft of this ADR): closer to ADR 0003, but it answers "how do I get from A to B", not "where can I go". It may come later.

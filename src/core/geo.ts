@@ -5,6 +5,9 @@ import type { LatLng } from "./trip";
 
 /** A position in GeoJSON order: longitude, latitude. */
 export type Position = readonly [lng: number, lat: number];
+
+/** A GeoJSON-order position as a trip point's latitude and longitude. */
+export const latLngOf = ([lng, lat]: Position): LatLng => ({ lat, lng });
 type Ring = readonly Position[];
 
 export type LineGeometry =

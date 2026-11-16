@@ -13,20 +13,20 @@ export type Panel = ReturnType<typeof usePanel>;
  * Where the planner's content sits: the bottom sheet on a narrow screen in portrait, the side
  * panel everywhere else (`sideways`). Both are kept, so turning the screen restores each as it was.
  */
-export function usePanel(editingAccessPoints: boolean) {
+export function usePanel(otherMode: boolean) {
   const sideways = useSideways();
 
   const [stop, setStop] = useState<SheetStop>("peek");
   // Measured by the sheet, so the bottom buttons can sit just above it.
   const [peekPx, setPeekPx] = useState<number | null>(null);
 
-  // The side panel's width and open state are settings on this device. While editing access
-  // points the open state is not stored: a reload comes back in normal mode with the panel as
-  // it was before entering.
+  // The side panel's width and open state are settings on this device. Outside normal mode
+  // (access point editing, suggested trips) the open state is not stored: a reload comes back in
+  // normal mode with the panel as it was before entering.
   const [stored, changeStored] = useSidePanel();
-  const [openWhileEditing, setOpenWhileEditing] = useState(true);
-  const open = editingAccessPoints ? openWhileEditing : stored.open;
-  const setOpen = (next: boolean) => (editingAccessPoints ? setOpenWhileEditing(next) : changeStored({ open: next }));
+  const [openInOtherMode, setOpenInOtherMode] = useState(true);
+  const open = otherMode ? openInOtherMode : stored.open;
+  const setOpen = (next: boolean) => (otherMode ? setOpenInOtherMode(next) : changeStored({ open: next }));
   const shownWidth = useSidePanelWidth(stored.width);
 
   return {
@@ -40,8 +40,8 @@ export function usePanel(editingAccessPoints: boolean) {
     width: stored.width,
     setWidth: (width: number) => changeStored({ width }),
     shownWidth,
-    /** Opens the panel for this visit to access point editing; the stored setting is left alone. */
-    openForEditing: () => setOpenWhileEditing(true),
+    /** Opens the panel for this visit to another mode; the stored setting is left alone. */
+    openForMode: () => setOpenInOtherMode(true),
     /** Shows the content: the sheet raised to half, or the panel opened. */
     raise: () => (sideways ? setOpen(true) : setStop("half")),
     /** The same, but a sheet already above the peek stays where it is. */

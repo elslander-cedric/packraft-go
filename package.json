@@ -18,7 +18,8 @@
     "data:walloon-stretches": "tsx scripts/walloon-stretches/build.mts",
     "review:walloon-stretches": "tsx scripts/walloon-stretches/review.mts",
     "prepare:access-data": "tsx scripts/prepare-access-data.mts",
-    "prepare:spw-data": "tsx scripts/prepare-spw-data.mts"
+    "prepare:spw-data": "tsx scripts/prepare-spw-data.mts",
+    "prepare:route-network": "tsx scripts/prepare-route-network.mts"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
@@ -27,7 +28,8 @@
     "next": "^16.4.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

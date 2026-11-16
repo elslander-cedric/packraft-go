@@ -393,11 +393,16 @@ const noRule: AccessStatus = { state: "unknown", reasons: [{ kind: "no-rule", st
  * region's default; where several apply, the most restrictive wins.
  */
 export function accessAt(point: LatLng, rules: AccessRules, context: AccessContext): AccessStatus {
-  const matching = rules.records.filter((record) => applies(record, point));
-  const waters = matching.filter((record) => record.scope === "water");
-  const chosen = waters.length > 0 ? waters : matching;
+  const chosen = recordsAt(point, rules);
   if (chosen.length === 0) return noRule;
   return combineAccess(chosen.map((record) => evaluateRecord(record, context)));
+}
+
+/** The records that rule the water at one point: the specific waters there, else its region. */
+export function recordsAt(point: LatLng, rules: AccessRules): AccessRecord[] {
+  const matching = rules.records.filter((record) => applies(record, point));
+  const waters = matching.filter((record) => record.scope === "water");
+  return waters.length > 0 ? waters : matching;
 }
 
 /**

@@ -18,6 +18,8 @@ export type ConfirmDialogProps = {
   onCancel: () => void;
   /** Where focus goes when the dialog closes: the button that led to the question. */
   returnFocusTo?: FocusTarget;
+  /** `primary` when confirming loses nothing, such as saving; `danger` (the default) otherwise. */
+  tone?: "danger" | "primary";
 };
 
 /**
@@ -34,6 +36,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   returnFocusTo,
+  tone = "danger",
 }: ConfirmDialogProps) {
   const popup = useRef<HTMLDivElement>(null);
   const area = useVisibleArea(open, popup);
@@ -56,7 +59,7 @@ export function ConfirmDialog({
           <AlertDialog.Description className="confirm-dialog-message">{message}</AlertDialog.Description>
           <div className="dialog-actions">
             <AlertDialog.Close className="button">{cancelLabel}</AlertDialog.Close>
-            <Button className="button-danger" onClick={onConfirm}>
+            <Button className={`button-${tone}`} onClick={onConfirm}>
               {confirmLabel}
             </Button>
           </div>

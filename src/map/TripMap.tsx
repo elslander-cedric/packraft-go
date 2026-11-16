@@ -11,6 +11,7 @@ import { Focus, MapAreaReporter, OpeningView, type MapFocus } from "./MapCamera"
 import { initialMapView } from "./mapConfig";
 import OverlayTiles from "./OverlayTiles";
 import SearchResultLayer, { type MapCover } from "./SearchResultLayer";
+import SuggestedTripLayer, { type SuggestedTripLayerProps } from "./SuggestedTripLayer";
 import { Taps } from "./Taps";
 import { TripLayers } from "./TripLayers";
 
@@ -55,6 +56,10 @@ export type TripMapProps = {
   searchCover?: () => MapCover;
   /** The visible map, when it loads and after every move (place search ranks places in it). */
   onAreaChange?: (area: SearchArea) => void;
+  /** The suggested trips while they are shown (ADR 0039), drawn below the trip. */
+  suggestedTrips?: SuggestedTripLayerProps | null;
+  /** A tap on a suggested trip's line, by its index; it is not a tap on the map. */
+  onSuggestedTripTap?: (index: number) => void;
 };
 
 const positionStyle = { color: "#fff", weight: 3, fillColor: "#1a73e8", fillOpacity: 1 };
@@ -86,6 +91,8 @@ export default function TripMap({
   searchResult,
   searchCover,
   onAreaChange,
+  suggestedTrips,
+  onSuggestedTripTap,
 }: TripMapProps) {
   return (
     <MapContainer
@@ -101,7 +108,8 @@ export default function TripMap({
       {access && <AccessLayer {...access} />}
       <OpeningView trip={trip} position={position} cover={searchCover} />
       {focus && <Focus focus={focus} />}
-      <Taps onTap={onMapTap} onLegTap={onLegTap} />
+      {suggestedTrips && <SuggestedTripLayer {...suggestedTrips} />}
+      <Taps onTap={onMapTap} onLegTap={onLegTap} onSuggestedTripTap={onSuggestedTripTap} />
       <TripLayers
         trip={trip}
         selectedPoint={selectedPoint}

@@ -29,6 +29,11 @@ export const strings = {
     message: "Your current trip will be replaced.",
     confirm: "Replace current trip",
   },
+  useSuggestedTripConfirm: {
+    title: "Use this suggested trip?",
+    message: "Your current trip will be replaced.",
+    confirm: "Replace current trip",
+  },
   openFileInvalid: "This is not a packraft-go trip file, or it is damaged. Your current trip is unchanged.",
   openFileUnknownVersion:
     "This trip file is from a newer or unknown version of packraft-go and can't be opened here. Your current trip is unchanged.",
@@ -138,7 +143,7 @@ export const strings = {
     // The planner's sheet and tabs (ADR 0026).
     sheetLabel: "Trip",
     tabsLabel: "Trip details",
-    tabs: { sections: "Sections", days: "Days", accessPoints: "Access points" },
+    tabs: { sections: "Sections", days: "Days", accessPoints: "Access points", suggestedTrips: "Suggested trips" },
     // The trip's totals in the sheet's peek: each figure after its icon, named for screen readers.
     totals: {
       labels: {
@@ -240,6 +245,68 @@ export const strings = {
     // The edit dialog: what you change is kept until Save stores it on the device.
     accessPointDialogTitle: "Access point details",
     accessPointSave: "Save",
+    // Suggested trips (ADR 0039): the floating button top right that asks for your trip wishes and,
+    // pressed again while they are shown, closes them; icon-only, coloured while they are shown.
+    findTripsButton: "Find trips",
+    suggestedTrips: {
+      wishesTitle: "Trip wishes",
+      hikeKmLabel: "Hike distance (km)",
+      hikeKmHint: "About how far. Leave empty for no preference.",
+      paddleKmLabel: "Paddle distance (km)",
+      paddleKmHint: "About how far. Leave empty for no preference.",
+      maxSwitchesLabel: "Most switches",
+      maxSwitchesHint: "Every put-in and every take-out counts one.",
+      // Loop, one-way or either: a toggle in the wishes dialog.
+      shapeLabel: "Loop or one-way",
+      shapeOptions: { loop: "Loop", "one-way": "One-way", either: "Either" },
+      dateLabel: "Date",
+      confirm: "Find trips",
+      listLabel: "Suggested trips",
+      // In the area the map shows; the trip is left as it is.
+      loading: "Finding trips…",
+      waitingForToday: "Waiting for today's official status and flows…",
+      networkFailed: "The trip network couldn't be loaded. Trying again…",
+      // A row: its number, then e.g. "Loop · 6.2 km hike · 9.9 km paddle · 2 switches" (no hike when it doesn't walk).
+      shapes: { loop: "Loop", "one-way": "One-way" },
+      hike: (distance: string) => `${distance} hike`,
+      paddle: (distance: string) => `${distance} paddle`,
+      switches: (count: number) => (count === 1 ? "1 switch" : `${count} switches`),
+      // A selected suggestion's details, named by its number in the list and on the map.
+      detailsTitle: (n: number) => `Suggested trip ${n}`,
+      back: "Back",
+      use: "Use this trip",
+      timeLabel: "Time",
+      // Its walks, e.g. "Climb: 120 m · Descent: 80 m" and "On trails: 82% · On roads: 30%".
+      climbLabel: "Climb",
+      descentLabel: "Descent",
+      trailShareLabel: "On trails",
+      roadShareLabel: "On roads",
+      riversLabel: "Rivers",
+      airesLabel: "Aires",
+      accessPointsLabel: "Your access points",
+      // Bank spots (ADR 0039): where a path reaches the bank outside Wallonia; nobody has checked them.
+      bankSpots: (count: number) =>
+        `${count === 1 ? "1 bank spot" : `${count} bank spots`}: unchecked on the ground, look before you rely on ${count === 1 ? "it" : "them"}`,
+      // After using a trip through bank spots.
+      saveBankSpots: {
+        title: (count: number) => (count === 1 ? "Save the bank spot as an access point?" : "Save the bank spots as access points?"),
+        message: (count: number) =>
+          `This trip gets in or out at ${count === 1 ? "a bank spot" : `${count} bank spots`}, where a path reaches the bank. ` +
+          "Nobody has checked them on the ground. Saved, you can check them and reuse them.",
+        confirm: "Save as access points",
+        cancel: "Not now",
+      },
+      // Why nothing was found.
+      reasons: {
+        noOpenWater: "No open water in this area on this date.",
+        switches: (max: number) =>
+          `Every trip here needs more than ${max === 1 ? "1 switch" : `${max} switches`}.`,
+        loop: "No loop fits here.",
+        oneWay: "No one-way trip fits here.",
+        paddleDistance: (km: string) => `Zoom out: no trip of about ${km} paddling fits here.`,
+        hikeDistance: (km: string) => `Zoom out: no trip of about ${km} hiking fits here.`,
+      },
+    },
     // The access layer: switched on and off in the Map menu, named `accessLayerToggle`.
     // The chip at the top of the map while the layer is on, e.g. "Access · today"; it opens a dialog.
     accessChip: (when: string) => `Access · ${when}`,

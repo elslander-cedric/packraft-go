@@ -5,7 +5,8 @@ import "./NumberField.css";
 export type NumberFieldProps = {
   label: string;
   hint?: string;
-  defaultValue: number;
+  /** Left out, the field starts empty. */
+  defaultValue?: number;
   /** Arrow keys step by this much; stepping never goes below it. */
   step: number;
   /** Marks the field as holding a value that can't be used. */

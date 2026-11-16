@@ -1,0 +1,139 @@
+import { useId, useMemo } from "react";
+import { accessPointNodeId } from "@/core/accessPointNetwork";
+import type { AccessPoints } from "@/core/accessPoints";
+import type { SuggestedTrip } from "@/core/suggestedTrips";
+import { bankSpotsOf, suggestedTripAccess } from "@/core/tripFromSuggestedTrip";
+import { Button } from "../components/Button";
+import { accessPointText } from "../accessPointText";
+import { formatDuration, formatElevation, formatShare } from "../format";
+import { Icon } from "../icons/Icon";
+import { icons } from "../icons/icons";
+import { strings } from "../strings";
+import { LegAccessView } from "../TripAccessView";
+import {
+  localToday,
+  useAccessRules,
+  useBuiltInLocks,
+  useBuiltInObstacles,
+  useBuiltInOfficialAires,
+} from "../useAccessRules";
+import { useOfficialStatus } from "../useOfficialStatus";
+import { useWalloonFlows } from "../useWalloonFlows";
+import { SuggestedTripNumber, suggestedTripFigures } from "./SuggestedTripsList";
+
+const text = strings.planner.suggestedTrips;
+
+export type SuggestedTripDetailsProps = {
+  /** Its number in the list and on the map. */
+  number: number;
+  trip: SuggestedTrip;
+  /** The date searched for, YYYY-MM-DD. */
+  date: string;
+  /** Your access points, to name those it gets in or out at. */
+  accessPoints: AccessPoints;
+  onBack: () => void;
+  onUse: () => void;
+};
+
+/**
+ * A selected suggested trip's details (ADR 0039): its figures, the rivers, aires and your access points it uses, and the
+ * access of its water on the date with its warnings, as the trip it becomes will show them.
+ * Back returns to the list; Use this trip makes it the trip. Both come first, so they show with
+ * the sheet at half.
+ */
+export default function SuggestedTripDetails({
+  number,
+  trip,
+  date,
+  accessPoints,
+  onBack,
+  onUse,
+}: SuggestedTripDetailsProps) {
+  const headingId = useId();
+  const access = useSuggestedTripAccess(trip, date);
+  const aires = useBuiltInOfficialAires(true)?.aires;
+  const aireNames = [
+    ...new Set(
+      trip.nodes.map(
+        (node) => aires?.find((aire) => aire.id === node.id)?.name,
+      ),
+    ),
+  ].filter((name) => name !== undefined);
+  const accessPointNames = [
+    ...new Set(
+      trip.nodes.flatMap((node) => {
+        const point = accessPoints.find((candidate) => accessPointNodeId(candidate.id) === node.id);
+        return point ? [accessPointText(point).heading] : [];
+      }),
+    ),
+  ];
+  const bankSpots = bankSpotsOf(trip).length;
+  const rivers = [...new Set(trip.legs.flatMap((leg) => (leg.mode === "paddle" ? leg.waters : [])))];
+
+  return (
+    <section
+      className="planner-suggested-trip-details"
+      aria-labelledby={headingId}
+    >
+      <div className="planner-suggested-trip-actions">
+        <h3 id={headingId}>
+          <SuggestedTripNumber number={number} />
+          <span className="visually-hidden">{text.detailsTitle(number)}</span>
+        </h3>
+        <Button className="planner-button" onClick={onBack}>
+          <Icon icon={icons.backToSuggestedTrips} /> {text.back}
+        </Button>
+        <Button className="planner-button" onClick={onUse}>
+          <Icon icon={icons.useSuggestedTrip} /> {text.use}
+        </Button>
+      </div>
+      <p>{suggestedTripFigures(trip)}</p>
+      <p>{`${text.timeLabel}: ${formatDuration(trip.timeH)}`}</p>
+      {trip.hikeM > 0 && (
+        <>
+          <p>{`${text.climbLabel}: ${formatElevation(trip.climbM)} · ${text.descentLabel}: ${formatElevation(trip.descentM)}`}</p>
+          <p>{`${text.trailShareLabel}: ${formatShare(trip.trailShare)} · ${text.roadShareLabel}: ${formatShare(trip.roadShare)}`}</p>
+        </>
+      )}
+      {rivers.length > 0 && (
+        <p>{`${text.riversLabel}: ${rivers.join(", ")}`}</p>
+      )}
+      {aireNames.length > 0 && (
+        <p>{`${text.airesLabel}: ${aireNames.join(", ")}`}</p>
+      )}
+      {accessPointNames.length > 0 && (
+        <p>{`${text.accessPointsLabel}: ${accessPointNames.join(", ")}`}</p>
+      )}
+      {bankSpots > 0 && <p>{text.bankSpots(bankSpots)}</p>}
+      {access?.legs.map(
+        (leg) => leg && <LegAccessView key={leg.leg} access={leg} />,
+      )}
+    </section>
+  );
+}
+
+/**
+ * The access of the suggested trip's water on the date, with the obstacles and locks it passes:
+ * today's readings for today, as the search used them.
+ */
+function useSuggestedTripAccess(trip: SuggestedTrip, date: string) {
+  const rules = useAccessRules(true);
+  const obstacles = useBuiltInObstacles(true) ?? undefined;
+  const locks = useBuiltInLocks(true) ?? undefined;
+  const today = localToday();
+  const forToday = date === today;
+  const flows = useWalloonFlows(rules, forToday);
+  const official = useOfficialStatus(rules, forToday);
+  return useMemo(
+    () =>
+      rules &&
+      suggestedTripAccess(trip, date, rules, {
+        today,
+        ...(flows && { flows }),
+        ...(official && { official }),
+        locks,
+        obstacles,
+      }),
+    [trip, date, rules, today, flows, official, locks, obstacles],
+  );
+}

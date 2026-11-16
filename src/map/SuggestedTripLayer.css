@@ -1,0 +1,25 @@
+/* A suggested trip's number on the map: a purple badge, the colour of its line. */
+.suggested-trip-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-on-suggested-trip);
+  border-radius: 50%;
+  background: var(--color-suggested-trip);
+  color: var(--color-on-suggested-trip);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 40%);
+  pointer-events: none;
+}
+
+/* A suggested trip's lines and their casings: the CSS stroke wins over Leaflet's attribute. */
+path.suggested-trip {
+  stroke: var(--color-suggested-trip);
+}
+
+path.suggested-trip-casing {
+  stroke: var(--color-on-suggested-trip);
+}
