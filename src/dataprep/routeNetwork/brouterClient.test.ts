@@ -37,6 +37,14 @@ describe("the BRouter client of the route network script", () => {
     expect(fetched).toEqual([]);
   });
 
+  it("refuses a cached answer that isn't one it wrote", async () => {
+    const { client, fetched } = fakes({
+      "https://brouter.de/a": JSON.stringify({ status: "200", text: "kept" }),
+    });
+    await expect(client.answer("https://brouter.de/a")).rejects.toThrow();
+    expect(fetched).toEqual([]);
+  });
+
   it("asks for a missing answer once, identified by the project URL only, and caches it", async () => {
     const { client, fetched } = fakes();
     expect(await client.answer("https://brouter.de/a")).toEqual({

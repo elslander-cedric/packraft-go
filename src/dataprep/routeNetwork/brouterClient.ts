@@ -2,7 +2,8 @@
 // pause between them, identified by the project URL only, every answer (no-route ones too)
 // cached by its URL so a re-run only asks for what's missing. Never used by the app.
 // Network, clock and cache are injected so the script supplies the real ones, tests fakes.
-import { OVERPASS_USER_AGENT } from "../walloonStretches/overpass";
+import { z } from "zod";
+import { cachedOrRetried, pacer, SCRIPT_USER_AGENT, type Attempt, type PoliteDeps } from "../politeRequests";
 import type { BRouterAnswer } from "./walking";
 
 /** Minimum pause between two live requests: the free community server answers 403 to faster runs. */
@@ -11,72 +12,48 @@ export const BROUTER_MIN_INTERVAL_MS = 6000;
 const RETRY_PAUSE_MS = 120_000;
 const MAX_ATTEMPTS = 4;
 
-export type BRouterClientDeps = {
+export type BRouterClientDeps = PoliteDeps & {
   fetch: (
     url: string,
     init: { headers: Record<string, string> },
   ) => Promise<{ status: number; text: () => Promise<string> }>;
-  wait: (ms: number) => Promise<void>;
-  now: () => number;
-  /** Keyed by the request URL; the value is the answer as JSON. */
-  cache: {
-    read: (url: string) => Promise<string | undefined>;
-    write: (url: string, value: string) => Promise<void>;
-  };
-  log?: (message: string) => void;
 };
+
+/** A cached answer, as `answer` writes it. */
+const cachedAnswerSchema = z.object({ status: z.number(), body: z.string() });
 
 /** 200 is a route, 400 is BRouter's "no route here"; anything else is the server failing. */
 const settled = (status: number) => status === 200 || status === 400;
 
 export function createBRouterClient(deps: BRouterClientDeps) {
-  let lastRequestAt: number | undefined;
+  const politely = pacer(deps, BROUTER_MIN_INTERVAL_MS);
 
-  async function ask(url: string): Promise<BRouterAnswer | string> {
-    if (lastRequestAt !== undefined) {
-      const elapsed = deps.now() - lastRequestAt;
-      if (elapsed < BROUTER_MIN_INTERVAL_MS) {
-        await deps.wait(BROUTER_MIN_INTERVAL_MS - elapsed);
-      }
-    }
-    lastRequestAt = deps.now();
+  async function attempt(url: string): Promise<Attempt<BRouterAnswer>> {
+    await politely();
     try {
       const response = await deps.fetch(url, {
-        headers: { "User-Agent": OVERPASS_USER_AGENT },
+        headers: { "User-Agent": SCRIPT_USER_AGENT },
       });
       const body = await response.text();
-      return settled(response.status)
-        ? { status: response.status, body }
-        : `HTTP ${response.status}: ${body.slice(0, 200)}`;
+      if (!settled(response.status)) {
+        return { ok: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
+      }
+      const answer = { status: response.status, body };
+      return { ok: true, value: answer, cached: JSON.stringify(answer) };
     } catch (error) {
-      return String(error);
+      return { ok: false, error: String(error) };
     }
   }
 
   return {
-    async answer(url: string): Promise<BRouterAnswer> {
-      const cached = await deps.cache.read(url);
-      if (cached !== undefined) {
-        return JSON.parse(cached);
-      }
-      let lastError = "";
-      for (let i = 0; i < MAX_ATTEMPTS; i++) {
-        if (i > 0) {
-          deps.log?.(
-            `BRouter failed (${lastError.slice(0, 80)}); retrying in ${RETRY_PAUSE_MS / 1000} s`,
-          );
-          await deps.wait(RETRY_PAUSE_MS);
-        }
-        const outcome = await ask(url);
-        if (typeof outcome !== "string") {
-          await deps.cache.write(url, JSON.stringify(outcome));
-          return outcome;
-        }
-        lastError = outcome;
-      }
-      throw new Error(
-        `BRouter failed ${MAX_ATTEMPTS} times for ${url}: ${lastError}`,
-      );
-    },
+    answer: (url: string): Promise<BRouterAnswer> =>
+      cachedOrRetried(deps, {
+        service: "BRouter",
+        key: url,
+        fromCache: (cached) => cachedAnswerSchema.parse(JSON.parse(cached)),
+        attempt: () => attempt(url),
+        maxAttempts: MAX_ATTEMPTS,
+        retryPauseMs: RETRY_PAUSE_MS,
+      }),
   };
 }
