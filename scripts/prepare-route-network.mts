@@ -18,12 +18,12 @@ import { setTimeout as sleep } from "node:timers/promises";
 import type { LockDataset, ObstacleDataset, OfficialAireDataset } from "../src/access/dataset";
 import { dateInBrussels } from "../src/core/calendarDate";
 import type { Bounds } from "../src/core/geo";
-import type { WalkingLink } from "../src/core/routeNetwork";
+import { WALKING_CEILING_M, type WalkingLink } from "../src/core/routeNetwork";
 import { createBRouterClient } from "../src/dataprep/routeNetwork/brouterClient";
 import { buildRouteNetwork, type NetworkInputs } from "../src/dataprep/routeNetwork/build";
 import { bankPathQuery, bankSpotTiles, bankWaterLines, bankWaterQuery, recordQuery } from "../src/dataprep/routeNetwork/overpass";
 import { serialiseRouteNetwork } from "../src/dataprep/routeNetwork/serialise";
-import { WALKING_CEILING_M, walkingLink, walkingPairs, walkingUrl } from "../src/dataprep/routeNetwork/walking";
+import { walkingLink, walkingPairs, walkingUrl } from "../src/dataprep/routeNetwork/walking";
 import { createOverpassClient, type OverpassElement, type OverpassResult } from "../src/dataprep/walloonStretches/overpass";
 import { builtInAccessRules } from "../src/access/builtInRules";
 

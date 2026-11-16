@@ -2,19 +2,18 @@
 // nodes, with estimated walks to the nodes nearby and, when one lies on a water, as a place to
 // get in or out there. Pure: the network is never changed, a new one is returned.
 import type { AccessPoint, AccessPoints } from "./accessPoints";
-import { distanceM, projectOntoLine, type Position } from "./geo";
-import type {
-  PaddleLink,
-  RouteNetwork,
-  RouteNode,
-  WalkingLink,
+import { distanceM, latLngOf, projectOntoLine, type Position } from "./geo";
+import {
+  WALKING_CEILING_M,
+  type PaddleLink,
+  type RouteNetwork,
+  type RouteNode,
+  type WalkingLink,
 } from "./routeNetwork";
 import type { LatLng } from "./trip";
 
 /** An estimated walk is the straight line times this, for the bends of real paths. */
 const WALK_DETOUR_FACTOR = 1.3;
-/** The longest walk, as for the prepared walking links (about 15 km). */
-const WALKING_CEILING_M = 15_000;
 /** An access point this close to a paddle link's line is on that water, as for official aires. */
 const ON_WATER_M = 150;
 /** An access point this close along the water to a link's end gets in or out there already. */
@@ -52,7 +51,6 @@ function withAccessPoint(
   };
 }
 
-const latLng = ([lng, lat]: Position): LatLng => ({ lat, lng });
 
 /** A straight walk from every node near enough to the access point. */
 function estimatedWalks(
@@ -62,7 +60,7 @@ function estimatedWalks(
 ): WalkingLink[] {
   return nodes.flatMap((from) => {
     const walkM = Math.round(
-      distanceM(latLng(from.position), at) * WALK_DETOUR_FACTOR,
+      distanceM(latLngOf(from.position), at) * WALK_DETOUR_FACTOR,
     );
     if (walkM > WALKING_CEILING_M) return [];
     // Nothing is known of its paths: no trail or road share, no climb.
@@ -89,7 +87,7 @@ function onWater(
 ): readonly PaddleLink[] {
   let nearest: { link: PaddleLink; offM: number; alongM: number } | undefined;
   for (const link of links) {
-    const { offM, alongM } = projectOntoLine(at, link.line.map(latLng));
+    const { offM, alongM } = projectOntoLine(at, link.line.map(latLngOf));
     if (offM <= ON_WATER_M && (!nearest || offM < nearest.offM))
       nearest = { link, offM, alongM };
   }
@@ -115,7 +113,7 @@ function onWater(
 function lineLengthM(line: readonly Position[]): number {
   let lengthM = 0;
   for (let i = 1; i < line.length; i++)
-    lengthM += distanceM(latLng(line[i - 1]), latLng(line[i]));
+    lengthM += distanceM(latLngOf(line[i - 1]), latLngOf(line[i]));
   return lengthM;
 }
 
@@ -130,7 +128,7 @@ function splitLine(
 ): [Position[], Position[]] {
   let startM = 0;
   for (let i = 1; i < line.length; i++) {
-    const segmentM = distanceM(latLng(line[i - 1]), latLng(line[i]));
+    const segmentM = distanceM(latLngOf(line[i - 1]), latLngOf(line[i]));
     if (startM + segmentM >= alongM || i === line.length - 1) {
       const share = segmentM === 0 ? 0 : (alongM - startM) / segmentM;
       const [fromLng, fromLat] = line[i - 1];

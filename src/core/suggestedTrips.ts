@@ -2,7 +2,7 @@
 // trip wishes, searched on the route network. Pure: the network, the rules and today's
 // readings are passed in, and nothing is loaded or asked for here.
 import { evaluateRecord, regionsAt, type AccessContext, type AccessRules } from "./access";
-import type { Bounds, Position } from "./geo";
+import { latLngOf, type Bounds, type Position } from "./geo";
 import type { PaddleLink, RouteNetwork, RouteNode, WalkingLink } from "./routeNetwork";
 import type { Pace, TripWishes } from "./settings";
 import { hikeTimeH, paddleTimeH } from "./summarise";
@@ -149,7 +149,7 @@ export function suggestTrips({ network: shipped, rules, when, area, wishes, pace
 
 /** The network without any bank spot in Wallonia and its links: there the AGW allows only aires (ADR 0039). */
 function withoutBankSpotsInWallonia(network: RouteNetwork, rules: AccessRules): RouteNetwork {
-  const inWallonia = ({ position: [lng, lat] }: RouteNode) => regionsAt({ lat, lng }, rules).includes("wallonia");
+  const inWallonia = ({ position }: RouteNode) => regionsAt(latLngOf(position), rules).includes("wallonia");
   const dropped = new Set(network.nodes.filter((node) => node.kind === "bank-spot" && inWallonia(node)).map((node) => node.id));
   if (dropped.size === 0) return network;
   const kept = (link: { from: string; to: string }) => !dropped.has(link.from) && !dropped.has(link.to);

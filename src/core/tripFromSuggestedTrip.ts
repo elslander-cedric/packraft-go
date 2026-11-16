@@ -2,6 +2,7 @@
 // details show before it is used.
 import type { AccessRules } from "./access";
 import type { CalendarDate } from "./calendarDate";
+import { latLngOf } from "./geo";
 import type { RouteNode } from "./routeNetwork";
 import type { SuggestedTrip } from "./suggestedTrips";
 import { setStartDate, type Trip } from "./trip";
@@ -21,7 +22,7 @@ export function tripFromSuggestedTrip(
 ): Trip {
   const trip: Trip = {
     name: "",
-    points: suggestedTrip.nodes.map(({ position: [lng, lat] }) => ({ lat, lng })),
+    points: suggestedTrip.nodes.map(({ position }) => latLngOf(position)),
     legs: suggestedTrip.legs.map((leg) => ({ mode: leg.mode })),
   };
   return setStartDate(trip, date);
@@ -59,11 +60,7 @@ export function suggestedTripAccess(
       route: {
         status: "routed",
         // The network has no heights, and the access check reads only the positions.
-        geometry: suggestedTrip.legs[i].line.map(([lng, lat]) => ({
-          lat,
-          lng,
-          elevation: 0,
-        })),
+        geometry: suggestedTrip.legs[i].line.map((position) => ({ ...latLngOf(position), elevation: 0 })),
       },
     })),
   };

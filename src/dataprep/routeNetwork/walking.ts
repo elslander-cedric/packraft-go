@@ -3,13 +3,11 @@
 // request at a time, and caches the answers.
 import { z } from "zod";
 import type { Position } from "@/core/geo";
-import type { RouteNode, WalkingLink } from "@/core/routeNetwork";
+import { WALKING_CEILING_M, type RouteNode, type WalkingLink } from "@/core/routeNetwork";
 import { brouterUrl, TRAIL_PREFERENCE } from "@/routing/brouter";
 import { wayShares } from "@/routing/wayShares";
 import { distanceM, simplify, type Pt } from "../walloonStretches/geo";
 
-/** The longest walking link; a longer walk passes through a node. */
-export const WALKING_CEILING_M = 15_000;
 /** Simplification of a link's line, in metres: enough to draw it on the map. */
 const LINE_TOLERANCE_M = 15;
 

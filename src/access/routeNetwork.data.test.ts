@@ -12,6 +12,7 @@ import {
   routeNodeKinds,
   type PaddleLink,
   type WalkingLink,
+  WALKING_CEILING_M,
 } from "@/core/routeNetwork";
 import { defaultSettings } from "@/core/settings";
 import { suggestTrips } from "@/core/suggestedTrips";
@@ -25,8 +26,6 @@ const recordIds = new Set(builtInAccessRules.records.map((record) => record.id))
 const airesById = new Map(builtInOfficialAires.map((aire) => [aire.id, aire]));
 const linkName = (link: PaddleLink | WalkingLink) => `${link.from} -> ${link.to}`;
 const walkingLinks = network.walkingLinks ?? [];
-/** The longest walking link (ADR 0039: about 15 km). */
-const WALKING_CEILING_M = 15_000;
 
 /** Belgium and a little around it. */
 const inBelgium = ([lng, lat]: readonly [number, number]) => lng > 2.4 && lng < 6.5 && lat > 49.4 && lat < 51.6;

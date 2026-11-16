@@ -52,10 +52,13 @@ export type PaddleLink = {
   readonly line: readonly Position[];
 };
 
+/** The longest walking link (ADR 0039: about 15 km); a longer walk passes through a node. */
+export const WALKING_CEILING_M = 15_000;
+
 /**
- * A walk along paths between two nodes, routed preferring waymarked trails, at most about
- * 15 km. Either way: walked from `to` to `from`, the line runs backwards and climb and
- * descent swap.
+ * A walk along paths between two nodes, routed preferring waymarked trails, at most
+ * `WALKING_CEILING_M`. Either way: walked from `to` to `from`, the line runs backwards and
+ * climb and descent swap.
  */
 export type WalkingLink = {
   readonly from: string;

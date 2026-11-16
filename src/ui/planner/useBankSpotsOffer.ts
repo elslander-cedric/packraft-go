@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { latLngOf } from "@/core/geo";
 import type { RouteNode } from "@/core/routeNetwork";
 import type { SuggestedTrip } from "@/core/suggestedTrips";
 import type { LatLng, Trip } from "@/core/trip";
@@ -23,7 +24,7 @@ export function useBankSpotsOffer(addAt: (places: readonly LatLng[]) => void) {
       setUsing(null);
     },
     save: () => {
-      addAt(offered.map(({ position: [lng, lat] }) => ({ lat, lng })));
+      addAt(offered.map(({ position }) => latLngOf(position)));
       setOffered([]);
     },
     dismiss: () => setOffered([]),
