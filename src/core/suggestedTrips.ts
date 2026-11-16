@@ -143,7 +143,7 @@ export function suggestTrips({ network: shipped, rules, when, area, wishes, pace
     trips = trips.filter(keep);
     if (trips.length === 0) return { status: "none", reason };
   }
-  const best = varied(ranked(trips, wishes), searchable.byId).slice(0, MAX_TRIPS);
+  const best = varied(onceEachLoop(ranked(trips, wishes)), searchable.byId).slice(0, MAX_TRIPS);
   return { status: "found", trips: best.map((trip) => suggestedTrip(trip, searchable.byId)) };
 }
 
@@ -417,6 +417,47 @@ function stretchesOf(trip: SearchedTrip, byId: ReadonlyMap<string, RouteNode>): 
   const keys = (link: PaddleLink) =>
     atBankSpot(link.from) || atBankSpot(link.to) ? link.waters.map((water) => `water:${water}`) : link.records;
   return unique(trip.choices.flatMap((choice) => (choice.mode === "paddle" ? choice.chain.steps.flatMap((step) => keys(step.link)) : [])));
+}
+
+/** The links a leg takes, each with the node it goes to, so either way of a link differs. */
+function linkKeys(choice: Choice): string[] {
+  if (choice.mode === "paddle") {
+    return choice.chain.steps.map((step) => `paddle:${step.link.from}-${step.link.to}>${step.to}`);
+  }
+  const { link, to } = choice.walk;
+  return [`hike:${link.from}-${link.to}>${to}`];
+}
+
+/**
+ * The same for a loop wherever it starts: its links in order, started at whichever link makes
+ * the smallest key. A one-way trip has none.
+ */
+function loopKey(trip: SearchedTrip): string | undefined {
+  if (shapeOf(trip) !== "loop") {
+    return undefined;
+  }
+  const keys = trip.choices.flatMap(linkKeys);
+  const rotations = keys.map((_, i) => [...keys.slice(i), ...keys.slice(0, i)].join("|"));
+  return rotations.sort()[0];
+}
+
+/**
+ * The ranked trips with each loop once: a loop started at another of its nodes is the same
+ * trip, so only the better ranked is kept.
+ */
+function onceEachLoop(ranked: readonly SearchedTrip[]): SearchedTrip[] {
+  const seen = new Set<string>();
+  return ranked.filter((trip) => {
+    const key = loopKey(trip);
+    if (key === undefined) {
+      return true;
+    }
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 /**

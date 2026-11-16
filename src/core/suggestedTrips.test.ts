@@ -211,17 +211,17 @@ describe("suggested trips: switches, loops and one day", () => {
     expect(stops(search({ network: river, wishes: wishes({ maxSwitches: 1 }) }))).toEqual([]);
   });
 
-  it("go round a ring of water back to the put-in as a loop", () => {
+  it("go round a ring of water back to the put-in as a loop, once, whichever aire it starts at", () => {
     const result = search({ network: ring, wishes: wishes({ paddleKm: 12, shape: "loop" }) });
-    expect(stops(result)).toEqual(["A>A", "B>B", "C>C"]);
+    expect(stops(result)).toEqual(["A>A"]);
     if (result.status !== "found") throw new Error("no trips");
     expect(result.trips[0]).toMatchObject({ shape: "loop", paddleM: 12000, switches: 2 });
   });
 
   it.each([
-    ["loop", ["A>A", "B>B", "C>C"]],
+    ["loop", ["A>A"]],
     ["one-way", ["A>C", "B>A", "C>B"]],
-    ["either", ["A>A", "A>C", "B>A", "B>B", "C>B", "C>C"]],
+    ["either", ["A>A", "A>C", "B>A", "C>B"]],
   ] as const)("suggest %s trips when that is wished", (shape, expected) => {
     // 8 km one-way and 12 km round: both within 20% of 10 km, equally close.
     expect(stops(search({ network: ring, wishes: wishes({ paddleKm: 10, shape }) })).sort()).toEqual(expected);
@@ -331,6 +331,16 @@ describe("suggested trips: ranking and variety", () => {
     const other = { ...link("S0", "S1", 11, { records: ["open-2"] }) };
     const varied = network([...one.nodes, node("S0", 10), node("S1", 11)], [...one.links, other]);
     expect(stops(search({ network: varied }))).toEqual(["R0>R1", "R1>R2", "S0>S1", "R2>R3", "R3>R4", "R4>R5"]);
+  });
+
+  it("count a loop once, whichever node it starts at, so it takes one place on its stretch", () => {
+    // A loop on stretch open-1 (paddle L0 to L1, walk back), a one-way on the same stretch and one on open-2.
+    const loopAndOneWays = network(
+      [node("L0", 0), node("L1", 1), node("M0", 2), node("M1", 3), node("M2", 4), node("S0", 5), node("S1", 6), node("S2", 7)],
+      [link("L0", "L1", 10, { records: ["open-1"] }), link("M0", "M1", 10, { records: ["open-1"] }), link("S0", "S1", 10, { records: ["open-2"] })],
+      [walk("L1", "L0", 3), walk("M1", "M2", 3), walk("S1", "S2", 3)],
+    );
+    expect(stops(search({ network: loopAndOneWays, wishes: wishes({ hikeKm: 3 }) }))).toEqual(["L0>L1>L0", "M0>M1>M2", "S0>S1>S2"]);
   });
 });
 
@@ -464,12 +474,12 @@ describe("suggested trips: hike and paddle", () => {
   it("walk back from the take-out to the put-in as a loop", () => {
     const back = riverWithWalks([walk("B", "C", 8)]);
     const loops = search({ network: back, wishes: wishes({ hikeKm: 8, shape: "loop" }) });
-    // Park at the put-in and paddle first, or at the take-out and walk first.
-    expect(stops(loops)).toEqual(["B>C>B", "C>B>C"]);
+    // Walking first from the take-out is the same loop: it is suggested once.
+    expect(stops(loops)).toEqual(["B>C>B"]);
     if (loops.status !== "found") throw new Error("no trips");
     expect(loops.trips[0]).toMatchObject({ shape: "loop", hikeM: 8000, paddleM: 10000, switches: 2 });
     expect(stops(search({ network: back, wishes: wishes({ hikeKm: 8, shape: "one-way" }) }))).toEqual([]);
-    expect(stops(search({ network: back, wishes: wishes({ hikeKm: 8, shape: "either" }) })).sort()).toEqual(["B>C>B", "C>B>C"]);
+    expect(stops(search({ network: back, wishes: wishes({ hikeKm: 8, shape: "either" }) }))).toEqual(["B>C>B"]);
   });
 
   it("never suggest a walk alone, without paddling", () => {
