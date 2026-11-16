@@ -90,7 +90,7 @@ const everywhere: Bounds = [4, 49, 6, 51];
 
 function search(points: AccessPoint[], wishes: Partial<TripWishes>) {
   return suggestTrips({
-    network: withAccessPoints(network, points),
+    network: withAccessPoints(network, points, []),
     rules,
     when: { date: today, today },
     area: everywhere,
@@ -181,11 +181,28 @@ describe("suggested trips through your access points", () => {
     expect(paddles.filter((leg) => leg.from === "access-point-p1")).toEqual([]);
   });
 
+  it("split the river at an access point, each part passing only the obstacles on it", () => {
+    const withObstacles: RouteNetwork = {
+      ...network,
+      paddleLinks: [{ ...river, obstacles: ["rocks-up", "weir-down", "unknown"] }],
+    };
+    // Rocks a quarter down, a weir three quarters down; "unknown" has no known position.
+    const obstacles = [
+      { id: "rocks-up", position: [5.025, 50.5001] as Position },
+      { id: "weir-down", position: [5.075, 50.4999] as Position },
+    ];
+    const joined = withAccessPoints(withObstacles, [accessPoint("p1", [5.05, 50.50027])], obstacles);
+    expect(joined.paddleLinks.map(({ from, to, obstacles: passed }) => ({ from, to, passed }))).toEqual([
+      { from: "A", to: "access-point-p1", passed: ["rocks-up", "unknown"] },
+      { from: "access-point-p1", to: "B", passed: ["weir-down", "unknown"] },
+    ]);
+  });
+
   it("get in and out at the aire itself when an access point is next to it on the water", () => {
     // 20 m down the river from A.
     const joined = withAccessPoints(network, [
       accessPoint("p1", [5.00028, 50.5]),
-    ]);
+    ], []);
     expect(joined.paddleLinks).toEqual([river]);
   });
 });

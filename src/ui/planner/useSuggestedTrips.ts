@@ -7,7 +7,7 @@ import type { Bounds } from "@/core/geo";
 import type { Pace, TripWishes } from "@/core/settings";
 import { suggestTrips, type SuggestedTrips } from "@/core/suggestedTrips";
 import { useRouteNetwork } from "../routeNetwork";
-import { localToday, useAccessRules } from "../useAccessRules";
+import { localToday, useAccessRules, useBuiltInObstacles } from "../useAccessRules";
 import { useOfficialStatus } from "../useOfficialStatus";
 import { useWalloonFlows } from "../useWalloonFlows";
 
@@ -38,6 +38,9 @@ export function useSuggestedTrips(search: TripSearch | null, pace: Pace, accessP
   const wanted = search !== null;
   const network = useRouteNetwork(wanted);
   const rules = useAccessRules(wanted);
+  // From the rules' chunk: where obstacles are, for the links your access points split. Until
+  // then (or if it fails) both parts of a split link keep all its obstacles, which is safe.
+  const obstacles = useBuiltInObstacles(wanted);
   const today = localToday();
   const forToday = wanted && search.date === today;
   const flows = useWalloonFlows(rules, forToday);
@@ -54,12 +57,12 @@ export function useSuggestedTrips(search: TripSearch | null, pace: Pace, accessP
       ...(official && { official }),
     };
     return suggestTrips({
-      network: withAccessPoints(network, accessPoints),
+      network: withAccessPoints(network, accessPoints, obstacles ?? []),
       rules,
       when,
       area: search.area,
       wishes: search.wishes,
       pace,
     });
-  }, [network, rules, search, forToday, flows, official, today, pace, accessPoints]);
+  }, [network, rules, obstacles, search, forToday, flows, official, today, pace, accessPoints]);
 }

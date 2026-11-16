@@ -10,6 +10,7 @@ import {
   type RouteNode,
   type WalkingLink,
 } from "./routeNetwork";
+import type { Obstacle } from "./obstacle";
 import type { LatLng } from "./trip";
 
 /** An estimated walk is the straight line times this, for the bends of real paths. */
@@ -19,12 +20,17 @@ const ON_WATER_M = 150;
 /** An access point this close along the water to a link's end gets in or out there already. */
 const LINK_END_M = 50;
 
-/** The network with your access points joined. */
+/** Where an obstacle is, to tell which part of a split link passes it. */
+export type ObstaclePlace = Pick<Obstacle, "id" | "position">;
+
+/** The network with your access points joined; `obstacles` are the built-in ones, by id. */
 export function withAccessPoints(
   network: RouteNetwork,
   points: AccessPoints,
+  obstacles: readonly ObstaclePlace[],
 ): RouteNetwork {
-  return points.reduce(withAccessPoint, network);
+  const placed = new Map(obstacles.map((obstacle) => [obstacle.id, obstacle.position]));
+  return points.reduce((joined, point) => withAccessPoint(joined, point, placed), network);
 }
 
 /** The route node id of your access point with this id. */
@@ -33,6 +39,7 @@ export const accessPointNodeId = (id: string) => `access-point-${id}`;
 function withAccessPoint(
   network: RouteNetwork,
   point: AccessPoint,
+  obstacles: ReadonlyMap<string, Position>,
 ): RouteNetwork {
   const node: RouteNode = {
     id: accessPointNodeId(point.id),
@@ -43,14 +50,13 @@ function withAccessPoint(
   return {
     ...network,
     nodes: [...network.nodes, node],
-    paddleLinks: onWater(network.paddleLinks, node, point.position),
+    paddleLinks: onWater(network.paddleLinks, node, point.position, obstacles),
     walkingLinks: [
       ...(network.walkingLinks ?? []),
       ...estimatedWalks(network.nodes, node, point.position),
     ],
   };
 }
-
 
 /** A straight walk from every node near enough to the access point. */
 function estimatedWalks(
@@ -84,6 +90,7 @@ function onWater(
   links: readonly PaddleLink[],
   node: RouteNode,
   at: LatLng,
+  obstacles: ReadonlyMap<string, Position>,
 ): readonly PaddleLink[] {
   let nearest: { link: PaddleLink; offM: number; alongM: number } | undefined;
   for (const link of links) {
@@ -97,17 +104,44 @@ function onWater(
   if (alongM < LINK_END_M || alongM > lengthM - LINK_END_M) return links;
   const [before, after] = splitLine(link.line, alongM);
   const beforeM = Math.round((link.distanceM * alongM) / lengthM);
-  // Both halves keep the link's waters, records and obstacles: never more open than the whole.
+  const [obstaclesBefore, obstaclesAfter] = splitObstacles(link, alongM, obstacles);
+  // Both halves keep the link's waters and records: never more open than the whole.
   const halves: PaddleLink[] = [
-    { ...link, to: node.id, distanceM: beforeM, line: before },
+    { ...link, to: node.id, distanceM: beforeM, obstacles: obstaclesBefore, line: before },
     {
       ...link,
       from: node.id,
+      obstacles: obstaclesAfter,
       distanceM: link.distanceM - beforeM,
       line: after,
     },
   ];
   return links.flatMap((other) => (other === link ? halves : [other]));
+}
+
+/**
+ * The link's obstacles before `alongM` down its line and after, in order. One whose position
+ * isn't known stays on both: a part never passes fewer than it might.
+ */
+function splitObstacles(
+  link: PaddleLink,
+  alongM: number,
+  obstacles: ReadonlyMap<string, Position>,
+): [string[], string[]] {
+  const line = link.line.map(latLngOf);
+  const before: string[] = [];
+  const after: string[] = [];
+  for (const id of link.obstacles) {
+    const position = obstacles.get(id);
+    const obstacleAlongM = position && projectOntoLine(latLngOf(position), line).alongM;
+    if (obstacleAlongM === undefined || obstacleAlongM <= alongM) {
+      before.push(id);
+    }
+    if (obstacleAlongM === undefined || obstacleAlongM > alongM) {
+      after.push(id);
+    }
+  }
+  return [before, after];
 }
 
 function lineLengthM(line: readonly Position[]): number {
