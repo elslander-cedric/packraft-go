@@ -2,7 +2,7 @@
 // details show before it is used.
 import type { AccessRules } from "./access";
 import type { CalendarDate } from "./calendarDate";
-import { latLngOf } from "./geo";
+import { distanceM, latLngOf } from "./geo";
 import type { RouteNode } from "./routeNetwork";
 import type { SuggestedTrip } from "./suggestedTrips";
 import { setStartDate, type Trip } from "./trip";
@@ -34,11 +34,14 @@ export function bankSpotsOf(suggestedTrip: SuggestedTrip): RouteNode[] {
   return spots.filter((node, i) => spots.findIndex((other) => other.id === node.id) === i);
 }
 
+/** A trip point this close to a node is at it, whatever rounding it went through. */
+const SAME_PLACE_M = 1;
+
 /** True when the trip's points are the suggested trip's nodes: it is the suggested trip, used. */
 export function isTripFrom(trip: Trip, suggestedTrip: SuggestedTrip): boolean {
   return (
     trip.points.length === suggestedTrip.nodes.length &&
-    trip.points.every(({ lat, lng }, i) => lng === suggestedTrip.nodes[i].position[0] && lat === suggestedTrip.nodes[i].position[1])
+    trip.points.every((point, i) => distanceM(point, latLngOf(suggestedTrip.nodes[i].position)) < SAME_PLACE_M)
   );
 }
 

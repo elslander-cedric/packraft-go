@@ -173,4 +173,15 @@ describe("bank spots of a used suggested trip", () => {
     expect(isTripFrom(tripFromSuggestedTrip(throughSpots, "2027-07-10"), throughSpots)).toBe(true);
     expect(isTripFrom(tripFromSuggestedTrip(suggestedTrip, "2027-07-10"), throughSpots)).toBe(false);
   });
+
+  it("are offered when the trip's points are the suggested trip's nodes to within a metre, as stored and read back", () => {
+    const used = tripFromSuggestedTrip(throughSpots, "2027-07-10");
+    const nudged = (by: number) => ({
+      ...used,
+      points: used.points.map((point) => ({ ...point, lat: point.lat + by, lng: point.lng - by })),
+    });
+    // 1e-7° is about a centimetre; 1e-4° about 10 m.
+    expect(isTripFrom(nudged(1e-7), throughSpots)).toBe(true);
+    expect(isTripFrom(nudged(1e-4), throughSpots)).toBe(false);
+  });
 });
