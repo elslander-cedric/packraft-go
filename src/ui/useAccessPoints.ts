@@ -124,6 +124,9 @@ export function useAccessPoints() {
       setSelectedId(id);
     },
     discardDraft: () => setDraft(null),
+    /** Stores a new access point at each place, as the draft would be stored unchanged, such as a trip's bank spots. */
+    addAt: (places: readonly LatLng[]) =>
+      setPoints((current) => places.reduce((points, at) => addAccessPoint(points, { id: newId(), at, now: now() }), current)),
     select: (id: string | null) => setSelectedId(id),
     update: (id: string, changes: AccessPointChanges) =>
       setPoints((current) => updateAccessPoint(current, id, changes, now())),

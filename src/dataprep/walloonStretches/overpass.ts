@@ -17,6 +17,8 @@ export type OverpassElement = {
   lat?: number;
   lon?: number;
   tags?: Record<string, string>;
+  /** A way's node ids, in order (with `out geom`, beside its geometry). */
+  nodes?: number[];
   geometry?: Array<{ lat: number; lon: number } | null>;
 };
 export type OverpassResult = { elements: OverpassElement[] };
@@ -32,6 +34,8 @@ export type OverpassDeps = {
   /** Keyed by the query text. */
   cache: { read: (key: string) => Promise<string | undefined>; write: (key: string, value: string) => Promise<void> };
   log?: (message: string) => void;
+  /** Pause before retrying, for heavy queries to a busy server; `OVERPASS_RETRY_PAUSE_MS` by default. */
+  retryPauseMs?: number;
 };
 
 export function createOverpassClient(deps: OverpassDeps) {
@@ -72,8 +76,9 @@ export function createOverpassClient(deps: OverpassDeps) {
       let lastError = "";
       for (let i = 0; i < MAX_ATTEMPTS; i++) {
         if (i > 0) {
-          deps.log?.(`Overpass failed (${lastError.slice(0, 80)}); retrying in ${OVERPASS_RETRY_PAUSE_MS / 1000} s`);
-          await deps.wait(OVERPASS_RETRY_PAUSE_MS);
+          const pause = deps.retryPauseMs ?? OVERPASS_RETRY_PAUSE_MS;
+          deps.log?.(`Overpass failed (${lastError.slice(0, 80)}); retrying in ${pause / 1000} s`);
+          await deps.wait(pause);
         }
         const outcome = await attempt(query);
         if (outcome.ok) {

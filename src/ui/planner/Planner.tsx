@@ -12,6 +12,7 @@ import { isCamp, type LatLng } from "@/core/trip";
 import ClientTripMap from "@/map/ClientTripMap";
 import type { MapFocus } from "@/map/TripMap";
 import { Button } from "../components/Button";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { TabPanel } from "../components/Tabs";
 import DaysPanel from "../DaysPanel";
 import { Icon } from "../icons/Icon";
@@ -42,6 +43,7 @@ import SuggestedTripDetails from "./SuggestedTripDetails";
 import SuggestedTripsList from "./SuggestedTripsList";
 import TripButtons from "./TripButtons";
 import TripWishesDialog from "./TripWishesDialog";
+import { useBankSpotsOffer } from "./useBankSpotsOffer";
 import { useFindTrips } from "./useFindTrips";
 import { useMarkAccessPoint } from "./useMarkAccessPoint";
 import { useNextLegMode } from "./useNextLegMode";
@@ -124,6 +126,7 @@ export default function Planner({ router }: { router?: Router }) {
     if (!panel.sideways) panel.raiseFromPeek();
   });
   const closeSuggestions = () => dispatch({ type: "closeSuggestedTrips" });
+  const bankSpots = useBankSpotsOffer(access.addAt);
   // Leaving suggested trips, closed or by using one (once the replace question is answered),
   // restores the tab and the sheet's stop.
   const [shownMode, setShownMode] = useState(session.mode);
@@ -131,6 +134,7 @@ export default function Planner({ router }: { router?: Router }) {
     setShownMode(session.mode);
     if (shownMode.kind === "suggestedTrips" && session.mode.kind === "normal") {
       findTrips.close();
+      bankSpots.left(trip);
       setTab(shownMode.returnTo.tab);
       panel.setStop(shownMode.returnTo.sheet);
     }
@@ -253,6 +257,16 @@ export default function Planner({ router }: { router?: Router }) {
           openFile={openFile}
           settings={settings}
           saveSettings={saveSettings}
+        />
+        <ConfirmDialog
+          open={bankSpots.offered.length > 0}
+          title={strings.planner.suggestedTrips.saveBankSpots.title(bankSpots.offered.length)}
+          message={strings.planner.suggestedTrips.saveBankSpots.message(bankSpots.offered.length)}
+          confirmLabel={strings.planner.suggestedTrips.saveBankSpots.confirm}
+          cancelLabel={strings.planner.suggestedTrips.saveBankSpots.cancel}
+          onConfirm={bankSpots.save}
+          onCancel={bankSpots.dismiss}
+          tone="primary"
         />
         {session.keepStoredSave && (
           <p role="alert" className="planner-message planner-message-alert">
@@ -393,10 +407,11 @@ export default function Planner({ router }: { router?: Router }) {
                 date={findTrips.date}
                 accessPoints={access.points}
                 onBack={() => findTrips.select(null)}
-                onUse={() =>
-                  findTrips.date &&
-                  dispatch({ type: "useSuggestedTrip", suggestion: selectedSuggestion, date: findTrips.date })
-                }
+                onUse={() => {
+                  if (!findTrips.date) return;
+                  bankSpots.use(selectedSuggestion);
+                  dispatch({ type: "useSuggestedTrip", suggestion: selectedSuggestion, date: findTrips.date });
+                }}
               />
             ) : (
               <SuggestedTripsList state={findTrips.state} onSelect={selectSuggestion} />

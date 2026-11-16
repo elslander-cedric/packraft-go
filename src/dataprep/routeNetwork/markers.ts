@@ -8,7 +8,7 @@ import { crossings, project, type Pt } from "../walloonStretches/geo";
 import type { OverpassElement, OverpassResult } from "../walloonStretches/overpass";
 import { toPt } from "./direction";
 
-/** How close to the line a dam or lock gate mapped in OSM must be: OSM draws them on the water. */
+/** How close to the line a dam, lock gate or weir mapped in OSM must be: OSM draws them on the water. */
 const OSM_ON_LINE_M = 30;
 
 const BARRIER_KINDS: readonly ObstacleKind[] = ["dam", "impassable"];
@@ -43,7 +43,7 @@ function osmBarrier(line: readonly Pt[], element: OverpassElement): Marker[] {
   return nearest && nearest.distance <= OSM_ON_LINE_M ? [{ id, alongM: nearest.along }] : [];
 }
 
-const isOsmBarrier = (element: OverpassElement) => ["dam", "lock_gate"].includes(element.tags?.waterway ?? "");
+export const isOsmBarrier = (element: OverpassElement) => ["dam", "lock_gate", "weir"].includes(element.tags?.waterway ?? "");
 
 export function markersOnRecord(
   line: readonly Pt[],

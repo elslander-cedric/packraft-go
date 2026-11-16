@@ -6,6 +6,7 @@
 //
 //   npm run prepare:route-network              # reuses cached Overpass and BRouter answers
 //   npm run prepare:route-network -- --offline # refuses to ask Overpass or BRouter
+//   npm run prepare:route-network -- --count-walks # says how many walks BRouter would be asked for, and stops
 //
 // Politeness: one request at a time with a pause between them, identified by the project URL
 // only, every answer cached in .cache/route-network-osm/ and .cache/route-network-brouter/
@@ -16,13 +17,15 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import type { LockDataset, ObstacleDataset, OfficialAireDataset } from "../src/access/dataset";
 import { dateInBrussels } from "../src/core/calendarDate";
+import type { Bounds } from "../src/core/geo";
 import type { WalkingLink } from "../src/core/routeNetwork";
 import { createBRouterClient } from "../src/dataprep/routeNetwork/brouterClient";
 import { buildRouteNetwork, type NetworkInputs } from "../src/dataprep/routeNetwork/build";
-import { recordQuery } from "../src/dataprep/routeNetwork/overpass";
+import { bankPathQuery, bankSpotTiles, bankWaterLines, bankWaterQuery, recordQuery } from "../src/dataprep/routeNetwork/overpass";
 import { serialiseRouteNetwork } from "../src/dataprep/routeNetwork/serialise";
 import { WALKING_CEILING_M, walkingLink, walkingPairs, walkingUrl } from "../src/dataprep/routeNetwork/walking";
-import { createOverpassClient, type OverpassResult } from "../src/dataprep/walloonStretches/overpass";
+import { createOverpassClient, type OverpassElement, type OverpassResult } from "../src/dataprep/walloonStretches/overpass";
+import { builtInAccessRules } from "../src/access/builtInRules";
 
 const ROOT = path.join(import.meta.dirname, "..");
 const CACHE_DIR = path.join(ROOT, ".cache", "route-network-osm");
@@ -30,6 +33,9 @@ const BROUTER_CACHE_DIR = path.join(ROOT, ".cache", "route-network-brouter");
 const OUT = path.join(ROOT, "src", "access", "data", "route-network.json");
 const ENDPOINT = process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";
 const offline = process.argv.includes("--offline");
+const countWalks = process.argv.includes("--count-walks");
+// How long to wait when Overpass turns a bank spot tile away.
+const BUSY_PAUSE_MS = 3 * 60_000;
 
 type StretchFile = {
   sources: { annex1: string };
@@ -47,13 +53,21 @@ const keyFile = (query: string, directory = CACHE_DIR) =>
   path.join(directory, `${createHash("sha256").update(query).digest("hex").slice(0, 16)}.json`);
 await mkdir(CACHE_DIR, { recursive: true });
 await mkdir(BROUTER_CACHE_DIR, { recursive: true });
+let overpassRequests = 0;
+// A run never asks Overpass more than this, however busy it is: one run from an empty cache needs about 150.
+const OVERPASS_MAX_REQUESTS = Number(process.env.OVERPASS_MAX_REQUESTS ?? 200);
 const overpass = createOverpassClient({
   endpoint: ENDPOINT,
   fetch: async (url, init) => {
     if (offline) {
       throw new Error("an Overpass answer is not cached and --offline was given");
     }
-    console.log(`  fetching from ${new URL(url).host} ...`);
+    if (overpassRequests >= OVERPASS_MAX_REQUESTS) {
+      process.exitCode = 1;
+      throw new Error(`stopped after ${overpassRequests} requests to Overpass in this run (OVERPASS_MAX_REQUESTS)`);
+    }
+    overpassRequests += 1;
+    console.log(`  fetching from ${new URL(url).host} (request ${overpassRequests}) ...`);
     return fetch(url, { ...init, signal: AbortSignal.timeout(240_000) });
   },
   wait: async (ms) => {
@@ -65,6 +79,8 @@ const overpass = createOverpassClient({
     write: async (query, body) => writeFile(keyFile(query), body),
   },
   log: (message) => console.log(`  ${message}`),
+  // At 15 s most retries of a heavy query found the public server still at capacity.
+  retryPauseMs: 60_000,
 });
 
 const records = stretches.stretches.map((stretch) => ({
@@ -76,6 +92,41 @@ const osm: Record<string, OverpassResult> = {};
 for (const record of records) {
   console.log(`OSM: ${record.id} (${record.river})`);
   osm[record.id] = await overpass.query(recordQuery(record.line));
+}
+
+const flemishRegions = builtInAccessRules.records.filter(
+  (record) => record.scope === "region" && record.region !== "wallonia",
+);
+const tiles = bankSpotTiles(flemishRegions.map((record) => record.geometry));
+const bankElements: OverpassElement[] = [];
+for (const [i, tile] of tiles.entries()) {
+  console.log(`OSM: bank spot tile ${i + 1} of ${tiles.length} (${tile.join(", ")})`);
+  bankElements.push(...(await bankTile(tile)));
+}
+
+/** One tile's waters, then the paths near them, asked around the waters' own lines. */
+async function bankTile(tile: Bounds): Promise<OverpassElement[]> {
+  const waters = await patiently(bankWaterQuery(tile));
+  const lines = bankWaterLines(waters, tile);
+  if (lines.length === 0) return waters.elements;
+  const paths = await patiently(bankPathQuery(tile, lines));
+  if (paths.elements.length === 0) {
+    console.log(`REVIEW bank spot tile ${tile.join(", ")}: ${lines.length} water lines but no paths near them`);
+  }
+  return [...waters.elements, ...paths.elements];
+}
+
+/** These queries are heavy, and a busy public server turns them away for minutes at a time: wait before giving up. */
+async function patiently(query: string): Promise<OverpassResult> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await overpass.query(query);
+    } catch (error) {
+      if (attempt === 5) throw error;
+      console.log(`  Overpass is busy (${String(error).slice(0, 100)}); asking again in ${BUSY_PAUSE_MS / 60_000} minutes`);
+      await sleep(BUSY_PAUSE_MS);
+    }
+  }
 }
 
 const today = dateInBrussels(Date.now());
@@ -95,9 +146,11 @@ const inputs: NetworkInputs = {
     { title: `${obstacles.source.title} (snapshot ${obstacles.snapshot})`, url: obstacles.source.url },
     { title: `Locks in Flanders and Brussels, OpenStreetMap (extracted ${locks.extracted})`, url: "https://www.openstreetmap.org/copyright" },
     { title: `OpenStreetMap waterways, dams and lock gates via Overpass (${today})`, url: "https://www.openstreetmap.org/copyright" },
+    { title: `OpenStreetMap rivers, canals, weirs and paths near them for bank spots, via Overpass (${today})`, url: "https://www.openstreetmap.org/copyright" },
     { title: `Walking links routed by BRouter on OpenStreetMap (${today})`, url: "https://brouter.de/" },
   ],
   snapshot: today,
+  banks: { osm: { elements: bankElements }, rules: builtInAccessRules },
 };
 
 const built = buildRouteNetwork(inputs);
@@ -123,6 +176,16 @@ const brouter = createBRouterClient({
   log: (message) => console.log(`  ${message}`),
 });
 const pairs = walkingPairs(built.network.nodes);
+console.log(`${overpassRequests} requests to Overpass, the rest from its cache`);
+if (countWalks) {
+  const asked = await Promise.all(pairs.map((pair) => readFile(keyFile(walkingUrl(pair), BROUTER_CACHE_DIR)).then(() => false, () => true)));
+  const byKind = (kind: string) => built.network.nodes.filter((node) => node.kind === kind).length;
+  console.log(
+    `${built.network.nodes.length} nodes (${byKind("bank-spot")} bank spots), ${built.network.paddleLinks.length} paddle links, ` +
+      `${pairs.length} walking pairs, ${asked.filter(Boolean).length} not yet cached`,
+  );
+  process.exit(0);
+}
 const walkingLinks: WalkingLink[] = [];
 const unwalked: string[] = [];
 for (const [i, pair] of pairs.entries()) {
@@ -152,6 +215,9 @@ for (const { record, river, withM, againstM } of report.disagreeing) {
 }
 for (const record of report.withoutOsm) {
   console.log(`REVIEW ${record}: no OSM waterway along it, so no links`);
+}
+for (const link of report.unruled) {
+  console.log(`no link ${link}: part of its water has no access rule`);
 }
 for (const aire of report.airesOffWater) {
   console.log(`REVIEW ${aire}: on no stretch's water, so no links`);

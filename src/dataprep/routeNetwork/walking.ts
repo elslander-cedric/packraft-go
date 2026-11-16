@@ -22,19 +22,43 @@ const byId = (a: RouteNode, b: RouteNode) =>
   a.id.localeCompare(b.id, "en", { numeric: true });
 
 /**
+ * How many of its nearest nodes a bank spot walks to. Bank spots are many, and each pair is a
+ * BRouter request; the nearest are the ones a day's loop walks back to.
+ */
+export const BANK_SPOT_WALKS = 6;
+
+const crowFliesM = (a: RouteNode, b: RouteNode) => distanceM(toPt(a.position), toPt(b.position));
+
+/** Each bank spot's nearest nodes within the ceiling, by id. */
+function nearestToBankSpots(nodes: readonly RouteNode[]): Map<string, Set<string>> {
+  const nearest = new Map<string, Set<string>>();
+  for (const spot of nodes.filter((node) => node.kind === "bank-spot")) {
+    const others = nodes
+      .filter((other) => other !== spot)
+      .map((other) => ({ other, metres: crowFliesM(spot, other) }))
+      .filter(({ metres }) => metres <= WALKING_CEILING_M)
+      .sort((a, b) => a.metres - b.metres || byId(a.other, b.other));
+    nearest.set(spot.id, new Set(others.slice(0, BANK_SPOT_WALKS).map(({ other }) => other.id)));
+  }
+  return nearest;
+}
+
+/**
  * Every two nodes no further apart as the crow flies than a walking link may be long,
- * once, `from` first by id: a walk can't be shorter than the crow flies.
+ * once, `from` first by id: a walk can't be shorter than the crow flies. A bank spot only
+ * with its nearest few (`BANK_SPOT_WALKS`), or a bank spot it is one of the nearest of.
  */
 export function walkingPairs(nodes: readonly RouteNode[]): WalkingPair[] {
   const sorted = [...nodes].sort(byId);
+  const nearest = nearestToBankSpots(sorted);
+  const paired = (from: RouteNode, to: RouteNode) => {
+    if (from.kind !== "bank-spot" && to.kind !== "bank-spot") return crowFliesM(from, to) <= WALKING_CEILING_M;
+    return Boolean(nearest.get(from.id)?.has(to.id) || nearest.get(to.id)?.has(from.id));
+  };
   return sorted.flatMap((from, i) =>
     sorted
       .slice(i + 1)
-      .filter(
-        (to) =>
-          distanceM(toPt(from.position), toPt(to.position)) <=
-          WALKING_CEILING_M,
-      )
+      .filter((to) => paired(from, to))
       .map((to) => ({ from, to })),
   );
 }

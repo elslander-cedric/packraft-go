@@ -284,6 +284,18 @@ export const strings = {
       riversLabel: "Rivers",
       airesLabel: "Aires",
       accessPointsLabel: "Your access points",
+      // Bank spots (ADR 0039): where a path reaches the bank outside Wallonia; nobody has checked them.
+      bankSpots: (count: number) =>
+        `${count === 1 ? "1 bank spot" : `${count} bank spots`}: unchecked on the ground, look before you rely on ${count === 1 ? "it" : "them"}`,
+      // After using a trip through bank spots.
+      saveBankSpots: {
+        title: (count: number) => (count === 1 ? "Save the bank spot as an access point?" : "Save the bank spots as access points?"),
+        message: (count: number) =>
+          `This trip gets in or out at ${count === 1 ? "a bank spot" : `${count} bank spots`}, where a path reaches the bank. ` +
+          "Nobody has checked them on the ground. Saved, you can check them and reuse them.",
+        confirm: "Save as access points",
+        cancel: "Not now",
+      },
       // Why nothing was found.
       reasons: {
         noOpenWater: "No open water in this area on this date.",

@@ -2,7 +2,7 @@ import { useId, useMemo } from "react";
 import { accessPointNodeId } from "@/core/accessPointNetwork";
 import type { AccessPoints } from "@/core/accessPoints";
 import type { SuggestedTrip } from "@/core/suggestedTrips";
-import { suggestionAccess } from "@/core/tripFromSuggestion";
+import { bankSpotsOf, suggestionAccess } from "@/core/tripFromSuggestion";
 import { Button } from "../components/Button";
 import { accessPointText } from "../accessPointText";
 import { formatDuration, formatElevation, formatShare } from "../format";
@@ -67,6 +67,7 @@ export default function SuggestedTripDetails({
       }),
     ),
   ];
+  const bankSpots = bankSpotsOf(trip).length;
   const rivers = [...new Set(trip.legs.flatMap((leg) => (leg.mode === "paddle" ? leg.waters : [])))];
 
   return (
@@ -103,6 +104,7 @@ export default function SuggestedTripDetails({
       {accessPointNames.length > 0 && (
         <p>{`${text.accessPointsLabel}: ${accessPointNames.join(", ")}`}</p>
       )}
+      {bankSpots > 0 && <p>{text.bankSpots(bankSpots)}</p>}
       {access?.legs.map(
         (leg) => leg && <LegAccessView key={leg.leg} access={leg} />,
       )}
